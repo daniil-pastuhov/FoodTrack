@@ -39,7 +39,7 @@ import {
 import { buildPrompt, inputTokenBound, newCanary } from "../adapters/prompt";
 import { JUDGE_INSTRUCTION } from "../adapters/gemini";
 import { QUALITY_OUTPUT_RULES, SUSPICIOUS_OUTPUT_RULES, checkImageBrief, checkOutput, checkStepBriefs, hasEnoughItems, usableStaples } from "./outputSafety";
-import { briefRefused, makeRecipeImage, makeStepImages, type ImageOutcome } from "./recipeImage";
+import { briefRefused, logOutOfCredit, makeRecipeImage, makeStepImages, type ImageOutcome } from "./recipeImage";
 import {
   assertOpen,
   costKeyOf,
@@ -53,6 +53,11 @@ import {
   microUsd,
   paidAllowance,
   statsRef,
+  textFallbackOf,
+  textOutOfCreditTargetOf,
+  textPricesOf,
+  textReservePricesOf,
+  textSelectionOf,
   uidHash,
   userRef,
   utcDay,
@@ -70,8 +75,12 @@ import {
   type Deps,
   type FailureClass,
   type GenerationLimits,
+  type GenerationResult,
   type LlmUsage,
+  type TextTarget,
 } from "../ports";
+import type { Prompt } from "../adapters/prompt";
+import type { TokenPrices } from "../providers/types";
 
 /**
  * A generation's response without its picture, which withImage adds (it is in its own document).
@@ -155,7 +164,9 @@ export function planFor(req: GenerateRequest, config: RuntimeConfig): Plan {
     costKey,
     cost: text + (picture ? picture.share + picture.stepsShare : 0),
     limits: { maxOutputTokens, hardTokenCeiling },
-    reservedMicroUsd: microUsd(config.prices, inputTokenBound(req), hardTokenCeiling) + judge + (picture?.reservedMicroUsd ?? 0),
+    // The text at the dearer of its provider and every one it may fall back to (with the deploy
+    // default and no fallback: config.prices, as before providers were switchable).
+    reservedMicroUsd: microUsd(textReservePricesOf(config), inputTokenBound(req), hardTokenCeiling) + judge + (picture?.reservedMicroUsd ?? 0),
     inputHash: inputHashOf(req),
     ...(image ? { image } : {}),
   };
@@ -385,7 +396,36 @@ export interface PictureOutcome {
   steps: { step: number; outcome: ImageOutcome }[];
 }
 
-export type Outcome =
+/** Tokens booked at one price pair (Outcome.spend). */
+export interface SpendPart extends TokenPrices {
+  inputTokens: number;
+  /** Visible output plus thinking. */
+  outputTokens: number;
+}
+
+/** The text provider that answered, when it is not the deploy default or a fallback was asked (logs). */
+export interface TextAnswered {
+  provider: string;
+  model: string;
+  fallback: boolean;
+}
+
+/** What every Outcome may carry beside its result: how its measured usage is priced, and who answered. */
+interface OutcomeCosts {
+  /**
+   * Set only when some call of this outcome is priced otherwise than `config.prices` (another text
+   * provider): its usage by price, booked at settle instead of `usage` x `config.prices`.
+   */
+  spend?: SpendPart[];
+  /**
+   * Set when some call is priced otherwise than `config.prices` and the usage of some call is
+   * unknown: settle then books the reservation (bookedMicroUsd), never the known part at Gemini's.
+   */
+  bookReserved?: true;
+  text?: TextAnswered;
+}
+
+export type Outcome = OutcomeCosts & (
   | {
       ok: true;
       recipe?: Recipe;
@@ -417,7 +457,8 @@ export type Outcome =
        * safety block, a judge rejection): counted in the user's `promptRejections` at settle.
        */
       rejection?: string;
-    };
+    }
+);
 
 /**
  * Settle and reserve both write stats/{day}, a single hot document. A settle lost to contention
@@ -476,9 +517,7 @@ export async function settle(
     const picture: PictureOutcome | undefined = outcome.ok && gen.imageLevel ? outcome.picture ?? { dish: missing, steps: [] } : undefined;
     const pictures = picture ? [picture.dish, ...picture.steps.map((s) => s.outcome)] : [];
     const pictureMicroUsd = pictures.reduce((sum, p) => sum + p.microUsd, 0);
-    const actual = usage
-      ? microUsd(config.prices, usage.inputTokens, usage.outputTokens + usage.thinkingTokens) + pictureMicroUsd
-      : reserved;
+    const actual = bookedMicroUsd(outcome, config, reserved, pictureMicroUsd);
     const statsDay = gen.statsDay ?? utcDay(gen.createdAt.toMillis());
 
     const expiresAt = Timestamp.fromMillis(now + GENERATION_TTL_MS);
@@ -607,6 +646,7 @@ export async function settle(
     }
     finalDoc.actualMicroUsd = actual;
     if (usage) finalDoc.usage = usage;
+    if (outcome.text) finalDoc.textProvider = outcome.text.provider;
 
     if (user?.spendWindow?.day === statsDay) {
       userUpdate["spendWindow.microUsd"] = FieldValue.increment(actual - reserved);
@@ -678,6 +718,132 @@ function addUsage(a: LlmUsage | undefined, b: LlmUsage | undefined): LlmUsage | 
 }
 
 /**
+ * What settle books for an outcome: its measured usage (at `spend`'s prices when set, else at
+ * `config.prices`) plus its pictures; the whole reservation when the usage is unknown, or when
+ * some call priced otherwise than `config.prices` has unknown usage (`bookReserved`): the
+ * reservation is at the dearest provider the request could reach (textReservePricesOf), so a
+ * dearer provider is never booked at Gemini's prices.
+ */
+export function bookedMicroUsd(outcome: Outcome, config: RuntimeConfig, reservedMicroUsd: number, pictureMicroUsd: number): number {
+  const usage = outcome.usage;
+  if (!usage || outcome.bookReserved) return reservedMicroUsd;
+  return (outcome.spend ? spendMicroUsd(outcome.spend) : microUsd(config.prices, usage.inputTokens, usage.outputTokens + usage.thinkingTokens)) + pictureMicroUsd;
+}
+
+/** Micro-USD of usage booked at several price pairs: one rounding up over the sum, as microUsd does. */
+export function spendMicroUsd(parts: readonly SpendPart[]): number {
+  const byPrice = new Map<string, SpendPart>();
+  for (const p of parts) {
+    const key = `${p.inputUsdPerMTok}/${p.outputUsdPerMTok}`;
+    const s = byPrice.get(key);
+    if (s) {
+      s.inputTokens += p.inputTokens;
+      s.outputTokens += p.outputTokens;
+    } else byPrice.set(key, { ...p });
+  }
+  let total = 0;
+  for (const s of byPrice.values()) total += s.inputTokens * s.inputUsdPerMTok + s.outputTokens * s.outputUsdPerMTok;
+  return Math.ceil(total);
+}
+
+/** Every model call of one generation, with the prices each is booked at (Outcome.spend). */
+export interface CallLedger {
+  parts: { prices: TokenPrices; usage: LlmUsage | undefined }[];
+  answered?: TextTarget;
+  fallback: boolean;
+}
+
+/**
+ * The text call and its fallback, as an interface-level rule for every provider (README "Adding a
+ * provider"): the selected provider first; when it failed before generating anything (its usage
+ * known, no output or thinking tokens) for a reason about the provider, one more call to the
+ * fallback, in the same time budget:
+ * - out of credit (`provider_out_of_credit` logged): the named fallback, else the deploy default
+ *   provider when it is another one;
+ * - capacity or a configuration failure (no adapter, a refused key): the named fallback only;
+ * - never after a safety refusal, a content failure or anything mid-stream.
+ * The person's recipes follow the outcome's failure class as before (a known-usage infra failure
+ * is refunded); the reservation already covers the dearer provider (planFor).
+ */
+async function generateText(
+  deps: Pick<Deps, "generator" | "logger">,
+  uid: string,
+  req: GenerateRequest,
+  prompt: Prompt,
+  signal: AbortSignal,
+  limits: GenerationLimits,
+  config: RuntimeConfig,
+  ledger: CallLedger,
+): Promise<GenerationResult> {
+  const sel = textSelectionOf(config);
+  const primary: TextTarget = { provider: sel.provider, model: sel.model };
+  const priced = (t: TextTarget) => textPricesOf(config, t) ?? textReservePricesOf(config);
+  ledger.answered = primary;
+  let first: GenerationError;
+  try {
+    const result = await deps.generator.generate(req, prompt, signal, limits, primary);
+    ledger.parts.push({ prices: priced(primary), usage: result.usage });
+    return result;
+  } catch (e) {
+    if (!(e instanceof GenerationError)) throw e;
+    ledger.parts.push({ prices: priced(primary), usage: e.usage });
+    first = e;
+  }
+  const kind = first.providerKind;
+  if (kind === "out_of_credit") logOutOfCredit(deps, primary, "text");
+  const nothingMade = first.usage !== undefined && first.usage.outputTokens + first.usage.thinkingTokens === 0;
+  const next = kind === "out_of_credit"
+    ? textOutOfCreditTargetOf(config)
+    : kind === "capacity" || kind === "config" ? textFallbackOf(config) : null;
+  if (!next || !nothingMade || signal.aborted) throw first;
+  deps.logger.info("text_fallback", {
+    uidHash: uidHash(uid),
+    provider: primary.provider,
+    model: primary.model,
+    fallbackProvider: next.provider,
+    fallbackModel: next.model,
+    reason: kind.toUpperCase(),
+  });
+  ledger.answered = next;
+  ledger.fallback = true;
+  try {
+    const result = await deps.generator.generate(req, prompt, signal, limits, next);
+    ledger.parts.push({ prices: priced(next), usage: result.usage });
+    // The first call's (known, unbilled-output) usage is part of the outcome's.
+    return { ...result, usage: addUsage(first.usage, result.usage) };
+  } catch (e) {
+    if (!(e instanceof GenerationError)) throw e;
+    ledger.parts.push({ prices: priced(next), usage: e.usage });
+    if (e.providerKind === "out_of_credit") logOutOfCredit(deps, next, "text");
+    throw new GenerationError(e.failureClass, e.message, addUsage(first.usage, e.usage), e.safety, e.kind);
+  }
+}
+
+/**
+ * Adds the ledger's pricing and the answering provider to an outcome (nothing for the default
+ * path). Exported for the tests.
+ */
+export function withCosts(outcome: Outcome, ledger: CallLedger, config: RuntimeConfig): Outcome {
+  const base = config.prices;
+  const otherPrice = ledger.parts.some((p) => p.prices.inputUsdPerMTok !== base.inputUsdPerMTok || p.prices.outputUsdPerMTok !== base.outputUsdPerMTok);
+  const known = ledger.parts.every((p) => p.usage !== undefined);
+  const spend = outcome.usage && otherPrice && known
+    ? ledger.parts.map((p) => ({
+        inputUsdPerMTok: p.prices.inputUsdPerMTok,
+        outputUsdPerMTok: p.prices.outputUsdPerMTok,
+        inputTokens: p.usage!.inputTokens,
+        outputTokens: p.usage!.outputTokens + p.usage!.thinkingTokens,
+      }))
+    : undefined;
+  const a = ledger.answered;
+  const defaultProvider = config.providerDefaults?.text.provider ?? textSelectionOf(config).provider;
+  const text = a && (ledger.fallback || a.provider !== defaultProvider) ? { provider: a.provider, model: a.model, fallback: ledger.fallback } : undefined;
+  // Another price with a call of unknown usage: nothing measured can be priced honestly.
+  const bookReserved = outcome.usage && otherPrice && !known ? { bookReserved: true as const } : {};
+  return { ...outcome, ...(spend ? { spend } : {}), ...bookReserved, ...(text ? { text } : {}) };
+}
+
+/**
  * The model call and every check on its answer (output rules, quality gate, judge), without
  * reservation or settle: uses only `deps.generator`, `deps.judge` and `deps.logger`. Exported for
  * the red-team runner (admin/redteam), which runs exactly this against the live model.
@@ -689,6 +855,18 @@ export async function runGenerator(
   limits: GenerationLimits,
   config: RuntimeConfig,
 ): Promise<Outcome> {
+  const ledger: CallLedger = { parts: [], fallback: false };
+  return withCosts(await runChecked(deps, uid, req, limits, config, ledger), ledger, config);
+}
+
+async function runChecked(
+  deps: Pick<Deps, "generator" | "judge" | "logger">,
+  uid: string,
+  req: GenerateRequest,
+  limits: GenerationLimits,
+  config: RuntimeConfig,
+  ledger: CallLedger,
+): Promise<Outcome> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMINGS[req.kind].llmAbortMs);
   const canary = newCanary();
@@ -696,7 +874,7 @@ export async function runGenerator(
   let checked: CheckedAnswer;
   let usage: LlmUsage | undefined;
   try {
-    const result = await deps.generator.generate(req, prompt, controller.signal, limits);
+    const result = await generateText(deps, uid, req, prompt, controller.signal, limits, config, ledger);
     usage = result.usage;
     // The answer arrived too late to use, but its usage is known and is what gets booked.
     if (controller.signal.aborted) return { ok: false, failureClass: "infra", reason: "timeout", usage };
@@ -706,7 +884,7 @@ export async function runGenerator(
       if (config.outputJudge === "off") return quality;
       // The judge still sees the answer: one it refuses stays a charged content failure and a
       // prompt rejection, so skipping the pantry cannot turn a hostile answer into a refund.
-      const judged = await runJudge(deps, uid, req, config, check.value, usage);
+      const judged = await runJudge(deps, uid, req, config, check.value, usage, ledger);
       return judged.ok ? { ...quality, usage: judged.usage } : judged.failureClass === "content" ? judged : { ...quality, usage: judged.usage };
     }
     if (!check.ok) {
@@ -742,7 +920,7 @@ export async function runGenerator(
     clearTimeout(timer);
   }
   if (config.outputJudge === "off") return { ok: true, ...checked, usage };
-  return runJudge(deps, uid, req, config, checked, usage);
+  return runJudge(deps, uid, req, config, checked, usage, ledger);
 }
 
 /**
@@ -757,8 +935,11 @@ async function runJudge(
   config: RuntimeConfig,
   checked: CheckedAnswer,
   genUsage: LlmUsage | undefined,
+  ledger: CallLedger,
 ): Promise<Outcome> {
   const enforce = config.outputJudge === "enforce";
+  // The judge always runs on the "google" provider, at config.prices (adapters/gemini.ts).
+  const judgePrices = { inputUsdPerMTok: config.prices.inputUsdPerMTok, outputUsdPerMTok: config.prices.outputUsdPerMTok };
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), JUDGE.abortMs[req.kind]);
   try {
@@ -770,6 +951,7 @@ async function runJudge(
       ...(checked.stepBriefs?.length ? { stepBriefs: checked.stepBriefs.map((s) => s.brief) } : {}),
     };
     const { verdict, usage } = await deps.judge.judge(judged, controller.signal);
+    ledger.parts.push({ prices: judgePrices, usage });
     const total = addUsage(genUsage, usage);
     deps.logger.info("prompt_judge_verdict", { uidHash: uidHash(uid), kind: req.kind, verdict, mode: config.outputJudge });
     if (verdict !== "ok" && enforce) {
@@ -777,6 +959,7 @@ async function runJudge(
     }
     return { ok: true, ...checked, usage: total };
   } catch (e) {
+    ledger.parts.push({ prices: judgePrices, usage: e instanceof GenerationError ? e.usage : undefined });
     const usage = addUsage(genUsage, e instanceof GenerationError ? e.usage : undefined);
     const reason = controller.signal.aborted ? "judge timeout" : e instanceof GenerationError ? e.message : "judge error";
     deps.logger.warn("prompt_judge_failed", { uidHash: uidHash(uid), kind: req.kind, reason: reason.slice(0, 60), mode: config.outputJudge });
@@ -847,6 +1030,8 @@ export function logLlmCall(
       ? `${outcome.picture.steps.filter((s) => s.outcome.ok).length}/${outcome.picture.steps.length}`
       : null,
     model: u?.model ?? null,
+    // Only when another text provider than the deploy default answered, or a fallback was asked.
+    ...(outcome.text ? { provider: outcome.text.provider, textFallback: outcome.text.fallback } : {}),
     inputTokens: u?.inputTokens ?? null,
     outputTokens: u?.outputTokens ?? null,
     thinkingTokens: u?.thinkingTokens ?? null,

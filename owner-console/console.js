@@ -64,12 +64,21 @@ async function call(name, data) {
 
 function models(p) {
   if (p.provider === "off") return "none (pictures off)";
-  return `${p.provider} / ${p.model}, fallback ${p.fallbackModel || "none"}`;
+  const fb = p.fallbackModel ? `${p.fallbackProvider ? `${p.fallbackProvider} / ` : ""}${p.fallbackModel}` : "none";
+  return `${p.provider} / ${p.model}, fallback ${fb}`;
+}
+
+// The recipe text's part (older servers send none of these fields: then nothing is shown).
+function textModels(p) {
+  if (!p.textProvider) return "";
+  const fb = p.textFallbackModel ? `${p.textFallbackProvider} / ${p.textFallbackModel}` : "none";
+  return `${p.textProvider} / ${p.textModel}, fallback ${fb}`;
 }
 
 function render() {
   const a = view.active;
   $("active").textContent = a.label + (a.profile === "custom" ? "" : ` (${a.profile})`);
+  $("active-text").textContent = textModels(a) || "not reported by this server";
   $("active-models").textContent = `${models(a)}; step pictures at most ${a.maxStepImages}`;
   $("active-on").textContent = a.picturesOn ? "Yes" : "No";
   const c = view.lastChange;
@@ -93,7 +102,8 @@ function selected() {
 
 function describe() {
   const p = selected();
-  $("profile-summary").textContent = p ? `${p.summary} Models: ${models(p)}.` : "";
+  const text = p ? textModels(p) : "";
+  $("profile-summary").textContent = p ? `${p.summary} Text: ${text || "unchanged"}. Pictures: ${models(p)}.` : "";
   $("profile-missing").replaceChildren(...(p?.missing ?? []).map((m) => {
     const li = document.createElement("li");
     li.textContent = m;
@@ -177,7 +187,8 @@ async function start() {
   $("profile").addEventListener("change", describe);
   $("switch").addEventListener("click", () => {
     const p = selected();
-    $("confirm-text").textContent = `From ${view.active.label} to ${p.label} (${models(p)}).`;
+    const text = textModels(p);
+    $("confirm-text").textContent = `From ${view.active.label} to ${p.label} (${text ? `text ${text}; ` : ""}pictures ${models(p)}).`;
     $("confirm").showModal();
   });
   $("confirm-cancel").addEventListener("click", () => $("confirm").close());

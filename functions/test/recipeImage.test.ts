@@ -489,10 +489,12 @@ describe("spend ceilings", () => {
     // Without a fallback, the model's own price.
     const alone = parseRuntimeConfig({ image: { fallbackModel: "" } });
     expect(planFor(r, alone).reservedMicroUsd - planFor(plain, alone).reservedMicroUsd).toBe(extra - RESERVED + PRICE);
-    // OpenAI: the default fallback has no openai price, so it is dropped.
+    // OpenAI: the default fallback has no openai price, so it is dropped. With no fallback named, an
+    // OpenAI out of credit goes to the deploy default (Vertex Flash-Lite Image, USD 0.04, dearer
+    // than OpenAI's 0.02), so that is reserved (README "Adding a provider", out of credit).
     const openai = parseRuntimeConfig({ image: { provider: "openai", model: "gpt-image-1-mini" } });
     expect(openai.image.fallbackModel).toBe("");
-    expect(planFor(r, openai).reservedMicroUsd - planFor(plain, openai).reservedMicroUsd).toBe(extra - RESERVED + 20_000);
+    expect(planFor(r, openai).reservedMicroUsd - planFor(plain, openai).reservedMicroUsd).toBe(extra - RESERVED + PRICE);
     expect(planFor(plain, config)).not.toHaveProperty("image");
   });
 
@@ -696,7 +698,9 @@ describe("the OpenAI adapter", () => {
     ["moderation", 400, { error: { code: "moderation_blocked", type: "image_generation_user_error" } }, "safety", false],
     ["a bad key", 401, { error: { code: "invalid_api_key" } }, "config", false],
     ["rate limited", 429, { error: { code: "rate_limit_exceeded" } }, "infra", false, true],
-    ["out of money", 429, { error: { code: "insufficient_quota" } }, "infra", false, false],
+    // An exhausted account is the shared taxonomy's out_of_credit (README "Adding a provider").
+    ["out of money", 429, { error: { code: "insufficient_quota" } }, "out_of_credit", false, false],
+    ["out of money (402)", 402, { error: { code: "billing_hard_limit_reached" } }, "out_of_credit", false, false],
     ["a server error", 500, { error: { code: null } }, "infra", true, true],
     ["overloaded", 503, { error: { code: null } }, "infra", true, true],
     ["no picture", 200, { data: [] }, "infra", true, false],

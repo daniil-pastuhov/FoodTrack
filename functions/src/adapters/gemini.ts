@@ -34,7 +34,7 @@ import {
   type ThinkingConfig,
 } from "@google/genai";
 import type { GenerateRequest, Recipe } from "../contract";
-import { JUDGE } from "../constants";
+import { DEFAULT_PRICES, JUDGE } from "../constants";
 import {
   GenerationError,
   type GenerationLimits,
@@ -45,7 +45,10 @@ import {
   type LlmUsage,
   type OutputJudge,
   type RecipeGenerator,
+  type TextTarget,
 } from "../ports";
+import { httpFailureKind } from "../providers/failure";
+import type { ProviderFailureKind, TextProviderDescriptor } from "../providers/types";
 import type { Prompt } from "./prompt";
 
 export interface GeminiOptions {
@@ -142,6 +145,14 @@ function usageOf(meta: GenerateContentResponseUsageMetadata | undefined, model: 
   };
 }
 
+/**
+ * Vertex's statuses in the shared taxonomy. A 429 RESOURCE_EXHAUSTED on Vertex is shared capacity
+ * or quota, never a prepaid balance (Google bills afterwards), so it is capacity.
+ */
+function googleKind(status: number): ProviderFailureKind {
+  return status === 402 ? "infra" : httpFailureKind(status, { modelNotFound: true });
+}
+
 export class GeminiRecipeGenerator implements RecipeGenerator {
   private readonly models: StreamingModels;
 
@@ -150,12 +161,13 @@ export class GeminiRecipeGenerator implements RecipeGenerator {
       ?? new GoogleGenAI({ vertexai: true, project: options.project, location: options.location }).models;
   }
 
-  async generate(_request: GenerateRequest, prompt: Prompt, signal: AbortSignal, limits: GenerationLimits): Promise<GenerationResult> {
+  async generate(_request: GenerateRequest, prompt: Prompt, signal: AbortSignal, limits: GenerationLimits, target?: TextTarget): Promise<GenerationResult> {
     const local = new AbortController();
     const abortSignal = AbortSignal.any([signal, local.signal]);
-    const params = generationParamsFor(prompt, limits.maxOutputTokens, this.options);
+    const options = target ? { ...this.options, model: target.model } : this.options;
+    const params = generationParamsFor(prompt, limits.maxOutputTokens, options);
     const config: GenerateContentConfig = { ...params.config, abortSignal };
-    let model = this.options.model;
+    let model = options.model;
     let meta: GenerateContentResponseUsageMetadata | undefined;
     let finish: string | null = null;
     let blockReason: string | undefined;
@@ -196,8 +208,13 @@ export class GeminiRecipeGenerator implements RecipeGenerator {
       if (signal.aborted) throw new GenerationError("infra", "timeout");
       // An HTTP error before any chunk: nothing was generated. Mid-stream: usage is unknown.
       const reported = started ? undefined : known();
-      // Fixed reasons only: an SDK error message could quote the request.
-      if (e instanceof ApiError) throw new GenerationError("infra", `Vertex AI ${Number(e.status) || "error"}`, reported);
+      // Fixed reasons only: an SDK error message could quote the request. The kind (capacity for a
+      // 429 or a passing 5xx, config for a refused credential) only matters to a fallback, and only
+      // before anything was generated.
+      if (e instanceof ApiError) {
+        const status = Number(e.status) || 0;
+        throw new GenerationError("infra", `Vertex AI ${status || "error"}`, reported, undefined, !started && status ? googleKind(status) : undefined);
+      }
       throw new GenerationError("infra", "Vertex AI call failed", reported);
     }
     if (signal.aborted) throw new GenerationError("infra", "timeout");
@@ -213,6 +230,45 @@ export class GeminiRecipeGenerator implements RecipeGenerator {
     }
   }
 }
+
+/**
+ * The recipe text on Vertex AI (provider id "google"): the deploy default. Its prices are
+ * `config/runtime.prices.inputUsdPerMTok` / `outputUsdPerMTok` over DEFAULT_PRICES, for any Gemini
+ * model, as before providers were switchable. No key: the functions' service account (Vertex AI
+ * User). The output judge (below) always runs here, whichever provider writes the recipe.
+ */
+export const googleText: TextProviderDescriptor = {
+  kind: "text",
+  id: "google",
+  label: "Google Gemini on Vertex AI",
+  processing: "Google Cloud Vertex AI (location VERTEX_LOCATION, global by default)",
+  privacy: { approved: true, missing: "" },
+  defaultModel: "gemini-3.8-flash",
+  defaultModelParam: "GEMINI_MODEL",
+  prices: { "gemini-3.8-flash": { ...DEFAULT_PRICES } },
+  runtimeTokenPrices: true,
+  params: [
+    { name: "GEMINI_MODEL", default: "gemini-3.8-flash", description: "Vertex AI model id" },
+    {
+      name: "GEMINI_THINKING_LEVEL",
+      default: "LOW",
+      description: "Gemini 3+ thinking level (MINIMAL where the model supports it, else LOW). Ignored for gemini-2.x.",
+    },
+    { name: "VERTEX_LOCATION", default: "global", description: "" },
+    {
+      name: "GEMINI_JAILBREAK_FILTER",
+      default: "false",
+      description: "true adds HARM_CATEGORY_JAILBREAK (Vertex Preview; only for models that support it).",
+    },
+  ],
+  create: (ctx) => new GeminiRecipeGenerator({
+    project: ctx.project,
+    location: ctx.param("VERTEX_LOCATION"),
+    model: ctx.param("GEMINI_MODEL"),
+    thinkingLevel: ctx.param("GEMINI_THINKING_LEVEL"),
+    jailbreakFilter: ctx.param("GEMINI_JAILBREAK_FILTER") === "true",
+  }),
+};
 
 // --- The output judge ----------------------------------------------------------------------------
 

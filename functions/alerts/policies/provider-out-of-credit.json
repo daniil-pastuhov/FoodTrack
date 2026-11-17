@@ -1,0 +1,24 @@
+{
+  "displayName": "Recipe: provider out of credit",
+  "documentation": {
+    "content": "A recipe text or picture provider answered that its prepaid balance or spending limit is exhausted (`provider_out_of_credit`, with `provider`, `model`, `surface` `text` / `image`; never the provider's own message). Requests went to the profile's fallback, or to the default provider (Gemini / Vertex AI) when none is named, and anything not made was given back by the usual rules. Top up the provider's account (or raise its spending limit), or switch to a profile that does not use it. See functions/README.md, \"Adding a provider\" and \"Alerts\".",
+    "mimeType": "text/markdown"
+  },
+  "conditions": [
+    {
+      "conditionMatchedLog": {
+        "filter": "resource.type=\"cloud_run_revision\" AND jsonPayload.message=\"provider_out_of_credit\""
+      },
+      "displayName": "Recipe: provider out of credit"
+    }
+  ],
+  "combiner": "OR",
+  "enabled": true,
+  "severity": "ERROR",
+  "alertStrategy": {
+    "autoClose": "604800s",
+    "notificationRateLimit": {
+      "period": "3600s"
+    }
+  }
+}

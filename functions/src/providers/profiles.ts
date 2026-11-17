@@ -1,21 +1,23 @@
 /**
  * Named provider setups ("profiles") the owner switches between (README "Provider profiles"):
- * `npm run admin -- image list | use <id>` and the owner console's drop-down
- * (core/providerSwitch.ts). Today a profile sets the recipe picture's provider, model, fallback
- * model and the price reserved per picture; nothing else of config/runtime.
+ * `npm run admin -- providers list | use <id>` (alias `image`) and the owner console's drop-down
+ * (core/providerSwitch.ts). A profile sets the recipe picture's provider, model, fallback and the
+ * price reserved per picture, and, optionally, the recipe text's provider, model and fallback
+ * (`text`); nothing else of config/runtime. A profile without `text` means the text's deploy
+ * default (Gemini on Vertex AI): switching to it from one with a text part puts the default back.
  *
- * Adding a provider is one entry here plus its adapter (adapters/image.ts, a line in
- * `imageRouter` in src/index.ts and its name in IMAGE_PROVIDERS). A later profile may also carry
- * the recipe text's provider (e.g. an "EU pair", Mistral for the text and FLUX for the pictures):
- * that is a new optional part beside `image` (`text?: TextPart`), written by its own writer in
- * core/providerSwitch.ts `planProfile`; the profiles without it leave the text setup alone.
+ * The providers themselves are in providers/registry.ts (one adapter file plus one entry each,
+ * README "Adding a provider"); a profile's readiness includes each of its providers' own
+ * requirements (its key readable, its privacy approval), added here automatically.
  */
-import { DEFAULT_IMAGE_PRICES, DEFAULT_IMAGE_SELECTION, IMAGE_PROVIDERS, type ImageProvider } from "../constants";
-import type { ImageSelection } from "../model";
+import { DEFAULT_IMAGE_SELECTION, DEFAULT_TEXT_SELECTION, type ImageProvider } from "../constants";
+import type { ImageSelection, TextSelection } from "../model";
+import { defaultImagePrices, imageProviderById, imageProviderIds, providerSecrets, textDefaultPrices, textProviderById } from "./registry";
+import type { ProviderDescriptor } from "./types";
 
-/** Secrets a profile may need, by what they are for; the deploy wiring maps each to its Secret Manager name. */
-export const PROFILE_SECRETS = ["openai"] as const;
-export type ProfileSecret = (typeof PROFILE_SECRETS)[number];
+/** Secrets a profile may need, by id: each provider's declared secret (providers/registry.ts). */
+export const PROFILE_SECRETS: readonly string[] = providerSecrets().map((s) => s.id);
+export type ProfileSecret = string;
 
 /**
  * What must hold before a profile can be switched on.
@@ -32,6 +34,8 @@ export interface ImagePart {
   provider: ImageProvider;
   /** Absent for provider "off" (the model and fallback stay as they were). */
   model?: string;
+  /** The fallback's provider when it is another one (absent: the same provider). */
+  fallbackProvider?: string;
   /** "" for none. Absent for provider "off". */
   fallbackModel?: string;
   /**
@@ -43,28 +47,74 @@ export interface ImagePart {
   usdPerImage: Readonly<Record<string, number>>;
 }
 
+/**
+ * The recipe text part of a profile: written to `config/runtime.text`. Its prices come from the
+ * adapter's table (or `prices.textUsdPerMTok`), so the switch writes none.
+ */
+export interface TextPart {
+  provider: string;
+  model: string;
+  /** "" for none; the fallback provider defaults to `provider`. Owner's decision: an EU profile may fall back to Google. */
+  fallbackProvider?: string;
+  fallbackModel?: string;
+}
+
 export interface ProviderProfile {
   /** Stable id, used by the command, the console and the audit records; never reused for something else. */
   id: string;
   label: string;
-  /** One sentence for the console and `image list`. */
+  /** One sentence for the console and `providers list`. */
   summary: string;
   image: ImagePart;
+  /** Absent: the text's deploy default (no `config/runtime.text`). */
+  text?: TextPart;
+  /** The profile's own requirements plus every requirement of the providers it uses (withProviderRequirements). */
   requires: readonly Requirement[];
 }
 
 const price = (provider: string, model: string): Record<string, number> => {
   const key = `${provider}/${model}`;
-  const usd = DEFAULT_IMAGE_PRICES[key];
+  const usd = defaultImagePrices()[key];
   if (usd === undefined) throw new Error(`no default price for ${key}`);
   return { [key]: usd };
 };
+
+/** The providers a profile calls: its text's and fallback's, its picture's and fallback's. */
+export function providersOf(p: Pick<ProviderProfile, "image" | "text">): ProviderDescriptor[] {
+  const out: ProviderDescriptor[] = [];
+  const add = (d: ProviderDescriptor | undefined) => {
+    if (d && !out.includes(d)) out.push(d);
+  };
+  if (p.text) {
+    add(textProviderById(p.text.provider));
+    if (p.text.fallbackModel) add(textProviderById(p.text.fallbackProvider || p.text.provider));
+  }
+  if (p.image.provider !== "off") {
+    add(imageProviderById(p.image.provider));
+    if (p.image.fallbackModel) add(imageProviderById(p.image.fallbackProvider || p.image.provider));
+  }
+  return out;
+}
+
+/**
+ * A profile's requirements: its own, then each of its providers' privacy approval and key, each
+ * once (by its text).
+ */
+export function withProviderRequirements(p: Omit<ProviderProfile, "requires"> & { requires?: readonly Requirement[] }): ProviderProfile {
+  const reqs: Requirement[] = [...(p.requires ?? [])];
+  const has = (missing: string) => reqs.some((r) => r.missing === missing);
+  for (const d of providersOf(p)) {
+    if (!d.privacy.approved && !has(d.privacy.missing)) reqs.push({ kind: "approval", approved: false, missing: d.privacy.missing });
+    if (d.secret && !has(d.secret.missing)) reqs.push({ kind: "secret", secret: d.secret.id, missing: d.secret.missing });
+  }
+  return { ...p, requires: reqs };
+}
 
 const FLASH_LITE = "gemini-3.1-flash-lite-image";
 const NANO_BANANA = "gemini-nano-banana-2.1";
 const OPENAI_MINI = "gpt-image-1-mini";
 
-export const PROVIDER_PROFILES: readonly ProviderProfile[] = [
+export const PROVIDER_PROFILES: readonly ProviderProfile[] = ([
   {
     id: "flash-lite",
     label: "Gemini 3.1 Flash-Lite Image (Nano Banana 2.1 as fallback)",
@@ -101,24 +151,53 @@ export const PROVIDER_PROFILES: readonly ProviderProfile[] = [
     label: "OpenAI gpt-image-1-mini (no fallback)",
     summary: "OpenAI's Images API; needs its API key in Secret Manager and OpenAI named as a processor in the privacy policy.",
     image: { provider: "openai", model: OPENAI_MINI, fallbackModel: "", usdPerImage: price("openai", OPENAI_MINI) },
-    requires: [
-      // Owner's decision needed before this flips: README "What a new provider means for privacy".
-      { kind: "approval", approved: false, missing: "OpenAI is not yet named in the privacy policy's processor list (a code change turns this on)" },
-      { kind: "secret", secret: "openai", missing: "The OpenAI API key is not in Secret Manager, or the service account can't read it" },
-    ],
+    // From the provider (adapters/image.ts openaiImage): the privacy approval, then the key.
+    requires: [],
   },
-];
+] satisfies (Omit<ProviderProfile, "requires"> & { requires: readonly Requirement[] })[]).map(withProviderRequirements);
 
 export function profileById(id: unknown): ProviderProfile | undefined {
   return typeof id === "string" ? PROVIDER_PROFILES.find((p) => p.id === id) : undefined;
 }
 
-/** The profile a parsed `config/runtime.image` matches, or null for a setup set by hand ("custom"). */
-export function activeProfileOf(image: ImageSelection, profiles: readonly ProviderProfile[] = PROVIDER_PROFILES): ProviderProfile | null {
+/** Whether a parsed picture selection is exactly a profile's picture part. */
+export function imageMatches(part: ImagePart, image: ImageSelection): boolean {
+  if (part.provider !== image.provider) return false;
+  if (part.provider === "off") return true;
+  const fbProvider = (part.fallbackProvider ?? "") === part.provider ? "" : (part.fallbackProvider ?? "");
+  return part.model === image.model && (part.fallbackModel ?? "") === image.fallbackModel && fbProvider === (image.fallbackProvider ?? "");
+}
+
+/** The text selection a profile puts in force (its text part, or the deploy default). */
+export function textSelectionFor(p: Pick<ProviderProfile, "text">, textDefaults: { provider: string; model: string } = DEFAULT_TEXT_SELECTION): TextSelection {
+  if (!p.text) return { provider: textDefaults.provider, model: textDefaults.model, fallbackProvider: "", fallbackModel: "" };
+  const fbModel = p.text.fallbackModel ?? "";
+  return {
+    provider: p.text.provider,
+    model: p.text.model,
+    fallbackProvider: fbModel ? p.text.fallbackProvider || p.text.provider : "",
+    fallbackModel: fbModel,
+  };
+}
+
+const sameText = (a: TextSelection, b: TextSelection) =>
+  a.provider === b.provider && a.model === b.model && a.fallbackProvider === b.fallbackProvider && a.fallbackModel === b.fallbackModel;
+
+/**
+ * The profile a parsed `config/runtime` matches, or null for a setup set by hand ("custom"). With
+ * `text` given, a profile matches only when its text part (or, without one, the deploy default)
+ * is in force too; without it only the picture part is compared.
+ */
+export function activeProfileOf(
+  image: ImageSelection,
+  profiles: readonly ProviderProfile[] = PROVIDER_PROFILES,
+  text?: TextSelection,
+  textDefaults: { provider: string; model: string } = DEFAULT_TEXT_SELECTION,
+): ProviderProfile | null {
   for (const p of profiles) {
-    if (p.image.provider !== image.provider) continue;
-    if (p.image.provider === "off") return p;
-    if (p.image.model === image.model && (p.image.fallbackModel ?? "") === image.fallbackModel) return p;
+    if (!imageMatches(p.image, image)) continue;
+    if (text && !sameText(textSelectionFor(p, textDefaults), text)) continue;
+    return p;
   }
   return null;
 }
@@ -137,7 +216,23 @@ export function registryProblems(profiles: readonly ProviderProfile[] = PROVIDER
     ids.add(p.id);
     if (!p.label.trim() || !p.summary.trim()) out.push(`${at}: label and summary are required`);
     const img = p.image;
-    if (!(IMAGE_PROVIDERS as readonly string[]).includes(img.provider)) out.push(`${at}: unknown image provider ${img.provider}`);
+    if (!imageProviderIds().includes(img.provider)) out.push(`${at}: unknown image provider ${img.provider}`);
+    if (p.text) {
+      const t = p.text;
+      if (!textProviderById(t.provider)) out.push(`${at}: unknown text provider ${t.provider}`);
+      if (!MODEL.test(t.model)) out.push(`${at}: text model id is invalid`);
+      const tfModel = t.fallbackModel ?? "";
+      const tfProvider = t.fallbackProvider || t.provider;
+      if (tfModel !== "" && !MODEL.test(tfModel)) out.push(`${at}: text fallback model id is invalid`);
+      if (tfModel !== "" && !textProviderById(tfProvider)) out.push(`${at}: unknown text fallback provider ${tfProvider}`);
+      if (tfModel === t.model && tfProvider === t.provider) out.push(`${at}: the text fallback must differ from the model`);
+      const priced = (provider: string, model: string) => textProviderById(provider)?.runtimeTokenPrices || textDefaultPrices(provider, model) !== undefined;
+      if (!priced(t.provider, t.model)) out.push(`${at}: no price for text ${t.provider}/${t.model}`);
+      if (tfModel && !priced(tfProvider, tfModel)) out.push(`${at}: no price for text ${tfProvider}/${tfModel}`);
+    }
+    if (img.fallbackProvider !== undefined && (img.fallbackProvider === "off" || !imageProviderIds().includes(img.fallbackProvider))) {
+      out.push(`${at}: unknown image fallback provider ${img.fallbackProvider}`);
+    }
     for (const [key, usd] of Object.entries(img.usdPerImage)) {
       if (!Number.isFinite(usd) || usd < 0.001 || usd > 2) out.push(`${at}: price of ${key} must be 0.001 to 2 USD`);
     }
@@ -150,8 +245,9 @@ export function registryProblems(profiles: readonly ProviderProfile[] = PROVIDER
     if (!img.model || !MODEL.test(img.model)) out.push(`${at}: model id is invalid`);
     const fallback = img.fallbackModel ?? "";
     if (fallback !== "" && !MODEL.test(fallback)) out.push(`${at}: fallback model id is invalid`);
-    if (fallback === img.model) out.push(`${at}: the fallback must differ from the model`);
-    const keys = [img.model, fallback].filter(Boolean).map((m) => `${img.provider}/${m}`);
+    const fbAt = img.fallbackProvider || img.provider;
+    if (fallback === img.model && fbAt === img.provider) out.push(`${at}: the fallback must differ from the model`);
+    const keys = [`${img.provider}/${img.model}`, ...(fallback ? [`${fbAt}/${fallback}`] : [])];
     for (const k of keys) if (!(k in img.usdPerImage)) out.push(`${at}: no reserved price for ${k}`);
     for (const k of Object.keys(img.usdPerImage)) if (!keys.includes(k)) out.push(`${at}: price for ${k}, which it doesn't use`);
   }

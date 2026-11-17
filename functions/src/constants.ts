@@ -207,9 +207,23 @@ export const IMAGE = {
   briefMinChars: 10,
 } as const;
 
-/** The image providers behind the RecipeImageGenerator port (adapters/image.ts); "off" makes none. */
-export const IMAGE_PROVIDERS = ["vertex", "openai", "off"] as const;
-export type ImageProvider = (typeof IMAGE_PROVIDERS)[number];
+/**
+ * The recipe text's default provider and model, when neither the TEXT_PROVIDER / GEMINI_MODEL
+ * parameters nor `config/runtime.text` say otherwise: Gemini on Vertex AI (adapters/gemini.ts),
+ * no fallback. An out-of-credit failure of another provider falls back to these defaults.
+ */
+export const DEFAULT_TEXT_SELECTION = {
+  provider: "google",
+  model: "gemini-3.8-flash",
+  fallbackProvider: "",
+  fallbackModel: "",
+} as const;
+
+/**
+ * A picture provider's id: one of the adapters in providers/registry.ts (vertex, openai), or "off"
+ * (no pictures). Checked at run time against the registry (model.ts validImageSelection).
+ */
+export type ImageProvider = string;
 
 /**
  * The picture's default provider, model and fallback model, when neither the IMAGE_PROVIDER /
@@ -227,43 +241,12 @@ export const DEFAULT_IMAGE_SELECTION = {
   maxStepImages: 2,
 } as const;
 
-/**
- * USD per delivered picture, by "provider/model": the conservative figure reserved against the
- * spend ceilings for every picture a request may get, and booked for a picture whose provider
- * reported no token counts (or whose model has no IMAGE_TOKEN_PRICES entry), and for a failed call
- * that may have been charged. `config/runtime.prices.imageUsdPerImage` adds to or overrides them;
- * a provider and model with no price here or there make no pictures (the costs table then has no
- * `recipeImage`), so switching to an unpriced model can never spend unbooked money.
- * - vertex/gemini-nano-banana-2.1: 1,120 image tokens at USD 30 per 1M (0.0336) plus its thinking,
- *   billed as text output at USD 7.50 per 1M: 1,037 thinking tokens measured (0.0078), so about
- *   USD 0.0415 a picture. Its thinking has no enforceable limit; 0.06 covers about 3,500 thinking
- *   tokens.
- * - vertex/gemini-3.1-flash-lite-image: the same 1,120 image tokens at USD 30 per 1M, no thinking
- *   measured (USD 0.0336); 0.04 leaves room.
- * - openai/gpt-image-1-mini: USD 8 per 1M image output tokens; a "medium" 1536x1024 picture is a
- *   little over a thousand tokens (about USD 0.01-0.015); 0.02 leaves room.
- */
-export const DEFAULT_IMAGE_PRICES: Readonly<Record<string, number>> = {
-  "vertex/gemini-nano-banana-2.1": 0.06,
-  "vertex/gemini-3.1-flash-lite-image": 0.04,
-  "openai/gpt-image-1-mini": 0.02,
-};
-
-/**
- * Token rates (USD per 1M tokens) of the image models whose answers report token counts: a
- * delivered picture is booked at input x `input` + (text output + thinking) x `outputText` +
- * image output x `outputImage` instead of its flat price (core/recipeImage.ts). Changed with a
- * deploy; a model without an entry is booked at its flat price.
- * Sources, read 2026-11-17: Google's Gemini pricing page (Nano Banana 2.1: 1.50 / 7.50 / 30;
- * Gemini 3.1 Flash-Lite Image: 0.25 / 1.50 / 30; the Vertex AI page gives the same 1K image price),
- * OpenAI's pricing page (gpt-image-1-mini: text input 2, image output 8; output text priced as
- * image output, the higher rate).
- */
-export const IMAGE_TOKEN_PRICES: Readonly<Record<string, { input: number; outputText: number; outputImage: number }>> = {
-  "vertex/gemini-nano-banana-2.1": { input: 1.5, outputText: 7.5, outputImage: 30 },
-  "vertex/gemini-3.1-flash-lite-image": { input: 0.25, outputText: 1.5, outputImage: 30 },
-  "openai/gpt-image-1-mini": { input: 2, outputText: 8, outputImage: 8 },
-};
+// The pictures' prices (USD per delivered picture, and the token rates of the models that report
+// token counts) are in each provider's adapter (adapters/image.ts vertexImage / openaiImage),
+// collected by providers/registry.ts defaultImagePrices / imageTokenPricesOf;
+// `config/runtime.prices.imageUsdPerImage` adds to or overrides them, and a provider and model with
+// no price make no pictures (the costs table then has no `recipeImage`), so switching to an
+// unpriced model can never spend unbooked money.
 
 /** generateRecipe's function timeout; covers the menu path, the longest one. */
 export const GENERATE_TIMEOUT_SECONDS = 180;
@@ -316,6 +299,8 @@ export const THINKING_FACTOR = 2;
  * tier, prompts <= 200k): 1.50 input, 7.50 output, thinking billed as output. This is the price
  * from 2027-01-01; the introductory 0.75 / 3.75 until then makes these estimates conservative.
  * `config/runtime.prices` overrides it. Update both when the model or Google's price changes.
+ * These are the "google" text provider's prices (adapters/gemini.ts googleText) and the output
+ * judge's, whichever provider writes the recipe; another text provider's prices are in its adapter.
  */
 export const DEFAULT_PRICES = { inputUsdPerMTok: 1.5, outputUsdPerMTok: 7.5 } as const;
 

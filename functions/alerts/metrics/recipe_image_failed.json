@@ -1,0 +1,24 @@
+{
+  "name": "recipe_image_failed",
+  "description": "Recipe pictures not delivered for a reason about the provider (image_call lines with outcome CONFIG or INFRA, after any retry and fallback), by outcome and provider. Source of the alert \"Recipe: recipe pictures failing broadly\" (functions/README.md, \"Alerts\").",
+  "filter": "resource.type=\"cloud_run_revision\" AND jsonPayload.message=\"image_call\" AND jsonPayload.outcome=(\"CONFIG\" OR \"INFRA\")",
+  "labelExtractors": {
+    "outcome": "EXTRACT(jsonPayload.outcome)",
+    "provider": "EXTRACT(jsonPayload.provider)"
+  },
+  "metricDescriptor": {
+    "metricKind": "DELTA",
+    "valueType": "INT64",
+    "unit": "1",
+    "labels": [
+      {
+        "key": "outcome",
+        "description": "CONFIG or INFRA"
+      },
+      {
+        "key": "provider",
+        "description": "The picture provider in force (vertex, openai, ...)"
+      }
+    ]
+  }
+}

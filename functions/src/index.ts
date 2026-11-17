@@ -30,10 +30,13 @@ import {
   REGION,
 } from "./constants";
 import { RuntimeConfigCache, loadRuntimeConfig, validImageSelection, type ImageSelection, type RuntimeConfig } from "./model";
-import type { Caller, Deps } from "./ports";
-import { GeminiOutputJudge, GeminiRecipeGenerator } from "./adapters/gemini";
-import { ImageRouter, OpenAIImageGenerator, VertexImageGenerator } from "./adapters/image";
+import type { Caller, Deps, TextTarget } from "./ports";
+import { GeminiOutputJudge } from "./adapters/gemini";
 import { SecretReader } from "./adapters/secretManager";
+import { allProviders, imageProviders, providerSecrets, textProviderById, textProviders } from "./providers/registry";
+import { ImageRouter, TextRouter } from "./providers/router";
+import { checkProviderBalances as checkProviderBalancesCore } from "./providers/balance";
+import type { ProviderContext, ProviderDescriptor } from "./providers/types";
 import { GooglePlayVerifier } from "./adapters/play";
 import { AppleAppStoreVerifier } from "./adapters/appstore";
 import { AppleSignInRevoker } from "./adapters/appleRevoke";
@@ -89,25 +92,43 @@ const serviceAccount = defineString("FUNCTIONS_SERVICE_ACCOUNT", {
   default: "recipe-functions@",
   description: "Least-privilege service account the functions run as (name@ expands to this project).",
 });
-const geminiModel = defineString("GEMINI_MODEL", { default: "gemini-3.8-flash", description: "Vertex AI model id" });
-const geminiThinking = defineString("GEMINI_THINKING_LEVEL", {
-  default: "LOW",
-  description: "Gemini 3+ thinking level (MINIMAL where the model supports it, else LOW). Ignored for gemini-2.x.",
+// Every provider's own params (GEMINI_MODEL, GEMINI_THINKING_LEVEL, VERTEX_LOCATION,
+// GEMINI_JAILBREAK_FILTER, VERTEX_IMAGE_LOCATION, ...) and the param naming each provider's
+// secret (OPENAI_API_KEY_SECRET, ...) are declared by its adapter (providers/registry.ts) and
+// defined here, once each, so a new provider needs no line in this file.
+const providerParams = new Map<string, ReturnType<typeof defineString>>();
+for (const d of allProviders()) {
+  for (const p of d.params ?? []) {
+    if (!providerParams.has(p.name)) providerParams.set(p.name, defineString(p.name, { default: p.default, ...(p.description ? { description: p.description } : {}) }));
+  }
+}
+const secretParams = new Map<string, ReturnType<typeof defineString>>();
+for (const s of providerSecrets()) {
+  secretParams.set(s.id, defineString(s.param, {
+    default: s.name,
+    description: `Secret Manager secret holding the ${s.id} API key; read at run time only while a provider using it is selected.`,
+  }));
+}
+function providerParam(name: string): string {
+  const p = providerParams.get(name);
+  if (!p) throw new Error(`provider param ${name} is not declared`);
+  return p.value();
+}
+// The recipe text's default provider (config/runtime.text overrides it at run time); its model is
+// the provider's own default param (GEMINI_MODEL for google).
+const textProvider = defineString("TEXT_PROVIDER", {
+  default: "google",
+  description: "Default provider of the recipe text: google (config/runtime.text.provider overrides it).",
 });
-const vertexLocation = defineString("VERTEX_LOCATION", { default: "global" });
 const judgeModel = defineString("GEMINI_JUDGE_MODEL", {
   default: "",
   description: "Vertex AI model id of the output judge (config/runtime outputJudge); empty means GEMINI_MODEL.",
-});
-const jailbreakFilter = defineString("GEMINI_JAILBREAK_FILTER", {
-  default: "false",
-  description: "true adds HARM_CATEGORY_JAILBREAK (Vertex Preview; only for models that support it).",
 });
 // Recipe pictures (README "Recipe pictures"). The provider and model are only defaults:
 // config/runtime.image overrides them at run time, without a deploy.
 const imageProvider = defineString("IMAGE_PROVIDER", {
   default: DEFAULT_IMAGE_SELECTION.provider,
-  description: "Default provider of recipe pictures: vertex, openai or off (config/runtime.image.provider overrides it).",
+  description: "Default provider of recipe pictures: one in providers/registry.ts (vertex, openai) or off (config/runtime.image.provider overrides it).",
 });
 const imageModel = defineString("IMAGE_MODEL", {
   default: DEFAULT_IMAGE_SELECTION.model,
@@ -116,14 +137,6 @@ const imageModel = defineString("IMAGE_MODEL", {
 const imageFallbackModel = defineString("IMAGE_FALLBACK_MODEL", {
   default: DEFAULT_IMAGE_SELECTION.fallbackModel,
   description: "Default fallback model id at the same provider, asked once when the model fails for capacity; empty for none (config/runtime.image.fallbackModel overrides it).",
-});
-const vertexImageLocation = defineString("VERTEX_IMAGE_LOCATION", {
-  default: "global",
-  description: "Vertex AI location of the picture models (gemini-3.1-flash-lite-image and gemini-nano-banana-2.1 are offered on global only).",
-});
-const openAiKeySecret = defineString("OPENAI_API_KEY_SECRET", {
-  default: "OPENAI_API_KEY",
-  description: "Secret Manager secret holding the OpenAI API key; read at run time only while openai is the picture provider.",
 });
 const appleAppId = defineInt("APPLE_APP_ID", { description: "Numeric App Store app id (App Store Connect > App Information)" });
 const appStoreKeyId = defineString("APPSTORE_KEY_ID", { description: "App Store Server API (In-App Purchase) key id" });
@@ -162,19 +175,66 @@ function imageDefaults(): ImageSelection {
   return s ?? { ...DEFAULT_IMAGE_SELECTION, provider: "off" };
 }
 
+/** The text provider and model the parameters name; an unknown provider is the google default (logged). */
+function textDefaults(): TextTarget {
+  let d = textProviderById(textProvider.value());
+  if (!d) {
+    logger.warn("TEXT_PROVIDER is not a text provider; the google default is used");
+    d = textProviderById("google")!;
+  }
+  return { provider: d.id, model: d.defaultModelParam ? providerParam(d.defaultModelParam) : d.defaultModel };
+}
+
 function configSource(): () => Promise<RuntimeConfig> {
   const defaults = imageDefaults();
-  const cache = new RuntimeConfigCache(() => loadRuntimeConfig(getFirestore(), logger, defaults), () => Date.now());
+  const text = textDefaults();
+  const cache = new RuntimeConfigCache(() => loadRuntimeConfig(getFirestore(), logger, defaults, text), () => Date.now());
   return () => cache.get();
 }
 
-/** Every picture provider, built on first use (adapters/image.ts ImageRouter). */
-function imageRouter(project: string): ImageRouter {
-  const openAiKey = new SecretReader({ project, secret: openAiKeySecret.value() });
-  return new ImageRouter({
-    vertex: () => new VertexImageGenerator({ project, location: vertexImageLocation.value() }),
-    openai: () => new OpenAIImageGenerator({ apiKey: () => openAiKey.get() }),
-  });
+/** One SecretReader per provider secret (lazy: nothing is read until a provider using it is called). */
+const secretReaders = new Map<string, SecretReader>();
+function secretReader(id: string): SecretReader | undefined {
+  const param = secretParams.get(id);
+  if (!param) return undefined;
+  let r = secretReaders.get(id);
+  if (!r) {
+    r = new SecretReader({ project: projectId(), secret: param.value() });
+    secretReaders.set(id, r);
+  }
+  return r;
+}
+
+/** What an adapter is built with: the project, only its own params, and its own secret, read lazily. */
+function providerContext(d: ProviderDescriptor): ProviderContext {
+  const own = new Set((d.params ?? []).map((p) => p.name));
+  return {
+    project: projectId(),
+    param: (name) => {
+      if (!own.has(name)) throw new Error(`${d.id} did not declare the param ${name}`);
+      return providerParam(name);
+    },
+    secret: () => {
+      const r = d.secret ? secretReader(d.secret.id) : undefined;
+      return r ? r.get() : Promise.reject(new Error("secret unavailable"));
+    },
+  };
+}
+
+/** Every text provider, built on first use (providers/router.ts TextRouter). */
+function textRouter(): TextRouter {
+  return new TextRouter(Object.fromEntries(textProviders().map((d) => [d.id, () => d.create(providerContext(d))])), textDefaults());
+}
+
+/** Every picture provider, built on first use (providers/router.ts ImageRouter). */
+function imageRouter(): ImageRouter {
+  return new ImageRouter(Object.fromEntries(imageProviders().map((d) => [d.id, () => d.create(providerContext(d))])));
+}
+
+/** Whether the functions' service account can read a provider secret now (readiness only; the value is dropped). */
+function secretReadable(id: string): Promise<boolean> {
+  const r = secretReader(id);
+  return r ? r.get().then(() => true, () => false) : Promise.resolve(false);
 }
 
 /**
@@ -228,21 +288,16 @@ function getDeps(): Deps {
         ? { privateKey: appStorePrivateKey.value(), keyId: appStoreKeyId.value(), issuerId: appStoreIssuerId.value() }
         : undefined,
     }),
-    generator: new GeminiRecipeGenerator({
-      project: process.env.GCLOUD_PROJECT ?? process.env.GOOGLE_CLOUD_PROJECT ?? "",
-      location: vertexLocation.value(),
-      model: geminiModel.value(),
-      thinkingLevel: geminiThinking.value(),
-      jailbreakFilter: jailbreakFilter.value() === "true",
-    }),
+    generator: textRouter(),
+    // The judge is always Gemini on Vertex AI, whichever provider writes the recipe.
     judge: new GeminiOutputJudge({
       project: process.env.GCLOUD_PROJECT ?? process.env.GOOGLE_CLOUD_PROJECT ?? "",
-      location: vertexLocation.value(),
-      model: judgeModel.value() || geminiModel.value(),
-      thinkingLevel: geminiThinking.value(),
-      jailbreakFilter: jailbreakFilter.value() === "true",
+      location: providerParam("VERTEX_LOCATION"),
+      model: judgeModel.value() || providerParam("GEMINI_MODEL"),
+      thinkingLevel: providerParam("GEMINI_THINKING_LEVEL"),
+      jailbreakFilter: providerParam("GEMINI_JAILBREAK_FILTER") === "true",
     }),
-    imageGenerator: imageRouter(process.env.GCLOUD_PROJECT ?? process.env.GOOGLE_CLOUD_PROJECT ?? ""),
+    imageGenerator: imageRouter(),
     // Built per call: the Sign in with Apple key is a secret bound only to the functions that use it.
     appleRevoker: {
       revokeWithAuthorizationCode: (code) => appleClient().revokeWithAuthorizationCode(code),
@@ -527,6 +582,17 @@ export const pollPlayVoidedPurchases = onSchedule(
   },
 );
 
+// Prepaid providers' balances (README "Provider balances"): only providers with a threshold in
+// config/runtime.providerBalanceAlerts and a balance probe are asked; none by default.
+export const checkProviderBalances = onSchedule(
+  { schedule: "41 * * * *", timeZone: "Etc/UTC", timeoutSeconds: 120, retryCount: 0, maxInstances: 1, concurrency: 1 },
+  async () => {
+    const config = await loadRuntimeConfig(getFirestore(), logger, imageDefaults(), textDefaults());
+    if (Object.keys(config.providerBalanceAlerts).length === 0) return;
+    await checkProviderBalancesCore({ providers: allProviders(), thresholds: config.providerBalanceAlerts, context: providerContext, logger });
+  },
+);
+
 // The owner's board, redrawn hourly into a private bucket (README "The board", "Always on").
 // Never the default Firebase Storage bucket; refuses to write unless the bucket is private.
 export const redrawBoard = onSchedule(
@@ -568,15 +634,15 @@ function projectId(): string {
 let ownerEnvCache: OwnerEnv | undefined;
 function ownerEnv(): OwnerEnv {
   if (ownerEnvCache) return ownerEnvCache;
-  const openAiKey = new SecretReader({ project: projectId(), secret: openAiKeySecret.value() });
   ownerEnvCache = {
     db: getFirestore(),
     auth: getAuth(),
     now: () => Date.now(),
     logger,
     imageDefaults: imageDefaults(),
-    // Readiness only: the key is read (as the picture adapter would) and dropped, never returned.
-    secretReadable: (secret) => (secret === "openai" ? openAiKey.get().then(() => true, () => false) : Promise.resolve(false)),
+    textDefaults: textDefaults(),
+    // Readiness only: the key is read (as the adapter would) and dropped, never returned.
+    secretReadable,
   };
   return ownerEnvCache;
 }

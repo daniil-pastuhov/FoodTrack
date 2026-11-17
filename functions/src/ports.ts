@@ -7,6 +7,7 @@ import type { Firestore } from "firebase-admin/firestore";
 import type { GenerateRequest, Menu, Recipe } from "./contract";
 import type { Prompt } from "./adapters/prompt";
 import type { RuntimeConfig } from "./model";
+import type { ProviderFailureKind } from "./providers/types";
 
 /** A store error that should make the client try again later (network, 5xx, quota, misconfiguration). */
 export class RetryableStoreError extends Error {}
@@ -191,14 +192,32 @@ export class GenerationError extends Error {
    * code such as `PROMPT_BLOCKED` or `FINISH_SAFETY`); such a failure counts against the account's
    * daily prompt-rejection limit.
    */
+  /**
+   * `kind`: the shared provider failure taxonomy (providers/types.ts), when the adapter knows it;
+   * absent: derived from the class (`providerKind`). It decides only whether the fallback provider
+   * may be asked; the money follows `failureClass` and `usage` as before.
+   */
   constructor(
     readonly failureClass: FailureClass,
     message: string,
     readonly usage?: LlmUsage,
     readonly safety?: string,
+    readonly kind?: ProviderFailureKind,
   ) {
     super(message);
   }
+
+  get providerKind(): ProviderFailureKind {
+    if (this.kind) return this.kind;
+    if (this.safety) return "safety";
+    return this.failureClass === "content" ? "content" : "infra";
+  }
+}
+
+/** The selected text provider and model (RuntimeConfig.text), passed on every call. */
+export interface TextTarget {
+  provider: string;
+  model: string;
 }
 
 export interface GenerationLimits {
@@ -217,9 +236,10 @@ export interface GenerationResult {
 export interface RecipeGenerator {
   /**
    * Sends `prompt` (built by the core from `request`; the request is passed for fakes). Throws
-   * GenerationError. Must honour `signal` and `limits`.
+   * GenerationError. Must honour `signal` and `limits`. `target`: the provider and model to
+   * ask (providers/router.ts TextRouter picks the adapter by it); absent: the generator's own.
    */
-  generate(request: GenerateRequest, prompt: Prompt, signal: AbortSignal, limits: GenerationLimits): Promise<GenerationResult>;
+  generate(request: GenerateRequest, prompt: Prompt, signal: AbortSignal, limits: GenerationLimits, target?: TextTarget): Promise<GenerationResult>;
 }
 
 /** What the judge classifies: a validated answer, and the picture's brief when one was asked. */
@@ -293,27 +313,37 @@ export interface GeneratedImage {
 /**
  * A picture that was not made. `kind`: "safety" when the provider's own filters refused the
  * prompt or the picture, "config" when the provider cannot be called at all (unknown provider, no
- * API key: nothing was sent, nothing billed), "infra" otherwise (network, 4xx/5xx, timeout, an
- * unusable answer). `billed`: whether the call may have been charged; when true the picture's
+ * API key: nothing was sent, nothing billed), "out_of_credit" when its prepaid balance or spending
+ * limit is exhausted (nothing made, nothing billed), "infra" otherwise (network, 4xx/5xx, timeout,
+ * an unusable answer). `billed`: whether the call may have been charged; when true the picture's
  * reserved price is booked. The message is a fixed text (status codes, never provider text, which
  * could quote the prompt). `retryable`: a quota or overload answer (429, 5xx) worth asking again
- * after a pause (core/recipeImage.ts); `status`: the HTTP status, when there was one (logs only).
+ * after a pause (core/recipeImage.ts); `status`: the HTTP status, when there was one (logs only);
+ * `retryAfterMs`: how long the provider asked to wait (Retry-After), when it said.
  */
 export class ImageGenerationError extends Error {
   constructor(
-    readonly kind: "safety" | "config" | "infra",
+    readonly kind: "safety" | "config" | "infra" | "out_of_credit",
     message: string,
     readonly billed: boolean,
     readonly retryable = false,
     readonly status?: number,
+    readonly retryAfterMs?: number,
   ) {
     super(message);
+  }
+
+  /** The shared taxonomy (providers/types.ts): a retryable infra failure is "capacity". */
+  get providerKind(): ProviderFailureKind {
+    if (this.kind === "infra" && this.retryable) return "capacity";
+    return this.kind;
   }
 }
 
 /**
- * The provider-neutral port behind every recipe picture. Implementations (adapters/image.ts):
- * Vertex AI and OpenAI, chosen per call by `target.provider` (ImageRouter), and the emulator fake.
+ * The provider-neutral port behind every recipe picture. Implementations: the adapters in
+ * providers/registry.ts (Vertex AI and OpenAI today), chosen per call by `target.provider`
+ * (providers/router.ts ImageRouter), and the emulator fake.
  * Must honour `signal`. Throws ImageGenerationError.
  */
 export interface RecipeImageGenerator {

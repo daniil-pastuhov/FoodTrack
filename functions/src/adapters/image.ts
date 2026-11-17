@@ -17,9 +17,10 @@
 import { ApiError, FinishReason, GoogleGenAI, MediaModality, Modality, type GenerateContentParameters, type GenerateContentResponse } from "@google/genai";
 import { safetySettingsFor } from "./gemini";
 import { ImageGenerationError, type GeneratedImage, type ImagePrompt, type ImageTarget, type ImageUsage, type RecipeImageGenerator } from "../ports";
+import { CAPACITY_5XX as RETRYABLE_5XX, retryAfterMs } from "../providers/failure";
+import type { ImageProviderDescriptor } from "../providers/types";
 
-/** HTTP statuses worth one more attempt after a pause: quota or rate limit, overload, a passing server error. */
-const RETRYABLE_5XX: ReadonlySet<number> = new Set([500, 502, 503, 504]);
+export { ImageRouter } from "../providers/router";
 
 /** A count from a provider's usage report: a finite non-negative integer, else 0. */
 const count = (v: unknown): number => (typeof v === "number" && Number.isFinite(v) && v >= 0 ? Math.floor(v) : 0);
@@ -237,10 +238,16 @@ export class OpenAIImageGenerator implements RecipeImageGenerator {
       const code = `${body.error?.code ?? ""} ${body.error?.type ?? ""}`;
       if (res.status === 400 && MODERATION.test(code)) throw new ImageGenerationError("safety", "OpenAI moderation", false);
       if (res.status === 401 || res.status === 403) throw new ImageGenerationError("config", `OpenAI ${res.status}`, false);
-      // A refused request is not billed; a 5xx may have been. A rate limit (429, but not an
-      // exhausted account, `insufficient_quota`) and the passing 5xx are worth another attempt.
-      const retryable = (res.status === 429 && !/insufficient_quota/.test(code)) || RETRYABLE_5XX.has(res.status);
-      throw new ImageGenerationError("infra", `OpenAI ${res.status}`, res.status >= 500, retryable, res.status);
+      // An exhausted account (`insufficient_quota`, or a 402) made nothing and was not billed: the
+      // core asks the fallback, or the default provider (README "Adding a provider").
+      if (res.status === 402 || (res.status === 429 && /insufficient_quota/.test(code))) {
+        throw new ImageGenerationError("out_of_credit", `OpenAI ${res.status}`, false, false, res.status);
+      }
+      // A refused request is not billed; a 5xx may have been. A rate limit (429) and the passing
+      // 5xx are worth another attempt, after at least the pause the provider asked for.
+      const retryable = res.status === 429 || RETRYABLE_5XX.has(res.status);
+      const wait = retryable ? retryAfterMs(res.headers?.get?.("retry-after"), Date.now()) : undefined;
+      throw new ImageGenerationError("infra", `OpenAI ${res.status}`, res.status >= 500, retryable, res.status, wait);
     }
     const b64 = body.data?.[0]?.b64_json;
     if (typeof b64 !== "string" || !b64) throw new ImageGenerationError("infra", "OpenAI no image", true);
@@ -259,26 +266,65 @@ function openAIImageUsage(body: OpenAIImagesResponse): ImageUsage | undefined {
   return { inputTokens: count(u.input_tokens), outputTextTokens: Math.max(0, out - image), outputImageTokens: image };
 }
 
-// --- Choosing the provider -----------------------------------------------------------------------
+// --- The descriptors (providers/registry.ts) ------------------------------------------------------
 
 /**
- * Sends each call to the adapter of `target.provider`. Adapters are built on first use, so a
- * provider that is never selected is never constructed and its credentials are never read. A
- * provider without an adapter is a "config" failure (nothing sent, nothing billed).
+ * Vertex AI's Gemini image models (provider id "vertex"). Prices, USD per delivered picture, read
+ * 2026-11-17 (Google's Gemini and Vertex AI pricing pages):
+ * - gemini-nano-banana-2.1: 1,120 image tokens at USD 30 per 1M (0.0336) plus its thinking, billed
+ *   as text output at USD 7.50 per 1M: 1,037 thinking tokens measured (0.0078), so about USD
+ *   0.0415 a picture. Its thinking has no enforceable limit; 0.06 covers about 3,500 thinking
+ *   tokens.
+ * - gemini-3.1-flash-lite-image: the same 1,120 image tokens at USD 30 per 1M, no thinking
+ *   measured (USD 0.0336); 0.04 leaves room.
+ * Token rates (booked instead when the answer reports counts): Nano Banana 2.1 1.50 / 7.50 / 30;
+ * Flash-Lite Image 0.25 / 1.50 / 30.
  */
-export class ImageRouter implements RecipeImageGenerator {
-  private readonly built = new Map<string, RecipeImageGenerator>();
+export const vertexImage: ImageProviderDescriptor = {
+  kind: "image",
+  id: "vertex",
+  label: "Google Gemini image models on Vertex AI",
+  processing: "Google Cloud Vertex AI (location VERTEX_IMAGE_LOCATION, global by default)",
+  privacy: { approved: true, missing: "" },
+  usdPerImage: {
+    "gemini-nano-banana-2.1": 0.06,
+    "gemini-3.1-flash-lite-image": 0.04,
+  },
+  tokenPrices: {
+    "gemini-nano-banana-2.1": { input: 1.5, outputText: 7.5, outputImage: 30 },
+    "gemini-3.1-flash-lite-image": { input: 0.25, outputText: 1.5, outputImage: 30 },
+  },
+  params: [
+    {
+      name: "VERTEX_IMAGE_LOCATION",
+      default: "global",
+      description: "Vertex AI location of the picture models (gemini-3.1-flash-lite-image and gemini-nano-banana-2.1 are offered on global only).",
+    },
+  ],
+  create: (ctx) => new VertexImageGenerator({ project: ctx.project, location: ctx.param("VERTEX_IMAGE_LOCATION") }),
+};
 
-  constructor(private readonly factories: Readonly<Record<string, () => RecipeImageGenerator>>) {}
-
-  generate(prompt: ImagePrompt, target: ImageTarget, signal: AbortSignal): Promise<GeneratedImage> {
-    const factory = Object.prototype.hasOwnProperty.call(this.factories, target.provider) ? this.factories[target.provider] : undefined;
-    if (!factory) return Promise.reject(new ImageGenerationError("config", "no such image provider", false));
-    let adapter = this.built.get(target.provider);
-    if (!adapter) {
-      adapter = factory();
-      this.built.set(target.provider, adapter);
-    }
-    return adapter.generate(prompt, target, signal);
-  }
-}
+/**
+ * OpenAI's GPT Image models (provider id "openai"), Images API. gpt-image-1-mini: USD 8 per 1M
+ * image output tokens; a "medium" 1536x1024 picture is a little over a thousand tokens (about USD
+ * 0.01-0.015); 0.02 leaves room. Token rates (OpenAI's pricing page, read 2026-11-17): text input 2,
+ * image output 8; output text priced as image output, the higher rate. Not yet switchable: OpenAI
+ * is not in the privacy policy's processor list.
+ */
+export const openaiImage: ImageProviderDescriptor = {
+  kind: "image",
+  id: "openai",
+  label: "OpenAI GPT Image (Images API)",
+  processing: "OpenAI, United States (no EU-only processing by default)",
+  // Owner's decision needed before this flips: README "What a new provider means for privacy".
+  privacy: { approved: false, missing: "OpenAI is not yet named in the privacy policy's processor list (a code change turns this on)" },
+  secret: {
+    id: "openai",
+    param: "OPENAI_API_KEY_SECRET",
+    name: "OPENAI_API_KEY",
+    missing: "The OpenAI API key is not in Secret Manager, or the service account can't read it",
+  },
+  usdPerImage: { "gpt-image-1-mini": 0.02 },
+  tokenPrices: { "gpt-image-1-mini": { input: 2, outputText: 8, outputImage: 8 } },
+  create: (ctx) => new OpenAIImageGenerator({ apiKey: () => ctx.secret(), ...(ctx.fetch ? { fetch: ctx.fetch } : {}) }),
+};
