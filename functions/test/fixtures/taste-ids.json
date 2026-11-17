@@ -6,7 +6,8 @@
     "flavours": "- Flavours they like:",
     "favourites": "- Favourite ingredients:",
     "avoid": "- Ingredients they would rather skip:",
-    "methods": "- Cooking methods they like:"
+    "methods": "- Cooking methods they like:",
+    "units": "- Units they measure in:"
   },
   "options": {
     "cuisines:italian": "Italian",
@@ -74,6 +75,15 @@
     "methods:slow_cook": "slow cooking",
     "methods:air_fryer": "in an air fryer",
     "methods:no_cook": "no cooking at all",
-    "methods:steam": "steaming"
+    "methods:steam": "steaming",
+    "units:grams": "grams and kilograms",
+    "units:ounces_pounds": "ounces and pounds",
+    "units:millilitres": "millilitres and litres",
+    "units:decilitres": "decilitres",
+    "units:cups": "cups",
+    "units:fluid_ounces": "fluid ounces",
+    "units:spoons": "tablespoons and teaspoons",
+    "units:celsius": "degrees Celsius",
+    "units:fahrenheit": "degrees Fahrenheit"
   }
 }

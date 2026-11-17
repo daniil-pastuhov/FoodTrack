@@ -102,6 +102,9 @@ describe("catalogue completeness", () => {
         if (o.sub) expect(s.kind).toBe("single");
       }
       if (s.kind === "single") expect(new Set(opts.map((o) => o.sub === undefined)).size).toBe(1);
+      // A units step's options all say what they measure (the UNITS block's rules); no other step's do.
+      for (const o of opts) expect(o.measure !== undefined, `${s.id}:${o.id}.measure`).toBe(s.prompt.units === true);
+      if (s.prompt.units) expect(s.kind).toBe("multi");
     }
   });
 
@@ -118,7 +121,7 @@ describe("catalogue completeness", () => {
     for (const s of C.summary) expect(C.steps.find((x) => x.id === s)?.kind, s).toBe("multi");
   });
 
-  test("the approved design: six steps, caps 6 / 1 / 6 / 8 / 8 / 5, icons, favourites in three groups, heat cards, the skip note", () => {
+  test("the approved design: seven steps, caps 6 / 1 / 6 / 8 / 8 / 5 / 9, icons, favourites in three groups, heat cards, the skip and units notes", () => {
     expect(C.steps.map((s) => [s.id, s.kind, s.tone, s.icon, s.max])).toEqual([
       ["cuisines", "multi", "like", "globe", 6],
       ["heat", "single", "like", "flame", 1],
@@ -126,10 +129,12 @@ describe("catalogue completeness", () => {
       ["favourites", "multi", "like", "heart", 8],
       ["avoid", "multi", "avoid", "heart-off", 8],
       ["methods", "multi", "like", "cooking-pot", 5],
+      ["units", "multi", "like", "utensils", 9],
     ]);
     expect(C.steps.map((s) => s.question.en)).toEqual([
       "Which cuisines do you like?", "How hot do you like it?", "Which flavours do you reach for?",
       "What do you love to eat?", "What would you rather skip?", "How do you like to cook?",
+      "Which units can recipes use?",
     ]);
     const fav = C.steps.find((s) => s.id === "favourites")!;
     expect(fav.groups.map((g) => [g.title?.en, g.options.length])).toEqual([["Vegetables and beans", 7], ["Protein and dairy", 5], ["Fruit", 6]]);
@@ -137,9 +142,28 @@ describe("catalogue completeness", () => {
       ["mild", "Mild", "Little or no chilli", 1], ["medium", "Medium", "A gentle warmth", 2], ["hot", "Hot", "Bring on the chilli", 3],
     ]);
     expect(C.steps.find((s) => s.id === "avoid")!.note?.en).toBe("This is a preference, not an allergy setting. Allergies are set under Allergen warnings in Settings.");
-    expect(C.steps.filter((s) => s.id !== "avoid").every((s) => s.note === null)).toBe(true);
+    expect(C.steps.find((s) => s.id === "units")!.note?.en).toBe("Counts such as 2 eggs are always fine. Choose none and each recipe decides.");
+    expect(C.steps.filter((s) => s.id !== "avoid" && s.id !== "units").every((s) => s.note === null)).toBe(true);
     expect(C.conflicts).toEqual([["favourites:mushrooms", "avoid:mushrooms"], ["favourites:aubergine", "avoid:aubergine"], ["flavours:garlic", "avoid:garlic"]]);
     expect(C.summary).toEqual(["cuisines", "flavours", "favourites", "methods"]);
+  });
+
+  test("the units step: weight, volume and oven temperature; every unit can be chosen; what each measures", () => {
+    const units = C.steps.find((s) => s.id === "units")!;
+    expect(units.prompt).toEqual({ label: "- Units they measure in:", units: true });
+    expect(units.groups.map((g) => [g.title?.en, g.options.map((o) => [o.id, o.label.en, o.measure])])).toEqual([
+      ["Weight", [["grams", "Grams and kilograms", "amount"], ["ounces_pounds", "Ounces and pounds", "amount"]]],
+      ["Volume", [
+        ["millilitres", "Millilitres and litres", "amount"], ["decilitres", "Decilitres", "amount"], ["cups", "Cups", "amount"],
+        ["fluid_ounces", "Fluid ounces", "amount"], ["spoons", "Tablespoons and teaspoons", "spoon"],
+      ]],
+      ["Oven temperature", [["celsius", "Celsius (°C)", "temperature"], ["fahrenheit", "Fahrenheit (°F)", "temperature"]]],
+    ]);
+    expect(units.max).toBe(options("units").length);
+    // Last, so the settings row's summary and the earlier steps read as before; not in the summary.
+    expect(C.steps.at(-1)!.id).toBe("units");
+    expect(C.summary).not.toContain("units");
+    expect(C.conflicts.flat().some((k) => k.startsWith("units:"))).toBe(false);
   });
 });
 
@@ -148,7 +172,7 @@ describe("tasteQuizFor / getTasteQuiz", () => {
     const q = tasteQuizFor("en", []);
     expect(q.language).toBe("en");
     expect(q.version).toMatch(/^[0-9a-f]{16}$/);
-    expect(q.steps).toHaveLength(6);
+    expect(q.steps).toHaveLength(7);
     expect(q.steps[1]).toEqual({
       id: "heat", kind: "single", tone: "like", icon: "flame", question: "How hot do you like it?", note: null, max: 1,
       groups: [{ title: null, options: [
@@ -160,7 +184,8 @@ describe("tasteQuizFor / getTasteQuiz", () => {
     expect(q.steps[0].groups[0].options[0]).toEqual({ id: "italian", label: "Italian" });
     expect(q.conflicts).toEqual(C.conflicts);
     expect(q.summary).toEqual(C.summary);
-    expect(JSON.stringify(q)).not.toMatch(/prompt|they like|chilli heat|savoury dishes/);
+    expect(JSON.stringify(q)).not.toMatch(/prompt|they like|chilli heat|savoury dishes|measure|degrees|"units":/);
+    expect(q.steps[6].groups[2]).toEqual({ title: "Oven temperature", options: [{ id: "celsius", label: "Celsius (°C)" }, { id: "fahrenheit", label: "Fahrenheit (°F)" }] });
   });
 
   test("every language answers in that language with the same structure and version", () => {
@@ -189,7 +214,7 @@ describe("tasteQuizFor / getTasteQuiz", () => {
     expect((await getTasteQuiz(deps([]), { language: "sv" })).language).toBe("sv");
     for (const data of [undefined, null, "de", 3, [], { language: 7 }]) expect((await getTasteQuiz(deps([]), data)).language).toBe("en");
     const q = await getTasteQuiz(deps(["heat"]), { language: "en" });
-    expect(q.steps.map((s) => s.id)).toEqual(["cuisines", "flavours", "favourites", "avoid", "methods"]);
+    expect(q.steps.map((s) => s.id)).toEqual(["cuisines", "flavours", "favourites", "avoid", "methods", "units"]);
     expect(q.version).not.toBe(tasteQuizFor("en", []).version);
   });
 
@@ -201,7 +226,7 @@ describe("tasteQuizFor / getTasteQuiz", () => {
       ...options("favourites").filter((_, i) => i >= 7 && i < 12).map((o) => `favourites:${o.id}`), // the whole protein group
       ...options("flavours").map((o) => `flavours:${o.id}`), // every flavour: the step goes
     ]);
-    expect(q.steps.map((s) => s.id)).toEqual(["cuisines", "heat", "favourites", "avoid"]);
+    expect(q.steps.map((s) => s.id)).toEqual(["cuisines", "heat", "favourites", "avoid", "units"]);
     expect(q.steps[0].groups[0].options.map((o) => o.id)).not.toContain("italian");
     expect(q.steps[2].groups.map((g) => g.title)).toEqual(["Vegetables and beans", "Fruit"]);
     expect(q.steps[3].groups[0].options.map((o) => o.id)).not.toContain("mushrooms");
@@ -226,6 +251,18 @@ describe("tasteQuizFor / getTasteQuiz", () => {
     expect(tasteQuizVersion([], recapped)).not.toBe(base);
     const reworded: TasteCatalogue = { ...C, conflicts: C.conflicts.slice(1) };
     expect(tasteQuizVersion([], reworded)).not.toBe(base);
+  });
+
+  test("the units step is a new question: the six earlier steps are exactly the quiz the apps cached, the version moves on", () => {
+    // 35244e855cd4327f: the version of the six-step quiz (iosApp TasteQuizSample.swift, recorded from this server).
+    const sixSteps: TasteCatalogue = { ...C, steps: C.steps.filter((s) => s.id !== "units") };
+    expect(tasteQuizVersion([], sixSteps)).toBe("35244e855cd4327f");
+    expect(tasteQuizVersion([])).not.toBe("35244e855cd4327f");
+    // Hidden without a deploy: the whole step, or one group of it.
+    expect(tasteQuizFor("en", ["units"]).steps.map((s) => s.id)).not.toContain("units");
+    const noTemperature = tasteQuizFor("en", ["units:celsius", "units:fahrenheit"]).steps.find((s) => s.id === "units")!;
+    expect(noTemperature.groups.map((g) => g.title)).toEqual(["Weight", "Volume"]);
+    expect(noTemperature.max).toBe(9); // the catalogue's cap, as for any step with hidden options: never reached
   });
 
   test("config/runtime.tasteQuiz: a list of strings, else nothing hidden", () => {

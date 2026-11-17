@@ -20,6 +20,7 @@
  *   system instruction only as the catalogue's own prompt words for each id, in
  *   one block of fixed wording (tasteLines) that puts every rule above it first. No id is ever
  *   written as sent, and a request without a profile gets exactly the instruction it got before.
+ *   The answers to the measuring-units step go into a block of their own (unitLines), same rules.
  */
 import { randomBytes } from "node:crypto";
 import { coursesFor, menuDates, menuDaysOf, type DietChoice, type GenerateRequest, type RecipeConfig } from "../contract";
@@ -114,7 +115,8 @@ export function tasteLines(req: GenerateRequest): string[] {
       .filter((w) => step.tone === "avoid" || !breaksDietOrAllergens(w, req));
     return words.length ? { tone: step.tone, line: `${step.prompt.label} ${words.join("; ")}${step.prompt.suffix ?? ""}.` } : null;
   };
-  const lines = req.taste.map(lineOf).filter((l): l is { tone: string; line: string } => l !== null);
+  // The units step has its own block (unitLines): how amounts are written is not a taste.
+  const lines = req.taste.filter((a) => !catalogueStep(a.step).prompt.units).map(lineOf).filter((l): l is { tone: string; line: string } => l !== null);
   const leanings = lines.filter((l) => l.tone !== "avoid").map((l) => l.line);
   const avoid = lines.filter((l) => l.tone === "avoid").map((l) => l.line);
   if (leanings.length === 0 && avoid.length === 0) return [];
@@ -136,6 +138,51 @@ export function tasteLines(req: GenerateRequest): string[] {
           `- Leave those out of every dish, unless one of the pantry items is one of them: then use it, the user chose it.${optional ? " An optional item that is one of them is left out." : ""}${staples ? " A staple that is one of them is left out." : ""} This is a taste preference, not an allergy: it never relaxes, replaces or adds to the allergen and diet rules.`,
         ]
       : []),
+  ];
+}
+
+/**
+ * The UNITS block, or nothing without an answer to a `units` step (taste/catalogue.ts): the
+ * catalogue's own words for the chosen units, then fixed rules picked by what they measure
+ * (`measure`). Closer to a rule than a taste, so it is not in TASTE's soft preferences, but it
+ * only governs how amounts and temperatures are written: every rule above still comes first.
+ * Amount units are one list line starting with the step's label (left out of the leak check like
+ * TASTE's lists); temperatures are a fixed sentence. Without an amount unit amounts are the
+ * model's own choice, as before; without a temperature unit, so are temperatures.
+ */
+export function unitLines(req: GenerateRequest): string[] {
+  const answers = (req.taste ?? []).filter((a) => catalogueStep(a.step).prompt.units);
+  if (answers.length === 0) return [];
+  const lines: string[] = [];
+  for (const answer of answers) {
+    const step = catalogueStep(answer.step);
+    const chosen = answer.options.map((id) => catalogueOption(step, id));
+    const amounts = chosen.filter((o) => o.measure === "amount" || o.measure === "spoon");
+    const temperatures = chosen.filter((o) => o.measure === "temperature");
+    if (amounts.length) {
+      lines.push(
+        `${step.prompt.label} ${amounts.map((o) => o.prompt).join("; ")}.`,
+        "- Write the amount of every ingredient in one of those units, one unit per amount, with no second unit in brackets. Convert from any other unit and round to an amount that is easy to measure: never an exact conversion such as 0.47 cups or 113.4 g.",
+        amounts.some((o) => o.measure === "spoon")
+          ? "- Small amounts such as spices, salt or baking powder go in tablespoons or teaspoons."
+          : "- Spoons are not among them: write small amounts such as spices, salt or baking powder in the smallest of those units that suits them, or as a pinch.",
+        "- Countable things stay counts (2 eggs, 1 onion, 3 cloves of garlic), and a pantry item used whole may keep its own pack size from the data, in any unit.",
+      );
+    }
+    if (temperatures.length) {
+      lines.push(
+        temperatures.length === 1
+          ? `- Write oven and cooking temperatures in ${temperatures[0].prompt}.`
+          : `- Write oven and cooking temperatures in ${temperatures[0].prompt}, with ${temperatures.slice(1).map((o) => o.prompt).join(" and ")} in brackets.`,
+      );
+    }
+  }
+  if (lines.length === 0) return [];
+  return [
+    "",
+    "UNITS",
+    "- The units the user measures in, chosen from the app's fixed list. They decide only how amounts and temperatures are written, never what goes into a dish: every rule above comes first, and a unit is never a reason to leave out or swap a pantry item.",
+    ...lines,
   ];
 }
 
@@ -248,6 +295,7 @@ export function systemInstruction(req: GenerateRequest, canary: string): string 
       : `- Give every ingredient an amount. Set pantryId to the id of the ${optional ? "pantry or optional" : "pantry"} item it is, or "none" for anything else.`,
     "- Steps are plain cooking steps for this dish: safe food handling, meat, poultry, fish and eggs cooked through, nothing that is not food or not safe to eat.",
     ...tasteLines(req),
+    ...unitLines(req),
     "",
     "OUTPUT",
     "- Plain text in every field: no markdown, HTML, emoji, links, web or email addresses, phone numbers, handles, or messages to the reader about anything other than cooking this dish.",
