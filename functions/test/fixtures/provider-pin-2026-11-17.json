@@ -1,0 +1,823 @@
+{
+ "requests": {
+  "config-recipe-2026-11-14/plain": {
+   "inputHash": "be2f7ebbe669b57d91eea39759e6a307d9114c1b002bc3dd8dd2e042d68ed742",
+   "prompt": "3553e17bea7a9e8fa9758b36222d3e8d55218358df3cf8e7efe60187b07596a8",
+   "sent": [
+    "333a38b495cfa13816f330bd7e50af6f7e48797c60b149ffa4443fa4ec977137"
+   ],
+   "cost": 1,
+   "limits": {
+    "maxOutputTokens": 4096,
+    "hardTokenCeiling": 8192
+   },
+   "reservedMicroUsd": 67910,
+   "reservedWithJudge": 91564,
+   "image": null
+  },
+  "config-recipe-2026-11-14/dish": {
+   "inputHash": "16edfd18651ba56973a21223a4f18410b3630ffde5b883a4401701d6ee20d263",
+   "prompt": "bbc02be8d748607e22a8a8f8b5193d18f9825ebb5eaf87cd0ab4d5c64d320bee",
+   "sent": [
+    "5f1fb2b3e28494ccbe1a27d4a98f49112827e58fc7012508affbc1cb6db84fc7"
+   ],
+   "cost": 2,
+   "limits": {
+    "maxOutputTokens": 4096,
+    "hardTokenCeiling": 8192
+   },
+   "reservedMicroUsd": 128787,
+   "reservedWithJudge": 152441,
+   "image": {
+    "share": 1,
+    "stepsShare": 0,
+    "stepsMax": 0,
+    "reservedMicroUsd": 60000
+   }
+  },
+  "config-recipe-2026-11-14/steps": {
+   "inputHash": "2bb67c1fc54ba9d91147f2445b7343d6924f6ab8d52057d4dc9dfa68ec92da39",
+   "prompt": "a6dc993bcc71e8628641d23d7a7e79a178e4a93e7800aa2166352aaa7b73b861",
+   "sent": [
+    "62542da1081a171c4ec013e41768baa073111d55a605216db049c6d85a269d9a"
+   ],
+   "cost": 3,
+   "limits": {
+    "maxOutputTokens": 4096,
+    "hardTokenCeiling": 8192
+   },
+   "reservedMicroUsd": 250080,
+   "reservedWithJudge": 273734,
+   "image": {
+    "share": 1,
+    "stepsShare": 1,
+    "stepsMax": 2,
+    "reservedMicroUsd": 180000
+   }
+  },
+  "config-menu2-2026-11-14/plain": {
+   "inputHash": "31bb9e07b080ac46b68c5bf2ad972edfb247ed9a97eb5fcbe59d4a978a7c15ce",
+   "prompt": "2be16ba92f10088ea085156cdcb11d2b4f9a257bcada055f79bf7be916bbbcd2",
+   "sent": [
+    "d2e3d4e43024a51e7aaca4656049c06a85f61c42c74ac38c1b69fa2ffde0f477"
+   ],
+   "cost": 4,
+   "limits": {
+    "maxOutputTokens": 14000,
+    "hardTokenCeiling": 28000
+   },
+   "reservedMicroUsd": 217421,
+   "reservedWithJudge": 257417,
+   "image": null
+  },
+  "config-menu3-2026-11-14/plain": {
+   "inputHash": "720c1d054b58eae077f2efedecd1f922e23d38bb839e8b88b6d0a2081d4ca9b0",
+   "prompt": "039660edd9461caac338120e09c2b297e8bde5d7a12d6223f46e58120dd65851",
+   "sent": [
+    "51e93b772774b3ed2e3d80f94535dbdba8e4a025c7ecd465d1fe438a73c45ea1"
+   ],
+   "cost": 5,
+   "limits": {
+    "maxOutputTokens": 20000,
+    "hardTokenCeiling": 40000
+   },
+   "reservedMicroUsd": 307622,
+   "reservedWithJudge": 357517,
+   "image": null
+  },
+  "taste-recipe-2026-11-15/plain": {
+   "inputHash": "1190cbddffc5a892aef4cd11fbc81fd53b22c6b8e0fc05bf722064dbdd688d01",
+   "prompt": "e361a6df745796d63c6e5f3bfebe37f9653b9d3fee1e003870fd0bdff364bb48",
+   "sent": [
+    "a35d86233ebcec8eec873f5ddd0b52f0ffb977411f910773939e1842cd34d0da"
+   ],
+   "cost": 1,
+   "limits": {
+    "maxOutputTokens": 4096,
+    "hardTokenCeiling": 8192
+   },
+   "reservedMicroUsd": 69818,
+   "reservedWithJudge": 93472,
+   "image": null
+  },
+  "taste-recipe-2026-11-15/dish": {
+   "inputHash": "3e252f1327acb9da654dbdc8a776f581aba21bb646a16c18db8d6089f8f2e9ff",
+   "prompt": "e657df7e75a3896c06109e0020a5eac118787937cf4766928d48b9e744252446",
+   "sent": [
+    "7ce6be07716efc94f813570df59fc9c6fa37980ede1006d329699830a23b10a1"
+   ],
+   "cost": 2,
+   "limits": {
+    "maxOutputTokens": 4096,
+    "hardTokenCeiling": 8192
+   },
+   "reservedMicroUsd": 130695,
+   "reservedWithJudge": 154349,
+   "image": {
+    "share": 1,
+    "stepsShare": 0,
+    "stepsMax": 0,
+    "reservedMicroUsd": 60000
+   }
+  },
+  "taste-recipe-2026-11-15/steps": {
+   "inputHash": "96d7dd1177ed4560146a66133cca5806995e798260d450ff01d08eab94555680",
+   "prompt": "5ae3990ad72b1e171d7b7317ea60be1bcdbdbc9277820d2db064403f80e9e9bd",
+   "sent": [
+    "d20c9858d3fde54aac6cbb927561d0b1e0aac318655677fd204ea2b85fafad38"
+   ],
+   "cost": 3,
+   "limits": {
+    "maxOutputTokens": 4096,
+    "hardTokenCeiling": 8192
+   },
+   "reservedMicroUsd": 251988,
+   "reservedWithJudge": 275642,
+   "image": {
+    "share": 1,
+    "stepsShare": 1,
+    "stepsMax": 2,
+    "reservedMicroUsd": 180000
+   }
+  },
+  "live-menu-2026-11-14/plain": {
+   "inputHash": "6fdd50eeb43a13ae6c58f3cdaaccaca195cb0e982437512c12f341fcd6680eeb",
+   "prompt": "4ff13490c21ae90f3bee916c543481caeb49559d465c88d0eb493d338a610f43",
+   "sent": [
+    "37f1c903ebe82e868abd9f17052299bf1493e35bc6d4c7384dbeaeb24f501cde"
+   ],
+   "cost": 4,
+   "limits": {
+    "maxOutputTokens": 14000,
+    "hardTokenCeiling": 28000
+   },
+   "reservedMicroUsd": 217473,
+   "reservedWithJudge": 257469,
+   "image": null
+  },
+  "judgeSent": [
+   "73b93c2e4303a3e042e29eeab997383c979b8dc6a3a696db88fc5e14a5539f17",
+   "064893e68cc540c3905987a56ee7ea9da0c5db1ae46863786eb3f9aefca8684c"
+  ],
+  "judgeWorstCase": {
+   "recipe": 23654,
+   "menu1x1": 21846,
+   "menu1x2": 25145,
+   "menu1x3": 28446,
+   "menu2x1": 25971,
+   "menu2x2": 32570,
+   "menu2x3": 38346,
+   "menu3x1": 30920,
+   "menu3x2": 39996,
+   "menu3x3": 49895,
+   "menu4x1": 35871,
+   "menu4x2": 48245,
+   "menu4x3": 56496
+  }
+ },
+ "images": {
+  "prompts": [
+   "5d7191f4b9d387e865874c8760941a2f18006e66256a997ce77a4052ab6dd128",
+   "64c9cbb4986f4d81b2fdf7a598e8b006ac4e1286fc89fe5321857b01852e5701"
+  ],
+  "vertex": [
+   "b4f6fa73d60d3e9434ea3c6ce1cb63a763acfbc1285182547aa5c42678cf5f3c",
+   "b8248a353b2ee81a466a9f8c4897df73828cc9198d58f260d2195f50491b0be8",
+   "432231b7cd4239f83c3919696a64ab0ae0a94a94518d437c997582d6d094d88f",
+   "b090519e01189ec1e2debe7b707b85b530e0b069a6b32650aa96d6e5b3536d62"
+  ],
+  "openai": [
+   "ff2515d82723b7fa11969fb4529a1746de4248d4f924580986b6343dd8d4578d",
+   "43ce35080aade0e329854a9dc1da55ae9cfd6366a76ad6b719a53ca1963a3ff9",
+   "5d17149aeabc4b937ef05d4a12b1b575685f053960d311885699b22dd87f4fbc",
+   "9082b152ba6ee241218b37a44a5c8ae132ed03a98b8c7ecacb6550df60c3174e",
+   "dd901aab759a157f69873c6f9d1ce0c691691c4120a2a1b965e42046ae3b593a",
+   "eb263b40d441212ee9c36fec711a015b0c62f9d19ed352f2c637e26d51ee46f0"
+  ],
+  "cost": [
+   [
+    34080,
+    40000
+   ],
+   [
+    36030,
+    60000
+   ],
+   [
+    11600,
+    20000
+   ],
+   [
+    0,
+    0
+   ],
+   [
+    0,
+    0
+   ]
+  ]
+ },
+ "endToEnd": {
+  "recipe": {
+   "generation": {
+    "state": "done",
+    "cost": 1,
+    "charged": true,
+    "reservedMicroUsd": 66524,
+    "actualMicroUsd": 16500,
+    "usage": {
+     "inputTokens": 1000,
+     "outputTokens": 1500,
+     "thinkingTokens": 500,
+     "model": "fake-model",
+     "finishReason": "STOP"
+    },
+    "imageReservedMicroUsd": null,
+    "imageFailure": null,
+    "failureClass": null,
+    "failureReason": null
+   },
+   "logs": [
+    [
+     "info",
+     "llm_call",
+     {
+      "kind": "recipe",
+      "courses": null,
+      "days": null,
+      "taste": false,
+      "staples": 0,
+      "image": null,
+      "imageOutcome": null,
+      "stepImages": null,
+      "model": "fake-model",
+      "inputTokens": 1000,
+      "outputTokens": 1500,
+      "thinkingTokens": 500,
+      "finishReason": "STOP",
+      "outcome": "done",
+      "reason": null,
+      "cost": 1,
+      "charged": true,
+      "refunded": false,
+      "settledHere": true,
+      "reservedMicroUsd": 66524,
+      "estimatedMicroUsd": 16500
+     }
+    ]
+   ],
+   "imageTargets": []
+  },
+  "recipe-dish": {
+   "generation": {
+    "state": "done",
+    "cost": 2,
+    "charged": true,
+    "reservedMicroUsd": 127401,
+    "actualMicroUsd": 56500,
+    "usage": {
+     "inputTokens": 1000,
+     "outputTokens": 1500,
+     "thinkingTokens": 500,
+     "model": "fake-model",
+     "finishReason": "STOP"
+    },
+    "imageReservedMicroUsd": 60000,
+    "imageFailure": null,
+    "failureClass": null,
+    "failureReason": null
+   },
+   "logs": [
+    [
+     "info",
+     "image_call",
+     {
+      "provider": "vertex",
+      "model": "gemini-3.1-flash-lite-image",
+      "picture": "dish",
+      "outcome": "done",
+      "attempts": 1,
+      "fallback": false,
+      "inputBytes": 15962,
+      "passedThrough": false,
+      "bytes": 6568,
+      "width": 1200,
+      "height": 896,
+      "estimatedMicroUsd": 40000
+     }
+    ],
+    [
+     "info",
+     "llm_call",
+     {
+      "kind": "recipe",
+      "courses": null,
+      "days": null,
+      "taste": false,
+      "staples": 0,
+      "image": "dish",
+      "imageOutcome": "done",
+      "stepImages": null,
+      "model": "fake-model",
+      "inputTokens": 1000,
+      "outputTokens": 1500,
+      "thinkingTokens": 500,
+      "finishReason": "STOP",
+      "outcome": "done",
+      "reason": null,
+      "cost": 2,
+      "charged": true,
+      "refunded": false,
+      "settledHere": true,
+      "reservedMicroUsd": 127401,
+      "estimatedMicroUsd": 56500
+     }
+    ]
+   ],
+   "imageTargets": [
+    {
+     "provider": "vertex",
+     "model": "gemini-3.1-flash-lite-image"
+    }
+   ]
+  },
+  "recipe-steps": {
+   "generation": {
+    "state": "done",
+    "cost": 3,
+    "charged": true,
+    "reservedMicroUsd": 248694,
+    "actualMicroUsd": 136500,
+    "usage": {
+     "inputTokens": 1000,
+     "outputTokens": 1500,
+     "thinkingTokens": 500,
+     "model": "fake-model",
+     "finishReason": "STOP"
+    },
+    "imageReservedMicroUsd": 180000,
+    "imageFailure": null,
+    "failureClass": null,
+    "failureReason": null
+   },
+   "logs": [
+    [
+     "info",
+     "image_call",
+     {
+      "provider": "vertex",
+      "model": "gemini-3.1-flash-lite-image",
+      "picture": "dish",
+      "outcome": "done",
+      "attempts": 1,
+      "fallback": false,
+      "inputBytes": 15962,
+      "passedThrough": false,
+      "bytes": 6568,
+      "width": 1200,
+      "height": 896,
+      "estimatedMicroUsd": 40000
+     }
+    ],
+    [
+     "info",
+     "image_call",
+     {
+      "provider": "vertex",
+      "model": "gemini-3.1-flash-lite-image",
+      "picture": "step",
+      "outcome": "done",
+      "attempts": 1,
+      "fallback": false,
+      "inputBytes": 15962,
+      "passedThrough": false,
+      "bytes": 6568,
+      "width": 1200,
+      "height": 896,
+      "estimatedMicroUsd": 40000
+     }
+    ],
+    [
+     "info",
+     "image_call",
+     {
+      "provider": "vertex",
+      "model": "gemini-3.1-flash-lite-image",
+      "picture": "step",
+      "outcome": "done",
+      "attempts": 1,
+      "fallback": false,
+      "inputBytes": 15962,
+      "passedThrough": false,
+      "bytes": 6568,
+      "width": 1200,
+      "height": 896,
+      "estimatedMicroUsd": 40000
+     }
+    ],
+    [
+     "info",
+     "llm_call",
+     {
+      "kind": "recipe",
+      "courses": null,
+      "days": null,
+      "taste": false,
+      "staples": 0,
+      "image": "steps",
+      "imageOutcome": "done",
+      "stepImages": "2/2",
+      "model": "fake-model",
+      "inputTokens": 1000,
+      "outputTokens": 1500,
+      "thinkingTokens": 500,
+      "finishReason": "STOP",
+      "outcome": "done",
+      "reason": null,
+      "cost": 3,
+      "charged": true,
+      "refunded": false,
+      "settledHere": true,
+      "reservedMicroUsd": 248694,
+      "estimatedMicroUsd": 136500
+     }
+    ]
+   ],
+   "imageTargets": [
+    {
+     "provider": "vertex",
+     "model": "gemini-3.1-flash-lite-image"
+    },
+    {
+     "provider": "vertex",
+     "model": "gemini-3.1-flash-lite-image"
+    },
+    {
+     "provider": "vertex",
+     "model": "gemini-3.1-flash-lite-image"
+    }
+   ]
+  },
+  "infra-unknown-usage": {
+   "generation": {
+    "state": "failed",
+    "cost": 1,
+    "charged": false,
+    "reservedMicroUsd": 66524,
+    "actualMicroUsd": 66524,
+    "usage": null,
+    "imageReservedMicroUsd": null,
+    "imageFailure": null,
+    "failureClass": "infra",
+    "failureReason": "infra failure"
+   },
+   "logs": [
+    [
+     "info",
+     "llm_call",
+     {
+      "kind": "recipe",
+      "courses": null,
+      "days": null,
+      "taste": false,
+      "staples": 0,
+      "image": null,
+      "imageOutcome": null,
+      "stepImages": null,
+      "model": null,
+      "inputTokens": null,
+      "outputTokens": null,
+      "thinkingTokens": null,
+      "finishReason": null,
+      "outcome": "infra",
+      "reason": "infra failure",
+      "cost": 1,
+      "charged": false,
+      "refunded": true,
+      "settledHere": true,
+      "reservedMicroUsd": 66524,
+      "estimatedMicroUsd": 66524
+     }
+    ]
+   ],
+   "imageTargets": []
+  },
+  "content": {
+   "generation": {
+    "state": "failed",
+    "cost": 1,
+    "charged": false,
+    "reservedMicroUsd": 66524,
+    "actualMicroUsd": 16500,
+    "usage": {
+     "inputTokens": 1000,
+     "outputTokens": 1500,
+     "thinkingTokens": 500,
+     "model": "fake-model",
+     "finishReason": "STOP"
+    },
+    "imageReservedMicroUsd": null,
+    "imageFailure": null,
+    "failureClass": "content",
+    "failureReason": "content failure"
+   },
+   "logs": [
+    [
+     "info",
+     "llm_call",
+     {
+      "kind": "recipe",
+      "courses": null,
+      "days": null,
+      "taste": false,
+      "staples": 0,
+      "image": null,
+      "imageOutcome": null,
+      "stepImages": null,
+      "model": "fake-model",
+      "inputTokens": 1000,
+      "outputTokens": 1500,
+      "thinkingTokens": 500,
+      "finishReason": "STOP",
+      "outcome": "content",
+      "reason": "content failure",
+      "cost": 1,
+      "charged": false,
+      "refunded": true,
+      "settledHere": true,
+      "reservedMicroUsd": 66524,
+      "estimatedMicroUsd": 16500
+     }
+    ]
+   ],
+   "imageTargets": []
+  },
+  "picture-capacity-then-fallback": {
+   "generation": {
+    "state": "done",
+    "cost": 2,
+    "charged": true,
+    "reservedMicroUsd": 127401,
+    "actualMicroUsd": 16500,
+    "usage": {
+     "inputTokens": 1000,
+     "outputTokens": 1500,
+     "thinkingTokens": 500,
+     "model": "fake-model",
+     "finishReason": "STOP"
+    },
+    "imageReservedMicroUsd": 60000,
+    "imageFailure": "INFRA",
+    "failureClass": null,
+    "failureReason": null
+   },
+   "logs": [
+    [
+     "info",
+     "image_retry",
+     {
+      "provider": "vertex",
+      "model": "gemini-3.1-flash-lite-image",
+      "picture": "dish",
+      "attempt": 2,
+      "reason": "QUOTA",
+      "waitMs": 2000
+     }
+    ],
+    [
+     "info",
+     "image_retry",
+     {
+      "provider": "vertex",
+      "model": "gemini-3.1-flash-lite-image",
+      "picture": "dish",
+      "attempt": 3,
+      "reason": "QUOTA",
+      "waitMs": 4000
+     }
+    ],
+    [
+     "info",
+     "image_fallback",
+     {
+      "provider": "vertex",
+      "model": "gemini-3.1-flash-lite-image",
+      "fallbackModel": "gemini-nano-banana-2.1",
+      "picture": "dish",
+      "reason": "QUOTA",
+      "outcome": "INFRA"
+     }
+    ],
+    [
+     "info",
+     "image_call",
+     {
+      "provider": "vertex",
+      "model": "gemini-nano-banana-2.1",
+      "picture": "dish",
+      "outcome": "INFRA",
+      "attempts": 4,
+      "fallback": true,
+      "inputBytes": null,
+      "passedThrough": null,
+      "bytes": null,
+      "width": null,
+      "height": null,
+      "estimatedMicroUsd": 0
+     }
+    ],
+    [
+     "info",
+     "llm_call",
+     {
+      "kind": "recipe",
+      "courses": null,
+      "days": null,
+      "taste": false,
+      "staples": 0,
+      "image": "dish",
+      "imageOutcome": "INFRA",
+      "stepImages": null,
+      "model": "fake-model",
+      "inputTokens": 1000,
+      "outputTokens": 1500,
+      "thinkingTokens": 500,
+      "finishReason": "STOP",
+      "outcome": "done",
+      "reason": null,
+      "cost": 2,
+      "charged": true,
+      "refunded": false,
+      "settledHere": true,
+      "reservedMicroUsd": 127401,
+      "estimatedMicroUsd": 16500
+     }
+    ]
+   ],
+   "imageTargets": [
+    {
+     "provider": "vertex",
+     "model": "gemini-3.1-flash-lite-image"
+    },
+    {
+     "provider": "vertex",
+     "model": "gemini-3.1-flash-lite-image"
+    },
+    {
+     "provider": "vertex",
+     "model": "gemini-3.1-flash-lite-image"
+    },
+    {
+     "provider": "vertex",
+     "model": "gemini-nano-banana-2.1"
+    }
+   ]
+  },
+  "picture-safety": {
+   "generation": {
+    "state": "done",
+    "cost": 2,
+    "charged": true,
+    "reservedMicroUsd": 127401,
+    "actualMicroUsd": 56500,
+    "usage": {
+     "inputTokens": 1000,
+     "outputTokens": 1500,
+     "thinkingTokens": 500,
+     "model": "fake-model",
+     "finishReason": "STOP"
+    },
+    "imageReservedMicroUsd": 60000,
+    "imageFailure": "SAFETY",
+    "failureClass": null,
+    "failureReason": null
+   },
+   "logs": [
+    [
+     "info",
+     "image_call",
+     {
+      "provider": "vertex",
+      "model": "gemini-3.1-flash-lite-image",
+      "picture": "dish",
+      "outcome": "SAFETY",
+      "attempts": 1,
+      "fallback": false,
+      "inputBytes": null,
+      "passedThrough": null,
+      "bytes": null,
+      "width": null,
+      "height": null,
+      "estimatedMicroUsd": 40000
+     }
+    ],
+    [
+     "info",
+     "llm_call",
+     {
+      "kind": "recipe",
+      "courses": null,
+      "days": null,
+      "taste": false,
+      "staples": 0,
+      "image": "dish",
+      "imageOutcome": "SAFETY",
+      "stepImages": null,
+      "model": "fake-model",
+      "inputTokens": 1000,
+      "outputTokens": 1500,
+      "thinkingTokens": 500,
+      "finishReason": "STOP",
+      "outcome": "done",
+      "reason": null,
+      "cost": 2,
+      "charged": true,
+      "refunded": false,
+      "settledHere": true,
+      "reservedMicroUsd": 127401,
+      "estimatedMicroUsd": 56500
+     }
+    ]
+   ],
+   "imageTargets": [
+    {
+     "provider": "vertex",
+     "model": "gemini-3.1-flash-lite-image"
+    }
+   ]
+  },
+  "picture-config": {
+   "generation": {
+    "state": "done",
+    "cost": 2,
+    "charged": true,
+    "reservedMicroUsd": 127401,
+    "actualMicroUsd": 16500,
+    "usage": {
+     "inputTokens": 1000,
+     "outputTokens": 1500,
+     "thinkingTokens": 500,
+     "model": "fake-model",
+     "finishReason": "STOP"
+    },
+    "imageReservedMicroUsd": 60000,
+    "imageFailure": "CONFIG",
+    "failureClass": null,
+    "failureReason": null
+   },
+   "logs": [
+    [
+     "info",
+     "image_call",
+     {
+      "provider": "vertex",
+      "model": "gemini-3.1-flash-lite-image",
+      "picture": "dish",
+      "outcome": "CONFIG",
+      "attempts": 1,
+      "fallback": false,
+      "inputBytes": null,
+      "passedThrough": null,
+      "bytes": null,
+      "width": null,
+      "height": null,
+      "estimatedMicroUsd": 0
+     }
+    ],
+    [
+     "info",
+     "llm_call",
+     {
+      "kind": "recipe",
+      "courses": null,
+      "days": null,
+      "taste": false,
+      "staples": 0,
+      "image": "dish",
+      "imageOutcome": "CONFIG",
+      "stepImages": null,
+      "model": "fake-model",
+      "inputTokens": 1000,
+      "outputTokens": 1500,
+      "thinkingTokens": 500,
+      "finishReason": "STOP",
+      "outcome": "done",
+      "reason": null,
+      "cost": 2,
+      "charged": true,
+      "refunded": false,
+      "settledHere": true,
+      "reservedMicroUsd": 127401,
+      "estimatedMicroUsd": 16500
+     }
+    ]
+   ],
+   "imageTargets": [
+    {
+     "provider": "vertex",
+     "model": "gemini-3.1-flash-lite-image"
+    }
+   ]
+  }
+ }
+}
