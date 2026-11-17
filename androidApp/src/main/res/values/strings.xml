@@ -1050,17 +1050,17 @@
     <string name="recipe_allergen_consent_setting_on">You agreed on %1$s. Turn off to withdraw: our server then won\'t write recipes while allergens are set.</string>
     <string name="recipe_allergen_consent_setting_off">Needed for recipes from our server while allergens are set. We use it only for the request and don\'t keep it.</string>
     <plurals name="recipe_delete_body">
-        <item quantity="one">Your %1$d unused recipe will be lost and can\'t be refunded or restored. Your sign-in and email address are deleted from our server; a record of the purchases stays, no longer linked to you. Saved recipes and your pantry stay on this device.</item>
-        <item quantity="other">Your %1$d unused recipes will be lost and can\'t be refunded or restored. Your sign-in and email address are deleted from our server; a record of the purchases stays, no longer linked to you. Saved recipes and your pantry stay on this device.</item>
+        <item quantity="one">Your %1$d unused recipe will be lost and can\'t be refunded or restored. Your sign-in and email address are deleted from our server; a record of the purchases stays, no longer linked to you. Any reports you sent are kept for a limited time, also no longer linked to you. Saved recipes and your pantry stay on this device.</item>
+        <item quantity="other">Your %1$d unused recipes will be lost and can\'t be refunded or restored. Your sign-in and email address are deleted from our server; a record of the purchases stays, no longer linked to you. Any reports you sent are kept for a limited time, also no longer linked to you. Saved recipes and your pantry stay on this device.</item>
     </plurals>
     <!-- Deleting what our server holds for recipes kept on this device (an anonymous account). -->
     <string name="recipe_delete_device_data">Delete my data from our server</string>
     <string name="recipe_delete_device_title">Delete your data from our server?</string>
     <plurals name="recipe_delete_device_body">
-        <item quantity="one">Your %1$d unused recipe will be lost and can\'t be refunded or restored. The anonymous sign-in this device uses is deleted from our server; a record of the purchases stays, no longer linked to you. Saved recipes and your pantry stay on this device.</item>
-        <item quantity="other">Your %1$d unused recipes will be lost and can\'t be refunded or restored. The anonymous sign-in this device uses is deleted from our server; a record of the purchases stays, no longer linked to you. Saved recipes and your pantry stay on this device.</item>
+        <item quantity="one">Your %1$d unused recipe will be lost and can\'t be refunded or restored. The anonymous sign-in this device uses is deleted from our server; a record of the purchases stays, no longer linked to you. Any reports you sent are kept for a limited time, also no longer linked to you. Saved recipes and your pantry stay on this device.</item>
+        <item quantity="other">Your %1$d unused recipes will be lost and can\'t be refunded or restored. The anonymous sign-in this device uses is deleted from our server; a record of the purchases stays, no longer linked to you. Any reports you sent are kept for a limited time, also no longer linked to you. Saved recipes and your pantry stay on this device.</item>
     </plurals>
-    <string name="recipe_delete_device_body_none">The anonymous sign-in this device uses is deleted from our server; a record of any purchases stays, no longer linked to you. Saved recipes and your pantry stay on this device.</string>
+    <string name="recipe_delete_device_body_none">The anonymous sign-in this device uses is deleted from our server; a record of any purchases stays, no longer linked to you. Any reports you sent are kept for a limited time, also no longer linked to you. Saved recipes and your pantry stay on this device.</string>
     <string name="recipe_delete_device_confirm">Delete data</string>
     <string name="recipe_device_data_deleted">Your data is deleted from our server</string>
     <string name="recipe_delete_waits_for_purchase">A purchase is still being completed. You can delete once it has finished.</string>

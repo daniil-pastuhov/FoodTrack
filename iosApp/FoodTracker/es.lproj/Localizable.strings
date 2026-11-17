@@ -750,7 +750,7 @@
 "recipe_account_busy" = "Todavía se está escribiendo una receta. Vuelve a intentarlo en un momento.";
 "recipe_delete_device_data" = "Eliminar mis datos de nuestro servidor";
 "recipe_delete_device_title" = "¿Eliminar tus datos de nuestro servidor?";
-"recipe_delete_device_message_none" = "El inicio de sesión anónimo que usa este {device} se elimina de nuestro servidor; se conserva un registro de cualquier compra, ya sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este {device}.";
+"recipe_delete_device_message_none" = "El inicio de sesión anónimo que usa este {device} se elimina de nuestro servidor; se conserva un registro de cualquier compra, ya sin vínculo contigo. Las denuncias que hayas enviado se conservan durante un tiempo limitado, también sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este {device}.";
 "recipe_delete_device_confirm" = "Eliminar datos";
 "recipe_device_data_deleted" = "Tus datos se han eliminado de nuestro servidor";
 "recipe_delete_waits_for_purchase" = "Todavía se está completando una compra. Podrás hacerlo cuando termine.";

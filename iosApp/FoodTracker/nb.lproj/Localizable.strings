@@ -750,7 +750,7 @@
 "recipe_account_busy" = "En oppskrift skrives fortsatt. Prøv igjen om et øyeblikk.";
 "recipe_delete_device_data" = "Slett dataene mine fra serveren vår";
 "recipe_delete_device_title" = "Slette dataene dine fra serveren vår?";
-"recipe_delete_device_message_none" = "Den anonyme påloggingen denne {the_device} bruker, slettes fra serveren vår; en oversikt over eventuelle kjøp blir liggende, uten kobling til deg. Lagrede oppskrifter og matlageret blir på denne {the_device}.";
+"recipe_delete_device_message_none" = "Den anonyme påloggingen denne {the_device} bruker, slettes fra serveren vår; en oversikt over eventuelle kjøp blir liggende, uten kobling til deg. Eventuelle rapporter du har sendt, blir liggende en begrenset tid, også uten kobling til deg. Lagrede oppskrifter og matlageret blir på denne {the_device}.";
 "recipe_delete_device_confirm" = "Slett dataene";
 "recipe_device_data_deleted" = "Dataene dine er slettet fra serveren vår";
 "recipe_delete_waits_for_purchase" = "Et kjøp er ikke fullført ennå. Du kan slette når det er fullført.";

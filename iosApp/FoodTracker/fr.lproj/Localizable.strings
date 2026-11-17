@@ -750,7 +750,7 @@
 "recipe_account_busy" = "Une recette est encore en cours de rédaction. Réessayez dans un instant.";
 "recipe_delete_device_data" = "Supprimer mes données de notre serveur";
 "recipe_delete_device_title" = "Supprimer vos données de notre serveur ?";
-"recipe_delete_device_message_none" = "La connexion anonyme qu'utilise cet {device} est supprimée de notre serveur ; une trace des éventuels achats est conservée, sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet {device}.";
+"recipe_delete_device_message_none" = "La connexion anonyme qu'utilise cet {device} est supprimée de notre serveur ; une trace des éventuels achats est conservée, sans lien avec vous. Les éventuels signalements que vous avez envoyés sont conservés pendant une durée limitée, eux aussi sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet {device}.";
 "recipe_delete_device_confirm" = "Supprimer les données";
 "recipe_device_data_deleted" = "Vos données sont supprimées de notre serveur";
 "recipe_delete_waits_for_purchase" = "Un achat est encore en cours. Vous pourrez supprimer une fois qu'il sera terminé.";

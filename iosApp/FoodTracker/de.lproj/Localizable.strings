@@ -750,7 +750,7 @@
 "recipe_account_busy" = "Ein Rezept wird noch erstellt. Versuch es gleich noch einmal.";
 "recipe_delete_device_data" = "Meine Daten von unserem Server löschen";
 "recipe_delete_device_title" = "Deine Daten von unserem Server löschen?";
-"recipe_delete_device_message_none" = "Die anonyme Anmeldung, die dieses {device} nutzt, wird von unserem Server gelöscht; ein Nachweis eventueller Käufe bleibt erhalten, aber nicht mehr mit dir verknüpft. Gespeicherte Rezepte und dein Vorrat bleiben auf diesem {device}.";
+"recipe_delete_device_message_none" = "Die anonyme Anmeldung, die dieses {device} nutzt, wird von unserem Server gelöscht; ein Nachweis eventueller Käufe bleibt erhalten, aber nicht mehr mit dir verknüpft. Eventuelle Meldungen von dir bleiben eine begrenzte Zeit erhalten, ebenfalls nicht mehr mit dir verknüpft. Gespeicherte Rezepte und dein Vorrat bleiben auf diesem {device}.";
 "recipe_delete_device_confirm" = "Daten löschen";
 "recipe_device_data_deleted" = "Deine Daten sind von unserem Server gelöscht";
 "recipe_delete_waits_for_purchase" = "Ein Kauf wird noch abgeschlossen. Du kannst löschen, sobald er fertig ist.";
