@@ -510,7 +510,6 @@ private struct AddEditRequest: Identifiable {
     var prefill = AddItemPrefill()
 }
 
-#if DEBUG
 /// Takes the size offered and offers it on to its content, which can never make it larger: the
 /// app shell stays the size of the screen however tall a tab's content would like to be.
 private struct TakesOfferedSpace: Layout {
@@ -525,6 +524,7 @@ private struct TakesOfferedSpace: Layout {
     }
 }
 
+#if DEBUG
 extension RootTabView {
     /// Screenshot support for scripts/ios_screenshots.sh, compiled out of release builds:
     /// `-demoBackup <path>` replaces the pantry with a backup file, `-demoTab <name>` (home,
