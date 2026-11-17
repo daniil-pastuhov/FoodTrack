@@ -4,6 +4,7 @@
  *   npm run admin -- find   --email <address> | --play-order <GPA.…> | --apple-order <id> | --apple-transaction <id> | --uid <uid>
  *   npm run admin -- delete <one of the above> [--apply --confirm <uid>] [--kind <request kind>, with --uid]
  *   npm run admin -- board  [--days 30] [--out <file.html>]   (README "The board": read-only)
+ *   npm run admin -- image  list | use <profile> [--apply]  (README "Provider profiles")
  *
  * Against the emulators (project demo-foodtracker, 127.0.0.1:8080 / :9099) unless `--project` names
  * a live project; then with the operator's Application Default Credentials. `delete` is a dry run
@@ -36,6 +37,9 @@ import { BOARD_MAX_DAYS, buildBoard } from "../board/boardData";
 import { boardSummary, renderBoardHtml } from "../board/boardHtml";
 import { readBoardInput } from "../board/boardReader";
 import { LiveStoreLookups, accessSecret, cloudLogger, emulatorStoreLookups } from "./stores";
+import { DEFAULT_IMAGE_SELECTION } from "../constants";
+import { validImageSelection, type ImageSelection } from "../model";
+import { SwitchRefused, activateProfile, listProfiles, type PlannedWrite, type SetupView, type SwitchEnv } from "../core/providerSwitch";
 
 export const EMULATOR_PROJECT = "demo-foodtracker";
 
@@ -51,7 +55,9 @@ const USAGE = `usage:
   npm run admin -- find   (--email <a> | --play-order <GPA.…> | --apple-order <id> | --apple-transaction <id> | --uid <uid>) [--project <id>]
   npm run admin -- delete (same lookup) [--project <id>] [--apply --confirm <uid>] [--kind <${REQUEST_KINDS.join("|")}>, with --uid]
   npm run admin -- board  [--days <1-${BOARD_MAX_DAYS}, default 30>] [--out <file.html>] [--project <id>]
-Without --project: the local emulators (${EMULATOR_PROJECT}). delete is a dry run without --apply.`;
+  npm run admin -- image  list [--project <id>]
+  npm run admin -- image  use <profile> [--apply] [--project <id>]
+Without --project: the local emulators (${EMULATOR_PROJECT}). delete and image use are dry runs without --apply.`;
 
 const OPTIONS = {
   email: { type: "string" },
@@ -215,6 +221,110 @@ export async function runBoard(args: BoardArgs, env: BoardEnv): Promise<{ path: 
   return { path, html };
 }
 
+// --- Picture profiles (README "Provider profiles") ---------------------------------------------
+
+const IMAGE_OPTIONS = { project: { type: "string" }, apply: { type: "boolean" } } as const;
+
+export type ImageArgs = { command: "list"; project: string } | { command: "use"; profile: string; apply: boolean; project: string };
+
+export function parseImageArgs(argv: string[]): ImageArgs {
+  let parsed;
+  try {
+    parsed = parseArgs({ args: argv, options: IMAGE_OPTIONS, allowPositionals: true, strict: true });
+  } catch (e) {
+    throw new AdminRefusal(`${(e as Error).message}\n${USAGE}`);
+  }
+  const { values, positionals } = parsed;
+  if (positionals[0] !== "image") throw new AdminRefusal(USAGE);
+  const project = values.project ?? EMULATOR_PROJECT;
+  if (positionals[1] === "list" && positionals.length === 2) {
+    if (values.apply) throw new AdminRefusal("--apply belongs to image use.");
+    return { command: "list", project };
+  }
+  if (positionals[1] === "use" && positionals.length === 3) return { command: "use", profile: positionals[2], apply: values.apply === true, project };
+  throw new AdminRefusal(USAGE);
+}
+
+export interface ImageEnv extends SwitchEnv {
+  print(line: string): void;
+  flush?(): Promise<void>;
+}
+
+const usd = (n: number) => `USD ${n.toFixed(3).replace(/0$/, "")}`;
+
+function setupLine(s: SetupView): string {
+  if (s.provider === "off") return `${s.profile} (pictures off)`;
+  return `${s.profile}: ${s.provider} / ${s.model}, fallback ${s.fallbackModel || "none"}; step pictures at most ${s.maxStepImages}; ` +
+    `pictures ${s.picturesOn ? "offered" : "NOT offered (no price, or costs.recipeImage is 0)"}`;
+}
+
+const writeLine = (w: PlannedWrite) => `  - ${w.path.join(" > ")} = ${JSON.stringify(w.value)}`;
+
+/** `image list` and `image use`; throws AdminRefusal for a refused switch (nothing changed then). */
+export async function runImage(args: ImageArgs, env: ImageEnv): Promise<void> {
+  const { print } = env;
+  if (args.command === "list") {
+    const view = await listProfiles(env);
+    print(`Active:      ${setupLine(view.active)}`);
+    print(`Last change: ${view.lastChange ? `${view.lastChange.at} (${view.lastChange.via}) ${view.lastChange.from} -> ${view.lastChange.to}` : "none recorded"}`);
+    print("Profiles:");
+    for (const p of view.profiles) {
+      const mark = p.id === view.active.profile ? "*" : " ";
+      const models = p.provider === "off" ? "no pictures"
+        : [p.model, p.fallbackModel].filter(Boolean).map((m) => `${p.provider}/${m} (${usd(p.usdPerImage[`${p.provider}/${m}`])})`).join(", fallback ");
+      print(`${mark} ${p.id.padEnd(12)} ${p.ready ? "ready    " : "NOT READY"}  ${p.label}: ${models}`);
+      for (const m of p.missing) print(`                         - ${m}`);
+    }
+    print("Switch with: npm run admin -- image use <profile> (a dry run; add --apply to write).");
+    return;
+  }
+  let out;
+  try {
+    out = await activateProfile(env, args.profile, { apply: args.apply, actor: { via: "cli" } });
+  } catch (e) {
+    if (e instanceof SwitchRefused) throw new AdminRefusal(`Refused (${e.reason}): ${e.message}`);
+    throw e;
+  }
+  print(`From: ${setupLine(out.plan.from)}`);
+  print(`To:   ${setupLine(out.plan.to)}`);
+  if (!out.changed) {
+    print("Already in force: nothing to write.");
+    return;
+  }
+  print(out.applied ? "Done, written to config/runtime:" : "Dry run, nothing changed. --apply would write to config/runtime:");
+  for (const w of out.plan.writes) print(writeLine(w));
+  print(out.applied
+    ? `Audit record providerProfileChanges/${out.changeId}. New requests use it within 30 s (the instances' config cache).`
+    : `To switch: npm run admin -- image use ${args.profile} --apply${args.project === EMULATOR_PROJECT ? "" : ` --project ${args.project}`}`);
+}
+
+export function buildImageEnv(project: string): ImageEnv {
+  const { live, app } = adminApp(project);
+  const db = getFirestore(app);
+  const params = live ? deployParams(project) : {};
+  const logging = live ? cloudLogger(project, stderrLogger) : { logger: stderrLogger, flush: async () => undefined };
+  // The deploy's picture defaults, as the functions read them (only shown when config/runtime.image says nothing).
+  const fromParams = live
+    ? validImageSelection({
+        ...(params.IMAGE_PROVIDER ? { provider: params.IMAGE_PROVIDER } : {}),
+        ...(params.IMAGE_MODEL ? { model: params.IMAGE_MODEL } : {}),
+        ...(params.IMAGE_FALLBACK_MODEL !== undefined ? { fallbackModel: params.IMAGE_FALLBACK_MODEL } : {}),
+      }, DEFAULT_IMAGE_SELECTION)
+    : null;
+  const imageDefaults: ImageSelection = fromParams ?? { ...DEFAULT_IMAGE_SELECTION };
+  const openAiSecret = params.OPENAI_API_KEY_SECRET || "OPENAI_API_KEY";
+  return {
+    db,
+    now: () => Date.now(),
+    logger: logging.logger,
+    imageDefaults,
+    // Live: the operator's credentials read the secret (and drop it); the emulators hold no secrets.
+    secretReadable: async (secret) => live && secret === "openai" ? accessSecret(project, openAiSecret).then(() => true, () => false) : false,
+    print: (l) => console.log(l),
+    flush: logging.flush,
+  };
+}
+
 // --- Wiring -----------------------------------------------------------------------------------
 
 /** One JSON line per log entry, on stderr, so stdout stays the report. */
@@ -336,6 +446,17 @@ async function main(): Promise<void> {
   const argv = process.argv.slice(2);
   let env: AdminEnv | undefined;
   try {
+    if (argv[0] === "image") {
+      const args = parseImageArgs(argv);
+      const imageEnv = buildImageEnv(args.project);
+      console.log(args.project.startsWith("demo-") ? `[emulators, ${args.project}]` : `[LIVE project ${args.project}]`);
+      try {
+        await runImage(args, imageEnv);
+      } finally {
+        await imageEnv.flush?.();
+      }
+      return;
+    }
     if (argv[0] === "board") {
       const args = parseBoardArgs(argv);
       const boardEnv = buildBoardEnv(args.project);
