@@ -1,0 +1,4 @@
+• Opskrifter fra pakker kan nu komme med billeder lavet af AI: den færdige ret, eller også de svære trin. Din ret kan se anderledes ud, og billeder koster ekstra opskrifter fra din pakke, som formularen viser.
+• Gemte opskrifter beholder deres billeder; billedet af retten vises på listen.
+• "Rapportér opskriften": sig til, hvis en opskrift eller menu fra en pakke er stødende, usikker eller forkert.
+• Sletning af kontoen siger nu, at rapporter, du har sendt, gemmes i en begrænset tid.

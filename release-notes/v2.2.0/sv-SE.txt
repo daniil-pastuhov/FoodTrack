@@ -1,0 +1,4 @@
+• Recept från paket kan nu komma med bilder skapade av AI: den färdiga rätten, eller även knepiga steg. Din rätt kan se annorlunda ut, och bilder tar extra recept från ditt paket, som formuläret visar.
+• Sparade recept behåller sina bilder; bilden av rätten syns i listan.
+• ”Rapportera receptet”: säg till om ett recept eller en meny från ett paket är stötande, osäkert eller fel.
+• När du raderar kontot står det nu att rapporter du skickat sparas en begränsad tid.

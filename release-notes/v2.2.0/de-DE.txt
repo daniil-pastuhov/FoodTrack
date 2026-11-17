@@ -1,0 +1,4 @@
+• Rezepte aus Paketen können jetzt Bilder von KI haben: das Gericht oder auch knifflige Schritte. Dein Gericht kann anders aussehen, und Bilder brauchen zusätzliche Rezepte aus dem Paket, wie das Formular zeigt.
+• Gespeicherte Rezepte behalten ihre Bilder; das Bild des Gerichts erscheint in der Liste.
+• „Dieses Rezept melden“: Sag uns, wenn ein Rezept oder Menü aus einem Paket anstößig, unsicher oder falsch ist.
+• Beim Löschen des Kontos steht jetzt, dass Meldungen begrenzt aufbewahrt werden.

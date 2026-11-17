@@ -1,0 +1,4 @@
+• Las recetas de los paquetes ahora pueden traer imágenes creadas con IA: el plato, o también los pasos difíciles. Tu plato puede verse diferente, y las imágenes usan recetas extra de tu paquete, como indica el formulario.
+• Las recetas guardadas conservan sus imágenes; la del plato aparece en la lista.
+• «Denunciar esta receta»: avísanos si una receta o menú de un paquete es ofensivo, peligroso o incorrecto.
+• Al eliminar la cuenta se indica que las denuncias se guardan un tiempo limitado.
