@@ -451,22 +451,23 @@ requests included. The largest requests are now:
 That is under USD 0.0005 a call; the per-user and global arithmetic below is unchanged (one
 3-course menu booked at its worst case, 0.323, still fits the 0.45 a day; a second does not).
 
-**A taste profile adds at most about 1,500 bytes** (November 2026, CONTRACT.md "Taste profile"):
-the TASTE block is the server's own words, so its size is bounded by the id lists and caps, not
-by the client. Measured with every list at its cap with its longest words, `hot`, and everything
-else at its maximum as above (fullest multi-choice config): +1,469 bytes on a recipe, +1,497 on a
-menu (the menu's "vary them over the menu"), about USD 0.0022 a call. The price is unchanged.
+**A taste profile adds at most about 2,500 bytes** (November 2026, CONTRACT.md "Taste profile"):
+the TASTE and UNITS blocks are the server's own words, so their size is bounded by the id lists
+and caps, not by the client. Measured with every list at its cap with its longest words, `hot`,
+every unit, and everything else at its maximum as above (fullest multi-choice config): +2,458
+bytes on a recipe, +2,486 on a menu (the menu's "vary them over the menu"), about USD 0.0037 a
+call; the units step's share is 989 bytes, about USD 0.0015. The price is unchanged.
 
 | request | largest, no profile | largest, with the largest profile (judge off / on) |
 |---|---|---|
-| recipe | 13,979 bytes, USD 0.08241 / 0.10606 | 15,448 bytes, USD 0.08461 / 0.10827 |
-| 3-day 2-course menu | 15,243 bytes, USD 0.23286 / 0.27286 | 16,740 bytes, USD 0.23511 / 0.27511 |
-| 3-day 3-course menu | 15,262 bytes, USD 0.32289 / 0.37279 | 16,759 bytes, USD 0.32514 / 0.37503 |
-| 4-day 3-course menu | 15,287 bytes, USD 0.38293 / 0.43943 | 16,784 bytes, USD 0.38518 / 0.44167 |
+| recipe | 13,979 bytes, USD 0.08241 / 0.10606 | 16,437 bytes, USD 0.08610 / 0.10975 |
+| 3-day 2-course menu | 15,243 bytes, USD 0.23286 / 0.27286 | 17,729 bytes, USD 0.23659 / 0.27659 |
+| 3-day 3-course menu | 15,262 bytes, USD 0.32289 / 0.37279 | 17,748 bytes, USD 0.32662 / 0.37652 |
+| 4-day 3-course menu | 15,287 bytes, USD 0.38293 / 0.43943 | 17,773 bytes, USD 0.38666 / 0.44316 |
 
 The largest of all, 4 days of 3 courses with the judge on, still fits the per-user USD 0.45 (by
-0.008); `test/taste.test.ts` checks every menu set and the recipe against it with the judge off
-and on, and that the block adds under 1,700 bytes and USD 0.003.
+0.0068); `test/taste.test.ts` checks every menu set and the recipe against it with the judge off
+and on, and that the blocks add under 2,600 bytes and USD 0.004.
 
 **Staples add at most 2,600 bytes** (November 2026, CONTRACT.md "Staples"): the third data block
 holds at most 20 names and 400 code points of names (`MAX_STAPLES`, `MAX_STAPLE_NAME_CHARS`), a
@@ -1270,10 +1271,21 @@ then, and no native speaker has read them yet. `version` is the first 16 hex cha
 sha256 over the whole catalogue and the hidden entries that hide something, so it changes with
 any edit and with the hidden list, never by hand.
 
+**The measuring-units step** (`units`, added 2026-11-17 after the six steps of the design, so the
+apps show it as one new question): which units recipes may use, three groups (Weight: grams and
+kilograms, ounces and pounds; Volume: millilitres and litres, decilitres, cups, fluid ounces,
+tablespoons and teaspoons; Oven temperature: Celsius, Fahrenheit), every one choosable, none
+meaning each recipe chooses as before. It is an ordinary `multi` / `like` step on the wire; on the
+server its `prompt.units` and each option's `measure` (`amount`, `spoon` or `temperature`, never
+sent) put its answers in a UNITS block of fixed rules after TASTE (`unitLines` in
+`src/adapters/prompt.ts`, CONTRACT.md "Taste profile (request)") instead of the soft preferences.
+Hide temperatures without a deploy with `["units:celsius", "units:fahrenheit"]`, the step with
+`["units"]`.
+
 **Icons**: a step's `icon` must be one of `TASTE_ICONS`, the Lucide names the apps bundle:
-`globe`, `flame`, `citrus`, `heart`, `heart-off`, `cooking-pot` (in use), and `utensils`, `leaf`,
-`salad`, `fish`, `wheat`, `clock`, `sparkles`, `list-checks` (bundled for later steps;
-`utensils` is what an app draws for a name it does not have). A new icon needs an app
+`globe`, `flame`, `citrus`, `heart`, `heart-off`, `cooking-pot`, `utensils` (in use; `utensils` is also what
+an app draws for a name it does not have), and `leaf`, `salad`, `fish`, `wheat`, `clock`,
+`sparkles`, `list-checks` (bundled for later steps). A new icon needs an app
 release that bundles it before a step uses it.
 
 **Changing a question or an option** is a code change and a deploy, reviewed like code (the

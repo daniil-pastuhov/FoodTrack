@@ -566,6 +566,21 @@ preference, not an allergen**: it is never added to `allergens`, never checked i
 never refuses an answer; the allergen and diet checks, the quality gate and every other output
 check are unchanged. The price is unchanged.
 
+**Measuring units** (the `units` step, November 2026; a step like any other on the wire, `multi`,
+`tone: like`, nothing new for a client): its answers are not a taste, so they get a second block
+of fixed wording, UNITS, after TASTE and only when the step has an answer. It names the chosen
+units by the catalogue's words and says how amounts are written: every ingredient's amount in one
+of those units (one unit per amount), converted from any other and rounded to something easy to
+measure; small amounts in spoons when spoons are chosen, otherwise in the smallest chosen unit
+that suits or as a pinch; countable things stay counts, and a pantry item used whole may keep its
+own pack size. The two temperature options set how oven and cooking temperatures are written
+(both: the first with the second in brackets). It decides only how amounts and temperatures are
+written, never what goes into a dish, and every rule above comes first. No amount unit chosen
+leaves amounts to the model, as without the step; no temperature option, the same for
+temperatures. Units are never filtered by the diet or the allergens (they name no food), and no
+output check reads units: `amount` stays free text, so an answer in other units is never refused
+for it.
+
 What the server keeps of it: **nothing but the request hash.** As for `config`, the profile is
 not written to the generation record (`users/{uid}/generations/{requestId}` holds `inputHash`, a
 sha256 of the validated request, and no inputs); it is not logged either (`llm_call` carries only

@@ -37,6 +37,12 @@ export interface CatalogueOption {
   readonly level?: 1 | 2 | 3;
   /** The server's fixed English words for this option in the prompt. Never client text. */
   readonly prompt: string;
+  /**
+   * Server-only, on the options of a `units` step: what the unit measures (an ingredient's amount,
+   * a small amount in spoons, or an oven or cooking temperature), which picks the UNITS block's
+   * fixed rules (adapters/prompt.ts unitLines). Never sent to the apps.
+   */
+  readonly measure?: "amount" | "spoon" | "temperature";
 }
 
 export interface CatalogueGroup {
@@ -61,6 +67,12 @@ export interface CatalogueStep {
     readonly suffix?: string;
     /** A list of foods (documentation only: the diet and allergen filter runs on every `like` step). */
     readonly ingredients?: true;
+    /**
+     * Measuring units: the step's answers go into their own UNITS block of fixed rules on how
+     * amounts and temperatures are written (adapters/prompt.ts unitLines), not into TASTE, and
+     * are not filtered by the diet and allergens (they name no food). Every option has a `measure`.
+     */
+    readonly units?: true;
   };
   readonly groups: readonly CatalogueGroup[];
 }
@@ -249,6 +261,44 @@ export const TASTE_CATALOGUE: TasteCatalogue = {
             { id: "air_fryer", label: { en: "Air fryer", ru: "Аэрогриль", nb: "Airfryer", es: "Freidora de aire", de: "Heißluftfritteuse", fr: "Air fryer", sv: "Airfryer", da: "Airfryer" }, prompt: "in an air fryer" },
             { id: "no_cook", label: { en: "No cooking", ru: "Без готовки", nb: "Uten koking", es: "Sin cocinar", de: "Ohne Kochen", fr: "Sans cuisson", sv: "Utan tillagning", da: "Uden tilberedning" }, prompt: "no cooking at all" },
             { id: "steam", label: { en: "Steaming", ru: "На пару", nb: "Damping", es: "Al vapor", de: "Dämpfen", fr: "Vapeur", sv: "Ångkokning", da: "Dampning" }, prompt: "steaming" },
+          ],
+        },
+      ],
+    },
+    {
+      id: "units",
+      kind: "multi",
+      tone: "like",
+      icon: "utensils",
+      max: 9,
+      question: { en: "Which units can recipes use?", ru: "Какие единицы измерения подходят для рецептов?", nb: "Hvilke måleenheter kan oppskriftene bruke?", es: "¿Qué unidades pueden usar las recetas?", de: "Welche Maßeinheiten dürfen Rezepte verwenden?", fr: "Quelles unités les recettes peuvent-elles utiliser ?", sv: "Vilka måttenheter får recepten använda?", da: "Hvilke måleenheder må opskrifterne bruge?" },
+      note: { en: "Counts such as 2 eggs are always fine. Choose none and each recipe decides.", ru: "Штуки, например 2 яйца, подходят всегда. Если ничего не выбрать, рецепт решит сам.", nb: "Antall, som 2 egg, går alltid an. Velger du ingen, bestemmer hver oppskrift selv.", es: "Las cantidades por unidades, como 2 huevos, siempre valen. Si no eliges ninguna, cada receta decide.", de: "Stückzahlen wie 2 Eier gehen immer. Wählst du keine, entscheidet jedes Rezept selbst.", fr: "Les quantités à l'unité, comme 2 œufs, sont toujours possibles. Sans choix, chaque recette décide.", sv: "Antal, som 2 ägg, går alltid bra. Väljer du ingen bestämmer varje recept själv.", da: "Antal, som 2 æg, er altid fint. Vælger du ingen, bestemmer hver opskrift selv." },
+      // The UNITS block (adapters/prompt.ts unitLines), not the TASTE block: how amounts and
+      // temperatures are written, never what goes into a dish.
+      prompt: { label: "- Units they measure in:", units: true },
+      groups: [
+        {
+          title: { en: "Weight", ru: "Вес", nb: "Vekt", es: "Peso", de: "Gewicht", fr: "Poids", sv: "Vikt", da: "Vægt" },
+          options: [
+            { id: "grams", label: { en: "Grams and kilograms", ru: "Граммы и килограммы", nb: "Gram og kilo", es: "Gramos y kilos", de: "Gramm und Kilogramm", fr: "Grammes et kilos", sv: "Gram och kilo", da: "Gram og kilo" }, measure: "amount", prompt: "grams and kilograms" },
+            { id: "ounces_pounds", label: { en: "Ounces and pounds", ru: "Унции и фунты", nb: "Unser og pund", es: "Onzas y libras", de: "Unzen und Pfund", fr: "Onces et livres", sv: "Uns och pund", da: "Unser og pund" }, measure: "amount", prompt: "ounces and pounds" },
+          ],
+        },
+        {
+          title: { en: "Volume", ru: "Объём", nb: "Volum", es: "Volumen", de: "Volumen", fr: "Volume", sv: "Volym", da: "Rumfang" },
+          options: [
+            { id: "millilitres", label: { en: "Millilitres and litres", ru: "Миллилитры и литры", nb: "Milliliter og liter", es: "Mililitros y litros", de: "Milliliter und Liter", fr: "Millilitres et litres", sv: "Milliliter och liter", da: "Milliliter og liter" }, measure: "amount", prompt: "millilitres and litres" },
+            { id: "decilitres", label: { en: "Decilitres", ru: "Децилитры", nb: "Desiliter", es: "Decilitros", de: "Deziliter", fr: "Décilitres", sv: "Deciliter", da: "Deciliter" }, measure: "amount", prompt: "decilitres" },
+            { id: "cups", label: { en: "Cups", ru: "Мерные стаканы (cups)", nb: "Kopper (cups)", es: "Tazas", de: "Tassen (Cups)", fr: "Tasses (cups)", sv: "Koppar (cups)", da: "Kopper (cups)" }, measure: "amount", prompt: "cups" },
+            { id: "fluid_ounces", label: { en: "Fluid ounces", ru: "Жидкие унции", nb: "Flytende unser", es: "Onzas líquidas", de: "Flüssigunzen", fr: "Onces liquides", sv: "Flytande uns", da: "Flydende unser" }, measure: "amount", prompt: "fluid ounces" },
+            { id: "spoons", label: { en: "Tablespoons and teaspoons", ru: "Столовые и чайные ложки", nb: "Spiseskjeer og teskjeer", es: "Cucharadas y cucharaditas", de: "Ess- und Teelöffel", fr: "Cuillères à soupe et à café", sv: "Matskedar och teskedar", da: "Spiseskeer og teskeer" }, measure: "spoon", prompt: "tablespoons and teaspoons" },
+          ],
+        },
+        {
+          title: { en: "Oven temperature", ru: "Температура духовки", nb: "Ovnstemperatur", es: "Temperatura del horno", de: "Ofentemperatur", fr: "Température du four", sv: "Ugnstemperatur", da: "Ovntemperatur" },
+          options: [
+            { id: "celsius", label: { en: "Celsius (°C)", ru: "Цельсий (°C)", nb: "Celsius (°C)", es: "Celsius (°C)", de: "Celsius (°C)", fr: "Celsius (°C)", sv: "Celsius (°C)", da: "Celsius (°C)" }, measure: "temperature", prompt: "degrees Celsius" },
+            { id: "fahrenheit", label: { en: "Fahrenheit (°F)", ru: "Фаренгейт (°F)", nb: "Fahrenheit (°F)", es: "Fahrenheit (°F)", de: "Fahrenheit (°F)", fr: "Fahrenheit (°F)", sv: "Fahrenheit (°F)", da: "Fahrenheit (°F)" }, measure: "temperature", prompt: "degrees Fahrenheit" },
           ],
         },
       ],

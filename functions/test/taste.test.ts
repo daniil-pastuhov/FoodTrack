@@ -10,7 +10,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { HttpsError } from "firebase-functions/v2/https";
-import { buildPrompt, inputTokenBound, systemInstruction, tasteLines, userText } from "../src/adapters/prompt";
+import { buildPrompt, inputTokenBound, systemInstruction, tasteLines, unitLines, userText } from "../src/adapters/prompt";
 import { MENU_COURSES, MENU_DAYS, type MenuCourses, type MenuDays } from "../src/constants";
 import { CAPABILITIES, inputHashOf, validateGenerateRequest, type GenerateRequest, type TasteProfile } from "../src/contract";
 import { getBalance } from "../src/core/account";
@@ -339,6 +339,117 @@ describe("the prompt", () => {
   });
 });
 
+describe("the units step (UNITS block)", () => {
+  const units = (ids: string[], over: Record<string, unknown> = {}) => unitLines(parse({ taste: { units: ids }, ...over }));
+  const INTRO = "- The units the user measures in, chosen from the app's fixed list. They decide only how amounts and temperatures are written, never what goes into a dish: every rule above comes first, and a unit is never a reason to leave out or swap a pantry item.";
+  const AMOUNTS = "- Write the amount of every ingredient in one of those units, one unit per amount, with no second unit in brackets. Convert from any other unit and round to an amount that is easy to measure: never an exact conversion such as 0.47 cups or 113.4 g.";
+  const SPOONS = "- Small amounts such as spices, salt or baking powder go in tablespoons or teaspoons.";
+  const NO_SPOONS = "- Spoons are not among them: write small amounts such as spices, salt or baking powder in the smallest of those units that suits them, or as a pinch.";
+  const COUNTS = "- Countable things stay counts (2 eggs, 1 onion, 3 cloves of garlic), and a pantry item used whole may keep its own pack size from the data, in any unit.";
+
+  test("cleaning: every unit can be chosen, in catalogue order; unknown ids dropped; hidden ones too", () => {
+    expect(tasteOf({ units: [...allOptions("units")].reverse() })).toEqual({ units: allOptions("units") });
+    expect(tasteOf({ units: ["cups", "stones", "furlongs"] })).toEqual({ units: ["cups"] });
+    expect(tasteOf({ units: ["celsius", "cups"] }, ["units:celsius"])).toEqual({ units: ["cups"] });
+    expect(tasteOf({ units: ["cups"], heat: "mild" }, ["units"])).toEqual({ heat: ["mild"] });
+  });
+
+  test("metric with spoons and Celsius, word for word, between TASTE and OUTPUT", () => {
+    const req = parse({ taste: { ...FULL, units: ["grams", "millilitres", "spoons", "celsius"] } });
+    expect(unitLines(req)).toEqual([
+      "",
+      "UNITS",
+      INTRO,
+      "- Units they measure in: grams and kilograms; millilitres and litres; tablespoons and teaspoons.",
+      AMOUNTS,
+      SPOONS,
+      COUNTS,
+      "- Write oven and cooking temperatures in degrees Celsius.",
+    ]);
+    const s = systemInstruction(req, CANARY);
+    expect(s.indexOf("\nUNITS\n")).toBeGreaterThan(s.indexOf("\nTASTE\n"));
+    expect(s.indexOf("\nUNITS\n")).toBeLessThan(s.indexOf("\nOUTPUT\n"));
+    // Not one of TASTE's soft preferences, and TASTE reads as it did.
+    expect(tasteLines(req)).toEqual(tasteLines(parse({ taste: FULL })));
+    expect(tasteLines(req).join("\n")).not.toMatch(/grams|units/i);
+  });
+
+  test("US units without spoons: small amounts in the smallest unit; both temperatures, the first in front", () => {
+    expect(units(["ounces_pounds", "cups", "fluid_ounces", "celsius", "fahrenheit"])).toEqual([
+      "",
+      "UNITS",
+      INTRO,
+      "- Units they measure in: ounces and pounds; cups; fluid ounces.",
+      AMOUNTS,
+      NO_SPOONS,
+      COUNTS,
+      "- Write oven and cooking temperatures in degrees Celsius, with degrees Fahrenheit in brackets.",
+    ]);
+    expect(units(["fahrenheit", "decilitres"]).slice(3)).toEqual(["- Units they measure in: decilitres.", AMOUNTS, NO_SPOONS, COUNTS, "- Write oven and cooking temperatures in degrees Fahrenheit."]);
+  });
+
+  test("only a temperature: amounts stay the model's choice; nothing chosen is no block", () => {
+    expect(units(["fahrenheit"])).toEqual(["", "UNITS", INTRO, "- Write oven and cooking temperatures in degrees Fahrenheit."]);
+    expect(units([])).toEqual([]);
+    expect(unitLines(parse({ taste: FULL }))).toEqual([]);
+    expect(systemInstruction(parse({ taste: FULL }), CANARY)).not.toContain("UNITS");
+  });
+
+  test("units alone: no TASTE block, and the same wording in a menu", () => {
+    const req = parse({ taste: { units: ["grams", "spoons"] } });
+    expect(tasteLines(req)).toEqual([]);
+    const s = systemInstruction(req, CANARY);
+    expect(s).not.toContain("\nTASTE\n");
+    expect(s.split("\nUNITS\n")).toHaveLength(2);
+    const menu = parse({ kind: "menu", courses: 2, taste: { units: ["grams", "spoons"] } });
+    expect(unitLines(menu)).toEqual(unitLines(req));
+  });
+
+  test("units are never filtered by the diet or the allergens, and change no rule", () => {
+    const vegan = { difficulty: "easy", detail: "standard", servings: 2, maxMinutes: null, mealType: "dinner", diet: "vegan", language: "en" };
+    const all = allOptions("units");
+    expect(units(all, { config: vegan, allergens: ["milk", "egg"], allergenConsent: true })).toEqual(units(all));
+    const req = parse({ taste: { units: all } });
+    expect(req.allergens).toEqual([]);
+    expect(req.config).toEqual(parse().config);
+    expect(buildPrompt(req, CANARY).schema).toEqual(buildPrompt(parse(), CANARY).schema);
+    expect(userText(req)).toBe(userText(parse()));
+  });
+
+  test("an answer in the chosen units passes every output check; the list may be repeated, the fixed rules may not", () => {
+    const req = parse({ taste: { units: allOptions("units") } });
+    const check = (a: unknown) => checkRecipeOutput(a, { req, canary: CANARY, systemInstruction: systemInstruction(req, CANARY) });
+    const answer = (ingredients: { amount: string; name: string; pantryId: string }[], summary = "A quick pasta.", steps = ["Heat the oven to 200°C (400°F).", "Bake the pasta for 20 minutes."]) => ({
+      title: "Pantry pasta", summary, minutes: 30, ingredients, steps,
+    });
+    const r = check(answer([
+      { amount: "8 oz", name: "pasta", pantryId: "p1" },
+      { amount: "1 1/2 cups", name: "tomatoes", pantryId: "p2" },
+      { amount: "2 fl oz", name: "cream", pantryId: "none" },
+      { amount: "1 dl", name: "stock", pantryId: "none" },
+      { amount: "1/2 tsp", name: "salt", pantryId: "none" },
+      { amount: "1 tbsp", name: "olive oil", pantryId: "none" },
+      { amount: "250 ml", name: "milk", pantryId: "none" },
+      { amount: "1 lb", name: "spinach", pantryId: "none" },
+      { amount: "2", name: "eggs", pantryId: "none" },
+    ]));
+    expect(r.ok).toBe(true);
+    const listed = "Grams and kilograms, millilitres and litres, decilitres, cups, fluid ounces, tablespoons and teaspoons all work here.";
+    expect(check(answer([{ amount: "200 g", name: "pasta", pantryId: "p1" }], listed)).ok).toBe(true);
+    const leaked = "Write the amount of every ingredient in one of those units, one unit per amount.";
+    expect(check(answer([{ amount: "200 g", name: "pasta", pantryId: "p1" }], leaked))).toMatchObject({ ok: false, rule: "LEAK" });
+  });
+
+  test("an old app's answers, without the step, give exactly the prompt they gave before it existed", () => {
+    const f = fixture("taste-recipe-2026-11-15.json");
+    const req = requestFrom(f);
+    expect(unitLines(req)).toEqual([]);
+    expect(req.taste!.map((a) => a.step)).not.toContain("units");
+    expect(systemInstruction(req, CANARY).split("\nTASTE\n")).toHaveLength(2);
+    expect(systemInstruction(req, CANARY)).not.toMatch(/UNITS|measure in/);
+  });
+});
+
 describe("no rule changes", () => {
   const answer = (ingredients: { amount: string; name: string; pantryId: string }[], summary = "A quick pasta.") => ({
     title: "Pantry pasta", summary, minutes: 20, ingredients, steps: ["Boil the pasta.", "Toss with sauce."],
@@ -403,7 +514,7 @@ function responseMinutes(schema: Record<string, unknown>): unknown {
 }
 
 describe("spend bounds", () => {
-  // The largest taste block: every list at its cap with its longest words, and a menu's wording.
+  // The largest taste profile: every list at its cap with its longest words (every unit), and a menu's wording.
   const longest = (field: string) => {
     const step = catalogueStep(field);
     const words = Object.fromEntries(step.groups.flatMap((g) => g.options).map((o) => [o.id, o.prompt]));
@@ -417,6 +528,7 @@ describe("spend bounds", () => {
     favourites: longest("favourites").filter((f) => !avoid.includes(f)),
     avoid,
     methods: longest("methods"),
+    units: longest("units"),
   };
   const heavy = (k: number, n: number) => Array.from({ length: n }, (_, i) => String.fromCodePoint(0x20000 + k * 64 + i)).join("");
   const largest = (kind: string, d: MenuDays | undefined, c: MenuCourses | undefined, taste?: unknown) => validateGenerateRequest({
@@ -435,11 +547,11 @@ describe("spend bounds", () => {
     ...MENU_DAYS.flatMap((d) => MENU_COURSES.map((c) => ["menu", d, c] as [string, MenuDays, MenuCourses])),
   ];
 
-  test("the largest block adds under 1,700 bytes to the input bound of every variant", () => {
+  test("the largest blocks (TASTE and UNITS) adds under 2,600 bytes to the input bound of every variant", () => {
     for (const [kind, d, c] of variants) {
       const grew = inputTokenBound(largest(kind, d, c, LARGEST_TASTE)) - inputTokenBound(largest(kind, d, c));
       expect(grew).toBeGreaterThan(1000);
-      expect(grew).toBeLessThan(1700);
+      expect(grew).toBeLessThan(2600);
     }
   });
 
@@ -448,8 +560,8 @@ describe("spend bounds", () => {
     for (const [kind, d, c] of variants) {
       const plan = planFor(largest(kind, d, c, LARGEST_TASTE), config);
       expect(plan.reservedMicroUsd).toBeLessThanOrEqual(config.perUserDailySpendMicroUsd);
-      // Under USD 0.003 more than without (1.50 USD per 1M input tokens, a token per byte at worst).
-      expect(plan.reservedMicroUsd - planFor(largest(kind, d, c), config).reservedMicroUsd).toBeLessThan(3_000);
+      // Under USD 0.004 more than without (1.50 USD per 1M input tokens, a token per byte at worst).
+      expect(plan.reservedMicroUsd - planFor(largest(kind, d, c), config).reservedMicroUsd).toBeLessThan(4_000);
     }
   });
 });
