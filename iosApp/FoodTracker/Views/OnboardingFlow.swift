@@ -20,7 +20,8 @@ struct OnboardingAsks {
 /// except what the last screen says.
 ///
 /// An answer is true for allowed, false for refused on the system prompt, and nil when the system
-/// never put the question, as with Not now. Only a refusal counts as declined.
+/// never put the question (a failed request). Only a refusal counts as declined. A permission
+/// screen can only be left through its system prompt (`canGoBack`; App Review 5.1.1(iv)).
 struct OnboardingFlow {
     private(set) var step: OnboardingStep = .welcome
     private(set) var remindersDeclined = false
@@ -70,8 +71,15 @@ struct OnboardingFlow {
         }
     }
 
-    /// Whether the screen offers Back: every one but the first.
-    var canGoBack: Bool { step != .welcome }
+    /// Whether the screen offers Back: every one but the first and the two permission screens,
+    /// which are left only through the system prompt (App Review 5.1.1(iv): nothing may put the
+    /// request off once it has been explained). Android keeps Back there.
+    var canGoBack: Bool {
+        switch step {
+        case .welcome, .notifications, .camera: return false
+        case .staples, .ready, .declined: return true
+        }
+    }
 
     /// Scanning leads the way unless the camera was refused, when the scanner would have nothing
     /// to show. Reminders being off doesn't get in the way of a scan.

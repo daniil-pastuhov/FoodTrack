@@ -9,6 +9,12 @@ private let onboardingMarkSize: CGFloat = 72
 /// The first-run flow: each permission is explained just before the system asks, and nothing
 /// depends on the answer. `onFinish` says where to go next.
 ///
+/// A permission screen (notifications, camera) has one button, Continue, which always puts the
+/// system prompt up, and no Back, Not now or other way past it: App Review guideline 5.1.1(iv)
+/// (2.1.0 was rejected for "Allow the camera" and Not now). Whatever the answer, the flow goes on.
+/// A refusal is met where the feature is used, with a way to the Settings app (Home's reminders
+/// note, the scanner's "The camera is off").
+///
 /// The camera is asked here only because this is where it is explained; `ScannerSheetView` still
 /// owns every other case. An answer given here carries over through the system's own record, so
 /// the scanner never asks a second time.
@@ -111,14 +117,12 @@ struct OnboardingView: View {
 
     private var notifications: some View {
         OnboardingPage(onBack: backAction) {
-            LarderButton(L10n.onboardingNotificationsAllow, fullWidth: true) {
+            // Neutral wording and the only way on: it always leads to the system prompt.
+            LarderButton(L10n.continueButton, fullWidth: true) {
                 ask {
                     let answer = await IOSNotificationManager.shared.requestAuthorization()
                     flow.notificationsAnswered(answer, OnboardingAsks(notifications: false, camera: cameraIsUnasked))
                 }
-            }
-            LarderButton(L10n.onboardingNotNow, variant: .text, fullWidth: true) {
-                flow.notificationsAnswered(nil, OnboardingAsks(notifications: false, camera: cameraIsUnasked))
             }
         } content: {
             OnboardingTitle(L10n.onboardingNotificationsTitle)
@@ -129,11 +133,9 @@ struct OnboardingView: View {
 
     private var camera: some View {
         OnboardingPage(onBack: backAction) {
-            LarderButton(L10n.onboardingCameraAllow, fullWidth: true) {
+            // As on the notifications screen: Continue, and the system prompt.
+            LarderButton(L10n.continueButton, fullWidth: true) {
                 ask { flow.cameraAnswered(await AVCaptureDevice.requestAccess(for: .video)) }
-            }
-            LarderButton(L10n.onboardingNotNow, variant: .text, fullWidth: true) {
-                flow.cameraAnswered(nil)
             }
         } content: {
             OnboardingTitle(L10n.onboardingCameraTitle)

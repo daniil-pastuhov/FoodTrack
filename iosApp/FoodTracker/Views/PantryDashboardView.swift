@@ -38,7 +38,8 @@ struct PantryDashboardView<DetailPane: View>: View {
     @State private var selectedItemIDs: Set<String> = []
     @State private var isSearching = false
     @State private var notificationsDenied = false
-    /// The system prompt hasn't been answered, as after Not now in onboarding.
+    /// The system prompt hasn't been answered: Not now in the onboarding of an earlier version,
+    /// or a request that failed.
     @State private var notificationsNotAsked = false
 
     private var pantryEmpty: Bool { viewModel.items.isEmpty }
@@ -266,7 +267,9 @@ struct PantryDashboardView<DetailPane: View>: View {
             icon: .bellOff,
             title: L10n.homeRemindersOffTitle,
             message: notificationsNotAsked ? L10n.remindersNotAskedMessage : L10n.homeRemindersOffMessage,
-            actionTitle: notificationsNotAsked ? L10n.onboardingNotificationsAllow : L10n.settingsNotificationsOpenSettings,
+            // Before the system prompt the button is neutral and the note can't be closed
+            // (App Review 5.1.1(iv)); after a refusal it opens Settings and can be.
+            actionTitle: notificationsNotAsked ? L10n.continueButton : L10n.settingsNotificationsOpenSettings,
             action: {
                 if notificationsNotAsked {
                     Task { await IOSNotificationManager.shared.requestAuthorization(thenSchedule: viewModel.items) }
@@ -274,7 +277,7 @@ struct PantryDashboardView<DetailPane: View>: View {
                     openNotificationSettings()
                 }
             },
-            onDismiss: { remindersCalloutDismissed = true }
+            onDismiss: notificationsNotAsked ? nil : { remindersCalloutDismissed = true }
         )
         .padding(.bottom, LarderSpace.s3)
     }

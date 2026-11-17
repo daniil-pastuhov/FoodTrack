@@ -545,15 +545,12 @@
 "onboarding_sample_title" = "Best used soon";
 "onboarding_sample_body" = "Greek yoghurt reaches its date tomorrow.";
 "onboarding_sample_description" = "Example reminder: %1$@. %2$@";
-"onboarding_notifications_allow" = "Turn on reminders";
-"onboarding_not_now" = "Not now";
 "onboarding_camera_title" = "Scan it instead of typing";
 "onboarding_camera_body" = "Point the camera at a product and %1$@ fills in the details for you. Photos stay on your device.";
 "onboarding_camera_barcodes_title" = "Barcodes";
 "onboarding_camera_barcodes_body" = "Finds the product and its name";
 "onboarding_camera_dates_title" = "Printed dates";
 "onboarding_camera_dates_body" = "Reads the date from the pack";
-"onboarding_camera_allow" = "Allow the camera";
 "onboarding_ready_title" = "Ready for your first item";
 "onboarding_ready_body" = "Bring something from the fridge and scan it. It takes a few seconds.";
 "onboarding_skip" = "Skip for now";

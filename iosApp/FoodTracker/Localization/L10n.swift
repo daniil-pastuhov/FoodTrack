@@ -177,8 +177,6 @@ public enum L10n {
     public static func onboardingSampleDescription(_ title: String, _ body: String) -> String {
         String(format: NSLocalizedString("onboarding_sample_description", comment: ""), title, body)
     }
-    public static var onboardingNotificationsAllow: String { NSLocalizedString("onboarding_notifications_allow", comment: "") }
-    public static var onboardingNotNow: String { NSLocalizedString("onboarding_not_now", comment: "") }
     public static var onboardingStaplesTitle: String { NSLocalizedString("onboarding_staples_title", comment: "") }
     public static var onboardingStaplesLater: String { NSLocalizedString("onboarding_staples_later", comment: "") }
     public static var onboardingStaplesContinue: String { NSLocalizedString("onboarding_staples_continue", comment: "") }
@@ -191,7 +189,6 @@ public enum L10n {
     public static var onboardingCameraBarcodesBody: String { NSLocalizedString("onboarding_camera_barcodes_body", comment: "") }
     public static var onboardingCameraDatesTitle: String { NSLocalizedString("onboarding_camera_dates_title", comment: "") }
     public static var onboardingCameraDatesBody: String { NSLocalizedString("onboarding_camera_dates_body", comment: "") }
-    public static var onboardingCameraAllow: String { NSLocalizedString("onboarding_camera_allow", comment: "") }
     public static var onboardingReadyTitle: String { NSLocalizedString("onboarding_ready_title", comment: "") }
     public static var onboardingReadyBody: String { NSLocalizedString("onboarding_ready_body", comment: "") }
     public static var onboardingSkip: String { NSLocalizedString("onboarding_skip", comment: "") }

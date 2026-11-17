@@ -62,7 +62,8 @@ public struct SettingsView: View {
     @State private var isResolvingStoreLocation = false
     /// iOS has notifications for the app switched off (authorization denied).
     @State private var notificationsDenied = false
-    /// The system prompt hasn't been answered, as after Not now in onboarding.
+    /// The system prompt hasn't been answered: Not now in the onboarding of an earlier version,
+    /// or a request that failed.
     @State private var notificationsNotAsked = false
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.isExpanded) private var isExpanded
@@ -392,7 +393,8 @@ public struct SettingsView: View {
                         icon: .bellOff,
                         title: L10n.settingsNotificationsBlockedTitle,
                         message: L10n.remindersNotAskedMessage,
-                        actionTitle: L10n.onboardingNotificationsAllow
+                        // Neutral: it leads to the system prompt (App Review 5.1.1(iv)).
+                        actionTitle: L10n.continueButton
                     ) {
                         Task { await IOSNotificationManager.shared.requestAuthorization(thenSchedule: viewModel.items) }
                     }
