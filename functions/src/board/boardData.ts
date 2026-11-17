@@ -31,6 +31,10 @@ export const STAT_FIELDS = [
   "sandboxCredits",
   "welcomeGrants",
   "welcomeCredits",
+  "imageRequests",
+  "imagesDelivered",
+  "imageFailures",
+  "reports",
 ] as const;
 export type StatField = (typeof STAT_FIELDS)[number];
 export type DayStats = Record<StatField, number>;

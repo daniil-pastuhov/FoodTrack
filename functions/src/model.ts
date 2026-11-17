@@ -6,9 +6,13 @@ import {
   CONFIG_CACHE_MS,
   COST_MAX,
   DEFAULT_COSTS,
+  DEFAULT_IMAGE_PRICES,
+  DEFAULT_IMAGE_SELECTION,
   DEFAULT_MENU_DAYS,
+  MAX_STEP_IMAGES_LIMIT,
   DEFAULT_MENU_SETS,
   DEFAULT_PRICES,
+  IMAGE_PROVIDERS,
   MENU_COURSES,
   MENU_DAYS,
   PURCHASE_TOKEN_NAMESPACE,
@@ -16,6 +20,8 @@ import {
   type CostKey,
   type Costs,
   type GenerationKind,
+  type ImageLevel,
+  type ImageProvider,
   type MenuCourses,
   type MenuDays,
   type MenuSetCosts,
@@ -78,6 +84,8 @@ export interface UserDoc {
    * recorded in `welcomes/`: when an ID token names another, getBalance records it.
    */
   welcomeProviders?: string[];
+  /** Reports (reportRecipe) sent by this account in the current UTC day (ceiling: reports.perUserPerDay). */
+  reportWindow?: { day: string; count: number };
   /** Balance that was lost when the account was deleted. */
   forfeitedBalance?: number;
   /** When the Auth user's displayName and photoURL were last cleared (scrubProfile). */
@@ -225,11 +233,73 @@ export interface GenerationDoc {
   menu?: Menu;
   /** Set on terminal states only; Firestore TTL deletes the doc after it. */
   expiresAt?: Timestamp;
+  /** A recipe asked with pictures: the level asked (`image`); absent on every other generation. */
+  imageLevel?: ImageLevel;
+  /**
+   * The dish picture's share of `cost` (recipeImage minus recipe, from the table at reservation
+   * time): given back when the recipe is delivered without the dish's picture. Never read from
+   * the current table.
+   */
+  imageCost?: number;
+  /**
+   * Level "steps": the step pictures' share of `cost` (recipeImageSteps minus recipeImage, at
+   * reservation): given back when not one step picture is delivered.
+   */
+  stepImagesCost?: number;
+  /** The step pictures asked at most (`image.maxStepImages` at reservation); level "steps" only. */
+  stepImagesMax?: number;
+  /** The pictures' worst-case spend (1 + stepImagesMax pictures), part of `reservedMicroUsd`. */
+  imageReservedMicroUsd?: number;
+  /** The provider and model the picture was asked of (no prompt, no brief). */
+  imageProvider?: string;
+  imageModel?: string;
+  /** Set when the recipe was delivered with its picture, which is in imageRef. */
+  imageStored?: true;
+  /** Set when the recipe was delivered without its picture (and imageCost given back). */
+  imageFailed?: true;
+  /** Fixed reason code of a picture that failed (never provider text). */
+  imageFailure?: string;
+  /** Level "steps": how many steps the model marked (after the brief checks, at most stepImagesMax). */
+  stepImagesMarked?: number;
+  /** Level "steps": the 0-based step indices whose pictures were delivered (in recipeImages/step-<i>). */
+  stepImagesStored?: number[];
+  /** Level "steps": set when some marked step's picture was not delivered (stepImagesCost is given back only when none was). */
+  stepImagesFailed?: true;
+}
+
+/** The document id of a generation's picture: the dish's, or a step's (0-based index). */
+export const imageDocId = (step?: number) => (step === undefined ? "main" : `step-${step}`);
+
+/**
+ * The delivered picture of a generation, in its own document so that the generation document,
+ * the judge's input and every read of a generation stay small: users/{uid}/generations/{id}/
+ * recipeImages/main. Same `expiresAt` as its generation (the TTL policy on `recipeImages`
+ * deletes it); deleteAccount's recursive delete of `generations` removes it too.
+ */
+export interface GenerationImageDoc {
+  mimeType: "image/jpeg";
+  data: Buffer;
+  width: number;
+  height: number;
+  expiresAt: Timestamp;
 }
 
 export interface Prices {
   inputUsdPerMTok: number;
   outputUsdPerMTok: number;
+  /**
+   * USD per delivered picture, by "provider/model" (DEFAULT_IMAGE_PRICES plus
+   * `config/runtime.prices.imageUsdPerImage`, which adds to or overrides them).
+   */
+  imageUsdPerImage?: Readonly<Record<string, number>>;
+}
+
+/** Which provider and model make a recipe's picture (README "Recipe pictures", "Switching"). */
+export interface ImageSelection {
+  provider: ImageProvider;
+  model: string;
+  /** Step pictures beside the dish's at most (`image: "steps"`); 0 turns that level off. */
+  maxStepImages: number;
 }
 
 export interface RuntimeConfig {
@@ -271,8 +341,23 @@ export interface RuntimeConfig {
    * verdict, never block) or "enforce" (a verdict other than ok is a content failure).
    */
   outputJudge: OutputJudgeMode;
+  /**
+   * The table in force. Its `recipeImage` is left out when pictures cannot be made:
+   * `recipeImage: 0`, the provider "off", or no price for the selected provider and model.
+   */
   costs: Costs;
   prices: Prices;
+  /**
+   * The picture's provider and model: `config/runtime.image` over the IMAGE_PROVIDER and
+   * IMAGE_MODEL parameters over DEFAULT_IMAGE_SELECTION. An invalid `image` turns pictures off.
+   */
+  image: ImageSelection;
+  /**
+   * "Report this recipe" (reportRecipe, README "Reports"): at most `perUserPerDay` reports per
+   * signed-in account and `perDay` across the service per UTC day; each report is kept
+   * `keepDays` days (TTL).
+   */
+  reports: ReportsConfig;
   /**
    * The taste quiz's tuning without a deploy (README "Taste profile quiz"): `hidden` is a list of
    * "<step>" or "<step>:<option>" ids left out of getTasteQuiz and dropped from requests. Nothing
@@ -285,6 +370,27 @@ export interface RuntimeConfig {
    * accounts (the brake on farming).
    */
   welcome: WelcomeConfig;
+}
+
+export interface ReportsConfig {
+  perUserPerDay: number;
+  perDay: number;
+  keepDays: number;
+}
+
+/** `reports`: each field optional (its default); out of range refuses the whole map (defaults). */
+export function validReports(v: unknown): ReportsConfig | null {
+  if (!isObj(v)) return null;
+  const d = DEFAULT_RUNTIME_CONFIG.reports;
+  const get = (k: keyof ReportsConfig, min: number, max: number) => {
+    const n = v[k] === undefined ? d[k] : v[k];
+    return isCount(n) && n >= min && n <= max ? n : null;
+  };
+  const perUserPerDay = get("perUserPerDay", 0, 1000);
+  const perDay = get("perDay", 0, 100_000);
+  const keepDays = get("keepDays", 1, 400);
+  if (perUserPerDay === null || perDay === null || keepDays === null) return null;
+  return { perUserPerDay, perDay, keepDays };
 }
 
 export interface WelcomeConfig {
@@ -324,7 +430,9 @@ export const DEFAULT_RUNTIME_CONFIG: Readonly<RuntimeConfig> = {
   rejectedPromptsPerDay: 5,
   outputJudge: "off",
   costs: DEFAULT_COSTS,
-  prices: { ...DEFAULT_PRICES },
+  prices: { ...DEFAULT_PRICES, imageUsdPerImage: { ...DEFAULT_IMAGE_PRICES } },
+  image: { ...DEFAULT_IMAGE_SELECTION },
+  reports: { perUserPerDay: 10, perDay: 500, keepDays: 90 },
   tasteQuiz: { hidden: [] },
   welcome: { recipes: 3, perDay: 200 },
 };
@@ -364,6 +472,22 @@ export function validCosts(v: unknown): Costs | null {
   if (!isObj(v)) return null;
   if (!isCost(v.recipe) || !isCost(v.menu2) || !isCost(v.menu3)) return null;
   const recipe = v.recipe;
+  // `recipeImage` (optional): absent or null is twice `recipe` (at most COST_MAX), 0 turns
+  // pictures off, anything else must be a cost of at least `recipe`: a picture never makes a
+  // recipe cheaper. `recipeImageSteps` likewise: absent or null is three times `recipe` (at
+  // least `recipeImage`, at most COST_MAX), 0 turns that level off, anything else must be at least
+  // `recipeImage`; without `recipeImage` there is no steps level either.
+  let recipeImage: number | undefined;
+  if (v.recipeImage === undefined || v.recipeImage === null) recipeImage = Math.min(COST_MAX, recipe * 2);
+  else if (v.recipeImage === 0) recipeImage = undefined;
+  else if (isCost(v.recipeImage) && v.recipeImage >= recipe) recipeImage = v.recipeImage;
+  else return null;
+  let recipeImageSteps: number | undefined;
+  if (v.recipeImageSteps === undefined || v.recipeImageSteps === null) {
+    recipeImageSteps = recipeImage === undefined ? undefined : Math.min(COST_MAX, Math.max(recipeImage, recipe * 3));
+  } else if (v.recipeImageSteps === 0) recipeImageSteps = undefined;
+  else if (isCost(v.recipeImageSteps) && v.recipeImageSteps >= (recipeImage ?? recipe)) recipeImageSteps = v.recipeImageSteps;
+  else return null;
   const sets = v.menuSets === undefined || v.menuSets === null ? {} : v.menuSets;
   if (!isObj(sets)) return null;
   const dayKeys = MENU_DAYS.map((d) => `${d}`);
@@ -407,14 +531,78 @@ export function validCosts(v: unknown): Costs | null {
       if (i > 0 && row[ck] < menuSets[`${MENU_DAYS[i - 1]}`][ck]) return null;
     }
   }
-  return costsOf(recipe, menuSets);
+  return costsOf(recipe, menuSets, recipeImage, recipeImageSteps);
 }
 
+/** A table without `recipeImage` and `recipeImageSteps` (pictures off). */
+export function withoutImage(costs: Costs): Costs {
+  if (costs.recipeImage === undefined && costs.recipeImageSteps === undefined) return costs;
+  return costsOf(costs.recipe, costs.menuSets);
+}
+
+/** A table without `recipeImageSteps` (step pictures off). */
+export function withoutStepImages(costs: Costs): Costs {
+  if (costs.recipeImageSteps === undefined) return costs;
+  return costsOf(costs.recipe, costs.menuSets, costs.recipeImage);
+}
+
+const IMAGE_KEY = /^[a-z][a-z0-9]{1,19}\/[A-Za-z0-9][A-Za-z0-9._-]{0,79}$/;
+const IMAGE_MODEL = /^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$/;
+
+/** `imageUsdPerImage`: "provider/model" keys, each a price from 0.001 to 2 USD; null when invalid. */
+function validImagePrices(v: unknown): Record<string, number> | null {
+  if (!isObj(v) || Object.keys(v).length > 50) return null;
+  const out: Record<string, number> = {};
+  for (const [k, n] of Object.entries(v)) {
+    if (!IMAGE_KEY.test(k) || typeof n !== "number" || !Number.isFinite(n) || n < 0.001 || n > 2) return null;
+    out[k] = n;
+  }
+  return out;
+}
+
+/** `config/runtime.image`: { provider?, model? }, each optional over `base`; null when invalid. */
+export function validImageSelection(v: unknown, base: ImageSelection): ImageSelection | null {
+  if (!isObj(v)) return null;
+  const provider = v.provider === undefined ? base.provider : v.provider;
+  const model = v.model === undefined ? base.model : v.model;
+  const max = v.maxStepImages === undefined ? base.maxStepImages : v.maxStepImages;
+  if (!(IMAGE_PROVIDERS as readonly unknown[]).includes(provider)) return null;
+  if (typeof model !== "string" || !IMAGE_MODEL.test(model)) return null;
+  if (!isCount(max) || max > MAX_STEP_IMAGES_LIMIT) return null;
+  return { provider: provider as ImageProvider, model, maxStepImages: max };
+}
+
+/**
+ * The micro-USD one picture of the selected provider and model is reserved and booked at, or
+ * null when pictures cannot be made (provider "off", or no price for this provider and model).
+ */
+export function imageMicroUsdOf(config: Pick<RuntimeConfig, "image" | "prices">): number | null {
+  if (config.image.provider === "off") return null;
+  const key = `${config.image.provider}/${config.image.model}`;
+  const prices = config.prices.imageUsdPerImage ?? DEFAULT_IMAGE_PRICES;
+  const usd = Object.prototype.hasOwnProperty.call(prices, key) ? prices[key] : undefined;
+  return usd === undefined ? null : Math.ceil(usd * 1_000_000);
+}
+
+/**
+ * The token prices are required; `imageUsdPerImage` is optional and adds to or overrides
+ * DEFAULT_IMAGE_PRICES entry by entry. Any invalid part refuses the whole override.
+ */
 function validPrices(v: unknown): Prices | null {
   if (!isObj(v)) return null;
   const ok = (n: unknown) => typeof n === "number" && Number.isFinite(n) && n >= 0.01 && n <= 1000;
   if (!ok(v.inputUsdPerMTok) || !ok(v.outputUsdPerMTok)) return null;
-  return { inputUsdPerMTok: v.inputUsdPerMTok as number, outputUsdPerMTok: v.outputUsdPerMTok as number };
+  let image: Record<string, number> = {};
+  if (v.imageUsdPerImage !== undefined && v.imageUsdPerImage !== null) {
+    const parsed = validImagePrices(v.imageUsdPerImage);
+    if (!parsed) return null;
+    image = parsed;
+  }
+  return {
+    inputUsdPerMTok: v.inputUsdPerMTok as number,
+    outputUsdPerMTok: v.outputUsdPerMTok as number,
+    imageUsdPerImage: { ...DEFAULT_IMAGE_PRICES, ...image },
+  };
 }
 
 /**
@@ -422,8 +610,12 @@ function validPrices(v: unknown): Prices | null {
  * fails open: `generationEnabled` and `allowSandbox` read as false, limits and tables take their
  * defaults (the safe values), and a warning names the fields.
  */
-export function parseRuntimeConfig(data: Record<string, unknown>, logger?: Logger): RuntimeConfig {
-  const out: RuntimeConfig = { ...DEFAULT_RUNTIME_CONFIG };
+export function parseRuntimeConfig(
+  data: Record<string, unknown>,
+  logger?: Logger,
+  imageDefaults: ImageSelection = DEFAULT_IMAGE_SELECTION,
+): RuntimeConfig {
+  const out: RuntimeConfig = { ...DEFAULT_RUNTIME_CONFIG, image: { ...imageDefaults } };
   const bad: string[] = [];
   for (const key of ["generationEnabled", "allowSandbox", "consumptionSampleContentProvided"] as const) {
     if (data[key] === undefined) continue;
@@ -486,6 +678,23 @@ export function parseRuntimeConfig(data: Record<string, unknown>, logger?: Logge
       bad.push("welcome");
     }
   }
+  if (data.reports !== undefined) {
+    const r = validReports(data.reports);
+    if (r) out.reports = r;
+    else bad.push("reports");
+  }
+  if (data.image !== undefined) {
+    const s = validImageSelection(data.image, out.image);
+    if (s) out.image = s;
+    else {
+      // Never fail open: an invalid image setting turns pictures off.
+      out.image = { ...out.image, provider: "off" };
+      bad.push("image");
+    }
+  }
+  // The table says a picture's price only while one can be made at a booked price.
+  if (imageMicroUsdOf(out) === null) out.costs = withoutImage(out.costs);
+  else if (out.image.maxStepImages === 0) out.costs = withoutStepImages(out.costs);
   if (bad.length) logger?.warn("config/runtime has invalid fields; safe values used", { fields: bad });
   return out;
 }
@@ -517,9 +726,9 @@ export function validWelcome(v: unknown): WelcomeConfig | null {
   return { recipes: recipes as number, perDay: perDay as number };
 }
 
-export async function loadRuntimeConfig(db: Firestore, logger?: Logger): Promise<RuntimeConfig> {
+export async function loadRuntimeConfig(db: Firestore, logger?: Logger, imageDefaults?: ImageSelection): Promise<RuntimeConfig> {
   const snap = await db.doc("config/runtime").get();
-  return parseRuntimeConfig((snap.data() ?? {}) as Record<string, unknown>, logger);
+  return parseRuntimeConfig((snap.data() ?? {}) as Record<string, unknown>, logger, imageDefaults);
 }
 
 /**
@@ -613,6 +822,22 @@ export function paidAllowance(user: UserDoc, perRefund: number): number {
 export const userRef = (db: Firestore, uid: string) => db.collection("users").doc(uid) as DocumentReference<UserDoc>;
 export const generationRef = (db: Firestore, uid: string, requestId: string) =>
   userRef(db, uid).collection("generations").doc(requestId) as DocumentReference<GenerationDoc>;
+/**
+ * users/{uid}/reportable/{requestId}: that a generation of this account was delivered (DONE), kept
+ * REPORTABLE_DAYS after it, long after the generation itself (7 days), so reportRecipe can tell
+ * a saved result of the caller's from a made-up id. Holds no recipe text.
+ */
+export interface ReportableDoc {
+  kind: GenerationKind;
+  at: Timestamp;
+  expiresAt: Timestamp;
+}
+export const REPORTABLE_DAYS = 365;
+export const reportableRef = (db: Firestore, uid: string, requestId: string) =>
+  userRef(db, uid).collection("reportable").doc(requestId) as DocumentReference<ReportableDoc>;
+
+export const generationImageRef = (db: Firestore, uid: string, requestId: string, step?: number) =>
+  generationRef(db, uid, requestId).collection("recipeImages").doc(imageDocId(step)) as DocumentReference<GenerationImageDoc>;
 export const purchaseRef = (db: Firestore, id: string) =>
   db.collection("purchases").doc(id) as DocumentReference<PurchaseDoc>;
 export const statsRef = (db: Firestore, day: string) => db.collection("stats").doc(day.replace(/-/g, ""));

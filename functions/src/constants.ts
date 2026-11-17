@@ -71,11 +71,29 @@ export interface Costs {
   readonly menu2: number;
   readonly menu3: number;
   readonly menuSets: MenuSetCosts;
+  /**
+   * A single recipe with a generated picture of the dish (`generateRecipe` `image: "dish"`,
+   * CONTRACT.md "Capability `acceptsRecipeImage`"). Absent when pictures are off: turned off in
+   * `config/runtime.costs` (`recipeImage: 0`), the provider is "off", or the selected provider and
+   * model have no per-image price (model.ts parseRuntimeConfig). The apps offer a picture only
+   * while the table has this key.
+   */
+  readonly recipeImage?: number;
+  /**
+   * A single recipe with a picture of the dish and pictures of up to `image.maxStepImages` of its
+   * steps (`image: "steps"`), the whole price. Absent when that level is off: whenever
+   * `recipeImage` is absent, `recipeImageSteps: 0`, or `maxStepImages` is 0.
+   */
+  readonly recipeImageSteps?: number;
 }
 
-export function costsOf(recipe: number, menuSets: MenuSetCosts): Costs {
+export function costsOf(recipe: number, menuSets: MenuSetCosts, recipeImage?: number, recipeImageSteps?: number): Costs {
   const row = menuSets[`${DEFAULT_MENU_DAYS}`];
-  return { recipe, menu2: row["2"], menu3: row["3"], menuSets };
+  return {
+    recipe, menu2: row["2"], menu3: row["3"], menuSets,
+    ...(recipeImage !== undefined ? { recipeImage } : {}),
+    ...(recipeImage !== undefined && recipeImageSteps !== undefined ? { recipeImageSteps } : {}),
+  };
 }
 
 /** Credits of a request's variant in a table. */
@@ -97,7 +115,27 @@ export const DEFAULT_MENU_SETS: MenuSetCosts = {
   "3": { "1": 3, "2": 4, "3": 5 },
   "4": { "1": 4, "2": 5, "3": 6 },
 };
-export const DEFAULT_COSTS: Costs = costsOf(1, DEFAULT_MENU_SETS);
+/**
+ * A recipe with a picture: twice a recipe by default (README "How the money works", "Recipe
+ * pictures"). A `config/runtime.costs` override without `recipeImage` gets twice its own
+ * `recipe` (at most COST_MAX); `recipeImage: 0` turns pictures off.
+ */
+export const DEFAULT_RECIPE_IMAGE_COST = 2;
+/**
+ * A recipe with the dish's picture and up to DEFAULT_MAX_STEP_IMAGES step pictures: three times a
+ * recipe by default (at most three pictures of about USD 0.034 plus the text, against at least
+ * 3 x USD 0.106 net). An override without `recipeImageSteps` gets three times its own `recipe`;
+ * `recipeImageSteps: 0` turns the level off.
+ */
+export const DEFAULT_RECIPE_IMAGE_STEPS_COST = 3;
+export const DEFAULT_COSTS: Costs = costsOf(1, DEFAULT_MENU_SETS, DEFAULT_RECIPE_IMAGE_COST, DEFAULT_RECIPE_IMAGE_STEPS_COST);
+
+/** The picture levels of `generateRecipe` `image` (CONTRACT.md "Capability `acceptsRecipeImage`"). */
+export const IMAGE_LEVELS = ["dish", "steps"] as const;
+export type ImageLevel = (typeof IMAGE_LEVELS)[number];
+/** Step pictures beside the dish's at most, by default (`config/runtime.image.maxStepImages`, 0 to MAX_STEP_IMAGES_LIMIT). */
+export const DEFAULT_MAX_STEP_IMAGES = 2;
+export const MAX_STEP_IMAGES_LIMIT = 4;
 /** An override is refused (defaults used) unless every cost is an integer in [1, COST_MAX]. */
 export const COST_MAX = 100;
 
@@ -120,6 +158,59 @@ export const JUDGE = {
   tokenCeiling: 2048,
   abortMs: { recipe: 12_000, menu: 25_000 } as Readonly<Record<GenerationKind, number>>,
 } as const;
+
+/**
+ * A recipe's picture (README "Recipe pictures"): made after the text passed every check, within
+ * the same reservation, so a recipe with a picture reserves `reservationExtraMs` more. The image
+ * call is aborted after `abortMs`; llmAbortMs + the judge's abortMs + abortMs (40 + 12 + 35 s)
+ * stays below reservationMs + reservationExtraMs (105 s) and GENERATE_TIMEOUT_SECONDS.
+ *
+ * Every picture is delivered as a JPEG of at most `maxEdge` pixels on its longer side, re-encoded
+ * at `jpegQuality` (adapters/imageNormalize.ts); a provider's answer larger than `maxInputBytes`
+ * is refused without decoding, and a delivered picture is at most `maxOutputBytes` (one Firestore
+ * document holds it, under the 1 MiB limit).
+ */
+export const IMAGE = {
+  abortMs: 35_000,
+  reservationExtraMs: 45_000,
+  maxEdge: 768,
+  jpegQuality: 80,
+  /** A provider's answer: a 1K picture is well under both (1024 x 1024; 1,536 on the long side at most for other ratios). */
+  maxInputBytes: 8 * 1024 * 1024,
+  maxInputPixels: 1600 * 1600,
+  maxOutputBytes: 600_000,
+  /** The text model's `imageBrief`: plain English, these many characters at most. */
+  briefMaxChars: 200,
+  briefMinChars: 10,
+} as const;
+
+/** The image providers behind the RecipeImageGenerator port (adapters/image.ts); "off" makes none. */
+export const IMAGE_PROVIDERS = ["vertex", "openai", "off"] as const;
+export type ImageProvider = (typeof IMAGE_PROVIDERS)[number];
+
+/**
+ * The picture's default provider and model, when neither the IMAGE_PROVIDER / IMAGE_MODEL
+ * parameters nor `config/runtime.image` say otherwise. Vertex AI's Nano Banana 2.1 (model id
+ * `gemini-nano-banana-2.1`, its model page on docs.cloud.google.com, read 2026-11-17; offered on
+ * the `global` endpoint only).
+ */
+export const DEFAULT_IMAGE_SELECTION = { provider: "vertex", model: "gemini-nano-banana-2.1", maxStepImages: 2 } as const;
+
+/**
+ * USD per delivered picture, by "provider/model", the conservative figures reserved against the
+ * spend ceilings and booked per call. `config/runtime.prices.imageUsdPerImage` adds to or
+ * overrides them; a provider and model with no price here or there make no pictures (the costs
+ * table then has no `recipeImage`), so switching to an unpriced model can never spend unbooked
+ * money.
+ * - vertex/gemini-nano-banana-2.1: Google lists 1,120 output tokens per 1K image at USD 30 per 1M
+ *   (USD 0.0336) plus the short prompt; 0.05 leaves room.
+ * - openai/gpt-image-1-mini: OpenAI lists USD 8 per 1M image output tokens; a 1024x1024 "medium"
+ *   picture is about a thousand tokens (USD 0.01); 0.02 leaves room.
+ */
+export const DEFAULT_IMAGE_PRICES: Readonly<Record<string, number>> = {
+  "vertex/gemini-nano-banana-2.1": 0.05,
+  "openai/gpt-image-1-mini": 0.02,
+};
 
 /** generateRecipe's function timeout; covers the menu path, the longest one. */
 export const GENERATE_TIMEOUT_SECONDS = 180;

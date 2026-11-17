@@ -222,6 +222,15 @@ export interface RecipeGenerator {
   generate(request: GenerateRequest, prompt: Prompt, signal: AbortSignal, limits: GenerationLimits): Promise<GenerationResult>;
 }
 
+/** What the judge classifies: a validated answer, and the picture's brief when one was asked. */
+export interface JudgedOutput {
+  recipe?: Recipe;
+  menu?: Menu;
+  imageBrief?: string;
+  /** Level "steps": the kept step briefs. */
+  stepBriefs?: string[];
+}
+
 /** The optional second check on a validated answer (config/runtime `outputJudge`). */
 export type JudgeVerdict = "ok" | "off_topic" | "unsafe_food" | "harmful";
 
@@ -237,7 +246,60 @@ export interface OutputJudge {
    * answers with an enum. Throws GenerationError ("content" when the judge's own safety filter
    * blocked the text, "infra" otherwise).
    */
-  judge(output: { recipe?: Recipe; menu?: Menu }, signal: AbortSignal): Promise<JudgeResult>;
+  judge(output: JudgedOutput, signal: AbortSignal): Promise<JudgeResult>;
+}
+
+// --- Recipe pictures ---------------------------------------------------------------------------
+
+/**
+ * What a picture is asked from: one fixed English text the server built (core/recipeImage.ts
+ * imagePromptFor) from its own template and the text model's checked `imageBrief`. Never the
+ * person's own text, never the system instruction.
+ */
+export interface ImagePrompt {
+  text: string;
+}
+
+/** The selected provider and model (RuntimeConfig.image), passed on every call. */
+export interface ImageTarget {
+  provider: string;
+  model: string;
+}
+
+/** A provider's answer, before core/recipeImage.ts re-encodes it to the delivered JPEG. */
+export interface GeneratedImage {
+  bytes: Buffer;
+  /** As the provider said (image/png, image/jpeg, image/webp ...); the bytes are checked anyway. */
+  mimeType: string;
+  /** The model that answered, when the provider says (logs only). */
+  model: string;
+}
+
+/**
+ * A picture that was not made. `kind`: "safety" when the provider's own filters refused the
+ * prompt or the picture, "config" when the provider cannot be called at all (unknown provider, no
+ * API key: nothing was sent, nothing billed), "infra" otherwise (network, 4xx/5xx, timeout, an
+ * unusable answer). `billed`: whether the call may have been charged; when true the picture's
+ * reserved price is booked. The message is a fixed text (status codes, never provider text, which
+ * could quote the prompt).
+ */
+export class ImageGenerationError extends Error {
+  constructor(
+    readonly kind: "safety" | "config" | "infra",
+    message: string,
+    readonly billed: boolean,
+  ) {
+    super(message);
+  }
+}
+
+/**
+ * The provider-neutral port behind every recipe picture. Implementations (adapters/image.ts):
+ * Vertex AI and OpenAI, chosen per call by `target.provider` (ImageRouter), and the emulator fake.
+ * Must honour `signal`. Throws ImageGenerationError.
+ */
+export interface RecipeImageGenerator {
+  generate(prompt: ImagePrompt, target: ImageTarget, signal: AbortSignal): Promise<GeneratedImage>;
 }
 
 // --- Wiring -----------------------------------------------------------------------------------
@@ -255,6 +317,8 @@ export interface Deps {
   appStore: AppStoreVerifier;
   generator: RecipeGenerator;
   judge: OutputJudge;
+  /** Recipe pictures, whatever the provider (RecipeImageGenerator). */
+  imageGenerator: RecipeImageGenerator;
   appleRevoker: AppleTokenRevoker;
   /** Encrypts the stored Sign in with Apple refresh tokens (adapters/envelope.ts). */
   sealer: SecretSealer;

@@ -22,6 +22,9 @@ the caller. The client wire contract is in [CONTRACT.md](CONTRACT.md).
 | `src/core/buyers.ts` | FIFO attribution of spent credits to purchases, buyer keys, the refund-after-use blocklist |
 | `src/core/consumption.ts` | Answers Apple's `CONSUMPTION_REQUEST` for consenting buyers |
 | `src/core/generation.ts` | `generateRecipe` (reserve, call the LLM, settle) and `getGeneration` (polling) |
+| `src/core/reports.ts` | `reportRecipe` ("Report this recipe") and keeping a deleted account's reports without its uid (see "Reports") |
+| `src/core/recipeImage.ts` | A recipe's picture: the fixed prompt template around the checked brief, the call under its time limit, the `image_call` line (see "Recipe pictures") |
+| `src/adapters/image.ts`, `imageNormalize.ts`, `secretManager.ts` | The picture providers behind one port (Vertex AI, OpenAI, `ImageRouter`), the re-encoding of every picture to the delivered JPEG (sharp), and the run-time read of a provider's API key |
 | `src/core/sweeper.ts` | Stale reservations, Play consume retries, owed consumption answers, negative-balance watch |
 | `src/core/notifications.ts` | Play RTDN, Voided Purchases poll, App Store Server Notifications v2, budget kill switch |
 | `src/core/account.ts` | `getBalance`, `mergeBalance`, `deleteAccount` |
@@ -31,14 +34,14 @@ the caller. The client wire contract is in [CONTRACT.md](CONTRACT.md).
 | `src/admin/` | The owner's offline commands, none deployed as a function: deletion requests by email (`npm run admin`, see "Deletion requests by email"), the spend and sales board by hand (`npm run admin -- board`, see "The board"), the prompt replay (`npm run prompt-body`) and the prompt-injection red-team runner (`npm run redteam`, `src/admin/redteam/`; see "Replaying a prompt against the live model") |
 | `src/taste/` | The taste profile quiz: `catalogue.ts` (every step, option, text and prompt word; see "Taste profile quiz") and `quiz.ts` (`getTasteQuiz`, the version, cleaning a request's `taste`) |
 | `src/core/guard.ts` | Pre-Firestore throttles, client address, log sampling |
-| `src/ports.ts` | `PlayVerifier`, `AppStoreVerifier`, `RecipeGenerator`, `AppleTokenRevoker` interfaces |
+| `src/ports.ts` | `PlayVerifier`, `AppStoreVerifier`, `RecipeGenerator`, `RecipeImageGenerator`, `AppleTokenRevoker` interfaces |
 | `src/adapters/` | Production implementations (Play Developer API, App Store Server Library, Gemini on Vertex AI, Sign in with Apple, KMS envelope encryption, the board's Cloud Storage bucket) and the prompt |
 | `alerts/` | The alerting as code: log-based metric (`metrics/`), alert policies (`policies/`) and `alerts.py`, which applies them (see "Alerts") |
 | `src/emulatorFakes.ts` | Fake stores and LLM, only inside the Functions emulator with `EMULATOR_FAKES=true` and a `demo-` project |
 | `src/index.ts` | Triggers, params, secrets, per-function limits |
 | `certs/AppleRootCA-G3.cer` | Apple's public root CA (SHA-256 `63:34:3A:BF:…:91:79`, checked by a test) |
 | `../firestore.rules` | Denies every client read and write; only the Admin SDK touches Firestore |
-| `../firestore.indexes.json` | Sweeper indexes and the TTL policy on `generations.expiresAt` |
+| `../firestore.indexes.json` | Sweeper indexes and the TTL policies on `generations.expiresAt` and `recipeImages.expiresAt` |
 
 ### Functions
 
@@ -46,6 +49,7 @@ the caller. The client wire contract is in [CONTRACT.md](CONTRACT.md).
 |---|---|---|
 | `verifyPurchase`, `generateRecipe`, `mergeBalance`, `deleteAccount`, `registerAppleSignIn`, `claimWelcome` | callable, App Check enforced and limited-use tokens consumed (replays refused) | See CONTRACT.md |
 | `getBalance`, `getGeneration`, `getTasteQuiz` | callable, App Check enforced, token not consumed | See CONTRACT.md |
+| `reportRecipe` | callable, App Check enforced and limited-use token consumed | "Report this recipe" on a result from a pack (CONTRACT.md, "Reports") |
 | `getWelcomeOffer` | callable, App Check enforced, token not consumed, **no sign-in** | See CONTRACT.md and "Welcome grant" |
 | `sweepReservations` | every 5 min | Refunds reservations still pending 60 s after their deadline; retries Play consumes and owed consumption answers; watches negative balances |
 | `pollPlayVoidedPurchases` | daily 04:00 UTC | Voided Purchases API, last 3 days, for RTDNs that never arrived |
@@ -110,6 +114,21 @@ the caller. The client wire contract is in [CONTRACT.md](CONTRACT.md).
   output rule, so an answer that also breaks one (a link, an allergen, the wrong language) is
   settled as that content failure; with `outputJudge` on, the judge also sees a gate-refused
   answer, and its refusal (under `enforce`) is settled as the judge's content failure.
+- A recipe with pictures (`image: "dish"` or `"steps"`, "Recipe pictures") costs
+  `costs.recipeImage` (default 2) or `costs.recipeImageSteps` (default 3), reserved like any
+  request together with the pictures' price. The generation doc stores the shares at reservation
+  time: `imageCost` (dish share = recipeImage − recipe) and `stepImagesCost` (steps share =
+  recipeImageSteps − recipeImage). A share is kept only for pictures delivered: no dish picture
+  (the picture model failed, refused, timed out, the brief was refused, the answer could not be
+  decoded) gives back both shares (`imageFailed`); a dish picture with not one step picture
+  (none marked, or every marked one failed) gives back the steps share (`stepImagesFailed`); at
+  least one step picture keeps it. Given back in the same settle, always, outside the content and
+  timeout allowances and not counted in `infraRefundsPerDay` (stats `imageGivenBackCredits`);
+  settle runs once per generation, so recovery and retries can never give back twice. No dish
+  picture also means no step picture delivered. Text failed: no picture is made; a refunded
+  failure gives everything back, and a charged one (by the rules below) keeps only the text's
+  share and gives both picture shares back. Free welcome recipes are spent only for what
+  is kept.
 - A request the gate would refuse whatever the model wrote is refused before anything is
   reserved, with `NOT_ENOUGH_ITEMS` (nothing charged, no model call, log
   `generation_not_enough_items`): no pantry item that the allergens and diet allow (by the same
@@ -363,6 +382,16 @@ Every LLM call is priced before it is made and paid for by a credit:
 
   4 days of 3 courses (12 dishes) is held at 24,000 (600 a day for the wrappers instead of 1,000)
   so that its worst case with the output judge on still fits the per-user ceiling below.
+- **Pictures.** A recipe with pictures also reserves the selected model's price for every picture
+  it may get (1 for `"dish"`, 1 + `image.maxStepImages` for `"steps"`, 3 by default) and books the
+  pictures really asked; the price per picture is
+  (`prices.imageUsdPerImage["<provider>/<model>"]`, default USD 0.05 for Vertex
+  `gemini-nano-banana-2.1`, 0.02 for OpenAI `gpt-image-1-mini`) in the same transaction and against
+  the same ceilings; settle books it when the provider may have charged (a picture delivered, a
+  safety refusal after generation, a timeout, an undecodable answer, a 5xx) and books 0 when
+  nothing was sent or the request was refused (4xx, no key, a refused brief). A provider and
+  model without a price make no pictures at all (`recipeImage` leaves the table), so switching
+  models can never spend unbooked money.
 - **Usage logs.** One `llm_call` log line per call: `uidHash` (sha256 of the uid with a fixed
   prefix, not the uid), kind, courses, days (menus; 3 for one reserved before menu sets), `taste`
   (whether the request carried a taste profile: `true` / `false`, null on a line the sweeper
@@ -370,6 +399,8 @@ Every LLM call is priced before it is made and paid for by a credit:
   the diet and allergen filter; null on a line the sweeper writes; never their names), model, input / output / thinking tokens, finish reason,
   duration, outcome, cost, charged / refunded, reserved and estimated micro-USD. Never ingredient
   names, staple names, taste ids, prompts or outputs. In Logs Explorer: `jsonPayload.message="llm_call"`.
+  It also says `image` (true when a picture was asked, else null) and `imageOutcome` (`done` or the
+  failure code); each picture call has its own `image_call` line ("Recipe pictures").
 
 #### Spend ceilings (defaults and arithmetic)
 
@@ -478,6 +509,16 @@ The response schema changes only in the value of `minutes.maximum` (any multiple
 Output caps are unchanged, so every figure below holds as it was; `test/optionalIngredients.test.ts`
 checks the inequality for each kind.
 
+**A picture adds its price and 759 bytes** (November 2026, "Recipe pictures"): the brief's two
+instruction lines and its schema field, under USD 0.001, plus the picture's reserved price (USD
+0.05 by default). The largest recipe (every field at its maximum, 4-byte names, multi-choice
+config) is USD 0.0824 without a picture and 0.1331 with one (0.1060 / 0.1568 with the judge on).
+Measured, a recipe with a picture is about 0.02 + 0.034 = USD 0.054 against at least 2 × 0.106 net
+(the 100-pack after a 30 % store cut and 25 % VAT), so the default price of 2 covers it about four
+times typically and 1.4 times at the worst case with the judge on. Per user, at most three
+pictures a day start when every one is booked at its worst case (0.133 × 3 = 0.40), about eight
+at measured cost. Menus get no pictures, so the menu arithmetic below is unchanged.
+
 - **Per user: USD 0.45 a day** (`perUserDailySpendMicroUsd: 450000`). A call starts only if
   today's booked spend + its worst case ≤ 0.45. 3-course menus: start at 0 → 0.11 → refused at
   0.22 (0.22 + 0.32 > 0.45): **two 3-course menus**, then recipes still fit (0.22 + 0.08 ≤ 0.45).
@@ -517,6 +558,7 @@ concurrency 1 below 1 vCPU), 1 instance:
 | `mergeBalance` | 1 | 10 | 30 s |
 | `deleteAccount` | 1 | 10 | 120 s |
 | `registerAppleSignIn` | 1 | 10 | 30 s |
+| `reportRecipe` | 1 | 20 (and 30 per uid, 120 per address, as every callable) | 30 s |
 | `claimWelcome` | 1 | 10 | 30 s |
 | `getWelcomeOffer` | 1 | 120 (per client address and instance only: no sign-in, so no uid) | 10 s |
 | `appStoreNotifications` | 1 | n/a (no Firestore before Apple's signature checks out) | 30 s |
@@ -675,6 +717,10 @@ Create log-based alerts in Cloud Logging on `jsonPayload.message` (all are struc
 | `daily_cap_reached` | error | The first `DAILY_CAP` refusal of the UTC day (`dailyCap`, `generationUnits`, `day`); recorded as `stats/{day}.dailyCapReachedAt`. |
 | `welcome_threshold` | warning | The welcome grant that took the day's count to half of `welcome.perDay` (rounded up): `percent` 50, `grants`, `perDay`, `day`. Once per UTC day (`welcome_day_limit` is the other half). |
 | `generation_refused` | warning | `generateRecipe` refused for an account's daily limits: `reason` `USER_DAILY_LIMIT` (`why`: `generations` or `spend`) or `INFRA_FAILURE_LIMIT` (`why`: `infra_refunds`), `uidHash`. Sampled: 30 a minute per instance, with `suppressedSinceLast`. Counted by the log-based metric `recipe_generation_refused`. |
+| `image_call` | info | One per picture asked of a provider: `uidHash`, `provider`, `model`, `outcome` (`done`, `SAFETY`, `CONFIG`, `TIMEOUT`, `INFRA`, `DECODE`), `durationMs`, `inputBytes`, `bytes`, `width`, `height`, `estimatedMicroUsd`. Never the prompt or the brief. Alert on many `CONFIG` (a missing key or an unknown provider after a switch) or `INFRA`. |
+| `recipe_reported` | warning | Someone used "Report this recipe" ("Reports"): `report` (a hash of the report id; the document is `reports/<reportId>`), `reason`, `kind` (null without a snapshot), `snapshot` (whether the generation was still kept), `hasNote`, `pictures`, `imageLevel`, `platform`, `appVersion`, `language`, `uidHash`. Never the note or the recipe. **Alert on any** (or on more than a few an hour), then read the report in the console. |
+| `report_day_limit` | error | The first report of the UTC day refused at `reports.perDay` (`day`, `perDay`, `reports`); once a day (`stats/{day}.reportCapReachedAt`). Alert on it: someone may be flooding reports, or the cap is too low. |
+| `image_brief_rejected` | warning | The text model's picture brief failed its check (`rule`); the recipe was delivered without a picture and its share given back. `uidHash`, `rule` only. Many `BRIEF_TERMS` / `URL` / `LEAK` from one account point at injection attempts. |
 | `board_purchases_capped` | warning | The period held more purchases than one redraw reads (`total`, `read`); the board says so and its purchase figures are partial. |
 
 ### Alerts
@@ -879,6 +925,42 @@ Only a caller with credits reaches the model, and an answer goes back only to th
    `USER_DAILY_LIMIT` before reservation, so before any model call and without charge, until the
    next UTC day. Input refusals for accounts without a document are logged but write nothing.
 
+### The picture prompt (recipe pictures)
+
+A recipe asked with a picture adds a second model call whose prompt must not be steerable by the
+person's text either ("Recipe pictures"):
+
+- The text model writes an `imageBrief` only when a picture is asked (two fixed OUTPUT lines and
+  a schema field; every other request's instruction is byte for byte what it was). It is not part
+  of the `Recipe` returned or stored.
+- `checkImageBrief` (`src/core/outputSafety.ts`) runs only on an answer whose text passed every
+  rule, the quality gate and (when on) the judge, which also sees the brief. It requires 10–200
+  characters of plain ASCII letters, spaces and `. , ' -` (no other script, digit, quote, bracket
+  or markup can get through, so no pantry name in another script either), runs every text rule
+  of the answer (canary and instruction leak, URL, contact, phone, markup, non-food,
+  solicitation, repetition), and refuses words for people, body parts, writing, brands, logos,
+  packaging, violence, nudity, drugs and instruction-like words ("ignore", "prompt", "system").
+  A refused brief is never repaired: no picture is asked, the recipe is delivered with
+  `imageFailed`, and `image_brief_rejected` logs the rule. It is not counted as a prompt
+  rejection (the text passed every check), which keeps a false positive from costing an honest
+  user anything; the share is given back.
+- The picture prompt is `IMAGE_PROMPT_HEAD + brief + IMAGE_PROMPT_TAIL` (`src/core/recipeImage.ts`):
+  fixed text asking for a photograph of the food only, with no people, hands, text, letters,
+  labels, packaging, brands, logos or watermark. The server copies nothing the person typed into
+  it: no pantry, optional or staple name, allergen or taste answer as sent, no system
+  instruction, no uid or other identifier (OpenAI gets no `user` / `safety_identifier`). The
+  brief itself is the text model's own English, written after it saw the pantry, so a product
+  name it chose to repeat may appear in it; briefs are not refused for naming the dish's food.
+- The provider's own filters stay on: Vertex gets the same explicit safety settings as the
+  recipe text and `personGeneration: ALLOW_NONE`; OpenAI `moderation: "auto"`. A refusal is a
+  `SAFETY` picture failure (recipe delivered, share given back).
+- What comes back is decoded and re-encoded (`adapters/imageNormalize.ts`): only JPEG, PNG or
+  WebP is accepted, at most 8 MB and 2.56 megapixels (1600 x 1600; providers return 1K), and every metadata block (EXIF, XMP, ICC,
+  C2PA) is dropped, so nothing a provider or an attacker embedded reaches the apps.
+- `test/recipeImage.test.ts` checks that the server never copies hostile item, allergen and
+  staple names into the picture prompt, and that briefs carrying URLs, people, writing, logos, other scripts or
+  instruction words are refused.
+
 ### Config switches and params
 
 | where | name | default | meaning |
@@ -977,6 +1059,128 @@ Never logged: names, prompts, answers, the canary, the uid. Suggested alert:
   structured output keyword support <https://aistudio.google.com/docs/structured-output>, Model
   Armor <https://docs.cloud.google.com/model-armor/model-armor-vertex-integration>.
 
+## Recipe pictures
+
+A single recipe written by the server can come with one generated picture of the dish
+(`generateRecipe` `image: "dish"`), or that and pictures of up to `image.maxStepImages` (default
+2) steps the recipe model marks as hard to follow from words alone (`image: "steps"`; CONTRACT.md
+"Capability `acceptsRecipeImage`"). Never a menu
+(`INVALID_REQUEST`), never the shared prompt or the phone's model.
+
+**Flow** (one call, one reservation, one App Check token): validate (`image` only on a recipe) →
+reserve `costs.recipeImage` / `recipeImageSteps` and the text's worst case plus every picture's price, with a deadline
+`IMAGE.reservationExtraMs` (45 s) longer → the text model, whose answer also carries an
+`imageBrief` (and, for `"steps"`, `stepBriefs`: `{step, brief}`, at most `maxStepImages`) → every
+output rule, the quality gate, the judge (which sees the briefs) → `checkImageBrief` /
+`checkStepBriefs` (a refused step brief, a step number out of range, a repeat or one past the
+maximum is left out) → the picture model, every picture at once, each with the fixed template
+around its brief, aborted after `IMAGE.abortMs` (35 s); without a dish brief no step picture is
+asked, and when the dish's picture fails the step pictures made are not delivered (their spend
+stays booked) → re-encode, one picture at a time per instance
+to a JPEG of at most 768 px, quality 80, no metadata (typically 60–150 KB; at most 600,000 bytes)
+→ settle: each picture into its own document, `generations/{id}/recipeImages/main` and
+`step-<i>` (one picture per document, far below the 1 MiB limit), in the same transaction; the
+response carries them as base64 (three pictures are under 1 MB of response). A generation the sweeper settled meanwhile gets no picture (no
+money spent on a discarded answer). `getGeneration` and a same-id retry read the stored picture
+back, so a lost answer is recovered with its picture for as long as the generation is kept.
+
+**Money**: "How the money works" (the share given back) and "Spend control" (the price reserved
+and booked). `IMAGE_UNAVAILABLE` refuses a level before anything is reserved while it is off.
+
+**Timings**: text 40 s + judge 12 s + picture 35 s stays inside the 105 s reservation and the
+180 s function timeout. A recipe with a picture takes ~10–25 s longer; the apps' callable timeout
+for it should be at least 120 s (the current Android recipe timeout is 75 s).
+
+**Turning pictures off**: `config/runtime.costs.recipeImage: 0`, or `config/runtime.image.provider:
+"off"` (both levels); only step pictures: `costs.recipeImageSteps: 0` or `image.maxStepImages: 0`. Either takes the key out of the table within 30 s, the apps hide the option, and a request
+still asking gets `IMAGE_UNAVAILABLE`. `generationEnabled: false` pauses pictures with everything
+else.
+
+### Switching provider and model
+
+Every provider is an adapter behind one port, `RecipeImageGenerator` (`src/ports.ts`): a fixed
+prompt, a provider and a model in; bytes and a MIME type out; failures as `ImageGenerationError`
+(`safety` / `config` / `infra`, with whether the call may have been billed). `ImageRouter`
+(`src/adapters/image.ts`) picks the adapter per call from `config/runtime.image`, and the core
+never names a provider. Whatever comes back is normalised to the same JPEG.
+
+| provider | adapter | model (default first) | credentials | price default |
+|---|---|---|---|---|
+| `vertex` | `VertexImageGenerator`: `@google/genai` `generateContent`, `responseModalities: [IMAGE]`, 1:1, `1K`, JPEG, `personGeneration: ALLOW_NONE`, safety settings | `gemini-nano-banana-2.1` (location `global` only); `gemini-3.1-flash-lite-image`, `gemini-3.1-flash-image`, `gemini-3-pro-image` also listed by Google | the functions' service account (Vertex AI User), as for the recipe text | USD 0.05 |
+| `openai` | `OpenAIImageGenerator`: `POST https://api.openai.com/v1/images/generations`, `n: 1`, `1024x1024`, `quality: "medium"`, `output_format: "jpeg"`, `output_compression: 85`, `moderation: "auto"` | `gpt-image-1-mini`; `gpt-image-2`, `gpt-image-2.5-flare` etc. need a price first | API key in Secret Manager (`OPENAI_API_KEY`), read at run time | USD 0.02 |
+| `off` | none | | | no pictures |
+
+To switch **model** at the same provider, without a deploy: put its price in
+`config/runtime.prices.imageUsdPerImage` (e.g. `{"vertex/gemini-3.1-flash-image": 0.08}`) and
+then set `config/runtime.image.model`. Order matters: a model without a price turns pictures off
+until it has one. To switch **provider**: Vertex needs nothing new. OpenAI needs its key once
+(docs/recipe-setup.md step 12: `npx firebase functions:secrets:set OPENAI_API_KEY` and Secret
+Accessor for the service account on that secret only); then `config/runtime.image: {provider:
+"openai", model: "gpt-image-1-mini"}`, no deploy. The key is not bound with `defineSecret` (that
+would require the secret at every deploy, whichever provider is in use): `SecretReader` reads it
+from Secret Manager on first use and keeps it in memory 10 minutes, so a rotated key is picked up
+within 10 minutes. A missing or refused key is a `CONFIG` picture failure: recipes are delivered
+without pictures and their share given back, and `image_call` lines say `CONFIG`. The
+parameters `IMAGE_PROVIDER` / `IMAGE_MODEL` only set the defaults when `config/runtime.image`
+says nothing. A third provider is a new adapter class and a line in `imageRouter`
+(`src/index.ts`), plus a price: nothing in `src/core/`.
+
+**What a new provider means for privacy.** The provider becomes a data processor of the picture
+prompts: the fixed template and the brief, an English description of a dish written by our
+recipe model (validated; nothing the person typed is copied into it by the server, though a
+product name the model chose to repeat may appear). It never receives the allergens or taste
+answers, the recipe, an identifier of the person or of the device, or the IP address (the call comes from
+our server). Before switching, the privacy policy and processor list must name it (and where it
+processes: OpenAI's API has no EU-only processing by default), its data terms checked (OpenAI
+says API data is not used for training by default and kept up to 30 days for abuse monitoring),
+and the App Privacy / Data safety answers re-read. Vertex AI is already our processor for the
+recipe text.
+
+**Dependency**: `sharp` (libvips) decodes and re-encodes the pictures. It ships prebuilt binaries
+for linux-x64 glibc, which Cloud Functions 2nd gen (Cloud Run, Node 24) uses, installed by
+`npm ci` without an install script; it adds about 18 MB to the deployed source's
+`node_modules` and is loaded on the first picture only. A 1K picture is about 4 MB decoded, with
+sharp's cache off and one thread, inside the 256 MiB instance; watch the function's memory after
+the first deploy and raise `generateRecipe` to 512 MiB only if it is short.
+
+## Reports
+
+"Report this recipe" (`reportRecipe`, CONTRACT.md `reportRecipe`): a person flags a recipe or menu
+the server wrote (from a pack, with or without pictures) as offensive or inappropriate, unsafe
+food advice, a wrong or offensive picture, or something else, with an optional note (500 code
+points). Only server results (owner's decision, 2026-11-17): a recipe from the phone's own model
+has no report action, and no recipe text is ever accepted from a client. Play's policy on
+AI-generated content expects such a way to report offensive output in the app.
+
+- **What is stored**: `reports/{hash of uid and reportId}` (scoped to the account; the client's
+  `reportId` is a field), naming one of the reporter's results, with a snapshot the server takes
+  from that generation (its recipe or menu, and copies of its pictures in `reportPictures/`) so
+  the owner can still read it after the generation expires. To tell a saved result of the
+  caller's from a made-up id after the generation is gone, settle writes a tiny
+  `users/{uid}/reportable/{requestId}` record (`kind`, `at`, TTL `expiresAt` a year later) for
+  every delivered result; a report then is stored without a snapshot. An id with neither is
+  `UNKNOWN_REQUEST`, never stored or counted. Kept `reports.keepDays` days (90), then deleted by the TTL policies on
+  `reports.expiresAt` and `reportPictures.expiresAt` (docs/recipe-setup.md step 12). The
+  reporter's uid; never an IP address.
+- **Never**: sent to a model, a change to a balance, a refund, an account created, a reply to the
+  person.
+- **Abuse**: a signed-in caller with a server document only (an account that has had a result
+  from a pack), naming one of its own results, a limited-use App Check token per report
+  (consumed, so it cannot be replayed), idempotent per account and `reportId`,
+  `reports.perUserPerDay` (10) per account checked first, then `reports.perDay` (500) across the
+  service per UTC day (`REPORT_LIMIT`; the first refusal of the day logs `report_day_limit` and
+  records `stats/{day}.reportCapReachedAt`), the per-instance throttle (20 a minute per uid), and
+  the note cleaned and capped. Filling the day needs 50 accounts that each had real results.
+- **Telling the owner**: one `recipe_reported` log line per report ("Logs to alert on"; an alert
+  on it is the owner's to create, "Alerts"), and the board's daily "Reports" column and summary
+  line (`stats/{day}.reports`, `reportReasons`). Read a report in the Firestore console
+  (`reports/<id>`; the log line carries a hash of the id, so search by time and reason).
+- **Account deletion** keeps the account's reports with `uid` set to null (`detachReports`), like
+  the other records it keeps; they expire on their own. Its `reportable` records are deleted.
+- **Not built**: a way for the owner to stop serving a reported recipe or picture (it is already
+  on the person's phone; the server keeps a generation only 7 days), a reply to the reporter, or
+  an admin command to list reports. Read them in the console.
+
 ## Taste profile quiz
 
 The quiz in Recipe settings > Taste profile is defined here, not in the apps: `getTasteQuiz`
@@ -1043,7 +1247,7 @@ Server-only. Documents:
   recipes not yet charged, and charged: the FIFO ledger leaves the latter out), `welcomeProviders`
   (the providers whose identities are recorded in `welcomes/`),
   rate windows (`minuteWindow`, `dayWindow`, `verifyWindow`), `spendWindow` (`{day, microUsd}`),
-  `infraRefunds` (`{day, count}`), `contentRefundsUsed` and `timeoutRefundsUsed` (lifetime),
+  `infraRefunds` (`{day, count}`), `reportWindow` (`{day, count}`: reports sent today), `contentRefundsUsed` and `timeoutRefundsUsed` (lifetime),
   `buyerKeys`, `profileScrubbedAt`, `debtMovedTo` + `debtMovedAt`, `appleToken` (`{sealed,
   storedAt}`: the encrypted Sign in with Apple refresh token, see "Stored Sign in with Apple
   tokens"), and tombstones `deletedAt` + `forfeitedBalance` or `mergedInto` + `mergedAt` (a
@@ -1053,7 +1257,15 @@ Server-only. Documents:
   `days`, `cost`, `inputHash` (sha256 of the validated request: the only trace of its config,
   ingredients, allergens and taste profile, none of which is stored), `reservedMicroUsd`, `statsDay`, `createdAt`, `deadlineAt`, `charged`,
   `failureClass`, `failureReason`, `usage`, `actualMicroUsd`, `recipe` / `menu`, `expiresAt`
-  (terminal states only; TTL deletes the doc some time after it, 7 days after it finished).
+  (terminal states only; TTL deletes the doc some time after it, 7 days after it finished), and for
+  a recipe asked with a picture `image`, `imageCost`, `imageReservedMicroUsd`, `imageProvider`,
+  `imageModel`, then `imageStored` or `imageFailed` + `imageFailure` (a fixed code), and for
+  `"steps"` `stepImagesCost`, `stepImagesMax`, `stepImagesMarked`, `stepImagesStored` (step
+  indices), `stepImagesFailed`. No brief or prompt is stored.
+- `users/{uid}/generations/{requestId}/recipeImages/{main | step-<i>}`: a delivered picture, `mimeType`
+  (`image/jpeg`), `data` (bytes, at most 600,000), `width`, `height`, `expiresAt` (the
+  generation's; TTL policy on `recipeImages.expiresAt`, `firestore.indexes.json`). Written in the
+  settle transaction; removed with the generation by deleteAccount's recursive delete.
 - `purchases/{id}`: `store`, `uid` (null after deleteAccount, which keeps `formerUid` for the ledger), `env`, `productId`, `quantity`, `credits`, `refundedCredits`,
   `state` (granted | consumed | refunded), `grantedAt`, `refundEventAt`, `buyerKeys`,
   `accountToken`, `consumptionConsent` + `consumptionConsentAt`, `consumptionRequestedAt`,
@@ -1074,6 +1286,9 @@ Server-only. Documents:
   (worst cases of calls in flight), `spentMicroUsd` (estimated, measured where known), `llmCalls`,
   `inputTokens`, `outputTokens`, `thinkingTokens`, `succeeded`, `contentFailures`,
   `infraFailures`, `qualityFailures`, `refundedCredits`, `unknownUsageCalls` (booked at the worst case),
+  `reports` and `reportReasons` (`{offensive | unsafe | picture | other: n}`),
+  `imageRequests`, `imagesDelivered`, `imageFailures` (pictures, not requests), `imageMicroUsd` (the pictures' booked
+  spend, part of `spentMicroUsd`), `imageGivenBackCredits` (part of `refundedCredits`),
   `netCreditsGranted` (production credits granted minus store refunds that day),
   `sandboxGrants`, `sandboxCredits`, `welcomeGrants` and `welcomeCredits` (welcome grants made
   that day and their free recipes; never in `netCreditsGranted`), `ceilingMicroUsd` (the spend
@@ -1082,6 +1297,15 @@ Server-only. Documents:
   `dailyCapReachedAt` (ms of the first `DAILY_CAP` refusal). A call is booked on the day it was
   reserved.
   `stats/ledger`: `negativeBalanceTotal` (the sweeper's last sum of negative balances).
+- `users/{uid}/reportable/{requestId}`: `kind`, `at`, `expiresAt` (TTL, a year): written by settle for
+  every delivered result, so a report can name a saved result after its generation expired.
+  Deleted with the account.
+- `reports/{sha256 of uid and reportId}` ("Reports"): `reportId`, `reason`, `note`, `requestId`, `kind`, `uid` (the reporter;
+  null after that account's deletion), `platform`, `appVersion`, `language`, `snapshot` (the
+  generation's recipe or menu, or null when it was no longer kept), `pictures`, `imageLevel`,
+  `generatedAt`, `createdAt`,
+  `expiresAt` (TTL, `reports.keepDays` days); and `reports/{reportId}/reportPictures/{main | step-<i>}`,
+  copies of the generation's pictures with the same `expiresAt`.
 - `config/runtime`: see below.
 
 ### `config/runtime`
@@ -1110,8 +1334,10 @@ its default, and a warning "config/runtime has invalid fields" names them. Insta
 | `perUserDailySpendMicroUsd` | integer ≥ 0 | `450000` | Estimated LLM spend per user per UTC day (USD 0.45). At it: `USER_DAILY_LIMIT`. |
 | `refundAbuseThreshold` | integer ≥ 1 | `2` | Refund-after-use events that block a buyer (`purchasesBlocked`). |
 | `consumptionSampleContentProvided` | bool | `true` | Sent to Apple as `sampleContentProvided` in consumption answers. |
-| `costs` | map | `{recipe: 1, menu2: 4, menu3: 5}` (and `menuSets` days + courses − 1) | Credits per request. `recipe`, `menu2`, `menu3` required, integers 1–100; `menu2` / `menu3` are the 3-day 2- and 3-course menus and the only source of those two prices. `menuSets` optional: `{"<days 1-4>": {"<courses 1-3>": n}}`, any cells; its 3-day `"2"` / `"3"` cells are accepted only when equal to `menu2` / `menu3`. A missing cell (all of them in a document from before menu sets) takes the default table's step from the 3-day row (±1 a day or course; the 3-day 1-course cell from `menu2`), held within [`recipe`, 100]. More days or courses never cheaper, no menu below `recipe`. Anything invalid: the whole default table is used (warning `costs`). Sent to clients in full (with `menuSets`) in every response with `balance`. |
-| `prices` | map | `{inputUsdPerMTok: 1.5, outputUsdPerMTok: 7.5}` | LLM price table for the estimates (see "Price table"). |
+| `costs` | map | `{recipe: 1, menu2: 4, menu3: 5}` (and `menuSets` days + courses − 1) | Credits per request. `recipeImage` optional: a recipe with a picture, an integer from `recipe` to 100; absent is twice `recipe` (at most 100), `0` turns pictures off (the table then has no `recipeImage` and no `recipeImageSteps`). `recipeImageSteps` optional: a recipe with the dish's and step pictures, from `recipeImage` to 100; absent is three times `recipe`, `0` turns that level off. `recipe`, `menu2`, `menu3` required, integers 1–100; `menu2` / `menu3` are the 3-day 2- and 3-course menus and the only source of those two prices. `menuSets` optional: `{"<days 1-4>": {"<courses 1-3>": n}}`, any cells; its 3-day `"2"` / `"3"` cells are accepted only when equal to `menu2` / `menu3`. A missing cell (all of them in a document from before menu sets) takes the default table's step from the 3-day row (±1 a day or course; the 3-day 1-course cell from `menu2`), held within [`recipe`, 100]. More days or courses never cheaper, no menu below `recipe`. Anything invalid: the whole default table is used (warning `costs`). Sent to clients in full (with `menuSets`) in every response with `balance`. |
+| `prices` | map | `{inputUsdPerMTok: 1.5, outputUsdPerMTok: 7.5}` | LLM price table for the estimates (see "Price table"). Optional `imageUsdPerImage`: `{"<provider>/<model>": USD}` (0.001–2 each, at most 50), added to or overriding the built-in picture prices (`DEFAULT_IMAGE_PRICES`) entry by entry. Anything invalid: the whole default `prices` (warning `prices`). |
+| `reports` | map | `{perUserPerDay: 10, perDay: 500, keepDays: 90}` | "Report this recipe" ("Reports"): reports per signed-in account per UTC day (0–1000), per day across the service (0–100,000), and days each report is kept (1–400). Either may be left out. Anything invalid: the defaults (warning `reports`). |
+| `image` | map | `{provider, model, maxStepImages}` from the params `IMAGE_PROVIDER` / `IMAGE_MODEL` (`vertex`, `gemini-nano-banana-2.1`) | The recipe picture's provider (`vertex`, `openai` or `off`), model id, and `maxStepImages` (integer 0–4, default 2: step pictures beside the dish's for `image: "steps"`; 0 turns that level off); each may be left out. Takes effect within 30 s, no deploy ("Recipe pictures"). Anything invalid: pictures **off** (warning `image`). A provider and model without a price in `prices.imageUsdPerImage` also turn pictures off. |
 | `budgetKillFraction` | number in (0, 2] | `1` | The budget alert flips the kill switch at cost ≥ budget × this. |
 | `welcome` | map | `{recipes: 3, perDay: 200}` | The welcome grant ("Welcome grant"): `recipes` (integer 0–20) free recipes once per Google or Apple sign-in, 0 turns it off; `perDay` (integer 0–10,000) grants at most per UTC day across all accounts, then the offer reads 0 and claims answer `OFF`. Either may be left out (its default). Anything invalid: the grant is **off** (warning `welcome`). |
 | `tasteQuiz` | map | `{hidden: []}` | `hidden`: at most 200 `"<step>"` or `"<step>:<option>"` ids left out of `getTasteQuiz` and dropped from requests' `taste` (see "Taste profile quiz"). Nothing else of the quiz is configurable here. Anything invalid: nothing hidden (warning `tasteQuiz`). |
@@ -1563,6 +1789,10 @@ which holds no secrets and may be committed), or set there beforehand:
 | `GEMINI_MODEL` | `gemini-3.8-flash` | Vertex AI model id. Any Flash-tier Gemini; `gemini-2.x` models get thinking budget 0 |
 | `GEMINI_THINKING_LEVEL` | `LOW` | Thinking level for Gemini 3+ (`MINIMAL` where the model supports it; 3.8 Flash does not) |
 | `VERTEX_LOCATION` | `global` | Vertex AI location. The default is `global` by the owner's decision; set a region only if the model is not offered in `global` |
+| `IMAGE_PROVIDER` | `vertex` | Default provider of recipe pictures: `vertex`, `openai` or `off` (`config/runtime.image.provider` overrides it at run time) |
+| `IMAGE_MODEL` | `gemini-nano-banana-2.1` | Default picture model id at that provider (`config/runtime.image.model` overrides it); needs a price ("Recipe pictures") |
+| `VERTEX_IMAGE_LOCATION` | `global` | Vertex AI location of the picture model (Nano Banana 2.1 is offered on `global` only) |
+| `OPENAI_API_KEY_SECRET` | `OPENAI_API_KEY` | Name of the Secret Manager secret with the OpenAI API key, read at run time only while `openai` is the picture provider |
 | `APPLE_APP_ID` | none | Numeric App Store app id (App Store Connect > App Information > Apple ID) |
 | `APPSTORE_KEY_ID`, `APPSTORE_ISSUER_ID` | none | App Store Server API key id and issuer id |
 | `APPLE_TEAM_ID`, `SIWA_KEY_ID` | none | Team id and Sign in with Apple key id, for exchanging codes and revoking tokens |
@@ -1580,6 +1810,9 @@ Secrets (Secret Manager, never in the repo), from `functions/`:
 cd functions
 npx firebase functions:secrets:set APPSTORE_PRIVATE_KEY < AuthKey_XXXXXXXXXX.p8   # In-App Purchase key
 npx firebase functions:secrets:set SIWA_PRIVATE_KEY < AuthKey_YYYYYYYYYY.p8       # Sign in with Apple key
+# Only to make recipe pictures with OpenAI ("Recipe pictures"): not bound to any function, read
+# at run time while openai is selected; grant the service account Secret Accessor on it alone.
+npx firebase functions:secrets:set OPENAI_API_KEY
 ```
 
 ## One-time setup (owner)

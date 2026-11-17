@@ -36,8 +36,14 @@ import {
   type PlayPurchase,
   type PlayVerifier,
   type RecipeGenerator,
+  type RecipeImageGenerator,
+  type GeneratedImage,
+  type ImagePrompt,
+  type ImageTarget,
+  ImageGenerationError,
   type VoidedPurchase,
 } from "../src/ports";
+import sharp from "sharp";
 
 export const PROJECT_ID = "demo-foodtracker";
 
@@ -254,7 +260,14 @@ export class FakeGenerator implements RecipeGenerator {
   usage: LlmUsage | undefined = fakeUsage();
   limits: GenerationLimits[] = [];
   prompts: Prompt[] = [];
-  fallback: Behaviour = async (req) => (req.kind === "menu" ? sampleMenu(req) : sampleRecipe());
+  fallback: Behaviour = async (req) =>
+    req.kind === "menu"
+      ? sampleMenu(req)
+      : req.image === "steps"
+        ? { ...sampleRecipe(), imageBrief: SAMPLE_BRIEF, stepBriefs: SAMPLE_STEP_BRIEFS }
+        : req.image
+          ? { ...sampleRecipe(), imageBrief: SAMPLE_BRIEF }
+          : sampleRecipe();
 
   /** Usage reported for successful calls; undefined means the model reported none. */
   async generate(req: GenerateRequest, prompt: Prompt, signal: AbortSignal, limits: GenerationLimits): Promise<GenerationResult> {
@@ -290,6 +303,50 @@ export class FakeGenerator implements RecipeGenerator {
       return sampleRecipe("Slow pasta");
     });
     return { release, started: startedP };
+  }
+}
+
+/** The brief the fake generator writes for a recipe asked with a picture. */
+export const SAMPLE_BRIEF = "A shallow white bowl of spaghetti with a glossy tomato sauce and torn basil leaves.";
+/** The step briefs it writes for `image: "steps"` (sampleRecipe has two steps). */
+export const SAMPLE_STEP_BRIEFS = [
+  { step: 1, brief: "Spaghetti rolling in a pot of boiling water, just softened and bending." },
+  { step: 2, brief: "Spaghetti tossed in a pan with tomato sauce until every strand is coated and glossy." },
+];
+
+/** A 1024 x 1024 PNG, as a provider might answer: larger than the delivered picture. */
+let samplePng: Promise<Buffer> | undefined;
+export function sampleProviderPng(): Promise<Buffer> {
+  samplePng ??= sharp({ create: { width: 1024, height: 1024, channels: 3, background: { r: 200, g: 120, b: 60 } } }).png().toBuffer();
+  return samplePng;
+}
+
+type ImageBehaviour = (prompt: ImagePrompt, target: ImageTarget, signal: AbortSignal) => Promise<GeneratedImage>;
+
+/** The picture provider: answers a 1024 x 1024 PNG (or the queued behaviours) and records every prompt. */
+export class FakeImageGenerator implements RecipeImageGenerator {
+  calls = 0;
+  prompts: ImagePrompt[] = [];
+  targets: ImageTarget[] = [];
+  next: ImageBehaviour[] = [];
+
+  async generate(prompt: ImagePrompt, target: ImageTarget, signal: AbortSignal): Promise<GeneratedImage> {
+    this.calls++;
+    this.prompts.push(prompt);
+    this.targets.push(target);
+    const n = this.next.shift();
+    if (n) return n(prompt, target, signal);
+    return { bytes: await sampleProviderPng(), mimeType: "image/png", model: target.model };
+  }
+
+  failWith(kind: "safety" | "config" | "infra", billed: boolean) {
+    this.next.push(async () => {
+      throw new ImageGenerationError(kind, `${kind} failure`, billed);
+    });
+  }
+
+  returns(bytes: Buffer, mimeType = "image/jpeg") {
+    this.next.push(async (_p, target) => ({ bytes, mimeType, model: target.model }));
   }
 }
 
@@ -358,6 +415,7 @@ export interface TestDeps extends Deps {
   appStore: FakeAppStore;
   generator: FakeGenerator;
   judge: FakeJudge;
+  imageGenerator: FakeImageGenerator;
   appleRevoker: FakeRevoker;
   clock: Clock;
   logs: LogLine[];
@@ -382,6 +440,7 @@ export function makeDeps(): TestDeps {
     appStore: new FakeAppStore(),
     generator: new FakeGenerator(),
     judge: new FakeJudge(),
+    imageGenerator: new FakeImageGenerator(),
     appleRevoker: new FakeRevoker(),
     // The real envelope code, with an in-memory key-encryption key in place of Cloud KMS.
     sealer: new EnvelopeSealer(new LocalKeyWrapper()),

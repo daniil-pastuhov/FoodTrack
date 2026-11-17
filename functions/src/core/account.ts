@@ -7,6 +7,7 @@ import type { Caller, Deps } from "../ports";
 import { blockFlag, mergeKeys } from "./buyers";
 import { authIdentities, hasUnrecordedProvider, prepareWelcomeRecord, recordWelcomeIdentities, welcomeFlag } from "./welcome";
 import { APPLE_PROVIDER, dropTokenIfAppleUnlinked, removeAppleLink, revokeStored } from "./appleToken";
+import { detachReports } from "./reports";
 
 type Block = { purchasesBlocked?: true; acceptsOptionalIngredients?: true; welcomeRecipes?: number };
 
@@ -270,6 +271,8 @@ export async function eraseAccount(
     return { mergedAway: false, storedApple };
   });
   const carriesApple = providers.includes(APPLE_PROVIDER) || storedApple !== undefined || freshCode !== undefined;
+  // The account's reports (reportRecipe) stay for the owner, without the uid.
+  await detachReports(deps, uid);
   if (mergedAway) {
     const removed = await removeAppleLink(deps, uid, freshCode, storedApple);
     await deps.auth.deleteUser(uid).catch(() => undefined);
@@ -285,6 +288,7 @@ export async function eraseAccount(
     await batch.commit();
   }
   await deps.db.recursiveDelete(uRef.collection("generations"));
+  await deps.db.recursiveDelete(uRef.collection("reportable"));
 
   const removed = carriesApple ? await removeAppleLink(deps, uid, freshCode, storedApple) : false;
   try {

@@ -537,5 +537,5 @@ describe("11. emulator fakes", () => {
 
 test("getBalance carries no purchasesBlocked for an ordinary buyer", async () => {
   await verifyPurchase(deps, callerFor("ord"), { store: "play", purchaseToken: deps.play.add(playToken()) });
-  expect(await getBalance(deps, callerFor("ord"))).toEqual({ balance: 10, costs: DEFAULT_RUNTIME_CONFIG.costs, acceptsOptionalIngredients: true, acceptsMultiChoiceConfig: true, acceptsDanish: true, acceptsMenuDays: true, acceptsTaste: true, acceptsWelcome: true, acceptsStaples: true, welcomeRecipes: 3, tasteQuizVersion: TQV });
+  expect(await getBalance(deps, callerFor("ord"))).toEqual({ balance: 10, costs: DEFAULT_RUNTIME_CONFIG.costs, acceptsOptionalIngredients: true, acceptsMultiChoiceConfig: true, acceptsDanish: true, acceptsMenuDays: true, acceptsTaste: true, acceptsWelcome: true, acceptsStaples: true, acceptsRecipeImage: true, acceptsReports: true, welcomeRecipes: 3, tasteQuizVersion: TQV });
 });

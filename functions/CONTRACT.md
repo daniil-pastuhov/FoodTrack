@@ -45,7 +45,8 @@ Every response that carries `balance` (`getBalance`, `verifyPurchase`, `generate
     "2": { "1": 2, "2": 3, "3": 4 },
     "3": { "1": 3, "2": 4, "3": 5 },
     "4": { "1": 4, "2": 5, "3": 6 }
-  }
+  },
+  "recipeImage": 2, "recipeImageSteps": 3
 }
 ```
 
@@ -55,11 +56,17 @@ Every response that carries `balance` (`getBalance`, `verifyPurchase`, `generate
 | `menu2` | 3-day menu, 2 courses (`kind: "menu", courses: 2`, no `days` or `days: 3`) | 4 credits |
 | `menu3` | 3-day menu, 3 courses (`kind: "menu", courses: 3`, no `days` or `days: 3`) | 5 credits |
 | `menuSets` | a menu set: `menuSets["<days>"]["<courses>"]`, days `"1"` to `"4"`, courses `"1"` to `"3"`, as strings (see "Capability `acceptsMenuDays`") | days + courses − 1 credits |
+| `recipeImage` | one recipe with a picture of the dish (`kind: "recipe", image: "dish"`), the whole price, not a surcharge (see "Capability `acceptsRecipeImage`"). **Optional**: absent while pictures are off | 2 credits (twice `recipe`) |
+| `recipeImageSteps` | one recipe with the dish's picture and up to 2 step pictures (`image: "steps"`), the whole price. **Optional**: absent while that level is off, and always when `recipeImage` is | 3 credits (three times `recipe`) |
 
 `menu2` and `menu3` are always exactly `menuSets["3"]["2"]` and `menuSets["3"]["3"]`: they stay for
 the clients from before menu sets, which read only them (there is no flat key for one course,
 which those clients never ask for). Every response carries the whole table, all 12 cells. More
-days or more courses never cost less, and no menu costs less than a recipe.
+days or more courses never cost less, and no menu costs less than a recipe. `recipeImage` is never
+less than `recipe`, and `recipeImageSteps` never less than `recipeImage`; each is **absent**
+(never 0 or null) whenever the server will not make that level (turned off, or the picture model
+it would use has no price), and a client offers a level only while the latest table has its key. Clients that read the table into a fixed type must ignore the
+unknown key (older clients do).
 
 The server alone decides the cost and may change the table without a client release. Clients must
 not hard-code prices: show the latest `costs` they received (cache it with the balance; with none
@@ -93,6 +100,8 @@ not on `message` (English, for logs).
 | `failed-precondition` | `PURCHASE_ACCOUNT_MISMATCH` | `verifyPurchase`: the store reports a purchase account token (see "Purchase account token") that is neither this account's nor that of an account merged into it. Nothing was recorded: do **not** finish the transaction; it can still be redeemed by the account that bought it. |
 | `failed-precondition` | `ALLERGEN_CONSENT_REQUIRED` | `generateRecipe`: a non-empty `allergens` without `"allergenConsent": true` (see "Allergen consent"). Checked before anything else about the allergens; nothing was read, stored or charged. Show the consent step, then send a **new** request. |
 | `failed-precondition` | `NOT_ENOUGH_ITEMS` | `generateRecipe`: the ticked items cannot make what was asked, decided before anything is reserved; nothing was charged and no model was called. Either no item is left once the allergens and every selected diet are applied (recipe or menu), or, for a menu, some day of the menu (1 to 4 days) has no item that may be planned on it (an item may go on any day when it has no date or was already past its date on `today`; otherwise only up to its date). Show "Tick a few more items" (for a menu: "...or ask for a single recipe"), keep the form; a changed request needs a new `requestId`. Clients that do not know this reason show their generic "couldn't write it, nothing was taken" message. |
+| `unavailable` | `IMAGE_UNAVAILABLE` | `generateRecipe` with `image` while the server does not make that level (the latest table has no `recipeImage` / `recipeImageSteps`: turned off, or switched to a model without a price, since the client last saw it). Refused before anything is reserved; nothing was charged and no model was called. Refresh the table (`getBalance`), hide the picture option, and offer the same recipe without a picture as a **new** request (a new `requestId`). |
+| `resource-exhausted` | `REPORT_LIMIT` | `reportRecipe`: this account's reports today, or the service's, reached the ceiling (`config/runtime.reports`). Nothing was stored. Say the report couldn't be sent today; do not retry in a loop. |
 | `failed-precondition` | `APPLE_NOT_LINKED` | `registerAppleSignIn`: the account has no Sign in with Apple linked. Ignore. |
 | `failed-precondition` | `APPLE_CODE_REJECTED` | `registerAppleSignIn`: Apple refused the code (expired after five minutes, already used, or not from this app). Ignore; the next Apple sign-in tries again. |
 | `unavailable` | `APPLE_UNAVAILABLE` | `registerAppleSignIn`: Apple or the key service could not be reached; nothing was stored. Ignore; the next Apple sign-in tries again. |
@@ -234,6 +243,75 @@ client from sending names a server would not use. A request with `staples` refus
 can cause) makes the apps clear the flag and refresh the balance, as for `taste`. Old clients
 ignore the flag and never send the field. Staples cost nothing: the price, the limits and every
 check are the same with and without them.
+
+## Capability `acceptsRecipeImage`
+
+Recipe pictures (November 2026): every response that carries `balance` (`getBalance`,
+`verifyPurchase`, `generateRecipe`, `getGeneration`, `mergeBalance`, `claimWelcome`) from a
+server that reads `image` on `generateRecipe` carries `"acceptsRecipeImage": true`; a server
+deployed before the field existed sends nothing. The flag says the server reads the field; which
+levels are on **now** is said by `costs`: `recipeImage` present offers `"dish"`,
+`recipeImageSteps` present offers `"steps"` (each at that price). Clients offer a level, and send
+it, only when the latest such response had the flag and that level's key (keep them with the
+cached balance; absent in a later response withdraws the option, as after a rollback). Without
+them the request goes **without** `image`: no error, nothing blocked. A server from before it
+ignores unknown fields and would write the recipe without pictures at the plain price; the flag
+keeps that from happening. A request with `image` refused as `INVALID_REQUEST` makes the apps
+clear the flag and refresh the balance; one refused as `IMAGE_UNAVAILABLE` only refreshes the
+table. Old clients ignore the flag and the new keys and never send the field; their requests,
+prices and responses are exactly what they were. An app that knows only `"dish"` never sees a
+step field: they are sent only on a `"steps"` request.
+
+- `image`: absent, `null` or `false` is no picture; `"dish"` is one picture of the finished dish;
+  `"steps"` is that picture plus pictures of up to `maxStepImages` (2 by default, set on the
+  server) of the recipe's steps that are hard to follow from words alone (a technique, or a state
+  such as how thick or how brown), chosen by the recipe model. A recipe whose steps are all plain
+  gets no step picture. Anything else (`true`, `"DISH"`) is `INVALID_REQUEST`.
+- Only a single recipe written by the server: `image` with `kind: "menu"` is `INVALID_REQUEST`.
+  Never the shared prompt or the phone's own model.
+- `image` is one of the inputs a `requestId` is bound to (the same id with another level or
+  without one is `REQUEST_ID_REUSED`); a request without it binds exactly as before.
+- Cost: `costs.recipeImage` (`"dish"`) or `costs.recipeImageSteps` (`"steps"`) for the whole
+  request, charged at reservation like any request.
+- The pictures are made in the same call, after the recipe's text passed every check, all at
+  once, so a recipe with pictures takes longer: up to ~80 s (set the callable timeout to at least
+  120 s, and poll `getGeneration` as for any request that is cut off).
+- **What is kept** (the shares are from the table at reservation: dish share = `recipeImage` −
+  `recipe`, steps share = `recipeImageSteps` − `recipeImage`):
+  - the dish's picture delivered (and, for `"steps"`, at least one step picture, even fewer than
+    the maximum): the whole cost;
+  - no dish picture: no step picture is delivered either, the whole picture share is given back
+    (both shares for `"steps"`), and `"imageFailed": true` (with `"stepImagesFailed": true` and
+    `"stepImages": []` when steps had been marked);
+  - `"steps"`, the dish's picture delivered but not one step picture (none was marked, or every
+    marked one failed): the steps share is given back.
+
+  `"stepImagesFailed": true` means at least one marked step's picture was not delivered (some or
+  all of them: show "Couldn't make pictures of some steps this time."). A `"steps"` recipe in which
+  no step was marked has neither `stepImages` nor `stepImagesFailed` (say nothing), and its steps
+  share was given back.
+
+  Always, outside every allowance in "Failures and refunds", exactly once (a retry or
+  `getGeneration` returns the same outcome and never gives back again). `charged` stays `true`
+  (the recipe was delivered) and `balance` already shows what came back. Show the recipe with a
+  quiet line that a picture couldn't be made this time; do not promise a refund.
+- **The text fails**: no picture is made. Refunded failures give everything back, as without
+  pictures; a failure that is charged ("Failures and refunds") keeps only the text's share
+  (`costs.recipe` at reservation) and gives every picture share back.
+- The recipe itself (`recipe`) has the same shape with or without pictures.
+- The pictures are made by a generative model from short English descriptions of the dish and
+  of the steps that the recipe model writes and the server checks; the server copies nothing the
+  person typed (item names, allergens, taste answers) into the picture prompt, though the
+  descriptions may name the dish's food, a product name included. They show only food and tableware (no
+  people, hands, text or logos asked for, and the picture model's own safety filters on), and may
+  not look like what the person cooks: the apps show a quiet line saying they were made by AI.
+
+## Capability `acceptsReports`
+
+"Report this recipe" (November 2026): every response that carries `balance` from a server that
+has `reportRecipe` carries `"acceptsReports": true`. The apps show the action on a result the
+server wrote (a recipe or menu from a pack, its pictures) only after a response said so; never on
+a recipe from the phone's own model.
 
 ## Types
 
@@ -543,6 +621,31 @@ ingredients; steps 1–7 (`brief`), 2–10 (`standard`), 2–18 (`stepByStep`). 
 or bidirectional characters, links, e-mail addresses, phone numbers, HTML or markdown. Clients
 still render every field as plain text (never as markdown or HTML).
 
+### Recipe picture (response)
+
+On a `DONE` response to a request with `image` whose dish picture was made (and on every
+`getGeneration` or same-id retry of it within the idempotency window), and, for `"steps"`, the
+step pictures made, each tied to its step (`step`: the 0-based index into `recipe.steps`; in
+step order, at most `maxStepImages`, possibly none):
+
+```json
+"image": { "mimeType": "image/jpeg", "data": "<base64>", "width": 768, "height": 768 },
+"stepImages": [
+  { "step": 2, "image": { "mimeType": "image/jpeg", "data": "<base64>", "width": 768, "height": 768 } }
+]
+```
+
+`stepImages` is present on a `DONE` `"steps"` response when the model marked at least one step
+(possibly `[]` when every marked picture failed), and never otherwise; `"stepImagesFailed": true`
+whenever a marked step's picture is missing from it.
+
+- `mimeType`: always `"image/jpeg"`, whatever model drew it (the server re-encodes every picture).
+- `data`: standard base64 (RFC 4648 §4, with `=` padding, no line breaks) of the JPEG's bytes;
+  typically 60–150 KB of JPEG, never more than 600,000 bytes.
+- `width`, `height`: pixels, at most 768 on the longer side (square today; do not assume it).
+- No EXIF or other metadata. The apps keep the picture with the saved recipe on the device; the
+  server keeps it only as long as the generation (the idempotency window), then deletes it.
+
 ### Menu (response)
 
 ```json
@@ -611,19 +714,29 @@ Cost: `costs.recipe` for a recipe, `costs.menuSets["<days>"]["<courses>"]` for a
 "Costs"; by default 1 for a recipe and days + courses − 1 for a menu; a 3-day menu is
 `costs.menu2` / `costs.menu3`, 4 and 5).
 
+`image` (optional): `"dish"` or `"steps"` asks for pictures with a recipe; send a level only to a
+server that says `acceptsRecipeImage` and whose latest `costs` has its key (see "Capability
+`acceptsRecipeImage`"). Cost with it: `costs.recipeImage` / `costs.recipeImageSteps`.
+
 Response:
 
 ```json
 { "status": "DONE | IN_PROGRESS | FAILED", "recipe": {}, "menu": {}, "balance": 9, "charged": true,
-  "costs": { "recipe": 1, "menu2": 4, "menu3": 5, "menuSets": { "...": "see Costs" } },
+  "image": { "mimeType": "image/jpeg", "data": "<base64>", "width": 768, "height": 768 },
+  "costs": { "recipe": 1, "menu2": 4, "menu3": 5, "menuSets": { "...": "see Costs" }, "recipeImage": 2 },
   "acceptsOptionalIngredients": true, "acceptsMultiChoiceConfig": true, "acceptsDanish": true,
   "acceptsMenuDays": true, "acceptsTaste": true, "tasteQuizVersion": "35244e855cd4327f",
-  "acceptsStaples": true }
+  "acceptsStaples": true, "acceptsRecipeImage": true, "acceptsReports": true }
 ```
+
+`image` is present only on a `DONE` recipe asked with `image` whose dish picture was made,
+`"imageFailed": true` only on one delivered without it, and `stepImages` / `"stepImagesFailed":
+true` only on `"steps"` requests (see "Capability `acceptsRecipeImage`" and "Recipe picture
+(response)").
 
 | status | meaning | `charged` | client action |
 |---|---|---|---|
-| `DONE` | `recipe` (kind recipe) or `menu` (kind menu) is present | `true` | Show and save it. |
+| `DONE` | `recipe` (kind recipe) or `menu` (kind menu) is present; with `image` also `image` or `imageFailed: true`, and for `"steps"` `stepImages` when a step was marked (and `stepImagesFailed: true` when a marked one is missing) | `true` | Show and save it (with its pictures). |
 | `IN_PROGRESS` | Same `requestId` is still generating (another call is running) | `true` (held; if it then fails, refunded or not by "Failures and refunds") | Poll `getGeneration` with the same `requestId` every few seconds (at least 3 s apart). |
 | `FAILED` | Generation failed | `false` when refunded; `true` when the failure was charged (see below) | `charged` false: "failed, not charged". `charged` true: "failed; this request could not be completed and was charged" (see below for the wording). A new attempt needs a **new** `requestId`. |
 
@@ -720,8 +833,10 @@ The polling call. App Check enforced, token **not** consumed; per-user throttled
 Request `{ "requestId": "<the id sent to generateRecipe>" }`.
 
 Response: exactly `generateRecipe`'s response for that generation (`status`, `recipe` / `menu`,
-`balance`, `charged`, `costs`, the capability flags, `tasteQuizVersion`, and `purchasesBlocked`
-when set). It never charges, never starts a
+`image` / `imageFailed` / `stepImages` / `stepImagesFailed` for a recipe asked with pictures, `balance`, `charged`, `costs`, the
+capability flags, `tasteQuizVersion`, and `purchasesBlocked` when set). A picture is returned
+for as long as its generation is kept; a recovered recipe whose picture was not made says
+`imageFailed: true`, and the picture's share was given back once, when it settled. It never charges, never starts a
 generation and never calls the model. Unknown id (never sent, another account's, or past the
 idempotency window): `not-found` / `UNKNOWN_REQUEST`; then re-send `generateRecipe` with the same
 `requestId` and the same inputs.
@@ -955,8 +1070,9 @@ token's linked providers, a stored Apple token, or a code sent).
   without re-authenticating and with no code; the apps offer it in that state too.
 - Remaining credits are lost; warn first. The Auth user is deleted; sign out locally afterwards.
   Kept: the `users/{uid}` tombstone (balance 0, `forfeitedBalance`, totals, `buyerKeys`), every
-  `purchases/` document (`uid` null, `formerUid` set), `buyers/` and `welcomes/` documents. Deleted: the
-  account's `generations` and its rate-limit windows. A purchase made by this uid and not yet
+  `purchases/` document (`uid` null, `formerUid` set), `buyers/` and `welcomes/` documents, and the
+  account's reports (`reportRecipe`) with their `uid` set to null, until their own expiry. Deleted:
+  the account's `generations` (and their pictures) and its rate-limit windows. A purchase made by this uid and not yet
   verified can never be redeemed afterwards (`ACCOUNT_CLOSED` for the uid, `PURCHASE_ACCOUNT_MISMATCH`
   for any other), so clients hold deletion back until it is confirmed.
 - `BUSY` while a generation is in flight on the account: wait for it to finish, then retry.
@@ -967,6 +1083,57 @@ token's linked providers, a stored Apple token, or a code sent).
 - Free recipes are lost with the account like any unused recipes, and the record that the
   account's Google or Apple sign-in has had them (`welcomes/`) is kept: signing in again with the
   same account does not grant them twice.
+
+### `reportRecipe`
+
+"Report this recipe" on a result the server wrote: a recipe or a menu from a pack, with or
+without pictures. A recipe from the phone's own model has no report action, and no recipe text is
+ever sent with a report. Signed-in caller (anonymous accounts included: every result from a pack
+belongs to one), App Check enforced **and consumed** (a limited-use token per call). Send it only
+to a server that says `acceptsReports`. A report is never sent to a model, never changes a
+balance, and promises nothing; the apps say only that it was sent.
+
+Request:
+
+```json
+{
+  "reportId": "UUID, new per report, reused for retries of that report",
+  "requestId": "the generation's requestId (the saved recipe's or menu's)",
+  "reason": "offensive | unsafe | picture | other",
+  "note": "optional, the person's own words",
+  "app": { "platform": "android | ios", "version": "2.3.0", "language": "en" }
+}
+```
+
+- `reason`: offensive or inappropriate; unsafe food advice; the picture is wrong or offensive
+  (the apps offer it only on a result with pictures; the server accepts it on any); something else.
+- `note`: optional, at most 2,000 characters sent; cleaned (control and format characters out,
+  whitespace runs to one space) and cut to **500 code points**. `null`, empty or blank is none.
+- `requestId`: one of the caller's own results. The server takes the snapshot (the recipe or
+  menu text, and copies of its pictures) from that generation while it is still kept (the
+  idempotency window, 7 days after it finished). Later, up to a year after it was delivered (a
+  saved recipe can be reported weeks later), the report is stored **without a snapshot**. An id
+  this account never had delivered (another account's, made up, or older than a year), or a
+  result delivered before reports existed whose generation has expired: `not-found` /
+  `UNKNOWN_REQUEST`, nothing stored or counted.
+- `recipe`, `menu` or any recipe text in the request: `INVALID_REQUEST`.
+- `app`: the app's platform, version (`[0-9A-Za-z.+-]`, at most 32) and language (`en`,
+  `nb`, `es-MX`...).
+- An account without a server document (it never had a result from a pack): `not-found` /
+  `UNKNOWN_REQUEST`; nothing is created. A deleted or merged account: `ACCOUNT_CLOSED`.
+- `reportId` is scoped to the account: the same `reportId` and `requestId` again is the same report
+  (`RECEIVED`, nothing stored twice); the same `reportId` for another `requestId` is
+  `INVALID_REQUEST`; another account's report with the same `reportId` is its own.
+- Limits: 10 reports per account, checked first, and 500 for the whole service per UTC day by
+  default (`config/runtime.reports`), then `REPORT_LIMIT`. Refused reports never count.
+
+Response `{ "status": "RECEIVED" }`.
+
+Kept on the server (`reports/{reportId}`, never readable by any client): the reason, the note,
+`requestId`, the reporter's uid (set to null when that account is deleted), the app's platform,
+version and language, the snapshot and its pictures when there was one, the time, for 90 days
+(`config/runtime.reports.keepDays`), then deleted. The owner is told by a log alert and on the
+owner's board.
 
 ### `registerAppleSignIn`
 

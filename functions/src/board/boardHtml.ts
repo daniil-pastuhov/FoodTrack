@@ -278,6 +278,8 @@ function dailyTable(days: BoardDay[]): string {
     ["Content failures", (d) => int(d.contentFailures)],
     ["Infra failures", (d) => int(d.infraFailures)],
     ["Quality refusals", (d) => int(d.qualityFailures)],
+    ["Picture recipes", (d) => int(d.imageRequests)],
+    ["Reports", (d) => int(d.reports)],
     ["Recipes refunded", (d) => int(d.refundedCredits)],
     ["Worst-case calls", (d) => int(d.unknownUsageCalls)],
     ["Tokens in", (d) => compact(d.inputTokens)],
@@ -674,6 +676,8 @@ export function boardSummary(b: Board): string[] {
       `${int(p.welcomeGrants)} in the period (${int(p.welcomeCredits)} recipes); ${b.welcome.recipes > 0 ? `${int(b.welcome.recipes)} per sign-in` : "off"}.`,
     `Generations: ${int(p.succeeded)} written, ${int(p.contentFailures)} content failures, ${int(p.infraFailures)} infrastructure failures, ` +
       `${int(p.qualityFailures)} quality refusals; ${int(p.refundedCredits)} recipes refunded; ${int(p.unknownUsageCalls)} calls at worst case.`,
+    `Pictures: ${int(p.imageRequests)} recipes asked with pictures, ${int(p.imagesDelivered)} pictures delivered, ${int(p.imageFailures)} not. ` +
+      `Reports (recipe_reported): ${int(t.reports)} today, ${int(p.reports)} in the period.`,
     ...(b.purchasesCapped
       ? [`PURCHASES CAPPED: ${int(b.purchasesCapped.total)} in the period, only the newest ${int(b.purchasesCapped.read)} counted (back to ${utcTime(b.purchasesCapped.oldestReadMs)}).`]
       : []),
@@ -751,6 +755,10 @@ export function boardJson(b: Board): Record<string, unknown> {
       contentFailures: p.contentFailures,
       infraFailures: p.infraFailures,
       qualityRefusals: p.qualityFailures,
+      pictureRecipes: p.imageRequests,
+      picturesDelivered: p.imagesDelivered,
+      pictureFailures: p.imageFailures,
+      reports: p.reports,
       recipesUsed: p.generationUnits,
       recipesRefunded: p.refundedCredits,
       unknownUsageCalls: p.unknownUsageCalls,
