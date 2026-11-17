@@ -1,0 +1,21 @@
+:root { color-scheme: light dark; --fg: #1d1d1f; --bg: #fafafa; --muted: #5f6368; --line: #d0d4d9; --accent: #1a73e8; --warn: #b3261e; }
+@media (prefers-color-scheme: dark) { :root { --fg: #e8eaed; --bg: #17181a; --muted: #a0a4a8; --line: #3c4043; --accent: #8ab4f8; --warn: #f2b8b5; } }
+* { box-sizing: border-box; }
+body { margin: 0; font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--fg); background: var(--bg); }
+main { max-width: 40rem; margin: 0 auto; padding: 1.25rem; }
+h1 { font-size: 1.5rem; margin: 0 0 .25rem; }
+h2 { font-size: 1.15rem; margin: 1.5rem 0 .5rem; }
+.sub, .note { color: var(--muted); font-size: .9rem; }
+.facts { display: grid; grid-template-columns: max-content 1fr; gap: .25rem 1rem; margin: 0 0 1rem; }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; overflow-wrap: anywhere; }
+label { display: block; font-weight: 600; margin: 1rem 0 .25rem; }
+select, button { font: inherit; min-height: 44px; border-radius: 10px; border: 1px solid var(--line); background: transparent; color: inherit; padding: .4rem .9rem; }
+select { width: 100%; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 600; }
+button:disabled { opacity: .5; }
+.missing { color: var(--warn); padding-left: 1.2rem; }
+.alert, #message.error { color: var(--warn); }
+dialog { border: 1px solid var(--line); border-radius: 14px; background: var(--bg); color: var(--fg); max-width: 32rem; }
+dialog::backdrop { background: rgb(0 0 0 / .4); }
+.buttons { display: flex; gap: .75rem; justify-content: flex-end; }
