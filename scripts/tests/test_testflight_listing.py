@@ -1111,8 +1111,11 @@ def iap_version(id_, number, state):
     return {"id": id_, "attributes": {"version": number, "state": state}}
 
 
-def item(kind, id_):
-    return {"id": f"item-{id_}", "relationships": {kind: {"data": {"id": id_}}}}
+def item(kind, id_, state=None):
+    found = {"id": f"item-{id_}", "relationships": {kind: {"data": {"id": id_}}}}
+    if state:
+        found["attributes"] = {"state": state}
+    return found
 
 
 class IapTests(unittest.TestCase):
@@ -1321,6 +1324,164 @@ class ReviewNotesTests(unittest.TestCase):
         notes = testflight.review_notes()
         self.assertTrue(notes)
         self.assertLessEqual(len(notes), 4000)
+
+
+class SentBackSubmissionTests(unittest.TestCase):
+    """After App Review rejected the version: its submission is UNRESOLVED_ISSUES and its rejected
+    items are marked resolved before it is sent again (seen on 2026-11-17 with 2.1.1)."""
+
+    def setUp(self):
+        self.gets = {
+            "/apps/app/inAppPurchasesV2": [iap("i10", "recipes_10", "WAITING_FOR_REVIEW"),
+                                           iap("i50", "recipes_50", "WAITING_FOR_REVIEW")],
+            "/v2/inAppPurchases/i10/versions": [iap_version("v10", 1, "READY_FOR_REVIEW")],
+            "/v2/inAppPurchases/i50/versions": [iap_version("v50", 1, "READY_FOR_REVIEW")],
+            "/reviewSubmissions": [{"id": "rs", "attributes": {"state": "UNRESOLVED_ISSUES"}}],
+            "/reviewSubmissions/rs/items": [item("appStoreVersion", "asv", "REJECTED"),
+                                            item("inAppPurchaseVersion", "v10", "READY_FOR_REVIEW"),
+                                            item("inAppPurchaseVersion", "v50", "READY_FOR_REVIEW")],
+        }
+        self.version = {"id": "asv", "attributes": {"versionString": "2.1.1",
+                                                    "appVersionState": "REJECTED"}}
+
+    def fake(self, refuse=None):
+        """refuse: {(method, path): body} answered with a 409."""
+        asc = FakeAsc(self.gets)
+        real = asc.call
+
+        def call(method, path, params=None, body=None):
+            if refuse and (method, path) in refuse:
+                asc.calls.append((method, path, body))
+                raise testflight.AscError(409, refuse[(method, path)])
+            return real(method, path, params, body)
+
+        asc.call = call
+        return asc
+
+    def submit(self, asc):
+        return quiet(testflight.submit_for_review, asc, "app", self.version, "AFTER_APPROVAL")
+
+    def test_the_rejected_version_is_marked_resolved_then_the_submission_is_sent(self):
+        asc = self.fake()
+        result, out = self.submit(asc)
+        self.assertEqual(result, 0)
+        self.assertEqual(asc.writes(), [
+            ("PATCH", "/reviewSubmissionItems/item-asv", {"data": {
+                "type": "reviewSubmissionItems", "id": "item-asv",
+                "attributes": {"resolved": True}}}),
+            ("PATCH", "/reviewSubmissions/rs", {"data": {
+                "type": "reviewSubmissions", "id": "rs", "attributes": {"submitted": True}}})])
+        self.assertIn("marking the rejected app version item (item-asv) resolved, then resubmitting",
+                      out)
+        self.assertIn("recipes_10 (CONSUMABLE, id i10)", out)
+        self.assertIn("-> already in the review submission", out)
+
+    def test_a_rejected_purchase_in_it_is_resolved_too_in_the_submission_order(self):
+        self.gets["/apps/app/inAppPurchasesV2"][0] = iap("i10", "recipes_10", "REJECTED")
+        self.gets["/v2/inAppPurchases/i10/versions"] = [iap_version("v10", 1, "REJECTED")]
+        self.gets["/reviewSubmissions/rs/items"] = [
+            item("inAppPurchaseVersion", "v10", "REJECTED"), item("appStoreVersion", "asv", "REJECTED"),
+            item("inAppPurchaseVersion", "v50", "READY_FOR_REVIEW")]
+        asc = self.fake()
+        result, out = self.submit(asc)
+        self.assertEqual(result, 0)
+        self.assertEqual([w[1] for w in asc.writes()],
+                         ["/reviewSubmissionItems/item-v10", "/reviewSubmissionItems/item-asv",
+                          "/reviewSubmissions/rs"])
+        self.assertTrue(all(w[0] == "PATCH" for w in asc.writes()))
+        self.assertIn("in-app purchase recipes_10 item (item-v10) and app version item (item-asv)", out)
+        self.assertIn("already in the review submission App Review sent back", out)
+        self.assertNotIn("::warning::", out)
+
+    def test_a_rejected_item_the_release_does_not_ship_stops_before_any_write(self):
+        self.gets["/reviewSubmissions/rs/items"].append(
+            {"id": "item-event", "attributes": {"state": "REJECTED"},
+             "relationships": {"appEvent": {"links": {}}}})
+        asc = self.fake()
+        with self.assertRaises(SystemExit) as stop:
+            self.submit(asc)
+        message = str(stop.exception)
+        self.assertIn("item item-event: an item that isn't an app or in-app purchase version", message)
+        self.assertIn("Resubmit to App Review", message)
+        self.assertEqual(asc.writes(), [])
+
+    def test_an_older_rejected_purchase_version_beside_a_new_draft_stops(self):
+        self.gets["/apps/app/inAppPurchasesV2"][0] = iap("i10", "recipes_10", "REJECTED")
+        self.gets["/v2/inAppPurchases/i10/versions"] = [iap_version("v10", 1, "REJECTED"),
+                                                        iap_version("v10b", 2, "PREPARE_FOR_SUBMISSION")]
+        self.gets["/reviewSubmissions/rs/items"][1] = item("inAppPurchaseVersion", "v10", "REJECTED")
+        asc = self.fake()
+        with self.assertRaises(SystemExit) as stop:
+            self.submit(asc)
+        self.assertIn("item item-v10: an in-app purchase version not shipped with this release",
+                      str(stop.exception))
+        self.assertEqual(asc.writes(), [])
+
+    def test_a_refused_resolve_stops_with_the_way_to_resubmit_by_hand(self):
+        asc = self.fake(refuse={("PATCH", "/reviewSubmissionItems/item-asv"): "ENTITY_STATE_INVALID"})
+        with self.assertRaises(SystemExit) as stop:
+            self.submit(asc)
+        message = str(stop.exception)
+        self.assertIn("refused to mark the rejected app version item (item-asv)", message)
+        self.assertIn("App Store Connect > App Review > the submission with unresolved issues > "
+                      "Resubmit to App Review", message)
+        self.assertIn("no need to re-run the job", message)
+        self.assertNotIn(("PATCH", "/reviewSubmissions/rs"), [w[:2] for w in asc.writes()])
+
+    def test_a_refused_resubmit_says_what_it_can_mean_and_the_way_by_hand(self):
+        body = ('{"errors":[{"code":"STATE_ERROR.ENTITY_STATE_INVALID","detail":"appStoreVersions '
+                "with id 'asv' is not in valid state\"}]}")
+        asc = self.fake(refuse={("PATCH", "/reviewSubmissions/rs"): body})
+        with self.assertRaises(SystemExit) as stop:
+            self.submit(asc)
+        message = str(stop.exception)
+        self.assertIn("may still be rejected", message)
+        self.assertIn("Resubmit to App Review", message)
+        self.assertIn("no need to re-run the job", message)
+        self.assertNotIn("then re-run the job", message)
+        self.assertIn("ENTITY_STATE_INVALID", message)
+
+    def test_a_ready_for_review_submission_resolves_nothing(self):
+        self.gets["/reviewSubmissions"] = [{"id": "rs", "attributes": {"state": "READY_FOR_REVIEW"}}]
+        asc = self.fake(refuse={("PATCH", "/reviewSubmissions/rs"): "STATE_ERROR"})
+        with self.assertRaises(SystemExit) as stop:
+            self.submit(asc)
+        self.assertEqual([w[1] for w in asc.writes()], ["/reviewSubmissions/rs"])
+        self.assertIn("then re-run the job", str(stop.exception))  # the message as before
+
+    def test_a_new_submission_resolves_nothing(self):
+        self.gets["/reviewSubmissions"] = []
+        asc = self.fake()
+        result, out = self.submit(asc)
+        self.assertEqual(result, 0)
+        self.assertFalse([w for w in asc.writes() if w[1].startswith("/reviewSubmissionItems/")])
+        self.assertNotIn("resolved", out)
+
+    def test_the_read_only_view_shows_the_step_and_writes_nothing(self):
+        asc = self.fake()
+        asc.gets["/apps"] = [{"id": "app"}]
+        with mock.patch.object(testflight, "Asc", return_value=asc), \
+                mock.patch.object(testflight, "listing_target",
+                                  return_value=(self.version, None, True, "2.1.1 is REJECTED")):
+            result, out = quiet(testflight.cmd_iaps, mock.Mock(version=None))
+        self.assertEqual(result, 0)
+        self.assertEqual(asc.writes(), [])
+        self.assertIn("Open review submission rs (UNRESOLVED_ISSUES): 1 app version(s), "
+                      "2 in-app purchase version(s); rejected items: item-asv", out)
+        self.assertIn("Review submission: rs (sent back by App Review): would mark the rejected app "
+                      "version item (item-asv) resolved, then resubmit", out)
+
+    def test_the_read_only_view_says_it_would_stop(self):
+        self.gets["/reviewSubmissions/rs/items"].append(
+            {"id": "item-page", "attributes": {"state": "REJECTED"}, "relationships": {}})
+        asc = self.fake()
+        asc.gets["/apps"] = [{"id": "app"}]
+        with mock.patch.object(testflight, "Asc", return_value=asc), \
+                mock.patch.object(testflight, "listing_target",
+                                  return_value=(self.version, None, True, "2.1.1 is REJECTED")):
+            _, out = quiet(testflight.cmd_iaps, mock.Mock(version=None))
+        self.assertIn("would stop, it has rejected items this release doesn't ship: item item-page",
+                      out)
 
 
 if __name__ == "__main__":

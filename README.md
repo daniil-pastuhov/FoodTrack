@@ -117,7 +117,15 @@ Merging to `main` publishes nothing; CI only tests and builds it (a merged pull 
    reviewed (the first ones must go with a version); if the listing can't be applied in full, or
    App Store Connect refuses the purchases, nothing is submitted and the job says what to do
    before a re-run carries on (`store-listing/app-store/README.md`, "Changing the listing
-   texts"). It goes live as soon as Apple approves it (set the repository variable
+   texts"). After App Review rejected a version, the next release takes over that version (it
+   is renamed to the new number) and its review submission, which App Review left with
+   unresolved issues: the job marks the rejected items it ships again resolved (the version's,
+   and those of in-app purchases still to be reviewed in it), then resubmits it, as the website's
+   "Resubmit to App Review" does; `testflight.py iaps` shows that step read-only. Another
+   rejected item in it, or App Store Connect refusing the step, stops the job; then resubmit by
+   hand (App Store Connect > App Review > the submission with unresolved issues > Resubmit to App
+   Review), with no need to re-run the job, as the build and listing are already on the version.
+   It goes live as soon as Apple approves it (set the repository variable
    `APP_STORE_RELEASE_TYPE` to `MANUAL` to release it from App Store Connect yourself). Then it
    tags `vX.Y.Z` and creates a GitHub release.
 
