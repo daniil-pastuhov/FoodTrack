@@ -1,6 +1,8 @@
 package com.foodtracker.android.ui.design
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -73,7 +75,9 @@ fun LarderThumb(
     fallbackIcon: LarderIcons,
     modifier: Modifier = Modifier,
     background: Color = MaterialTheme.colorScheme.surfaceContainer,
-    size: LarderThumbSize = LarderThumbSize.Regular
+    size: LarderThumbSize = LarderThumbSize.Regular,
+    /** Drawn instead of [imageUrl] when set: previews, which load nothing. */
+    painter: Painter? = null
 ) {
     Box(
         modifier = modifier
@@ -88,7 +92,9 @@ fun LarderThumb(
             size = size.icon,
             tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        if (imageUrl != null) {
+        if (painter != null) {
+            Image(painter = painter, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+        } else if (imageUrl != null) {
             AsyncImage(
                 model = imageUrl,
                 contentDescription = null,

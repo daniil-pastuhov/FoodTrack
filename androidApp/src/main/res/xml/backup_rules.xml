@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11 and below (fullBackupContent). Only an exclusion: everything Auto Backup took
+     before still goes, except the recipe pictures (RecipePictureFiles), which stay on this
+     device; their saved recipes come back without them. -->
+<full-backup-content>
+    <exclude domain="file" path="recipe_pictures/" />
+</full-backup-content>

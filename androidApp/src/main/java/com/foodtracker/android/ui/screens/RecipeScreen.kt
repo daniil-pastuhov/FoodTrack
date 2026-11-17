@@ -104,6 +104,7 @@ import com.foodtracker.android.util.recipeMealLabel
 import com.foodtracker.recipe.AccountState
 import com.foodtracker.recipe.OnDeviceAvailability
 import com.foodtracker.recipe.OnDeviceRoute
+import com.foodtracker.recipe.PictureLevel
 import com.foodtracker.recipe.PaidUiState
 import com.foodtracker.recipe.RECIPE_SHOWN_ITEMS
 import com.foodtracker.recipe.RecipeConfig
@@ -279,6 +280,11 @@ fun RecipeScreen(
                 val refused = if (state.mode == RecipeMode.MENU) R.plurals.recipe_refused_menu else R.plurals.recipe_refused
                 snackbars.show(resources.getQuantityString(refused, event.taken, event.taken), null, null)
             }
+            // The level isn't made now; the refreshed costs hide it, so the next tap is plain.
+            RecipeEvent.PicturesUnavailable -> {
+                stateHolder.consumeEvent()
+                snackbars.show(resources.getString(R.string.recipe_image_unavailable), null, null)
+            }
             null -> Unit
         }
     }
@@ -318,7 +324,10 @@ fun RecipeScreen(
             onOpenSaved = { navigator.navigate(LarderRoute.SavedRecipes) },
             onOpenSettings = { navigator.navigate(LarderRoute.RecipeSettings) },
             onScan = { navigator.navigate(LarderRoute.Scanner()) },
-            onWelcome = stateHolder::openWelcome
+            onWelcome = stateHolder::openWelcome,
+            onOpenPictures = stateHolder::openPictures,
+            onPictureLevel = stateHolder::setPictureLevel,
+            onDismissPictures = stateHolder::dismissPictures
         )
     )
 
@@ -347,7 +356,11 @@ internal class RecipeTabActions(
     val onOpenSettings: () -> Unit = {},
     val onScan: () -> Unit = {},
     /** The free recipes' offer: the sign-in sheet, or the claim when signed in. */
-    val onWelcome: () -> Unit = {}
+    val onWelcome: () -> Unit = {},
+    /** The Pictures row and its sheet. */
+    val onOpenPictures: () -> Unit = {},
+    val onPictureLevel: (PictureLevel) -> Unit = {},
+    val onDismissPictures: () -> Unit = {}
 )
 
 @Composable
@@ -407,7 +420,13 @@ internal fun RecipeTabContent(
                 // No Stop for the server: the server goes on with a request once it has it.
                 paid.writing == RecipeMode.RECIPE -> Writing(
                     title = stringResource(R.string.recipe_writing_server_title),
-                    body = stringResource(R.string.recipe_writing_server_body),
+                    body = stringResource(
+                        when (paid.writingPictures) {
+                            PictureLevel.NONE -> R.string.recipe_writing_server_body
+                            PictureLevel.DISH -> R.string.recipe_writing_server_image_body
+                            PictureLevel.STEPS -> R.string.recipe_writing_server_images_body
+                        }
+                    ),
                     bottom = bottomOverlayClearance
                 )
                 else -> RecipeForm(
@@ -420,6 +439,10 @@ internal fun RecipeTabContent(
             }
         }
 
+    }
+
+    if (state.picturesSheet && state.pictures.shown) {
+        PicturesSheet(state.pictures, paid.costs, paid.balance ?: 0, onSelect = actions.onPictureLevel, onDismiss = actions.onDismissPictures)
     }
 
     if (showingOthers) {
@@ -782,6 +805,12 @@ private fun QuickForm(state: RecipeUiState, actions: RecipeTabActions) {
         }
     }
     LarderGroup {
+        // Pictures first, drawn like More options; only while the server writes this recipe.
+        val pictures = state.pictures
+        if (pictures.shown) {
+            PicturesRow(pictures, state.paid.costs, state.paid.balance ?: 0, actions.onOpenPictures)
+            LarderDivider()
+        }
         LarderListItem(
             title = stringResource(R.string.recipe_more_options),
             supporting = recipeOptionsSummary(resources, config, state.appLanguage),
@@ -985,7 +1014,16 @@ private fun PrimaryAction(state: RecipeUiState, primary: RecipePrimary, actions:
             RecipePrimary.OnDevice -> stringResource(R.string.recipe_cost_free)
             else -> null
         },
-        subtitle = if (primary == RecipePrimary.Server && state.sendsTaste) stringResource(R.string.taste_uses_profile) else null,
+        // The pictures sent, then the taste profile, on one line.
+        subtitle = if (primary == RecipePrimary.Server) {
+            val resources = LocalContext.current.resources
+            listOfNotNull(
+                if (state.mode == RecipeMode.RECIPE) picturesSubtitle(resources, state.pictures.sent) else null,
+                if (state.sendsTaste) stringResource(R.string.taste_uses_profile) else null
+            ).joinToString(" · ").ifEmpty { null }
+        } else {
+            null
+        },
         enabled = enabled,
         modifier = Modifier.fillMaxWidth()
     )
@@ -1354,6 +1392,36 @@ internal fun RecipeTabRussianPreview() = RecipeTabPreview(previewState(OnDeviceA
 @Preview(locale = "ru")
 @Composable
 internal fun RecipeTabRussianMenuPreview() = RecipeTabPreview(previewState(paid = previewPaid(12), mode = RecipeMode.MENU))
+
+/** A server that prices pictures: the Pictures row (first in the group with More options) at each
+ *  remembered level, and with a pack short of the steps or of any picture. */
+private fun picturesState(balance: Int, level: PictureLevel, writing: RecipeMode? = null) = previewState(
+    paid = previewPaid(balance, writing = writing).copy(
+        costs = com.foodtracker.recipe.RecipeCosts(recipeImage = 2, recipeImageSteps = 3),
+        takesRecipeImage = true,
+        writingPictures = if (writing != null) level else PictureLevel.NONE
+    )
+).let { it.copy(options = it.options.copy(pictureLevel = level)) }
+
+@PreviewLightDark
+@Composable
+internal fun RecipeTabPicturesDishPreview() = RecipeTabPreview(picturesState(12, PictureLevel.DISH))
+
+@Preview(heightDp = 1400)
+@Composable
+internal fun RecipeTabPicturesStepsPreview() = RecipeTabPreview(picturesState(12, PictureLevel.STEPS))
+
+@Preview(heightDp = 1400)
+@Composable
+internal fun RecipeTabPicturesShortPreview() = RecipeTabPreview(picturesState(2, PictureLevel.STEPS))
+
+@Preview(heightDp = 1400)
+@Composable
+internal fun RecipeTabPicturesNoneLeftPreview() = RecipeTabPreview(picturesState(1, PictureLevel.STEPS))
+
+@Preview
+@Composable
+internal fun RecipeTabPicturesWritingPreview() = RecipeTabPreview(picturesState(12, PictureLevel.STEPS, writing = RecipeMode.RECIPE))
 
 @Preview(widthDp = 820, heightDp = 1180)
 @Composable

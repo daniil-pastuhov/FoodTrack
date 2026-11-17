@@ -98,6 +98,10 @@ private class FakeBackend(var available: Boolean = true) : RecipeBackend {
     var balanceTaste = false
     var balanceTasteVersion: String? = null
     var balanceStaples = false
+    var balanceImage = false
+    var balanceReports = false
+    val reports = mutableListOf<RecipeReport>()
+    val reportReplies = ArrayDeque<ServerResult<Unit>>()
     val tasteQuizReplies = ArrayDeque<ServerResult<kotlinx.serialization.json.JsonElement>>()
     val tasteQuizAsked = mutableListOf<String>()
     var balanceCalls = 0
@@ -133,7 +137,7 @@ private class FakeBackend(var available: Boolean = true) : RecipeBackend {
     override suspend fun getBalance(): ServerResult<BalanceReply> {
         balanceCalls++
         return when (val current = balance) {
-            is ServerResult.Ok -> ServerResult.Ok(BalanceReply(current.value, balanceCosts, balanceBlocked, balanceOptional, balanceMultiChoice, balanceDanish, balanceMenuDays, balanceTaste, balanceTasteVersion, acceptsStaples = balanceStaples))
+            is ServerResult.Ok -> ServerResult.Ok(BalanceReply(current.value, balanceCosts, balanceBlocked, balanceOptional, balanceMultiChoice, balanceDanish, balanceMenuDays, balanceTaste, balanceTasteVersion, acceptsStaples = balanceStaples, acceptsRecipeImage = balanceImage, acceptsReports = balanceReports))
             is ServerResult.Err -> current
         }
     }
@@ -144,6 +148,29 @@ private class FakeBackend(var available: Boolean = true) : RecipeBackend {
     override suspend fun deleteAccount(): ServerResult<DeleteReply> {
         deleteCalls++
         return deleteReplies.removeFirst()
+    }
+    override suspend fun reportRecipe(report: RecipeReport): ServerResult<Unit> {
+        reports += report
+        return reportReplies.removeFirstOrNull() ?: ServerResult.Ok(Unit)
+    }
+}
+
+/** Keeps what it is given in memory, as the files would be. */
+private class FakePictureStore : RecipePictureStore {
+    val kept = mutableMapOf<String, SavedPictures>()
+    var sweptWith: Set<String>? = null
+    var fails = false
+    override suspend fun save(savedId: String, pictures: ReplyPictures, steps: Int): SavedPictures {
+        if (fails) throw IllegalStateException("disk full")
+        val saved = SavedPictures(
+            pictures.dish?.let { RecipePicture(RECIPE_PICTURE_DISH, it.width, it.height) },
+            pictures.forSteps(steps).map { RecipeStepPicture(it.step, RecipePicture(recipeStepPictureFile(it.step), it.picture.width, it.picture.height)) }
+        )
+        kept[savedId] = saved
+        return saved
+    }
+    override suspend fun sweep(keep: Set<String>) {
+        sweptWith = keep
     }
 }
 
@@ -279,6 +306,7 @@ class RecipePaidTest {
     private var account = FakeAccount()
     private val saved = PaidSavedRepository()
     private val configRepository = PaidConfigRepository()
+    private val pictureStore = FakePictureStore()
     private var paidRepository = InMemoryRecipePaidRepository(RecipePaidSnapshot(allergenConsent = agreed))
     private var now = 1_000_000L
     private var nextRequest = 0
@@ -309,6 +337,7 @@ class RecipePaidTest {
         newId = { "saved${nextSaved++}" },
         newRequestId = { "req${nextRequest++}" },
         today = { today },
+        pictureStore = pictureStore,
         pollDelay = { millis ->
             polls++
             waits += millis
@@ -3649,5 +3678,355 @@ class RecipePaidTest {
         holder.generateOnServer()
         assertEquals(listOf("Salt"), backend.generated.last().staples)
         assertFalse(paidRepository.get().serverTakesStaples, "its absence in a later reply withdraws it")
+    }
+
+    // --- Pictures: only to a server that says acceptsRecipeImage and prices the level ---------
+
+    private val pictureCosts = RecipeCosts(recipeImage = 2, recipeImageSteps = 3)
+    private val picture = PictureBytes(ByteArray(16) { it.toByte() }, 768, 768)
+
+    private fun withPicturesServer(balance: Int, takes: Boolean = true, level: PictureLevel = PictureLevel.DISH, costs: RecipeCosts = pictureCosts) {
+        withBalance(balance)
+        paidRepository = InMemoryRecipePaidRepository(
+            RecipePaidSnapshot(allergenConsent = agreed, balance = balance, costs = costs, serverTakesRecipeImage = takes, serverTakesReports = true)
+        )
+        backend.balanceCosts = costs
+        backend.balanceImage = takes
+        backend.balanceReports = true
+        configRepository.storedOptions = configRepository.storedOptions.copy(pictureLevel = level)
+    }
+
+    private fun donePictures(
+        balance: Int,
+        dish: PictureBytes? = picture,
+        steps: List<StepPictureBytes> = emptyList(),
+        imageFailed: Boolean = false,
+        stepsFailed: Boolean = false,
+        recipe: Recipe = sampleRecipe.copy(steps = listOf("Toast.", "Fry.", "Serve."))
+    ) = ServerResult.Ok(
+        GenerateReply(
+            GenerateStatus.DONE,
+            recipe = recipe,
+            balance = balance,
+            charged = true,
+            costs = buildJsonObject { put("recipe", 1); put("recipeImage", 2); put("recipeImageSteps", 3) },
+            acceptsRecipeImage = JsonPrimitive(true),
+            acceptsReports = JsonPrimitive(true),
+            imageFailed = if (imageFailed) JsonPrimitive(true) else null,
+            stepImagesFailed = if (stepsFailed) JsonPrimitive(true) else null,
+            pictures = ReplyPictures(dish, steps)
+        )
+    )
+
+    @Test
+    fun theChosenLevelIsSentAndItsPriceIsOnTheButton() = runUnconfined {
+        withPicturesServer(5, level = PictureLevel.DISH)
+        val holder = holder()
+        assertEquals(PictureLevel.DISH, holder.uiState.value.pictures.sent)
+        assertEquals(2, holder.uiState.value.serverCost)
+        backend.generateReplies += donePictures(3)
+        holder.generateOnServer()
+        assertEquals(PictureLevel.DISH, backend.generated.single().image)
+        val written = saved.rows.value.single().recipe!!
+        assertEquals(RecipePicture(RECIPE_PICTURE_DISH, 768, 768), written.picture)
+        assertEquals(backend.generated.single().requestId, written.requestId, "kept for a report")
+        assertTrue(holder.uiState.value.pictureNotices.isEmpty())
+    }
+
+    @Test
+    fun aShortPackSendsTheLevelItCoversAndTheButtonSaysSo() = runUnconfined {
+        withPicturesServer(2, level = PictureLevel.STEPS)
+        val holder = holder()
+        val choice = holder.uiState.value.pictures
+        assertEquals(PictureLevel.DISH, choice.sent)
+        assertEquals(PictureShort.DISH_ONLY, choice.short)
+        assertEquals(2, holder.uiState.value.serverCost)
+        backend.generateReplies += donePictures(0)
+        holder.generateOnServer()
+        assertEquals(PictureLevel.DISH, backend.generated.single().image)
+        assertEquals(PictureLevel.STEPS, configRepository.storedOptions.pictureLevel, "the choice is kept")
+    }
+
+    @Test
+    fun noPicturesWithoutTheFlagOrForAMenu() = runUnconfined {
+        withPicturesServer(10, takes = false)
+        val holder = holder()
+        assertFalse(holder.uiState.value.pictures.shown)
+        assertEquals(1, holder.uiState.value.serverCost)
+        backend.generateReplies += done(9)
+        holder.generateOnServer()
+        assertNull(backend.generated.single().image)
+        holder.consumeEvent()
+        withPicturesServer(10)
+        val menuHolder = holder()
+        menuHolder.setMode(RecipeMode.MENU)
+        assertFalse(menuHolder.uiState.value.pictures.shown)
+        backend.generateReplies += ServerResult.Ok(GenerateReply(GenerateStatus.DONE, menu = sampleMenu(2), balance = 5, charged = true))
+        menuHolder.generateOnServer()
+        assertNull(backend.generated.last().image)
+        assertEquals(backend.generated.last().requestId, saved.rows.value.first { it.menu != null }.menu!!.requestId)
+    }
+
+    @Test
+    fun choosingALevelRemembersItAndClosesTheSheet() = runUnconfined {
+        withPicturesServer(5, level = PictureLevel.NONE)
+        val holder = holder()
+        holder.openPictures()
+        assertTrue(holder.uiState.value.picturesSheet)
+        holder.setPictureLevel(PictureLevel.STEPS)
+        assertFalse(holder.uiState.value.picturesSheet)
+        assertEquals(PictureLevel.STEPS, configRepository.storedOptions.pictureLevel)
+        assertEquals(3, holder.uiState.value.serverCost)
+    }
+
+    @Test
+    fun aLevelThePackDoesntCoverCantBeChosen() = runUnconfined {
+        withPicturesServer(2, level = PictureLevel.NONE)
+        val holder = holder()
+        holder.openPictures()
+        holder.setPictureLevel(PictureLevel.STEPS)
+        assertEquals(PictureLevel.NONE, configRepository.storedOptions.pictureLevel)
+        assertTrue(holder.uiState.value.picturesSheet)
+    }
+
+    @Test
+    fun stepPicturesAreKeptWithTheirSteps() = runUnconfined {
+        withPicturesServer(5, level = PictureLevel.STEPS)
+        val holder = holder()
+        backend.generateReplies += donePictures(2, steps = listOf(StepPictureBytes(2, picture), StepPictureBytes(9, picture)))
+        holder.generateOnServer()
+        assertEquals(PictureLevel.STEPS, backend.generated.single().image)
+        assertEquals(listOf(2), saved.rows.value.single().recipe!!.stepPictures.map { it.step }, "a step that isn't there is dropped")
+    }
+
+    @Test
+    fun failedPicturesLeaveANoticeForTheResultThatArrived() = runUnconfined {
+        withPicturesServer(5, level = PictureLevel.STEPS)
+        val holder = holder()
+        backend.generateReplies += donePictures(3, dish = null, imageFailed = true, stepsFailed = true)
+        holder.generateOnServer()
+        val id = saved.rows.value.single().id
+        assertEquals(PictureNotice(dishFailed = true, stepsFailed = true), holder.uiState.value.pictureNotices[id])
+        assertNull(saved.rows.value.single().recipe!!.picture)
+        holder.pictureNoticeSeen(id)
+        assertTrue(holder.uiState.value.pictureNotices.isEmpty(), "not again when it is opened later")
+    }
+
+    @Test
+    fun aStepsRecipeWithNoStepWorthAPictureSaysNothing() = runUnconfined {
+        withPicturesServer(5, level = PictureLevel.STEPS)
+        val holder = holder()
+        backend.generateReplies += donePictures(2)
+        holder.generateOnServer()
+        assertTrue(holder.uiState.value.pictureNotices.isEmpty())
+    }
+
+    @Test
+    fun picturesThatCantBeKeptStillSaveTheRecipe() = runUnconfined {
+        withPicturesServer(5, level = PictureLevel.DISH)
+        pictureStore.fails = true
+        val holder = holder()
+        backend.generateReplies += donePictures(3)
+        holder.generateOnServer()
+        val row = saved.rows.value.single()
+        assertNull(row.recipe!!.picture)
+        assertEquals(PictureNotice(dishFailed = true, stepsFailed = false), holder.uiState.value.pictureNotices[row.id])
+    }
+
+    @Test
+    fun aRecoveredGenerationBringsItsPicturesToo() = runUnconfined {
+        withPicturesServer(5, level = PictureLevel.DISH)
+        val holder = holder()
+        backend.generateReplies += ServerResult.Err(ServerError.OFFLINE)
+        holder.generateOnServer()
+        val held = paidRepository.get().pendingGeneration
+        assertEquals(PictureLevel.DISH, held?.image)
+        backend.polls = ArrayDeque(listOf(donePictures(3)))
+        now += 60_000
+        holder.onAppResume()
+        assertEquals(listOf(held!!.requestId), backend.polled)
+        val row = saved.rows.value.single()
+        assertEquals(RECIPE_PICTURE_DISH, row.recipe!!.picture?.file)
+        assertEquals(held.requestId, row.recipe!!.requestId)
+    }
+
+    @Test
+    fun aRequestWithPicturesRefusedAsInvalidClearsTheFlagAndAsksAgain() = runUnconfined {
+        withPicturesServer(5, level = PictureLevel.DISH)
+        val holder = holder()
+        backend.balanceImage = false
+        backend.generateReplies += ServerResult.Err(ServerError.INVALID_REQUEST)
+        val before = backend.balanceCalls
+        holder.generateOnServer()
+        assertEquals(RecipeEvent.ServerFailed, holder.uiState.value.event)
+        assertEquals(before + 1, backend.balanceCalls)
+        assertFalse(paidRepository.get().serverTakesRecipeImage)
+        assertFalse(holder.uiState.value.pictures.shown)
+        holder.consumeEvent()
+        backend.generateReplies += done(4)
+        holder.generateOnServer()
+        assertNull(backend.generated.last().image, "the next try goes without pictures")
+    }
+
+    @Test
+    fun imageUnavailableTakesNothingAndRefreshesTheTable() = runUnconfined {
+        withPicturesServer(5, level = PictureLevel.DISH)
+        val holder = holder()
+        backend.balanceCosts = RecipeCosts()
+        backend.generateReplies += ServerResult.Err(ServerError.IMAGE_UNAVAILABLE)
+        holder.generateOnServer()
+        assertEquals(RecipeEvent.PicturesUnavailable, holder.uiState.value.event)
+        assertNull(paidRepository.get().pendingGeneration)
+        assertEquals(5, holder.uiState.value.paid.balance)
+        assertFalse(holder.uiState.value.pictures.shown, "the level is gone with the new table")
+        holder.consumeEvent()
+        backend.generateReplies += done(4)
+        holder.generateOnServer()
+        val again = backend.generated.last()
+        assertNull(again.image)
+        assertTrue(again.requestId != backend.generated.first().requestId, "a new request")
+    }
+
+    @Test
+    fun aRecipeWithPicturesIsAskedAboutForLonger() = runUnconfined {
+        withPicturesServer(5, level = PictureLevel.DISH)
+        val holder = holder()
+        backend.generateReplies += ServerResult.Ok(GenerateReply(GenerateStatus.IN_PROGRESS, balance = 5, charged = true, acceptsRecipeImage = JsonPrimitive(true)))
+        backend.polls = ArrayDeque(List(200) { ServerResult.Ok(GenerateReply(GenerateStatus.IN_PROGRESS, balance = 5, charged = true, acceptsRecipeImage = JsonPrimitive(true))) })
+        val began = now
+        holder.generateOnServer()
+        assertTrue(now - began >= 200_000, "past a plain recipe's 150 s: ${now - began}")
+        assertEquals(ServerIssue.OFFLINE, holder.uiState.value.paid.issue)
+    }
+
+    @Test
+    fun theWritingScreenKnowsThePicturesAsked() = runUnconfined {
+        withPicturesServer(5, level = PictureLevel.STEPS)
+        val holder = holder()
+        backend.generateGate = CompletableDeferred()
+        backend.generateReplies += donePictures(2)
+        holder.generateOnServer()
+        assertEquals(PictureLevel.STEPS, holder.uiState.value.paid.writingPictures)
+        backend.generateGate!!.complete(Unit)
+    }
+
+    @Test
+    fun theOldPicturesAreSweptOnceTheSavedListIsRead() = runUnconfined {
+        saved.rows.value = listOf(SavedRecipe.of("kept", sampleRecipe, 1))
+        holder()
+        assertEquals(setOf("kept"), pictureStore.sweptWith)
+    }
+
+    // --- Report this recipe ----------------------------------------------------------------
+
+    private suspend fun TestScope.reportable(): Pair<RecipeStateHolder, SavedRecipe> {
+        withPicturesServer(5, level = PictureLevel.DISH)
+        val holder = holder()
+        backend.generateReplies += donePictures(3)
+        holder.generateOnServer()
+        holder.consumeEvent()
+        return holder to saved.rows.value.single()
+    }
+
+    @Test
+    fun aServerResultCanBeReportedWithAReasonAndANote() = runUnconfined {
+        val (holder, row) = reportable()
+        assertEquals(ReportFoot.AVAILABLE, holder.uiState.value.reportFoot(row))
+        holder.openReport(row.id)
+        val sheet = holder.uiState.value.report!!
+        assertTrue(ReportReason.PICTURE in sheet.reasons, "it has a picture")
+        holder.sendReport()
+        assertTrue(holder.uiState.value.report!!.reasonMissing, "Choose a reason.")
+        assertTrue(backend.reports.isEmpty())
+        holder.chooseReportReason(ReportReason.UNSAFE)
+        holder.setReportNote("  Leaves rice out overnight.  ")
+        holder.sendReport()
+        val sent = backend.reports.single()
+        assertEquals(RecipeReport(sheet.reportId, row.requestId!!, ReportReason.UNSAFE, "Leaves rice out overnight.", "en"), sent)
+        assertNull(holder.uiState.value.report)
+        assertTrue(holder.uiState.value.reportSent)
+        assertEquals(ReportFoot.REPORTED, holder.uiState.value.reportFoot(row))
+        assertEquals(listOf(row.requestId), configRepository.storedOptions.reportedRequests, "remembered across launches")
+    }
+
+    @Test
+    fun aFailedReportIsSentAgainWithTheSameId() = runUnconfined {
+        val (holder, row) = reportable()
+        holder.openReport(row.id)
+        holder.chooseReportReason(ReportReason.OTHER)
+        backend.reportReplies += ServerResult.Err(ServerError.OFFLINE)
+        holder.sendReport()
+        assertEquals(ReportStatus.FAILED, holder.uiState.value.report!!.status)
+        holder.sendReport()
+        assertEquals(2, backend.reports.size)
+        assertEquals(backend.reports[0].reportId, backend.reports[1].reportId)
+        assertTrue(holder.uiState.value.reportSent)
+    }
+
+    @Test
+    fun theReportLimitIsSaidAndNotRetried() = runUnconfined {
+        val (holder, row) = reportable()
+        holder.openReport(row.id)
+        holder.chooseReportReason(ReportReason.OFFENSIVE)
+        backend.reportReplies += ServerResult.Err(ServerError.REPORT_LIMIT)
+        holder.sendReport()
+        assertEquals(ReportStatus.LIMIT, holder.uiState.value.report!!.status)
+        holder.sendReport()
+        assertEquals(1, backend.reports.size)
+        assertEquals(ReportFoot.AVAILABLE, holder.uiState.value.reportFoot(row))
+    }
+
+    @Test
+    fun noReportForAPhoneRecipeAnOldRowOrWithoutAnAccount() = runUnconfined {
+        withPicturesServer(5)
+        saved.rows.value = listOf(
+            SavedRecipe.of("phone", sampleRecipe.copy(source = RecipeSource.DEVICE), 1),
+            SavedRecipe.of("old", sampleRecipe.copy(source = RecipeSource.SERVER), 2)
+        )
+        val holder = holder()
+        saved.rows.value.forEach { row ->
+            assertEquals(ReportFoot.HIDDEN, holder.uiState.value.reportFoot(row), row.id)
+            holder.openReport(row.id)
+            assertNull(holder.uiState.value.report)
+        }
+        account = FakeAccount(AccountKind.NONE)
+        val signedOut = holder()
+        val server = SavedRecipe.of("new", sampleRecipe.copy(source = RecipeSource.SERVER, requestId = "req"), 3)
+        assertEquals(ReportFoot.HIDDEN, signedOut.uiState.value.reportFoot(server))
+        assertEquals(0, account.anonymousCreated, "never an account for a report")
+    }
+
+    @Test
+    fun aResultTheServerCantReportAnyMoreSaysSoWithoutTryAgain() = runUnconfined {
+        val (holder, row) = reportable()
+        holder.openReport(row.id)
+        holder.chooseReportReason(ReportReason.OTHER)
+        backend.reportReplies += ServerResult.Err(ServerError.UNKNOWN_REQUEST)
+        holder.sendReport()
+        assertEquals(ReportStatus.UNKNOWN, holder.uiState.value.report!!.status)
+        holder.sendReport()
+        assertEquals(1, backend.reports.size, "nothing sent again")
+        assertEquals(ReportFoot.AVAILABLE, holder.uiState.value.reportFoot(row), "not remembered as reported")
+    }
+
+    @Test
+    fun aReportIdRefusedForAnotherResultIsReplacedOnTryAgain() = runUnconfined {
+        val (holder, row) = reportable()
+        holder.openReport(row.id)
+        holder.chooseReportReason(ReportReason.OTHER)
+        backend.reportReplies += ServerResult.Err(ServerError.INVALID_REQUEST)
+        holder.sendReport()
+        assertEquals(ReportStatus.FAILED, holder.uiState.value.report!!.status)
+        holder.sendReport()
+        assertEquals(2, backend.reports.size)
+        assertTrue(backend.reports[0].reportId != backend.reports[1].reportId)
+    }
+
+    @Test
+    fun theNoteStopsAt500() = runUnconfined {
+        val (holder, row) = reportable()
+        holder.openReport(row.id)
+        holder.setReportNote("x".repeat(700))
+        assertEquals(REPORT_NOTE_MAX, holder.uiState.value.report!!.note.length)
     }
 }

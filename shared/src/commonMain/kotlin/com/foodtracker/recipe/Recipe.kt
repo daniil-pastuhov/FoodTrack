@@ -58,8 +58,44 @@ data class Recipe(
      *  by how many days: shown in red above the ingredients and in its shared text. Local to the
      *  apps, worked out from the request ([pastDateOf]), never from the model's text; the server
      *  never sends it, and a row saved before it existed reads as none. */
-    val pastDate: List<PastDateItem> = emptyList()
-)
+    val pastDate: List<PastDateItem> = emptyList(),
+    /** Local only: the generation's request id (server recipes saved since pictures and reports
+     *  came, 2026-11): what "Report this recipe" names. Null in rows saved before it, which then
+     *  offer no report, and in recipes the phone wrote. Set by the app, never read from a reply. */
+    val requestId: String? = null,
+    /** Local only: the dish's picture kept on this device beside the saved row ([RecipePictureStore]),
+     *  null without one. Set by the app when a reply with pictures is saved, never read from a reply. */
+    val picture: RecipePicture? = null,
+    /** Local only: the step pictures kept with it, in step order, each tied to its step. */
+    val stepPictures: List<RecipeStepPicture> = emptyList()
+) {
+    /** The same recipe with nothing local a reply or a model's text could have carried: no request
+     *  id and no pictures. Applied to everything that arrives before the app sets its own. */
+    fun withoutLocalFields(): Recipe = if (requestId == null && picture == null && stepPictures.isEmpty()) this else copy(requestId = null, picture = null, stepPictures = emptyList())
+
+    /** Whether it has any picture kept with it: the report sheet's picture reason. */
+    val hasPictures: Boolean get() = picture != null || stepPictures.isNotEmpty()
+}
+
+/** A picture kept on this device with a saved recipe: [file] is its name in that saved recipe's
+ *  own folder ([RECIPE_PICTURE_DISH] or [recipeStepPictureFile]); [width] and [height] in pixels,
+ *  as the server said. */
+@Serializable
+data class RecipePicture(val file: String, val width: Int, val height: Int)
+
+/** A step's picture: [step] is the 0-based index into [Recipe.steps]. */
+@Serializable
+data class RecipeStepPicture(val step: Int, val picture: RecipePicture)
+
+/** The dish picture's file name in a saved recipe's folder. */
+const val RECIPE_PICTURE_DISH = "dish.jpg"
+
+/** Step [step]'s picture file name in a saved recipe's folder. */
+fun recipeStepPictureFile(step: Int): String = "step-$step.jpg"
+
+/** Whether [name] is one this app writes ([RECIPE_PICTURE_DISH], [recipeStepPictureFile]): only
+ *  such a name is ever opened, so a saved payload can't point outside its folder. */
+fun isRecipePictureFile(name: String): Boolean = name == RECIPE_PICTURE_DISH || Regex("step-[0-9]{1,2}\\.jpg").matches(name)
 
 /** Each ingredient's [RecipeIngredient.stapleName]: the staple at its [RecipeIngredient.stapleIndex]
  *  in [staples] (the request's `staples`, as sent), null otherwise. iOS: `RecipeWire.withStapleNames`. */
@@ -100,7 +136,9 @@ data class Menu(
     val days: List<MenuDay>,
     /** Every item past its date the menu was written from (see [Recipe.pastDate]): the warning
      *  under the menu's title. Each course's own recipe carries its day's share. */
-    val pastDate: List<PastDateItem> = emptyList()
+    val pastDate: List<PastDateItem> = emptyList(),
+    /** Local only: the generation's request id, as for [Recipe.requestId]. */
+    val requestId: String? = null
 )
 
 /** The [items] (as sent, `expiresOn` `YYYY-MM-DD`) that are past their date on [today], in the
@@ -178,6 +216,9 @@ data class SavedRecipe(
 ) {
     /** How many dishes this holds: one for a recipe, every course of every day for a menu. */
     val dishCount: Int get() = menu?.days?.sumOf { it.courses.size } ?: 1
+
+    /** The generation's request id, for a report; null in rows saved before it was kept. */
+    val requestId: String? get() = recipe?.requestId ?: menu?.requestId
 
     companion object {
         fun of(id: String, recipe: Recipe, createdAtEpochMillis: Long) = SavedRecipe(

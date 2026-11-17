@@ -176,6 +176,17 @@ class ReviewPrompterTest {
     }
 
     @Test
+    fun aSentReportBlocksTheSession() {
+        val prompter = eligiblePrompter()
+        prompter.onRecipeEvent(RecipeEvent.Written("r1"))
+        prompter.onReportSent()
+        assertTrue(prompter.sessionBlocked)
+        assertFalse(prompter.onRecipeLeft())
+        repeat(3) { assertFalse(prompter.onUsedOne(1)) }
+        assertEquals(0, requests)
+    }
+
+    @Test
     fun aRecipeWrittenWithoutAnItemIsAProblem() {
         val prompter = eligiblePrompter()
         prompter.onRecipeEvent(RecipeEvent.Written("r1", leftOut = listOf("Milk")))
@@ -189,7 +200,7 @@ class ReviewPrompterTest {
             RecipeEvent.Failed, RecipeEvent.ServerFailed, RecipeEvent.ServerFailedLater, RecipeEvent.ServerBusy,
             RecipeEvent.ServerRateLimited, RecipeEvent.ServerLimitToday, RecipeEvent.ServerTroubleToday,
             RecipeEvent.ServerRefused(1), RecipeEvent.IngredientNotSent("x"), RecipeEvent.AllergenNotSent("x"),
-            RecipeEvent.TooManyAllergens(31, 30), RecipeEvent.AllergenConsentDeclined
+            RecipeEvent.TooManyAllergens(31, 30), RecipeEvent.AllergenConsentDeclined, RecipeEvent.PicturesUnavailable
         )
         failures.forEach { event ->
             val prompter = eligiblePrompter()

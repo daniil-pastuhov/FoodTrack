@@ -1316,4 +1316,50 @@
         <item quantity="one">Basisvaren din kan også brukes</item>
         <item quantity="other">De %1$d basisvarene dine kan også brukes</item>
     </plurals>
+    <!-- Recipe: pictures (recipes from packs only, single recipes; each level only when our server says acceptsRecipeImage and prices it: recipeImage, recipeImageSteps). The unit is a "recipe", never a credit. -->
+    <string name="recipe_image_row">Bilder</string>
+    <string name="recipe_image_title">Bilder, laget av KI</string>
+    <string name="recipe_image_none">Ingen bilder</string>
+    <string name="recipe_image_dish">Retten</string>
+    <string name="recipe_image_dish_desc">Ett bilde av den ferdige retten</string>
+    <string name="recipe_image_steps">Retten og vanskelige trinn</string>
+    <string name="recipe_image_steps_desc">Pluss bilder av trinn som er vanskelige å følge bare med ord</string>
+    <string name="recipe_image_short">Du har %1$s igjen: ikke nok til bilder.</string>
+    <string name="recipe_image_short_steps">Du har %1$s igjen: nok til et bilde av retten, ikke trinnene.</string>
+    <string name="recipe_image_with">Med bilde av retten</string>
+    <string name="recipe_image_with_steps">Med bilder av retten og trinnene</string>
+    <string name="recipe_writing_server_image_body">Opptil ett minutt med bilde. Du kan gå fra denne skjermen; oppskriften havner i Lagrede oppskrifter.</string>
+    <string name="recipe_writing_server_images_body">Opptil to minutter med bilder av trinnene. Du kan gå fra denne skjermen; oppskriften havner i Lagrede oppskrifter.</string>
+    <string name="recipe_image_caption">Bildet er laget av KI. Retten din kan se annerledes ut.</string>
+    <string name="recipe_image_steps_caption">Trinnbildene er laget av KI. Ditt kan se annerledes ut.</string>
+    <string name="recipe_image_desc">Bilde av %1$s, laget av KI</string>
+    <string name="recipe_image_step_desc">Bilde av trinn %1$d, laget av KI</string>
+    <string name="recipe_image_failed">Kunne ikke lage et bilde av retten denne gangen.</string>
+    <string name="recipe_image_steps_failed">Kunne ikke lage bilder av noen av trinnene denne gangen.</string>
+    <string name="recipe_image_cost_line">En oppskrift med et bilde av retten, laget av KI, bruker %1$s.</string>
+    <string name="recipe_image_steps_cost_line">Med bilder av vanskelige trinn også bruker den %1$s.</string>
+    <!-- Recipe: Report this recipe / menu (every model-written result; only when our server says acceptsReports). -->
+    <string name="recipe_report_action">Rapporter denne oppskriften</string>
+    <string name="recipe_report_menu_action">Rapporter denne menyen</string>
+    <string name="recipe_report_lede">Hva er galt med den?</string>
+    <string name="recipe_report_reason_offensive">Støtende eller upassende</string>
+    <string name="recipe_report_reason_unsafe">Usikre råd om mat</string>
+    <string name="recipe_report_reason_picture">Et bilde er feil eller støtende</string>
+    <string name="recipe_report_reason_other">Noe annet</string>
+    <string name="recipe_report_reason_required">Velg en grunn.</string>
+    <string name="recipe_report_note_label">Legg til en merknad (valgfritt)</string>
+    <string name="recipe_report_note_count">%1$d av %2$d tegn</string>
+    <string name="recipe_report_sends_server">Vi får grunnen og merknaden din, knyttet til denne oppskriften, så vi kan se på det.</string>
+    <string name="recipe_report_sends_server_menu">Vi får grunnen og merknaden din, knyttet til denne menyen, så vi kan se på det.</string>
+    <string name="recipe_report_send">Send rapport</string>
+    <string name="recipe_report_cancel">Avbryt</string>
+    <string name="recipe_report_sending">Sender …</string>
+    <string name="recipe_report_sent">Takk. Vi ser på det.</string>
+    <string name="recipe_report_failed">Kunne ikke sende rapporten. Prøv igjen når du er på nett.</string>
+    <string name="recipe_report_try_again">Prøv igjen</string>
+    <string name="recipe_report_done">Du har rapportert dette</string>
+    <string name="recipe_report_limit">Det er grensen for rapporter i dag. Prøv igjen i morgen.</string>
+    <string name="recipe_report_unknown">Denne oppskriften kan ikke rapporteres lenger.</string>
+    <string name="recipe_image_unavailable">Bilder kan ikke lages akkurat nå. Ingen oppskrift ble trukket.</string>
+    <!-- /Recipe: pictures and reports -->
 </resources>

@@ -1410,4 +1410,50 @@
         <item quantity="many">Tus %1$d básicos también se pueden usar</item>
         <item quantity="other">Tus %1$d básicos también se pueden usar</item>
     </plurals>
+    <!-- Recipe: pictures (recipes from packs only, single recipes; each level only when our server says acceptsRecipeImage and prices it: recipeImage, recipeImageSteps). The unit is a "recipe", never a credit. -->
+    <string name="recipe_image_row">Imágenes</string>
+    <string name="recipe_image_title">Imágenes creadas con IA</string>
+    <string name="recipe_image_none">Sin imágenes</string>
+    <string name="recipe_image_dish">El plato</string>
+    <string name="recipe_image_dish_desc">Una imagen del plato terminado</string>
+    <string name="recipe_image_steps">El plato y los pasos difíciles</string>
+    <string name="recipe_image_steps_desc">Y además imágenes de los pasos difíciles de seguir solo con palabras</string>
+    <string name="recipe_image_short">Tienes %1$s: no basta para imágenes.</string>
+    <string name="recipe_image_short_steps">Tienes %1$s: basta para la imagen del plato, no para los pasos.</string>
+    <string name="recipe_image_with">Con imagen del plato</string>
+    <string name="recipe_image_with_steps">Con imágenes del plato y de los pasos</string>
+    <string name="recipe_writing_server_image_body">Hasta un minuto con imagen. Puedes salir de esta pantalla; la receta estará en Recetas guardadas.</string>
+    <string name="recipe_writing_server_images_body">Hasta dos minutos con imágenes de los pasos. Puedes salir de esta pantalla; la receta estará en Recetas guardadas.</string>
+    <string name="recipe_image_caption">Imagen creada con IA. Tu plato puede verse diferente.</string>
+    <string name="recipe_image_steps_caption">Las imágenes de los pasos están creadas con IA. Lo tuyo puede verse diferente.</string>
+    <string name="recipe_image_desc">Imagen de %1$s, creada con IA</string>
+    <string name="recipe_image_step_desc">Imagen del paso %1$d, creada con IA</string>
+    <string name="recipe_image_failed">Esta vez no se ha podido crear una imagen del plato.</string>
+    <string name="recipe_image_steps_failed">Esta vez no se han podido crear imágenes de algunos pasos.</string>
+    <string name="recipe_image_cost_line">Una receta con imagen del plato, creada con IA, descuenta %1$s.</string>
+    <string name="recipe_image_steps_cost_line">Con imágenes de los pasos difíciles, descuenta %1$s.</string>
+    <!-- Recipe: Report this recipe / menu (every model-written result; only when our server says acceptsReports). -->
+    <string name="recipe_report_action">Denunciar esta receta</string>
+    <string name="recipe_report_menu_action">Denunciar este menú</string>
+    <string name="recipe_report_lede">¿Qué le pasa?</string>
+    <string name="recipe_report_reason_offensive">Ofensivo o inapropiado</string>
+    <string name="recipe_report_reason_unsafe">Consejo alimentario poco seguro</string>
+    <string name="recipe_report_reason_picture">Una imagen es incorrecta u ofensiva</string>
+    <string name="recipe_report_reason_other">Otra cosa</string>
+    <string name="recipe_report_reason_required">Elige un motivo.</string>
+    <string name="recipe_report_note_label">Añadir una nota (opcional)</string>
+    <string name="recipe_report_note_count">%1$d de %2$d caracteres</string>
+    <string name="recipe_report_sends_server">Recibimos el motivo y tu nota, vinculados a esta receta, para revisarlo.</string>
+    <string name="recipe_report_sends_server_menu">Recibimos el motivo y tu nota, vinculados a este menú, para revisarlo.</string>
+    <string name="recipe_report_send">Enviar denuncia</string>
+    <string name="recipe_report_cancel">Cancelar</string>
+    <string name="recipe_report_sending">Enviando…</string>
+    <string name="recipe_report_sent">Gracias. Lo revisaremos.</string>
+    <string name="recipe_report_failed">No se ha podido enviar la denuncia. Inténtalo de nuevo cuando tengas conexión.</string>
+    <string name="recipe_report_try_again">Reintentar</string>
+    <string name="recipe_report_done">Ya lo has denunciado</string>
+    <string name="recipe_report_limit">Has llegado al límite de denuncias de hoy. Vuelve a intentarlo mañana.</string>
+    <string name="recipe_report_unknown">Esta receta ya no se puede denunciar.</string>
+    <string name="recipe_image_unavailable">Ahora mismo no se pueden hacer imágenes. No se ha descontado ninguna receta.</string>
+    <!-- /Recipe: pictures and reports -->
 </resources>

@@ -52,8 +52,8 @@ object ReviewPromptRule {
 
     /**
      * Whether [moment] may lead to the prompt now. [sessionBlocked] is true when this session
-     * showed onboarding, an error, a failed or refused generation, a purchase problem or a
-     * refused permission, or is a demo/screenshot launch.
+     * showed onboarding, an error, a failed or refused generation, a purchase problem, a refused
+     * permission or a sent report of a recipe or menu, or is a demo/screenshot launch.
      *
      * A clock set back before [ReviewPromptRecord.firstLaunchMillis] or the last request reads
      * as "too soon", never as "long enough ago".

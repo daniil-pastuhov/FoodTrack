@@ -43,8 +43,23 @@ data class RecipeCosts(
     val recipe: Int = 1,
     val menu2: Int = 4,
     val menu3: Int = 5,
-    val menuSets: Map<Int, Map<Int, Int>> = emptyMap()
+    val menuSets: Map<Int, Map<Int, Int>> = emptyMap(),
+    /** A single recipe with a picture of the dish (`image: "dish"`), the whole price; null while
+     *  the server doesn't offer that level (functions/CONTRACT.md "Capability `acceptsRecipeImage`").
+     *  Never a price made up on the phone: no price, no level. */
+    val recipeImage: Int? = null,
+    /** The same with pictures of tricky steps too (`image: "steps"`); null while that level is off,
+     *  and always when [recipeImage] is. */
+    val recipeImageSteps: Int? = null
 ) {
+    /** What one recipe at picture level [level] takes: [recipe] for none, else that level's price,
+     *  null when the server doesn't price it (so it isn't offered). */
+    fun picture(level: PictureLevel): Int? = when (level) {
+        PictureLevel.NONE -> recipe
+        PictureLevel.DISH -> recipeImage
+        PictureLevel.STEPS -> recipeImageSteps
+    }
+
     /** A 3-day menu of [courses] courses a day (2 or 3), from [menu2] / [menu3]. */
     fun menu(courses: Int): Int = if (courses >= 3) menu3 else menu2
 
@@ -65,8 +80,12 @@ data class RecipeCosts(
             return prices.min()..prices.max()
         }
 
-    fun of(kind: WireKind, courses: Int?, days: Int? = null): Int =
-        if (kind == WireKind.MENU) menuSet(days ?: DEFAULT_MENU_DAYS, courses ?: 2) ?: menu(courses ?: 2) else recipe
+    fun of(kind: WireKind, courses: Int?, days: Int? = null, image: PictureLevel? = null): Int =
+        if (kind == WireKind.MENU) {
+            menuSet(days ?: DEFAULT_MENU_DAYS, courses ?: 2) ?: menu(courses ?: 2)
+        } else {
+            image?.let(::picture) ?: recipe
+        }
 }
 
 /** Days of a menu when a request doesn't say (an older server, and `days` left out). */
@@ -82,7 +101,10 @@ val LEGACY_MENU_COURSES: List<Int> = listOf(2, 3)
 /** The costs in a reply's `costs`, read leniently: a missing, mistyped or unlikely value keeps the
  *  default for that one field, and anything that isn't an object is no costs at all. `menuSets`
  *  keeps only the day counts and courses the app knows ([MENU_DAY_OPTIONS], [MENU_COURSE_OPTIONS])
- *  with a whole price; anything else in it, and any other key, is ignored. */
+ *  with a whole price; anything else in it, and any other key, is ignored. The picture prices
+ *  (`recipeImage`, `recipeImageSteps`) are optional: kept only when present and whole, a dish
+ *  price below the recipe's or a steps price below the dish's (never sent so) reads as absent, and
+ *  a steps price without a dish price is dropped. */
 fun recipeCostsOf(json: JsonElement?): RecipeCosts? {
     val costs = json as? JsonObject ?: return null
     val defaults = RecipeCosts()
@@ -101,7 +123,10 @@ fun recipeCostsOf(json: JsonElement?): RecipeCosts? {
         }.toMap()
         prices.takeIf { it.isNotEmpty() }?.let { days to it }
     }.toMap()
-    return RecipeCosts(read("recipe", defaults.recipe), read("menu2", defaults.menu2), read("menu3", defaults.menu3), sets)
+    val recipe = read("recipe", defaults.recipe)
+    val dish = price(costs["recipeImage"])?.takeIf { it >= recipe }
+    val steps = dish?.let { dishPrice -> price(costs["recipeImageSteps"])?.takeIf { it >= dishPrice } }
+    return RecipeCosts(recipe, read("menu2", defaults.menu2), read("menu3", defaults.menu3), sets, dish, steps)
 }
 
 private const val MAX_COST = 100
@@ -161,7 +186,13 @@ data class GenerateRequest(
      *  is the one from before staples) otherwise, and in a request kept by an older version. Part
      *  of the inputs a request id is bound to, as sent; a retry keeps it unchanged. */
     @EncodeDefault(EncodeDefault.Mode.NEVER)
-    val staples: List<String>? = null
+    val staples: List<String>? = null,
+    /** Pictures with a single recipe: [PictureLevel.DISH] or [PictureLevel.STEPS], only to a server
+     *  that said `acceptsRecipeImage` and prices that level ([pictureChoice]). Null (and then left
+     *  out of the JSON altogether, so the request is the one from before pictures) for none, for a
+     *  menu, and in a request kept by an older version. Part of the inputs a request id is bound to. */
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
+    val image: PictureLevel? = null
 ) {
     /** Whether [other] asks for the same thing, whatever its id. */
     fun sameAskAs(other: GenerateRequest): Boolean =
@@ -203,7 +234,20 @@ data class GenerateReply(
     /** Read with [welcomeRecipesFieldOf]. */
     val welcomeRecipes: JsonElement? = null,
     /** Read with [acceptsStaplesOf]. */
-    val acceptsStaples: JsonElement? = null
+    val acceptsStaples: JsonElement? = null,
+    /** Read with [acceptsRecipeImageOf]. */
+    val acceptsRecipeImage: JsonElement? = null,
+    /** Read with [acceptsReportsOf]. */
+    val acceptsReports: JsonElement? = null,
+    /** A recipe asked with pictures was delivered without the dish's picture: read with
+     *  [acceptsRecipeImageOf] (only a JSON `true`). */
+    val imageFailed: JsonElement? = null,
+    /** A "steps" recipe for which at least one step picture that was tried wasn't delivered. */
+    val stepImagesFailed: JsonElement? = null,
+    /** The reply's `image` and `stepImages`, decoded by the platform backend off the main thread
+     *  ([ReplyPictures]); never part of the JSON this class is read from, and never logged. */
+    @kotlinx.serialization.Transient
+    val pictures: ReplyPictures? = null
 )
 
 @Serializable
@@ -228,7 +272,9 @@ data class VerifyReply(
     val tasteQuizVersion: JsonElement? = null,
     val acceptsWelcome: JsonElement? = null,
     val welcomeRecipes: JsonElement? = null,
-    val acceptsStaples: JsonElement? = null
+    val acceptsStaples: JsonElement? = null,
+    val acceptsRecipeImage: JsonElement? = null,
+    val acceptsReports: JsonElement? = null
 )
 
 /** `getBalance`'s answer. */
@@ -247,7 +293,11 @@ data class BalanceReply(
     /** What a claim would grant now ([welcomeRecipesFieldOf]); null when absent. */
     val welcomeRecipes: Int? = null,
     /** The server reads a request's `staples` ([acceptsStaplesOf]). */
-    val acceptsStaples: Boolean = false
+    val acceptsStaples: Boolean = false,
+    /** The server reads a request's `image` ([acceptsRecipeImageOf]). */
+    val acceptsRecipeImage: Boolean = false,
+    /** The server has `reportRecipe` ([acceptsReportsOf]). */
+    val acceptsReports: Boolean = false
 )
 
 /** `mergeBalance`'s answer: the joined [balance], what [moved] from this install (negative when a
@@ -268,7 +318,9 @@ data class MergeReply(
     /** What a claim would grant now ([welcomeRecipesFieldOf]); null when absent. */
     val welcomeRecipes: Int? = null,
     /** The server reads a request's `staples` ([acceptsStaplesOf]). */
-    val acceptsStaples: Boolean = false
+    val acceptsStaples: Boolean = false,
+    val acceptsRecipeImage: Boolean = false,
+    val acceptsReports: Boolean = false
 )
 
 /** A reply's `purchasesBlocked`, read leniently: only a JSON `true` blocks; anything else
@@ -301,6 +353,15 @@ fun acceptsTasteOf(json: JsonElement?): Boolean = purchasesBlockedOf(json)
  *  `true` says the server reads a request's `staples`; absent says it doesn't, and the request
  *  goes without them (no error, nothing blocked). */
 fun acceptsStaplesOf(json: JsonElement?): Boolean = purchasesBlockedOf(json)
+
+/** A reply's `acceptsRecipeImage` (functions/CONTRACT.md "Capability `acceptsRecipeImage`"): only a
+ *  JSON `true` says the server reads a request's `image`; which levels are on is said by the
+ *  costs' `recipeImage` / `recipeImageSteps`. Absent: the request goes without pictures. */
+fun acceptsRecipeImageOf(json: JsonElement?): Boolean = purchasesBlockedOf(json)
+
+/** A reply's `acceptsReports` (functions/CONTRACT.md "Capability `acceptsReports`"): only a JSON
+ *  `true` says the server has `reportRecipe`, so the results it wrote offer "Report this recipe". */
+fun acceptsReportsOf(json: JsonElement?): Boolean = purchasesBlockedOf(json)
 
 /** A reply's `tasteQuizVersion` (functions/CONTRACT.md): the version `getTasteQuiz` would answer
  *  with now, so the app can tell new questions without opening the quiz; null when absent or not
@@ -363,6 +424,15 @@ enum class ServerError {
      *  diets are applied (for a menu, some day has no item it may use). Nothing was charged and no
      *  model was called; a changed request needs a new request id. */
     NOT_ENOUGH_ITEMS,
+
+    /** `generateRecipe` with `image`: the server doesn't make that level now (turned off, or its
+     *  price withdrawn since the table was read). Refused before anything was reserved; the table
+     *  is asked for again and the same recipe without the picture is a new request. */
+    IMAGE_UNAVAILABLE,
+
+    /** `reportRecipe`: this account's reports today, or the service's, reached the ceiling.
+     *  Nothing was stored; not asked again by itself. */
+    REPORT_LIMIT,
 
     /** `resource-exhausted` without a reason (HTTP 429): every server instance is busy. Nothing
      *  was charged; ask again, same request id, after a few seconds. */
@@ -437,6 +507,11 @@ interface RecipeBackend {
 
     /** Deletes the signed-in account on the server. The caller signs out afterwards. */
     suspend fun deleteAccount(): ServerResult<DeleteReply>
+
+    /** `reportRecipe`: "Report this recipe" on a result the server wrote, with no recipe text.
+     *  A limited-use App Check token; the same [RecipeReport.reportId] again is the same report.
+     *  Only to a server that said `acceptsReports`, for an account that exists. */
+    suspend fun reportRecipe(report: RecipeReport): ServerResult<Unit> = ServerResult.Err(ServerError.CALLABLE_MISSING)
 }
 
 /** `deleteAccount`'s answer. [appleLinkRemoved] is null for an account without Apple, false when
@@ -637,6 +712,12 @@ data class RecipePaidSnapshot(
     /** The same for `acceptsStaples`: only then are the staples' names sent ([stapleWireNames]).
      *  Cleared when a request that carried them is refused as INVALID_REQUEST without a field. */
     val serverTakesStaples: Boolean = false,
+    /** The same for `acceptsRecipeImage`: only then is a picture level offered and `image` sent,
+     *  each level only while the costs price it. Cleared when a request that carried `image` is
+     *  refused as INVALID_REQUEST (a rolled-back server). */
+    val serverTakesRecipeImage: Boolean = false,
+    /** The same for `acceptsReports`: only then do the results the server wrote offer a report. */
+    val serverTakesReports: Boolean = false,
     /** The last `tasteQuizVersion` a reply carried; null before one did. */
     val tasteQuizVersion: String? = null,
     /** The last `getWelcomeOffer` answer, with its time: shown while under a day old. */

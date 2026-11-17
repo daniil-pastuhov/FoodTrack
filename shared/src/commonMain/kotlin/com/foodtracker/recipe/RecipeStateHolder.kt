@@ -138,6 +138,10 @@ sealed interface RecipeEvent {
 
     /** The server declined these items once too often, and [taken] recipes were counted. */
     data class ServerRefused(val taken: Int) : RecipeEvent
+
+    /** IMAGE_UNAVAILABLE: the server doesn't make the pictures asked for right now. Nothing was
+     *  taken; the costs are asked for again (the level goes), and the next tap is a new request. */
+    data object PicturesUnavailable : RecipeEvent
 }
 
 /** A way to get a recipe from the form, each one its own button: a tap on one never falls back
@@ -248,7 +252,16 @@ data class RecipeUiState(
     /** The person's staples, from the pantry's state ([PantryUiState.staples]). */
     val staples: List<Staple> = emptyList(),
     /** The shopping list's names now: a staple on it is out and goes nowhere. */
-    val shoppingNames: List<String> = emptyList()
+    val shoppingNames: List<String> = emptyList(),
+    /** The Pictures sheet is open. */
+    val picturesSheet: Boolean = false,
+    /** Results saved in this run with fewer pictures than asked for, by saved id: their quiet lines,
+     *  shown until that result is left once ([RecipeStateHolder.pictureNoticeSeen]). */
+    val pictureNotices: Map<String, PictureNotice> = emptyMap(),
+    /** The report sheet on screen; null when it isn't. */
+    val report: ReportSheet? = null,
+    /** A report was just received by the server: the snackbar, once ([RecipeStateHolder.consumeReportSent]). */
+    val reportSent: Boolean = false
 ) {
     /** The language recipes are written in. */
     val language: String = config.language ?: appLanguage
@@ -395,12 +408,31 @@ data class RecipeUiState(
     val onDeviceLanguageUnsupported: Boolean =
         onDeviceAvailability != null && onDeviceAvailability != OnDeviceAvailability.UNSUPPORTED && !onDeviceSupportsLanguage
 
-    /** What the current mode takes from a pack. */
-    val serverCost: Int get() = if (mode == RecipeMode.MENU) paid.costs.menuSet(menuDays, menuCourses) ?: paid.costs.menu(menuCourses) else paid.costs.recipe
+    /** What the current mode takes from a pack without pictures: what decides whether the server
+     *  can be asked at all. */
+    private val baseServerCost: Int get() = if (mode == RecipeMode.MENU) paid.costs.menuSet(menuDays, menuCourses) ?: paid.costs.menu(menuCourses) else paid.costs.recipe
+
+    /** What the current mode takes from a pack, with the pictures really sent ([pictures]). */
+    val serverCost: Int get() = if (mode == RecipeMode.MENU) baseServerCost else paid.costs.picture(pictures.sent) ?: paid.costs.recipe
 
     /** Whether the server can be asked now: a pack with enough left, nothing in the way. */
     val canGenerateOnServer: Boolean
-        get() = paid.available && paid.issue != ServerIssue.PAUSED && (paid.balance ?: 0) >= serverCost
+        get() = paid.available && paid.issue != ServerIssue.PAUSED && (paid.balance ?: 0) >= baseServerCost
+
+    /** The form's Pictures row ([pictureChoice]): only while the server is the primary of a single
+     *  recipe, says `acceptsRecipeImage` and prices a level. */
+    val pictures: PictureChoice
+        get() = pictureChoice(
+            options.pictureLevel,
+            paid.costs,
+            paid.takesRecipeImage,
+            paid.balance ?: 0,
+            serverPrimary = mode == RecipeMode.RECIPE && actions.primary == RecipeAction.SERVER
+        )
+
+    /** What [saved]'s foot shows for reporting ([reportFoot]). */
+    fun reportFoot(saved: SavedRecipe): ReportFoot =
+        reportFoot(saved.source, saved.requestId, paid.available, paid.account.kind != AccountKind.NONE, paid.takesReports, options.reportedRequests.toSet())
 
     /** The form's actions in this state; see [RecipeActions]. */
     val actions: RecipeActions
@@ -456,7 +488,9 @@ class RecipeStateHolder(
      *  still writing, and the backoff while it is busy. */
     pollDelay: suspend (Long) -> Unit = { delay(it) },
     /** See [RecipeUiState.shareSheetCopies]: false only on Android below 10 (API 29). */
-    shareSheetCopies: Boolean = true
+    shareSheetCopies: Boolean = true,
+    /** Where server recipes' pictures are kept beside their saved rows. */
+    private val pictureStore: RecipePictureStore = NoRecipePictureStore
 ) {
     private val _uiState = MutableStateFlow(
         configRepository.get().normalized().let { config ->
@@ -496,8 +530,17 @@ class RecipeStateHolder(
         pollDelay = pollDelay,
         isOnScreen = { onScreen.value > 0 },
         markUnread = ::markUnread,
-        onTermsReply = { prefetchTasteQuiz() }
+        onTermsReply = { prefetchTasteQuiz() },
+        pictureStore = pictureStore,
+        onPictureNotice = { id, notice -> _uiState.update { it.copy(pictureNotices = it.pictureNotices + (id to notice)) } },
+        onReported = { requestId ->
+            updateOptions { it.copy(reportedRequests = (it.reportedRequests - requestId + requestId).takeLast(REPORTED_REMEMBERED)) }
+        },
+        appLanguage = { _uiState.value.appLanguage }
     )
+
+    /** The pictures of rows gone are swept once a run, after the saved list is first read. */
+    private var swept = false
 
     /** How many copies of the writing screen are on screen and resumed (a transition can briefly
      *  hold two). Written on the main thread and read where a result arrives, off it. */
@@ -525,7 +568,15 @@ class RecipeStateHolder(
                 }
         }
         coroutineScope.launch {
-            savedRecipeRepository.getAllFlow().collect { saved -> _uiState.update { it.copy(saved = saved, savedLoaded = true) } }
+            savedRecipeRepository.getAllFlow().collect { saved ->
+                _uiState.update { it.copy(saved = saved, savedLoaded = true) }
+                // Folders whose row is gone (deleted in an earlier run, after its Undo had passed);
+                // never on delete itself, so Undo finds its pictures.
+                if (!swept) {
+                    swept = true
+                    coroutineScope.launch { runCatching { pictureStore.sweep(saved.mapTo(HashSet()) { it.id }) } }
+                }
+            }
         }
         paid.start()
         refresh()
@@ -768,7 +819,7 @@ class RecipeStateHolder(
                     return@launch
                 }
                 // The warning comes from the ticked items' own dates, never from the model's text.
-                val saved = SavedRecipe.of(newId(), recipe.copy(pastDate = state.pastDateTicked), nowMillis())
+                val saved = SavedRecipe.of(newId(), recipe.withoutLocalFields().copy(pastDate = state.pastDateTicked), nowMillis())
                 savedRecipeRepository.save(saved)
                 if (onScreen.value > 0) {
                     report(RecipeEvent.Written(saved.id), saved)
@@ -809,6 +860,63 @@ class RecipeStateHolder(
     /** The offline callout's Try again: sends the unanswered request again with its own id, or
      *  asks for the count. */
     fun retryServer() = paid.retry()
+
+    // --- Pictures (RecipePictures.kt) --------------------------------------------------------
+
+    /** The Pictures row: opens its sheet, only while the row shows. */
+    fun openPictures() {
+        if (!_uiState.value.pictures.shown) return
+        _uiState.update { it.copy(picturesSheet = true) }
+    }
+
+    fun dismissPictures() {
+        _uiState.update { it.copy(picturesSheet = false) }
+    }
+
+    /** A level chosen in the sheet: remembered, and the sheet closes at once. A level the pack
+     *  doesn't cover isn't chosen. */
+    fun setPictureLevel(level: PictureLevel) {
+        val choice = _uiState.value.pictures
+        if (level !in choice.levels || level !in choice.covered) return
+        _uiState.update { it.copy(picturesSheet = false) }
+        updateOptions { it.copy(pictureLevel = level) }
+    }
+
+    /** The result with [savedId] was left: its "couldn't make a picture" lines don't come back. */
+    fun pictureNoticeSeen(savedId: String) {
+        if (savedId !in _uiState.value.pictureNotices) return
+        _uiState.update { it.copy(pictureNotices = it.pictureNotices - savedId) }
+    }
+
+    /** Debug demo launches only: [savedId] as just arrived with [notice]. */
+    fun showPictureNoticeDemo(savedId: String, notice: PictureNotice) {
+        _uiState.update { it.copy(pictureNotices = it.pictureNotices + (savedId to notice)) }
+    }
+
+    /** Debug demo launches only: the remembered picture level and the sheet open or not. */
+    fun showPicturesDemo(level: PictureLevel, sheet: Boolean) {
+        _uiState.update { it.copy(options = it.options.copy(pictureLevel = level), picturesSheet = sheet) }
+    }
+
+    // --- Report this recipe ------------------------------------------------------------------
+
+    /** "Report this recipe / menu" on saved result [savedId] ([RecipeUiState.reportFoot]). */
+    fun openReport(savedId: String, asDish: Boolean = false) = paid.openReport(savedId, asDish)
+    fun chooseReportReason(reason: ReportReason) = paid.chooseReportReason(reason)
+    fun setReportNote(note: String) = paid.setReportNote(note)
+    fun sendReport() = paid.sendReport()
+    fun dismissReport() = paid.dismissReport()
+
+    /** The "Thanks" snackbar was shown. */
+    fun consumeReportSent() {
+        _uiState.update { it.copy(reportSent = false) }
+    }
+
+    /** Debug demo launches only: the report sheet as [sheet] says, or [reported] remembered. */
+    fun showReportDemo(sheet: ReportSheet?, reported: String? = null) {
+        if (reported != null) updateOptions { it.copy(reportedRequests = (it.reportedRequests - reported + reported).takeLast(REPORTED_REMEMBERED)) }
+        _uiState.update { it.copy(report = sheet, reportSent = reported != null) }
+    }
 
     // --- Packs -------------------------------------------------------------------------------
 
@@ -1055,7 +1163,10 @@ class RecipeStateHolder(
             it.copy(config = RecipeConfig(), options = RecipeOptions(), taste = TasteProfile(), tasteQuiz = null, tasteSeen = emptyList(), mode = RecipeMode.RECIPE, courses = DEFAULT_MENU_COURSES, days = DEFAULT_MENU_DAYS, selection = RecipeSelection.Default)
                 .withLanguageSupport()
         }
-        coroutineScope.launch { savedRecipeRepository.clearAll() }
+        coroutineScope.launch {
+            savedRecipeRepository.clearAll()
+            runCatching { pictureStore.sweep(emptySet()) }
+        }
     }
 }
 

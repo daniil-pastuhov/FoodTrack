@@ -1496,4 +1496,50 @@
         <item quantity="many">Можно использовать и базовые продукты: %1$d</item>
         <item quantity="other">Можно использовать и базовые продукты: %1$d</item>
     </plurals>
+    <!-- Recipe: pictures (recipes from packs only, single recipes; each level only when our server says acceptsRecipeImage and prices it: recipeImage, recipeImageSteps). The unit is a "recipe", never a credit. -->
+    <string name="recipe_image_row">Изображения</string>
+    <string name="recipe_image_title">Изображения, созданные ИИ</string>
+    <string name="recipe_image_none">Без изображений</string>
+    <string name="recipe_image_dish">Блюдо</string>
+    <string name="recipe_image_dish_desc">Одно изображение готового блюда</string>
+    <string name="recipe_image_steps">Блюдо и сложные шаги</string>
+    <string name="recipe_image_steps_desc">А также изображения шагов, которые трудно понять по описанию</string>
+    <string name="recipe_image_short">У вас осталось %1$s: на изображения не хватит.</string>
+    <string name="recipe_image_short_steps">У вас осталось %1$s: хватит на изображение блюда, но не шагов.</string>
+    <string name="recipe_image_with">С изображением блюда</string>
+    <string name="recipe_image_with_steps">С изображениями блюда и шагов</string>
+    <string name="recipe_writing_server_image_body">С изображением — до минуты. С экрана можно уйти: рецепт появится в сохранённых рецептах.</string>
+    <string name="recipe_writing_server_images_body">С изображениями шагов — до двух минут. С экрана можно уйти: рецепт появится в сохранённых рецептах.</string>
+    <string name="recipe_image_caption">Изображение создано ИИ. Ваше блюдо может выглядеть иначе.</string>
+    <string name="recipe_image_steps_caption">Изображения шагов созданы ИИ. У вас может выглядеть иначе.</string>
+    <string name="recipe_image_desc">Изображение блюда «%1$s», созданное ИИ</string>
+    <string name="recipe_image_step_desc">Изображение шага %1$d, созданное ИИ</string>
+    <string name="recipe_image_failed">На этот раз изображение блюда создать не удалось.</string>
+    <string name="recipe_image_steps_failed">На этот раз не удалось создать изображения некоторых шагов.</string>
+    <string name="recipe_image_cost_line">Рецепт с изображением блюда, созданным ИИ, стоит %1$s.</string>
+    <string name="recipe_image_steps_cost_line">С изображениями сложных шагов — %1$s.</string>
+    <!-- Recipe: Report this recipe / menu (every model-written result; only when our server says acceptsReports). -->
+    <string name="recipe_report_action">Пожаловаться на рецепт</string>
+    <string name="recipe_report_menu_action">Пожаловаться на меню</string>
+    <string name="recipe_report_lede">Что с ним не так?</string>
+    <string name="recipe_report_reason_offensive">Оскорбительно или неуместно</string>
+    <string name="recipe_report_reason_unsafe">Небезопасный совет по еде</string>
+    <string name="recipe_report_reason_picture">Изображение неверное или оскорбительное</string>
+    <string name="recipe_report_reason_other">Другое</string>
+    <string name="recipe_report_reason_required">Выберите причину.</string>
+    <string name="recipe_report_note_label">Комментарий (необязательно)</string>
+    <string name="recipe_report_note_count">%1$d из %2$d символов</string>
+    <string name="recipe_report_sends_server">Мы получим причину и комментарий вместе с этим рецептом, чтобы разобраться.</string>
+    <string name="recipe_report_sends_server_menu">Мы получим причину и комментарий вместе с этим меню, чтобы разобраться.</string>
+    <string name="recipe_report_send">Отправить</string>
+    <string name="recipe_report_cancel">Отмена</string>
+    <string name="recipe_report_sending">Отправка…</string>
+    <string name="recipe_report_sent">Спасибо. Мы посмотрим.</string>
+    <string name="recipe_report_failed">Не удалось отправить жалобу. Попробуйте ещё раз, когда будете в сети.</string>
+    <string name="recipe_report_try_again">Повторить</string>
+    <string name="recipe_report_done">Вы уже пожаловались</string>
+    <string name="recipe_report_limit">На сегодня лимит жалоб исчерпан. Попробуйте завтра.</string>
+    <string name="recipe_report_unknown">На этот рецепт больше нельзя пожаловаться.</string>
+    <string name="recipe_image_unavailable">Сейчас картинки сделать нельзя. Рецепт не списан.</string>
+    <!-- /Recipe: pictures and reports -->
 </resources>
