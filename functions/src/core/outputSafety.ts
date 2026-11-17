@@ -40,6 +40,7 @@ import {
 } from "./foodTerms";
 import { fold, scriptOf } from "./inputSafety";
 import { TASTE_CATALOGUE } from "../taste/catalogue";
+import { IMAGE } from "../constants";
 
 export type OutputRule =
   | "SHAPE"
@@ -784,4 +785,93 @@ export function checkOutput(raw: unknown, ctx: OutputContext): OutputCheck<{ rec
   const r = checkRecipeOutput(raw, ctx);
   if (r.ok) return { ok: true, value: { recipe: r.value } };
   return r.value ? { ok: false, rule: r.rule, value: { recipe: r.value } } : { ok: false, rule: r.rule };
+}
+
+// --- The picture's brief -----------------------------------------------------------------------
+
+/** Why a brief was refused; the picture is then not made (the recipe is still delivered). */
+export type BriefRule = OutputRule | "BRIEF_MISSING" | "BRIEF_CHARACTERS" | "BRIEF_TERMS";
+
+/**
+ * Words a brief may not hold, because the picture must show only food and tableware (no people,
+ * no writing, no brands) and never anything unfit for a family cooking app. Matched as whole
+ * words on the lower-cased brief, singular and plural.
+ */
+const BRIEF_BLOCKED = new Set([
+  "person", "people", "man", "men", "woman", "women", "child", "children", "kid", "kids", "baby", "babies",
+  "boy", "boys", "girl", "girls", "human", "humans", "face", "faces", "hand", "hands", "finger", "fingers",
+  "arm", "arms", "body", "bodies", "chef", "chefs", "portrait", "selfie", "celebrity",
+  "text", "texts", "word", "words", "letter", "letters", "lettering", "writing", "written", "caption", "captions",
+  "label", "labels", "logo", "logos", "brand", "brands", "branded", "trademark", "sign", "signs", "signage",
+  "watermark", "signature", "poster", "slogan", "headline", "font", "typography", "qr", "barcode",
+  "packaging", "package", "wrapper", "screen", "photo", "photograph", "image", "picture", "drawing", "draw",
+  "nude", "naked", "sexy", "erotic", "blood", "bloody", "gore", "corpse", "dead", "weapon", "weapons", "gun", "guns",
+  "rifle", "bomb", "drug", "drugs", "cigarette", "cigarettes", "syringe", "flag", "flags", "swastika",
+  "ignore", "instruction", "instructions", "prompt", "system",
+]);
+
+const BRIEF_CHARS = /^[A-Za-z][A-Za-z ,.'-]*$/;
+
+/**
+ * The text model's `imageBrief` (only on a recipe asked with a picture): a string of
+ * IMAGE.briefMinChars to IMAGE.briefMaxChars characters after the usual repairs, plain ASCII
+ * English letters, spaces and . , ' - only (so no name in another script, no markup, digits,
+ * quotes or brackets can reach the picture prompt), every rule an answer's text is held to (no
+ * URL, contact, canary or instruction leak, non-food, solicitation, repetition), and none of
+ * BRIEF_BLOCKED. A brief that fails is never repaired: the picture is not made.
+ */
+export function checkImageBrief(raw: unknown, ctx: OutputContext): { ok: true; brief: string } | { ok: false; rule: BriefRule } {
+  const v = typeof raw === "object" && raw !== null && !Array.isArray(raw) ? (raw as Record<string, unknown>).imageBrief : undefined;
+  return checkBrief(v, ctx);
+}
+
+/**
+ * The step briefs of a recipe asked with step pictures (`stepBriefs`, prompt.ts stepBriefLines):
+ * each entry `{step, brief}` with `step` a step number from 1 to `stepCount` and `brief` held to
+ * every rule of checkImageBrief. An entry that breaks a rule, repeats a step or comes after
+ * `max` kept ones is left out (counted in `refused`); a missing or malformed list is no step
+ * marked. Returns the kept ones with 0-based step indices, in the order written.
+ */
+export function checkStepBriefs(
+  raw: unknown,
+  ctx: OutputContext,
+  stepCount: number,
+  max: number,
+): { steps: { step: number; brief: string }[]; refused: BriefRule[] } {
+  const list = typeof raw === "object" && raw !== null && !Array.isArray(raw) ? (raw as Record<string, unknown>).stepBriefs : undefined;
+  const steps: { step: number; brief: string }[] = [];
+  const refused: BriefRule[] = [];
+  if (!Array.isArray(list)) return { steps, refused };
+  for (const entry of list.slice(0, 20)) {
+    const e = typeof entry === "object" && entry !== null && !Array.isArray(entry) ? (entry as Record<string, unknown>) : {};
+    const n = e.step;
+    if (typeof n !== "number" || !Number.isInteger(n) || n < 1 || n > stepCount || steps.some((s) => s.step === n - 1)) {
+      refused.push("SHAPE");
+      continue;
+    }
+    if (steps.length >= max) {
+      refused.push("LENGTH");
+      continue;
+    }
+    const b = checkBrief(e.brief, ctx);
+    if (b.ok) steps.push({ step: n - 1, brief: b.brief });
+    else refused.push(b.rule);
+  }
+  return { steps, refused };
+}
+
+function checkBrief(v: unknown, ctx: OutputContext): { ok: true; brief: string } | { ok: false; rule: BriefRule } {
+  if (typeof v !== "string") return { ok: false, rule: "BRIEF_MISSING" };
+  const brief = clean(v);
+  if (brief.length < IMAGE.briefMinChars || brief.length > IMAGE.briefMaxChars) return { ok: false, rule: "LENGTH" };
+  if (!BRIEF_CHARS.test(brief)) return { ok: false, rule: "BRIEF_CHARACTERS" };
+  try {
+    scan(checker(ctx).sc, brief);
+  } catch (e) {
+    if (e instanceof Invalid) return { ok: false, rule: e.rule };
+    throw e;
+  }
+  const words = brief.toLowerCase().split(/[^a-z']+/).filter(Boolean);
+  if (words.some((w) => BRIEF_BLOCKED.has(w) || BRIEF_BLOCKED.has(w.replace(/'s$/, "")))) return { ok: false, rule: "BRIEF_TERMS" };
+  return { ok: true, brief };
 }

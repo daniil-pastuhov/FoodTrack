@@ -1,6 +1,8 @@
 package com.foodtracker.android.ui.design
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -31,7 +33,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import coil.size.Scale
 import com.foodtracker.android.R
 import com.foodtracker.android.ui.theme.LarderRadius
 import com.foodtracker.android.ui.theme.LarderSize
@@ -65,15 +72,19 @@ enum class LarderThumbSize(val side: Dp, val icon: Dp, val radius: Dp) {
     Hero(72.dp, LarderIconSize.Hero, LarderRadius.lg)
 }
 
-/** A product thumbnail. The icon shows until the photo loads, and stays if it never does, so a
- *  failed image is never a broken-image mark. */
+/** A product (or saved recipe) thumbnail. The icon shows until the photo loads, and stays if it
+ *  never does, so a failed image is never a broken-image mark. Any shape of photo is cropped to
+ *  fill the square, centred, and decoded off the main thread at the square's pixel size (a 44dp
+ *  thumb of a 1200 × 896 recipe picture is a bitmap of about 130 px), never at the photo's own. */
 @Composable
 fun LarderThumb(
     imageUrl: String?,
     fallbackIcon: LarderIcons,
     modifier: Modifier = Modifier,
     background: Color = MaterialTheme.colorScheme.surfaceContainer,
-    size: LarderThumbSize = LarderThumbSize.Regular
+    size: LarderThumbSize = LarderThumbSize.Regular,
+    /** Drawn instead of [imageUrl] when set: previews, which load nothing. */
+    painter: Painter? = null
 ) {
     Box(
         modifier = modifier
@@ -88,9 +99,16 @@ fun LarderThumb(
             size = size.icon,
             tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        if (imageUrl != null) {
+        if (painter != null) {
+            Image(painter = painter, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+        } else if (imageUrl != null) {
+            val context = LocalContext.current
+            val sidePx = with(LocalDensity.current) { size.side.roundToPx() }
+            val request = remember(imageUrl, sidePx) {
+                ImageRequest.Builder(context).data(imageUrl).size(sidePx).scale(Scale.FILL).build()
+            }
             AsyncImage(
-                model = imageUrl,
+                model = request,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()

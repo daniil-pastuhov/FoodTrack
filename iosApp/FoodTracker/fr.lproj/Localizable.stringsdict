@@ -895,11 +895,11 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Votre %d recette non utilisée sera perdue, sans remboursement ni restauration possible. Votre connexion et votre adresse e-mail sont supprimées de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet {device}.</string>
+            <string>Votre %d recette non utilisée sera perdue, sans remboursement ni restauration possible. Votre connexion et votre adresse e-mail sont supprimées de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les éventuels signalements que vous avez envoyés sont conservés pendant une durée limitée, eux aussi sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet {device}.</string>
             <key>many</key>
-            <string>Vos %d recettes non utilisées seront perdues, sans remboursement ni restauration possible. Votre connexion et votre adresse e-mail sont supprimées de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet {device}.</string>
+            <string>Vos %d recettes non utilisées seront perdues, sans remboursement ni restauration possible. Votre connexion et votre adresse e-mail sont supprimées de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les éventuels signalements que vous avez envoyés sont conservés pendant une durée limitée, eux aussi sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet {device}.</string>
             <key>other</key>
-            <string>Vos %d recettes non utilisées seront perdues, sans remboursement ni restauration possible. Votre connexion et votre adresse e-mail sont supprimées de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet {device}.</string>
+            <string>Vos %d recettes non utilisées seront perdues, sans remboursement ni restauration possible. Votre connexion et votre adresse e-mail sont supprimées de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les éventuels signalements que vous avez envoyés sont conservés pendant une durée limitée, eux aussi sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet {device}.</string>
         </dict>
     </dict>
     <key>recipe_delete_device_message</key>
@@ -913,11 +913,11 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Votre %d recette non utilisée sera perdue, sans remboursement ni restauration possible. La connexion anonyme qu'utilise cet {device} est supprimée de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet {device}.</string>
+            <string>Votre %d recette non utilisée sera perdue, sans remboursement ni restauration possible. La connexion anonyme qu'utilise cet {device} est supprimée de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les éventuels signalements que vous avez envoyés sont conservés pendant une durée limitée, eux aussi sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet {device}.</string>
             <key>many</key>
-            <string>Vos %d recettes non utilisées seront perdues, sans remboursement ni restauration possible. La connexion anonyme qu'utilise cet {device} est supprimée de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet {device}.</string>
+            <string>Vos %d recettes non utilisées seront perdues, sans remboursement ni restauration possible. La connexion anonyme qu'utilise cet {device} est supprimée de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les éventuels signalements que vous avez envoyés sont conservés pendant une durée limitée, eux aussi sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet {device}.</string>
             <key>other</key>
-            <string>Vos %d recettes non utilisées seront perdues, sans remboursement ni restauration possible. La connexion anonyme qu'utilise cet {device} est supprimée de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet {device}.</string>
+            <string>Vos %d recettes non utilisées seront perdues, sans remboursement ni restauration possible. La connexion anonyme qu'utilise cet {device} est supprimée de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les éventuels signalements que vous avez envoyés sont conservés pendant une durée limitée, eux aussi sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet {device}.</string>
         </dict>
     </dict>
     <key>recipe_server_refused</key>

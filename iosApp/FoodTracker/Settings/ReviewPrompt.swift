@@ -28,7 +28,7 @@ enum ReviewMoment {
 }
 
 /// Only after a positive moment, never while the person is new, in onboarding or in a session
-/// where something went wrong, and at most once per app version and 120 days. The OS throttles
+/// where something went wrong or a recipe was reported, and at most once per app version and 120 days. The OS throttles
 /// on its own as well and may show nothing.
 enum ReviewPromptRule {
     static let minDaysSinceFirstLaunch = 7
@@ -139,6 +139,10 @@ final class ReviewPrompter {
 
     /// An error, a refused permission, a failed or refused generation, a purchase problem.
     func problemShown() { sessionBlocked = true }
+
+    /// "Report this recipe" was sent (owner, 2026-11-17): someone who just reported a result is
+    /// not asked to rate the app in that session. As Android's `ReviewPrompter.onReportSent`.
+    func reportSent() { sessionBlocked = true }
 
     func pantrySize(_ count: Int) {
         guard count > record.mostItemsSeen else { return }

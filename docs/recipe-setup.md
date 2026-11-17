@@ -404,6 +404,56 @@ binding exist on the live project (created and read back 2026-11-14).
       button drawn to Google's branding guidelines with the "G" from Google's asset bundle
       (`GoogleSignInButton.kt`).
 
+### 12. Recipe pictures (before the app release that offers them)
+
+A recipe from a pack can come with a generated picture of the dish (functions/README.md "Recipe
+pictures"). Nothing here is needed for the backend to deploy; until these are done, leave
+pictures off with `config/runtime.costs.recipeImage: 0` (the apps then offer no picture), or test
+them with `allowSandbox` only.
+
+- [ ] **Check** that both picture models answer: Vertex AI `gemini-3.1-flash-lite-image` (the
+  default `IMAGE_MODEL`) and its fallback `gemini-nano-banana-2.1` (`IMAGE_FALLBACK_MODEL`), both on
+  location `global` (`VERTEX_IMAGE_LOCATION`), each with one 4:3 1K JPEG, from Vertex AI Studio or
+  one `generateContent` call as the service account (a size check on 2026-11-17 got 1200 × 896
+  from both, in about 3 s and 15 s). It uses the Vertex AI API and the
+  service account's Vertex AI User role already in place; no new API, key or vendor. If Model
+  Garden asks to accept the model's terms, accept them there. The model page lists `global` only:
+  the picture prompt (no personal data) is processed wherever Google serves it, like the recipe
+  text today.
+- [ ] Deploy the functions and `firestore` (`firestore.indexes.json` adds the TTL policies on
+  `recipeImages.expiresAt`, the stored pictures, deleted with their generation, on
+  `reports.expiresAt` and `reportPictures.expiresAt`, the "Report this recipe" reports, deleted
+  after `config/runtime.reports.keepDays`, 90 days, and on `reportable.expiresAt`, the year-long
+  record of each delivered result), then check `gcloud firestore fields ttls list` shows all
+  four ACTIVE.
+- [ ] **Alert on reports** (functions/README.md "Reports", "Alerts"): a log-based alert on
+  `jsonPayload.message="recipe_reported"` (any) and one on `report_day_limit`, to the owner's email channel like the other
+  "Recipe: …" policies; read the report in the Firestore console (`reports/`).
+- [ ] Decide the prices (`config/runtime.costs.recipeImage`, default 2 = twice a recipe, and
+  `recipeImageSteps`, default 3, for the dish and up to `image.maxStepImages` = 2 step pictures) and leave
+  `prices.imageUsdPerImage` at its defaults unless Google's price changed (USD 0.04 Flash-Lite
+  Image, 0.06 Nano Banana 2.1; a picture is reserved at the dearer of the two and booked at its
+  real cost from the token counts Vertex reports).
+- [ ] Watch `image_retry` and `image_fallback` in the logs after the first days (functions/README.md
+  "Logs to alert on"): many retries mean the shared Vertex capacity is short for the picture model
+  (ask for more quota or Provisioned Throughput); frequent fallbacks mean the primary is failing
+  and each picture costs more.
+- [ ] Privacy policy and store forms: "Report this recipe" stores the reason, the optional note,
+  the account id and a copy of the reported recipe or menu (and its pictures) for 90 days; it is
+  offered only on results from a pack.
+- [ ] Privacy policy and store forms: a recipe from a pack may come with generated pictures,
+  kept on our server only as long as the generation (about 7 days) and then on the phone with the
+  saved recipe; the picture model receives only a short English description of the dish written
+  by the recipe model, never the person's items, allergens or taste answers. No new data type is
+  collected (App Privacy / Data safety unchanged); re-read the age-rating answers for
+  AI-generated images.
+- [ ] Only to use OpenAI instead (functions/README.md "Switching provider and model"): create the
+  secret `npx firebase functions:secrets:set OPENAI_API_KEY`, grant
+  `recipe-functions@` **Secret Manager Secret Accessor on that secret only**
+  (`gcloud secrets add-iam-policy-binding OPENAI_API_KEY --member serviceAccount:recipe-functions@bestbefore-f9ee1.iam.gserviceaccount.com --role roles/secretmanager.secretAccessor --project bestbefore-f9ee1`),
+  then set `config/runtime.image` to `{provider: "openai", model: "gpt-image-1-mini"}`. OpenAI then
+  becomes a data processor of the picture prompts (update the privacy policy first).
+
 ### App Review switch
 
 Before submitting a version that sells packs, set `allowSandbox: true` and make sure the caps

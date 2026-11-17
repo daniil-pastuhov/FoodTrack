@@ -220,9 +220,34 @@ class RecipePaidWordingTest {
     fun theDeleteDialogSaysWhatTheServerKeeps() {
         assertEquals(
             "Your 5 unused recipes will be lost and can't be refunded or restored. Your sign-in and email address are deleted from our server; " +
-                "a record of the purchases stays, no longer linked to you. Saved recipes and your pantry stay on this device.",
+                "a record of the purchases stays, no longer linked to you. Any reports you sent are kept for a limited time, also no longer linked to you. " +
+                "Saved recipes and your pantry stay on this device.",
             context.resources.getQuantityString(R.plurals.recipe_delete_body, 5, 5)
         )
+    }
+
+    @Test
+    fun everyDeletionDialogSaysReportsAreKeptInEveryLanguage() {
+        // deleteAccount keeps the account's reports, without its uid, until they expire (detachReports).
+        val expected = mapOf(
+            "en" to "Any reports you sent are kept for a limited time, also no longer linked to you.",
+            "ru" to "Ваши жалобы, если они были, хранятся ещё ограниченное время, тоже без связи с вами.",
+            "nb" to "Eventuelle rapporter du har sendt, blir liggende en begrenset tid, også uten kobling til deg.",
+            "es" to "Las denuncias que hayas enviado se conservan durante un tiempo limitado, también sin vínculo contigo.",
+            "de" to "Eventuelle Meldungen von dir bleiben eine begrenzte Zeit erhalten, ebenfalls nicht mehr mit dir verknüpft.",
+            "fr" to "Les éventuels signalements que vous avez envoyés sont conservés pendant une durée limitée, eux aussi sans lien avec vous.",
+            "sv" to "Eventuella rapporter du har skickat sparas en begränsad tid, även de utan koppling till dig.",
+            "da" to "Eventuelle rapporter, du har sendt, bliver gemt i en begrænset periode og er heller ikke længere knyttet til dig."
+        )
+        for ((language, sentence) in expected) {
+            val configuration = android.content.res.Configuration(context.resources.configuration).apply { setLocale(java.util.Locale.forLanguageTag(language)) }
+            val resources = context.createConfigurationContext(configuration).resources
+            for (text in listOf(
+                resources.getQuantityString(R.plurals.recipe_delete_body, 5, 5),
+                resources.getQuantityString(R.plurals.recipe_delete_device_body, 1, 1),
+                resources.getString(R.string.recipe_delete_device_body_none),
+            )) org.junit.Assert.assertTrue("$language: $text", sentence in text)
+        }
     }
 
     @Test

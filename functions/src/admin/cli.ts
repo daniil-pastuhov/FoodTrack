@@ -17,7 +17,7 @@ import { getAuth } from "firebase-admin/auth";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
 import { IOS_BUNDLE_ID, KMS_APPLE_TOKEN_KEY, KMS_KEY_RING, KMS_LOCATION } from "../constants";
 import { loadRuntimeConfig } from "../model";
-import type { AppStoreVerifier, Deps, Logger, OutputJudge, PlayVerifier, RecipeGenerator } from "../ports";
+import type { AppStoreVerifier, Deps, Logger, OutputJudge, PlayVerifier, RecipeGenerator, RecipeImageGenerator } from "../ports";
 import { AppleSignInRevoker } from "../adapters/appleRevoke";
 import { EnvelopeSealer, KmsKeyWrapper, LocalKeyWrapper } from "../adapters/envelope";
 import { EmulatorAppleTokens } from "../emulatorFakes";
@@ -301,6 +301,7 @@ export function buildEnv(project: string): AdminEnv {
     } as AppStoreVerifier,
     generator: { generate: notUsed("The model") } as RecipeGenerator,
     judge: { judge: notUsed("The judge") } as OutputJudge,
+    imageGenerator: { generate: notUsed("The image model") } as RecipeImageGenerator,
     appleRevoker: live
       ? {
           revokeWithAuthorizationCode: async (code) => (await appleClient()).revokeWithAuthorizationCode(code),

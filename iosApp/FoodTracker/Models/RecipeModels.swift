@@ -341,6 +341,16 @@ public struct Recipe: Codable, Equatable, Sendable {
     /// the apps, worked out from the request (`RecipeWire.pastDate`), never from the model's text;
     /// a payload saved before it existed reads as none. Android: `Recipe.pastDate`.
     public var pastDate: [PastDateItem] = []
+    /// Local only: the generation's request id (server recipes saved since pictures and reports
+    /// came, 2026-11): what "Report this recipe" names. Nil in rows saved before it, which then
+    /// offer no report, and in recipes the phone wrote. Set by the app, never read from a reply
+    /// (`withoutLocalFields`). Android: `Recipe.requestId`.
+    public var requestId: String? = nil
+    /// Local only: the dish's picture kept with the saved recipe (its bytes are in
+    /// `SavedRecipeRecord`), by its size; nil without one. Android: `Recipe.picture`.
+    public var picture: RecipePictureSize? = nil
+    /// Local only: the step pictures kept with it, in step order. Android: `Recipe.stepPictures`.
+    public var stepPictures: [RecipeStepPictureSize] = []
 
     public init(
         title: String,
@@ -366,6 +376,7 @@ public struct Recipe: Codable, Equatable, Sendable {
 
     private enum CodingKeys: String, CodingKey {
         case title, summary, minutes, servings, difficulty, ingredients, steps, tip, source, pastDate
+        case requestId, picture, stepPictures
     }
 
     public init(from decoder: Decoder) throws {
@@ -381,6 +392,47 @@ public struct Recipe: Codable, Equatable, Sendable {
         // A server payload has no source of its own.
         source = (try? c.decodeIfPresent(RecipeSource.self, forKey: .source)).flatMap { $0 } ?? .server
         pastDate = (try? c.decodeIfPresent([PastDateItem].self, forKey: .pastDate)).flatMap { $0 } ?? []
+        requestId = (try? c.decodeIfPresent(String.self, forKey: .requestId)).flatMap { $0 }
+        picture = (try? c.decodeIfPresent(RecipePictureSize.self, forKey: .picture)).flatMap { $0 }
+        stepPictures = (try? c.decodeIfPresent([RecipeStepPictureSize].self, forKey: .stepPictures)).flatMap { $0 } ?? []
+    }
+
+    /// The same recipe with nothing local a reply or a model's text could have carried: no request
+    /// id and no pictures. Applied to everything that arrives before the app sets its own. Android:
+    /// `Recipe.withoutLocalFields`.
+    func withoutLocalFields() -> Recipe {
+        var recipe = self
+        recipe.requestId = nil
+        recipe.picture = nil
+        recipe.stepPictures = []
+        return recipe
+    }
+
+    /// Whether it has any picture kept with it: the report sheet's picture reason.
+    var hasPictures: Bool { picture != nil || !stepPictures.isEmpty }
+}
+
+/// A picture kept on this device with a saved recipe, by its size in pixels as the server said.
+public struct RecipePictureSize: Codable, Equatable, Hashable, Sendable {
+    public var width: Int
+    public var height: Int
+
+    public init(width: Int, height: Int) {
+        self.width = width
+        self.height = height
+    }
+}
+
+/// A step's picture: `step` is the 0-based index into `Recipe.steps`.
+public struct RecipeStepPictureSize: Codable, Equatable, Hashable, Sendable {
+    public var step: Int
+    public var width: Int
+    public var height: Int
+
+    public init(step: Int, width: Int, height: Int) {
+        self.step = step
+        self.width = width
+        self.height = height
     }
 }
 
@@ -418,15 +470,19 @@ public struct RecipeMenu: Codable, Equatable, Sendable {
     /// Every item past its date the menu was written from (see `Recipe.pastDate`): the warning
     /// under the menu's title. Each course's own recipe carries its day's share.
     public var pastDate: [PastDateItem] = []
+    /// Local only: the generation's request id, as for `Recipe.requestId` (a dish opened from
+    /// the menu reports with it too). Android: `Menu.requestId`.
+    public var requestId: String? = nil
 }
 
 extension RecipeMenu {
-    private enum CodingKeys: String, CodingKey { case days, pastDate }
+    private enum CodingKeys: String, CodingKey { case days, pastDate, requestId }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         days = try c.decode([RecipeMenuDay].self, forKey: .days)
         pastDate = (try? c.decodeIfPresent([PastDateItem].self, forKey: .pastDate)).flatMap { $0 } ?? []
+        requestId = (try? c.decodeIfPresent(String.self, forKey: .requestId)).flatMap { $0 }
     }
 
     /// With its past-date warnings: each day's courses get the past-date items among that day's
@@ -518,11 +574,26 @@ public struct SavedRecipe: Identifiable, Equatable, Sendable {
     public let id: String
     public var createdAt: Date
     public var content: Content
+    /// The dish picture cropped small, for the Saved row's thumbnail; nil without a picture.
+    public var thumbnail: Data? = nil
+    /// The pictures' bytes, only where they are in hand (just arrived, or read back for Undo):
+    /// saving an entry with nil keeps what the store already holds for its id.
+    public var pictures: SavedRecipePictures? = nil
 
-    public init(id: String = UUID().uuidString, createdAt: Date = Date(), content: Content) {
+    public init(id: String = UUID().uuidString, createdAt: Date = Date(), content: Content, thumbnail: Data? = nil, pictures: SavedRecipePictures? = nil) {
         self.id = id
         self.createdAt = createdAt
         self.content = content
+        self.thumbnail = thumbnail
+        self.pictures = pictures
+    }
+
+    /// The generation's request id, for a result our server wrote and saved since it was kept.
+    public var requestId: String? {
+        switch content {
+        case .recipe(let recipe): return recipe.requestId
+        case .menu(let menu): return menu.requestId
+        }
     }
 
     public var kind: SavedRecipeKind {
@@ -543,6 +614,21 @@ public struct SavedRecipe: Identifiable, Equatable, Sendable {
         if case .recipe(let recipe) = content { return recipe }
         return nil
     }
+}
+
+/// A saved recipe's picture bytes (JPEG): the dish's, and each step's by its index. Kept in
+/// `SavedRecipeRecord` (external storage), never in the payload, a backup or a log.
+public struct SavedRecipePictures: Equatable, Sendable, CustomStringConvertible {
+    public var dish: Data?
+    public var steps: [Int: Data]
+
+    public init(dish: Data? = nil, steps: [Int: Data] = [:]) {
+        self.dish = dish
+        self.steps = steps
+    }
+
+    public var isEmpty: Bool { dish == nil && steps.isEmpty }
+    public var description: String { "SavedRecipePictures(dish: \(dish != nil), steps: \(steps.keys.sorted()))" }
 }
 
 /// One pantry item as a recipe route sees it: a name and how long it has left.

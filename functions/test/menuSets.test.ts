@@ -179,6 +179,8 @@ describe("cost table", () => {
     expect(DEFAULT_COSTS).toEqual({
       recipe: 1, menu2: 4, menu3: 5,
       menuSets: { 1: { 1: 1, 2: 2, 3: 3 }, 2: { 1: 2, 2: 3, 3: 4 }, 3: { 1: 3, 2: 4, 3: 5 }, 4: { 1: 4, 2: 5, 3: 6 } },
+      recipeImage: 2,
+      recipeImageSteps: 3,
     });
     expect(parseRuntimeConfig({}).costs).toEqual(DEFAULT_COSTS);
   });
@@ -192,6 +194,8 @@ describe("cost table", () => {
     expect(validCosts({ recipe: 2, menu2: 6, menu3: 8 })).toEqual({
       recipe: 2, menu2: 6, menu3: 8,
       menuSets: { 1: { 1: 3, 2: 4, 3: 6 }, 2: { 1: 4, 2: 5, 3: 7 }, 3: { 1: 5, 2: 6, 3: 8 }, 4: { 1: 6, 2: 7, 3: 9 } },
+      recipeImage: 4,
+      recipeImageSteps: 6,
     });
   });
 

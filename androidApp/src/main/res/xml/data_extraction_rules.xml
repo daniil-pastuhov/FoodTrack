@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12 and up (dataExtractionRules), cloud backup and device-to-device transfer alike.
+     Only an exclusion: everything else goes as it did with no rules, the recipe pictures
+     (RecipePictureFiles) stay on this device. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="file" path="recipe_pictures/" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="file" path="recipe_pictures/" />
+    </device-transfer>
+</data-extraction-rules>

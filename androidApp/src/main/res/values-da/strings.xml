@@ -1051,17 +1051,17 @@
     <string name="recipe_allergen_consent_setting_on">Du gav samtykke den %1$s. Slå fra for at trække det tilbage: så skriver vores server ikke opskrifter, mens der er angivet allergener.</string>
     <string name="recipe_allergen_consent_setting_off">Kræves for opskrifter fra vores server, mens der er angivet allergener. Vi bruger det kun til forespørgslen og gemmer det ikke.</string>
     <plurals name="recipe_delete_body">
-        <item quantity="one">Din %1$d ubrugte opskrift går tabt og kan hverken refunderes eller gendannes. Dit login og din e-mailadresse slettes fra vores server; en registrering af købene bliver gemt, men er ikke længere knyttet til dig. Gemte opskrifter og dit forråd bliver på denne enhed.</item>
-        <item quantity="other">Dine %1$d ubrugte opskrifter går tabt og kan hverken refunderes eller gendannes. Dit login og din e-mailadresse slettes fra vores server; en registrering af købene bliver gemt, men er ikke længere knyttet til dig. Gemte opskrifter og dit forråd bliver på denne enhed.</item>
+        <item quantity="one">Din %1$d ubrugte opskrift går tabt og kan hverken refunderes eller gendannes. Dit login og din e-mailadresse slettes fra vores server; en registrering af købene bliver gemt, men er ikke længere knyttet til dig. Eventuelle rapporter, du har sendt, bliver gemt i en begrænset periode og er heller ikke længere knyttet til dig. Gemte opskrifter og dit forråd bliver på denne enhed.</item>
+        <item quantity="other">Dine %1$d ubrugte opskrifter går tabt og kan hverken refunderes eller gendannes. Dit login og din e-mailadresse slettes fra vores server; en registrering af købene bliver gemt, men er ikke længere knyttet til dig. Eventuelle rapporter, du har sendt, bliver gemt i en begrænset periode og er heller ikke længere knyttet til dig. Gemte opskrifter og dit forråd bliver på denne enhed.</item>
     </plurals>
     <!-- Deleting what our server holds for recipes kept on this device (an anonymous account). -->
     <string name="recipe_delete_device_data">Slet mine data fra vores server</string>
     <string name="recipe_delete_device_title">Slet dine data fra vores server?</string>
     <plurals name="recipe_delete_device_body">
-        <item quantity="one">Din %1$d ubrugte opskrift går tabt og kan hverken refunderes eller gendannes. Det anonyme login, som denne enhed bruger, slettes fra vores server; en registrering af købene bliver gemt, men er ikke længere knyttet til dig. Gemte opskrifter og dit forråd bliver på denne enhed.</item>
-        <item quantity="other">Dine %1$d ubrugte opskrifter går tabt og kan hverken refunderes eller gendannes. Det anonyme login, som denne enhed bruger, slettes fra vores server; en registrering af købene bliver gemt, men er ikke længere knyttet til dig. Gemte opskrifter og dit forråd bliver på denne enhed.</item>
+        <item quantity="one">Din %1$d ubrugte opskrift går tabt og kan hverken refunderes eller gendannes. Det anonyme login, som denne enhed bruger, slettes fra vores server; en registrering af købene bliver gemt, men er ikke længere knyttet til dig. Eventuelle rapporter, du har sendt, bliver gemt i en begrænset periode og er heller ikke længere knyttet til dig. Gemte opskrifter og dit forråd bliver på denne enhed.</item>
+        <item quantity="other">Dine %1$d ubrugte opskrifter går tabt og kan hverken refunderes eller gendannes. Det anonyme login, som denne enhed bruger, slettes fra vores server; en registrering af købene bliver gemt, men er ikke længere knyttet til dig. Eventuelle rapporter, du har sendt, bliver gemt i en begrænset periode og er heller ikke længere knyttet til dig. Gemte opskrifter og dit forråd bliver på denne enhed.</item>
     </plurals>
-    <string name="recipe_delete_device_body_none">Det anonyme login, som denne enhed bruger, slettes fra vores server; en registrering af eventuelle køb bliver gemt, men er ikke længere knyttet til dig. Gemte opskrifter og dit forråd bliver på denne enhed.</string>
+    <string name="recipe_delete_device_body_none">Det anonyme login, som denne enhed bruger, slettes fra vores server; en registrering af eventuelle køb bliver gemt, men er ikke længere knyttet til dig. Eventuelle rapporter, du har sendt, bliver gemt i en begrænset periode og er heller ikke længere knyttet til dig. Gemte opskrifter og dit forråd bliver på denne enhed.</string>
     <string name="recipe_delete_device_confirm">Slet data</string>
     <string name="recipe_device_data_deleted">Dine data er slettet fra vores server</string>
     <string name="recipe_delete_waits_for_purchase">Et køb er stadig ved at blive gennemført. Du kan slette, når det er færdigt.</string>
@@ -1323,4 +1323,50 @@
         <item quantity="one">Din basisvare må også bruges</item>
         <item quantity="other">Dine %1$d basisvarer må også bruges</item>
     </plurals>
+    <!-- Recipe: pictures (recipes from packs only, single recipes; each level only when our server says acceptsRecipeImage and prices it: recipeImage, recipeImageSteps). The unit is a "recipe", never a credit. -->
+    <string name="recipe_image_row">Billeder</string>
+    <string name="recipe_image_title">Billeder, lavet af AI</string>
+    <string name="recipe_image_none">Ingen billeder</string>
+    <string name="recipe_image_dish">Retten</string>
+    <string name="recipe_image_dish_desc">Ét billede af den færdige ret</string>
+    <string name="recipe_image_steps">Retten og svære trin</string>
+    <string name="recipe_image_steps_desc">Plus billeder af trin, der er svære at følge med ord alene</string>
+    <string name="recipe_image_short">Du har %1$s tilbage: ikke nok til billeder.</string>
+    <string name="recipe_image_short_steps">Du har %1$s tilbage: nok til et billede af retten, ikke trinnene.</string>
+    <string name="recipe_image_with">Med billede af retten</string>
+    <string name="recipe_image_with_steps">Med billeder af retten og trinnene</string>
+    <string name="recipe_writing_server_image_body">Op til et minut med billede. Du kan godt forlade skærmen; opskriften kommer i Gemte opskrifter.</string>
+    <string name="recipe_writing_server_images_body">Op til to minutter med billeder af trinnene. Du kan godt forlade skærmen; opskriften kommer i Gemte opskrifter.</string>
+    <string name="recipe_image_caption">Billedet er lavet af AI. Din ret kan se anderledes ud.</string>
+    <string name="recipe_image_steps_caption">Billederne af trinnene er lavet af AI. Hos dig kan det se anderledes ud.</string>
+    <string name="recipe_image_desc">Billede af %1$s, lavet af AI</string>
+    <string name="recipe_image_step_desc">Billede af trin %1$d, lavet af AI</string>
+    <string name="recipe_image_failed">Der kunne ikke laves et billede af retten denne gang.</string>
+    <string name="recipe_image_steps_failed">Der kunne ikke laves billeder af nogle af trinnene denne gang.</string>
+    <string name="recipe_image_cost_line">En opskrift med et AI-lavet billede af retten bruger %1$s.</string>
+    <string name="recipe_image_steps_cost_line">Med billeder af svære trin også bruger den %1$s.</string>
+    <!-- Recipe: Report this recipe / menu (every model-written result; only when our server says acceptsReports). -->
+    <string name="recipe_report_action">Rapportér opskriften</string>
+    <string name="recipe_report_menu_action">Rapportér menuen</string>
+    <string name="recipe_report_lede">Hvad er der galt?</string>
+    <string name="recipe_report_reason_offensive">Stødende eller upassende</string>
+    <string name="recipe_report_reason_unsafe">Usikre råd om mad</string>
+    <string name="recipe_report_reason_picture">Et billede er forkert eller stødende</string>
+    <string name="recipe_report_reason_other">Noget andet</string>
+    <string name="recipe_report_reason_required">Vælg en grund.</string>
+    <string name="recipe_report_note_label">Tilføj en note (valgfrit)</string>
+    <string name="recipe_report_note_count">%1$d af %2$d tegn</string>
+    <string name="recipe_report_sends_server">Vi får din grund og note, knyttet til denne opskrift, så vi kan se på det.</string>
+    <string name="recipe_report_sends_server_menu">Vi får din grund og note, knyttet til denne menu, så vi kan se på det.</string>
+    <string name="recipe_report_send">Send rapport</string>
+    <string name="recipe_report_cancel">Annuller</string>
+    <string name="recipe_report_sending">Sender …</string>
+    <string name="recipe_report_sent">Tak. Vi kigger på det.</string>
+    <string name="recipe_report_failed">Rapporten kunne ikke sendes. Prøv igen, når du er online.</string>
+    <string name="recipe_report_try_again">Prøv igen</string>
+    <string name="recipe_report_done">Du har rapporteret det</string>
+    <string name="recipe_report_limit">Det er grænsen for rapporter i dag. Prøv igen i morgen.</string>
+    <string name="recipe_report_unknown">Denne opskrift kan ikke længere rapporteres.</string>
+    <string name="recipe_image_unavailable">Billeder kan ikke laves lige nu. Der er ikke trukket nogen opskrift.</string>
+    <!-- /Recipe: pictures and reports -->
 </resources>

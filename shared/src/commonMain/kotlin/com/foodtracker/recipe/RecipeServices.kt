@@ -50,7 +50,13 @@ data class RecipeOptions(
     /** Saved recipes and menus written without their result being shown (finished after the
      *  person left the writing screen, or recovered later), by saved id, until opened or deleted.
      *  Ids of rows gone otherwise are simply not counted ([RecipeUiState.unreadCount]). */
-    val unreadSaved: Set<String> = emptySet()
+    val unreadSaved: Set<String> = emptySet(),
+    /** The Pictures row's choice for a recipe from a pack: no pictures until the person picks a
+     *  level, then remembered (what is sent is [pictureChoice]'s, which the pack may hold lower). */
+    val pictureLevel: PictureLevel = PictureLevel.NONE,
+    /** Results reported from this device, by request id, oldest first and at most
+     *  [REPORTED_REMEMBERED]: their foot reads "You've reported this" across launches. */
+    val reportedRequests: List<String> = emptyList()
 )
 
 /** Recipes and menus written in the app, kept on this phone only. */

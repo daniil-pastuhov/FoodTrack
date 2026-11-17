@@ -30,6 +30,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import com.foodtracker.android.BuildConfig
@@ -83,9 +84,19 @@ internal fun recipeCount(resources: Resources, count: Int): String =
 /** What a pack is and what a menu takes from it, with the server's costs: a menu set's range
  *  when the server writes them, else what a 3-day menu takes. */
 internal fun recipePacksBody(resources: Resources, costs: RecipeCosts): String =
-    costs.menuSetRange?.let { range ->
-        resources.getQuantityString(R.plurals.recipe_packs_body_sets, range.last, range.first, range.last)
-    } ?: resources.getString(R.string.recipe_packs_body, recipeCount(resources, costs.menu2), recipeCount(resources, costs.menu3))
+    (
+        costs.menuSetRange?.let { range ->
+            resources.getQuantityString(R.plurals.recipe_packs_body_sets, range.last, range.first, range.last)
+        } ?: resources.getString(R.string.recipe_packs_body, recipeCount(resources, costs.menu2), recipeCount(resources, costs.menu3))
+    ) + recipePictureCostLines(resources, costs)
+
+/** " A recipe with a picture of the dish, made by AI, takes 2 recipes. With pictures of tricky
+ *  steps too, it takes 3 recipes.": one sentence per level the server prices, nothing without a
+ *  price (How recipes work and the Buy sheet). Starts with a space when not empty. */
+internal fun recipePictureCostLines(resources: Resources, costs: RecipeCosts): String = buildString {
+    costs.recipeImage?.let { append(' ').append(resources.getString(R.string.recipe_image_cost_line, recipeCount(resources, it))) }
+    costs.recipeImageSteps?.let { append(' ').append(resources.getString(R.string.recipe_image_steps_cost_line, recipeCount(resources, it))) }
+}
 
 /** The store price of one recipe in a pack, worked out from the pack's store price and never
  *  hard-coded: "£0.16 each". */
@@ -568,6 +579,17 @@ internal fun BuyPacksWithOfferPreview() = LarderTheme {
     Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh) {
         Column(modifier = Modifier.padding(LarderSpace.s4)) {
             BuySheetBody(BuySheet.Packs(previewPacks, "recipes_50"), setOf(SignInProvider.GOOGLE), BuySheetActions(), welcome = WelcomeHint(3, WelcomeKind.SIGN_IN))
+        }
+    }
+}
+
+/** A server that prices both picture levels: their sentences under what a menu takes. */
+@Preview
+@Composable
+internal fun BuyPacksPicturesPreview() = LarderTheme {
+    Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+        Column(modifier = Modifier.padding(LarderSpace.s4)) {
+            BuySheetBody(BuySheet.Packs(previewPacks, "recipes_50"), setOf(SignInProvider.GOOGLE), BuySheetActions(), costs = RecipeCosts(recipeImage = 2, recipeImageSteps = 3))
         }
     }
 }

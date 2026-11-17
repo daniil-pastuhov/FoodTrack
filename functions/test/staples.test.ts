@@ -513,11 +513,11 @@ describe("generateRecipe (emulators)", () => {
   });
 
   test("says it reads staples beside every balance", async () => {
-    expect(CAPABILITIES).toMatchObject({ acceptsStaples: true });
-    expect(await getBalance(deps, caller)).toMatchObject({ balance: 5, acceptsStaples: true });
+    expect(CAPABILITIES).toMatchObject({ acceptsStaples: true, acceptsRecipeImage: true, acceptsReports: true });
+    expect(await getBalance(deps, caller)).toMatchObject({ balance: 5, acceptsStaples: true, acceptsRecipeImage: true, acceptsReports: true });
     const body = raw();
-    expect(await generateRecipe(deps, caller, body)).toMatchObject({ status: "DONE", acceptsStaples: true });
-    expect(await getGeneration(deps, caller, { requestId: body.requestId })).toMatchObject({ status: "DONE", acceptsStaples: true });
+    expect(await generateRecipe(deps, caller, body)).toMatchObject({ status: "DONE", acceptsStaples: true, acceptsRecipeImage: true, acceptsReports: true });
+    expect(await getGeneration(deps, caller, { requestId: body.requestId })).toMatchObject({ status: "DONE", acceptsStaples: true, acceptsRecipeImage: true, acceptsReports: true });
   });
 
   test("staples reach the model in their own block, cost the same, and the answer says which staple", async () => {

@@ -71,6 +71,13 @@ struct BuyRecipesSheet: View {
                     .larderFont(.body)
                     .foregroundStyle(LarderColor.onSurfaceVariant)
                     .fixedSize(horizontal: false, vertical: true)
+                // What pictures take, only for the levels our server prices.
+                if credits.serverTakesRecipeImage, let pictures = L10n.recipeImageCostLines(credits.costs) {
+                    Text(pictures)
+                        .larderFont(.bodySm)
+                        .foregroundStyle(LarderColor.onSurfaceVariant)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 let savings = PackSavings.percents(packs.map(\.offer))
                 LarderGroup {
                     ForEach(Array(zip(packs, savings)), id: \.0.id) { pack, saving in

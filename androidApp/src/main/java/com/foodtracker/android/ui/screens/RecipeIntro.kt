@@ -109,6 +109,8 @@ internal fun RecipeIntroBody(content: RecipeIntroContent, paid: PaidUiState, onD
                             )
                         }
                     )
+                    // One sentence per picture level the server prices; none without a price.
+                    append(recipePictureCostLines(resources, costs))
                     content.lowestPrice?.let { append(' ').append(stringResource(R.string.recipe_intro_packs_price, it)) }
                 }
                 val stays = stringResource(R.string.recipe_intro_free_stays)
@@ -174,6 +176,22 @@ internal fun RecipeIntroEverythingPreview() = IntroPreview(RecipeIntroContent(on
 @Composable
 internal fun RecipeIntroWelcomePreview() =
     IntroPreview(RecipeIntroContent(onDevice = true, packs = true, canBuy = true, lowestPrice = "£2.99", welcome = WelcomeHint(1, WelcomeKind.SIGN_IN)))
+
+/** With a server that prices both picture levels: their two sentences in the packs entry. */
+@Preview
+@Composable
+internal fun RecipeIntroPicturesPreview() = LarderTheme {
+    Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+        Column(modifier = Modifier.padding(LarderSpace.s4)) {
+            RecipeIntroBody(
+                RecipeIntroContent(onDevice = true, packs = true, canBuy = true, lowestPrice = "£2.99"),
+                PaidUiState(available = true, costs = com.foodtracker.recipe.RecipeCosts(recipeImage = 2, recipeImageSteps = 3), takesRecipeImage = true),
+                {},
+                {}
+            )
+        }
+    }
+}
 
 @Preview
 @Composable

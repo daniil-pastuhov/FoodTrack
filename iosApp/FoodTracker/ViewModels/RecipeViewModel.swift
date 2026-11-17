@@ -82,6 +82,13 @@ enum RecipeFailure: Equatable {
     /// before it): nothing was sent, never another language in its place. Android:
     /// `LanguageNeedsServerUpdate`.
     case languageNeedsServerUpdate
+    /// `IMAGE_UNAVAILABLE`: the picture level asked for isn't made now. Nothing was taken; the
+    /// costs are asked for again (which withdraws the level) and Try again is a new request.
+    /// Android: `RecipeEvent.PicturesUnavailable`.
+    case picturesUnavailable
+    /// "Report this recipe" was received: "Thanks. We'll look at it." The rating prompt is ruled
+    /// out for the session by `ReviewPrompter.reportSent` itself.
+    case reportSent
 }
 
 extension RecipeFailure {
@@ -90,6 +97,8 @@ extension RecipeFailure {
     var blocksReviewPrompt: Bool {
         switch self {
         case .arrived, .earlierArrived: return false
+        // Rules the prompt out through `ReviewPrompter.reportSent`.
+        case .reportSent: return false
         default: return true
         }
     }
@@ -119,6 +128,23 @@ struct RecipeActions: Equatable {
         if canBuy && primary != .server { secondary.append(.buy) }
         return RecipeActions(primary: primary, secondary: secondary)
     }
+}
+
+/// The report sheet on screen (`RecipeViewModel.openReport`). `reportId` is kept for every retry
+/// of this report, so the server stores it once. Android: `ReportSheet`.
+struct RecipeReportSheet: Identifiable, Equatable {
+    var id: String { reportId }
+    let requestId: String
+    let isMenu: Bool
+    let hasPictures: Bool
+    let reportId: String
+    var reason: RecipeReportReason? = nil
+    var note: String = ""
+    var status: RecipeReportStatus = .editing
+    /// Send was tapped without a reason: "Choose a reason."
+    var reasonMissing = false
+
+    var reasons: [RecipeReportReason] { RecipeReporting.reasons(hasPictures: hasPictures) }
 }
 
 /// Where "How recipes work" was opened: by itself on the first visit, or from Recipe settings.
@@ -172,7 +198,25 @@ final class RecipeViewModel: ObservableObject {
     @Published private(set) var saved: [SavedRecipe] = []
     /// The tab's navigation stack. Here rather than in the view so a recipe that arrives, or a
     /// way in from Home, can set it while the tab is off screen.
-    @Published var path: [RecipeDestination] = []
+    @Published var path: [RecipeDestination] = [] {
+        didSet {
+            // A result's picture lines go once it is left (one that arrived unread keeps them until
+            // it has been opened and left): the saved copy opens without them, as on Android.
+            guard !pictureNotices.isEmpty else { return }
+            func results(_ path: [RecipeDestination]) -> Set<String> {
+                Set(path.compactMap { destination -> String? in
+                    if case .result(let id) = destination { return id }
+                    return nil
+                })
+            }
+            let left = results(oldValue).subtracting(results(path))
+            guard !left.isEmpty else { return }
+            let kept = pictureNotices.filter { !left.contains($0.key) }
+            if kept != pictureNotices { pictureNotices = kept }
+        }
+    }
+    /// The Pictures sheet, from the form's Pictures row.
+    @Published var showsPicturesSheet = false
     @Published var failure: RecipeFailure? {
         // A failed or refused generation rules the rating prompt out for the session.
         didSet { if failure?.blocksReviewPrompt == true { ReviewPrompter.shared.problemShown() } }
@@ -183,6 +227,17 @@ final class RecipeViewModel: ObservableObject {
     @Published private(set) var menuDays: Int
     /// The day count of the menu being written, for the writing screen's title.
     @Published private(set) var writingMenuDays = MenuSet.defaultDays
+    /// The picture level of the recipe being written (nil: none), for the writing screen's body.
+    @Published private(set) var writingPictures: RecipePictureLevel?
+    /// "Report this recipe / menu" on screen; nil when it isn't.
+    @Published var reportSheet: RecipeReportSheet?
+    /// The quiet lines for results that just arrived with fewer pictures than asked, by saved id:
+    /// shown on that result until it is left, never when it is opened later.
+    @Published private(set) var pictureNotices: [String: RecipePictureNotice] = [:]
+    /// The pictures of results that arrived in this run, by saved id, so opening one doesn't read
+    /// them back. Only the last few.
+    private var pictureCache: [String: SavedRecipePictures] = [:]
+    private var pictureCacheOrder: [String] = []
     /// Whether the Recipe tab is on screen with the app active (`RecipeView` says so): a result
     /// arriving then, with nothing pushed over the writing screen, is shown and so read.
     private var tabOnScreen = false
@@ -870,6 +925,26 @@ final class RecipeViewModel: ObservableObject {
 
     /// What a recipe, or the chosen menu set, takes, from the server's costs.
     var recipeCost: Int { credits.cost(of: .recipe, courses: 2) }
+
+    /// The form's Pictures row and what a recipe from the server really carries
+    /// (`RecipePictures.choice`): only while the server is the primary of a single recipe.
+    var pictureChoice: RecipePictureChoice {
+        RecipePictures.choice(
+            chosen: options.pictureLevel,
+            costs: credits.costs,
+            serverTakes: credits.serverTakesRecipeImage,
+            balance: credits.balance ?? 0,
+            serverPrimary: mode == .recipe && actions.primary == .server
+        )
+    }
+
+    /// What the server's Generate recipe takes: the picture level really sent's price.
+    var serverRecipeCost: Int { credits.costs.picture(pictureChoice.sent) ?? recipeCost }
+
+    /// A row in the Pictures sheet: remembered beside the other recipe options.
+    func setPictureLevel(_ level: RecipePictureLevel) {
+        updateOptions { $0.pictureLevel = level }
+    }
     var menuCost: Int { credits.cost(of: .menu, courses: menuSet.courses, days: menuSet.days) }
 
     private func serverCanWrite(_ kind: RecipeKind) -> Bool {
@@ -913,7 +988,9 @@ final class RecipeViewModel: ObservableObject {
             // The taste profile only to a server that reads it; otherwise the request goes without.
             taste: tasteToSend,
             // The staples only to a server that reads them; otherwise the request goes without.
-            withStaples: credits.storage.serverTakesStaples
+            withStaples: credits.storage.serverTakesStaples,
+            // Pictures only at the level the costs price and the pack covers, which the button shows.
+            image: kind == .recipe ? pictureChoice.sent : .none
         ) else {
             failure = .dietsNeedServerUpdate
             return
@@ -957,6 +1034,7 @@ final class RecipeViewModel: ObservableObject {
     private func runServerWrite(_ wire: GenerateRequest, start: Bool, collecting earlier: GenerateRequest? = nil, afterRefusal: Bool = false) {
         phase = .writingOnServer(wire.kind)
         writingMenuDays = wire.days ?? MenuSet.defaultDays
+        writingPictures = wire.image
         serverBusyRetrying = false
         let credits = credits
         writeTask = Task { [weak self] in
@@ -970,7 +1048,7 @@ final class RecipeViewModel: ObservableObject {
                         self.stopServerWrite(with: .busy)
                         return
                     }
-                    if let response { self.collectEarlier(earlier, response) }
+                    if let response { self.collectEarlier(earlier, response, await Self.arrivedPictures(response, wire: earlier)) }
                     collecting = false
                     credits.storage.pendingGeneration = wire
                 }
@@ -979,7 +1057,7 @@ final class RecipeViewModel: ObservableObject {
                     self.stopServerWrite(with: .serverFailed(wire.kind, sameRequest: true))
                     return
                 }
-                self.finishServerWrite(wire, response)
+                self.finishServerWrite(wire, response, await Self.arrivedPictures(response, wire: wire))
             } catch is CancellationError {
                 self?.phase = .idle
                 self?.serverBusyRetrying = false
@@ -1006,7 +1084,10 @@ final class RecipeViewModel: ObservableObject {
     /// nil when the server never got it.
     private func settle(_ wire: GenerateRequest, start: Bool, mayStart: Bool) async throws -> GenerateResponse? {
         let backend = credits.backend
-        let deadline = Date().addingTimeInterval(wire.kind == .menu ? 270 : 150)
+        // A recipe with pictures takes up to ~110 s for the dish and ~160 s with steps when the
+        // picture model is busy (server reservations 115 s / 165 s): asked after as long as a menu,
+        // 270 s, well past either.
+        let deadline = Date().addingTimeInterval(wire.kind == .menu || wire.image != nil ? 270 : 150)
         var sendsRequest = start
         // An older server without `getGeneration`: re-sending is how it is asked.
         var serverLacksGetGeneration = false
@@ -1055,13 +1136,15 @@ final class RecipeViewModel: ObservableObject {
 
     /// The answer for a request held from before the form changed: saved quietly when it
     /// arrived, the count updated either way. Nothing navigates; the new request follows.
-    private func collectEarlier(_ earlier: GenerateRequest, _ response: GenerateResponse) {
+    private func collectEarlier(_ earlier: GenerateRequest, _ response: GenerateResponse, _ arrived: ArrivedPictures) {
         credits.apply(response)
         credits.callSucceeded()
         switch Self.outcome(of: response, for: earlier, costs: credits.costs) {
         case .saved(let content):
-            // Never shown: unread until opened.
-            let entry = SavedRecipe(content: content)
+            // Never shown: unread until opened; its picture lines wait for that, in this run.
+            let (entry, notice) = Self.savedEntry(content, arrived: arrived, response: response, wire: earlier)
+            cachePictures(entry)
+            if let notice { pictureNotices[entry.id] = notice }
             savedStore.save(entry)
             saved = savedStore.all()
             updateOptions { $0.unreadSaved = RecipeUnread.afterSave($0.unreadSaved, id: entry.id, shown: false) }
@@ -1104,26 +1187,90 @@ final class RecipeViewModel: ObservableObject {
         self.failure = failure
     }
 
-    private func finishServerWrite(_ wire: GenerateRequest, _ response: GenerateResponse) {
+    private func finishServerWrite(_ wire: GenerateRequest, _ response: GenerateResponse, _ arrived: ArrivedPictures) {
         writeTask = nil
         phase = .idle
         serverBusyRetrying = false
+        writingPictures = nil
         credits.apply(response)
         credits.callSucceeded()
         let outcome = Self.outcome(of: response, for: wire, costs: credits.costs)
         if outcome.clearsRequest { credits.storage.pendingGeneration = nil }
         switch outcome {
         case .saved(let content):
+            let (entry, notice) = Self.savedEntry(content, arrived: arrived, response: response, wire: wire)
+            cachePictures(entry)
+            // The picture lines only on the result shown as it arrives (kept while it is open).
+            if let notice { pictureNotices[entry.id] = notice }
             // Shown if the writing screen is on screen; otherwise unread, and said to be saved.
-            if saveArrived(SavedRecipe(content: content)) {
+            if saveArrived(entry) {
                 ReviewPrompter.shared.recipeArrived()
                 failure = .arrived(balance: response.balance)
             } else {
+                // Kept for when it is opened from Saved recipes in this run, as on Android.
                 failure = .earlierArrived(wire.kind)
             }
         case .failure(let failure):
             self.failure = failure
         }
+    }
+
+    /// A reply's pictures, checked (`RecipePictures.accepted` / `forSteps`) and with the dish's
+    /// thumbnail drawn, off the main actor. Nothing for a request without pictures.
+    struct ArrivedPictures: Sendable {
+        var dish: RecipePictureBytes?
+        var steps: [RecipeStepPictureBytes]
+        var thumbnail: Data?
+
+        static let none = ArrivedPictures(dish: nil, steps: [], thumbnail: nil)
+    }
+
+    nonisolated static func arrivedPictures(_ response: GenerateResponse, wire: GenerateRequest) async -> ArrivedPictures {
+        guard wire.kind == .recipe, let level = wire.image, response.status == .done, let recipe = response.recipe else { return .none }
+        let dish = response.image?.value
+        let steps = level == .steps ? RecipePictures.forSteps(response.stepImages?.value ?? [], stepCount: recipe.steps.count) : []
+        let thumbnail = await Task.detached(priority: .userInitiated) { dish.flatMap { RecipePictureThumbnail.make(from: $0.data) } }.value
+        return ArrivedPictures(dish: dish, steps: steps, thumbnail: thumbnail)
+    }
+
+    /// The saved entry for a server result, with its pictures (sizes in the payload, bytes beside
+    /// it) and the picture lines it arrived with (`RecipePictures.notice`).
+    static func savedEntry(_ content: SavedRecipe.Content, arrived: ArrivedPictures, response: GenerateResponse, wire: GenerateRequest) -> (entry: SavedRecipe, notice: RecipePictureNotice?) {
+        var content = content
+        var pictures: SavedRecipePictures?
+        if case .recipe(var recipe) = content, wire.image != nil {
+            recipe.picture = arrived.dish.map { RecipePictureSize(width: $0.width, height: $0.height) }
+            recipe.stepPictures = arrived.steps.map { RecipeStepPictureSize(step: $0.step, width: $0.picture.width, height: $0.picture.height) }
+            content = .recipe(recipe)
+            let kept = SavedRecipePictures(
+                dish: arrived.dish?.data,
+                steps: Dictionary(arrived.steps.map { ($0.step, $0.picture.data) }, uniquingKeysWith: { first, _ in first })
+            )
+            pictures = kept.isEmpty ? nil : kept
+        }
+        let notice = RecipePictures.notice(
+            asked: wire.kind == .recipe ? wire.image : nil,
+            imageFailed: response.imageFailed?.value ?? false,
+            stepImagesFailed: response.stepImagesFailed?.value ?? false,
+            dishKept: arrived.dish != nil
+        )
+        return (SavedRecipe(content: content, thumbnail: arrived.thumbnail, pictures: pictures), notice)
+    }
+
+    private func cachePictures(_ entry: SavedRecipe) {
+        guard let pictures = entry.pictures else { return }
+        pictureCache[entry.id] = pictures
+        pictureCacheOrder.removeAll { $0 == entry.id }
+        pictureCacheOrder.append(entry.id)
+        while pictureCacheOrder.count > 3 {
+            pictureCache[pictureCacheOrder.removeFirst()] = nil
+        }
+    }
+
+    /// The pictures kept with a saved recipe: from this run's arrivals, or read off the main actor.
+    func pictures(for id: String) async -> SavedRecipePictures? {
+        if let cached = pictureCache[id] { return cached }
+        return await savedStore.loadPictures(id: id)
     }
 
     /// `retriesFresh`: the failure came while asking after an earlier request, so "Try again"
@@ -1148,6 +1295,17 @@ final class RecipeViewModel: ObservableObject {
         // And staples: the next request goes without them, and the balance says again what the server reads.
         if RecipeWire.clearsStaplesFlag(after: serverError, request: wire) {
             credits.storage.serverTakesStaples = false
+            let credits = credits
+            Task { await credits.refreshBalance() }
+        }
+        // And pictures: the next request goes without them until a reply says acceptsRecipeImage.
+        if RecipeWire.clearsPictureFlag(after: serverError, request: wire) {
+            credits.setServerTakesRecipeImage(false)
+            let credits = credits
+            Task { await credits.refreshBalance() }
+        }
+        // The level isn't made now: the table is asked for again, which withdraws it.
+        if serverError == .imageUnavailable {
             let credits = credits
             Task { await credits.refreshBalance() }
         }
@@ -1177,11 +1335,12 @@ final class RecipeViewModel: ObservableObject {
         case .infraFailureLimit: return .infraFailureLimit
         case .dailyCap: return .dailyCap
         case .notEnoughItems: return .notEnoughItems(kind, days: kind == .menu ? days : MenuSet.defaultDays)
+        case .imageUnavailable: return .picturesUnavailable
         case .server, .appCheckReplayed, .unknownRequest, .callableMissing, .serversBusy:
             // Nothing was decided on the server for this attempt: ask again under the same id.
             return .serverFailed(kind, sameRequest: true)
         case .requestIdReused, .unauthenticated, .invalidRequest, .recentSignInRequired, .mergeNotAllowed,
-             .storeMismatch, .purchaseAccountMismatch, .refusedName, .allergenConsentRequired, .signInRequired:
+             .storeMismatch, .purchaseAccountMismatch, .refusedName, .allergenConsentRequired, .signInRequired, .reportLimit:
             // REQUEST_ID_REUSED: the stored request is already dropped, so "Try again" builds a
             // new one under a new id.
             return .serverFailed(kind, sameRequest: false)
@@ -1218,7 +1377,10 @@ final class RecipeViewModel: ObservableObject {
             let staples = wire.staples ?? []
             switch kind {
             case .recipe:
-                if var recipe = response.recipe.map(RecipeWire.markedServer).map({ $0.withStapleNames(staples) }) {
+                // Nothing local comes from a reply: the request id is the one sent, pictures are added
+                // by the app (`savedEntry`).
+                if var recipe = response.recipe.map({ $0.withoutLocalFields() }).map(RecipeWire.markedServer).map({ $0.withStapleNames(staples) }) {
+                    recipe.requestId = wire.requestId
                     recipe.pastDate = recipe.hasItemIndices
                         ? RecipeWire.pastDate(of: recipe, ticked: wire.ingredients, optional: optional, today: wire.today)
                         : tickedPast
@@ -1228,9 +1390,11 @@ final class RecipeViewModel: ObservableObject {
                 if var menu = response.menu?.withStapleNames(staples), !menu.days.isEmpty {
                     for day in menu.days.indices {
                         for course in menu.days[day].courses.indices {
+                            menu.days[day].courses[course].recipe = menu.days[day].courses[course].recipe.withoutLocalFields()
                             menu.days[day].courses[course].recipe.source = .server
                         }
                     }
+                    menu.requestId = wire.requestId
                     if let exact = menu.withPastDateByIndex(ticked: wire.ingredients, optional: optional, today: wire.today) {
                         return .saved(.menu(exact))
                     }
@@ -1315,9 +1479,10 @@ final class RecipeViewModel: ObservableObject {
         saved.first { $0.id == id }
     }
 
-    /// Returns what Undo puts back.
+    /// Returns what Undo puts back, its pictures included.
     func deleteSaved(id: String) -> SavedRecipe? {
-        guard let entry = savedRecipe(id: id) else { return nil }
+        guard var entry = savedRecipe(id: id) else { return nil }
+        entry.pictures = pictureCache[id] ?? savedStore.pictures(id: id)
         savedStore.delete(id: id)
         saved = savedStore.all()
         updateOptions { $0.unreadSaved = RecipeUnread.afterOpen($0.unreadSaved, id: id) }
@@ -1334,7 +1499,12 @@ final class RecipeViewModel: ObservableObject {
     /// puts back (`restoreSaved(_:)`); empty when none of them is saved. Android:
     /// `RecipeStateHolder.deleteSaved(ids)`.
     func deleteSaved(ids: Set<String>) -> [SavedRecipe] {
-        let removed = SavedSelection.toDelete(saved, selected: ids)
+        let removed = SavedSelection.toDelete(saved, selected: ids).map { entry -> SavedRecipe in
+            // Read before they go, so one Undo brings the pictures back too.
+            var entry = entry
+            entry.pictures = pictureCache[entry.id] ?? savedStore.pictures(id: entry.id)
+            return entry
+        }
         guard !removed.isEmpty else { return [] }
         let removedIDs = Set(removed.map(\.id))
         savedStore.delete(ids: removedIDs)
@@ -1350,7 +1520,191 @@ final class RecipeViewModel: ObservableObject {
         saved = savedStore.all()
     }
 
+    // MARK: Report this recipe
+
+    /// What a saved result's foot shows (`RecipeReporting.foot`): never on the phone's recipes,
+    /// rows saved before request ids were kept, installs without the paid route or without an
+    /// account (none is made for it), or before a reply said `acceptsReports`.
+    func reportFoot(for entry: SavedRecipe) -> RecipeReportFoot {
+        RecipeReporting.foot(
+            source: entry.source,
+            requestId: entry.requestId,
+            available: credits.isPaidRouteAvailable,
+            hasAccount: credits.account.uid != nil,
+            serverTakesReports: credits.serverTakesReports,
+            reported: options.reportedRequests
+        )
+    }
+
+    /// "Report this recipe / menu": the sheet, sending nothing yet. `isMenu`: the menu as a whole
+    /// (a dish opened from it reports as a recipe, with the menu's request id).
+    func openReport(for entry: SavedRecipe, isMenu: Bool) {
+        guard reportFoot(for: entry) == .available, let requestId = entry.requestId else { return }
+        reportSheet = RecipeReportSheet(
+            requestId: requestId,
+            isMenu: isMenu,
+            hasPictures: !isMenu && (entry.recipe?.hasPictures ?? false),
+            reportId: UUID().uuidString.lowercased()
+        )
+    }
+
+    func chooseReportReason(_ reason: RecipeReportReason) {
+        guard var sheet = reportSheet, sheet.status != .sending, sheet.reasons.contains(reason) else { return }
+        sheet.reason = reason
+        sheet.reasonMissing = false
+        reportSheet = sheet
+    }
+
+    func setReportNote(_ note: String) {
+        guard var sheet = reportSheet, sheet.status != .sending else { return }
+        let cut = RecipeReporting.cutNote(note)
+        guard cut != sheet.note else { return }
+        sheet.note = cut
+        reportSheet = sheet
+    }
+
+    /// Cancel, or the sheet swiped away. A report already on its way still lands.
+    func dismissReport() {
+        reportSheet = nil
+    }
+
+    /// Send report, and its Try again: the same report id every time, so the server stores it
+    /// once. Without a reason, "Choose a reason." and nothing is sent. Never makes an account.
+    func sendReport() {
+        guard var sheet = reportSheet, sheet.status != .sending, sheet.status != .limit, sheet.status != .unknown else { return }
+        guard let reason = sheet.reason else {
+            sheet.reasonMissing = true
+            reportSheet = sheet
+            return
+        }
+        #if DEBUG
+        // A demo shows the states; nothing is ever sent from one.
+        if credits.demoMode { return }
+        #endif
+        guard credits.account.uid != nil else { return }
+        sheet.status = .sending
+        sheet.reasonMissing = false
+        reportSheet = sheet
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
+        let request = ReportRecipeRequest(
+            reportId: sheet.reportId,
+            requestId: sheet.requestId,
+            reason: reason.rawValue,
+            note: RecipeReporting.noteToSend(sheet.note),
+            app: .init(version: RecipeReporting.wireVersion(version), language: RecipeLanguage.app.rawValue)
+        )
+        let backend = credits.backend
+        let reportId = sheet.reportId
+        let requestId = sheet.requestId
+        Task { [weak self] in
+            do {
+                try await backend.reportRecipe(request)
+                self?.reportReceived(reportId: reportId, requestId: requestId)
+            } catch {
+                self?.reportFailed(reportId: reportId, error)
+            }
+        }
+    }
+
+    private func reportReceived(reportId: String, requestId: String) {
+        updateOptions { $0.reportedRequests = RecipeReporting.remembering($0.reportedRequests, requestId) }
+        if reportSheet?.reportId == reportId { reportSheet = nil }
+        // Owner, 2026-11-17: a sent report is a problem moment for the rating prompt.
+        ReviewPrompter.shared.reportSent()
+        failure = .reportSent
+    }
+
+    private func reportFailed(reportId: String, _ error: Error) {
+        let serverError = error as? RecipeServerError ?? .server
+        if serverError == .accountClosed { credits.note(serverError) }
+        guard var sheet = reportSheet, sheet.reportId == reportId else { return }
+        switch serverError {
+        case .reportLimit: sheet.status = .limit
+        // Not a result the server can take a report on: said plainly, never offered again.
+        case .unknownRequest: sheet.status = .unknown
+        default: sheet.status = .failed
+        }
+        reportSheet = sheet
+    }
+
     #if DEBUG
+    /// `-demoReport sheet|noReason|sending|failed|limit|unknown|sent` on a demo result: the report sheet in
+    /// that state (`sent`: the foot reads "You've reported this"). Nothing is sent.
+    func showReportDemo(_ state: String, entryID: String, isMenu: Bool) {
+        guard let entry = savedRecipe(id: entryID), let requestId = entry.requestId else { return }
+        if state == "sent" {
+            updateOptions { $0.reportedRequests = RecipeReporting.remembering($0.reportedRequests, requestId) }
+            return
+        }
+        openReport(for: entry, isMenu: isMenu)
+        guard var sheet = reportSheet else { return }
+        switch state {
+        case "noReason": sheet.reasonMissing = true
+        case "sending": sheet.reason = .unsafe; sheet.status = .sending
+        case "failed": sheet.reason = .unsafe; sheet.note = "The chicken is only cooked for 3 minutes."; sheet.status = .failed
+        case "limit": sheet.reason = .other; sheet.status = .limit
+        case "unknown": sheet.reason = .other; sheet.status = .unknown
+        default: sheet.reason = sheet.hasPictures ? .picture : .unsafe
+        }
+        reportSheet = sheet
+    }
+
+    /// `-demoRecipeState writingDish|writingSteps`: the writing screen of a recipe with pictures.
+    func showDemoWritingPictures(_ level: RecipePictureLevel) {
+        phase = .writingOnServer(.recipe)
+        writingPictures = level
+    }
+
+    /// `-demoRoute recipeResult` with `-demoRecipePictures dish|steps|failed|stepsFailed`: a
+    /// recipe from a pack with generated sample pictures (nothing fetched or sent), saved, and for
+    /// the failed ones the lines a result arriving like that shows. Returns its id.
+    func saveDemoPictureRecipe(_ kind: String, given: Recipe? = nil) -> String {
+        var recipe = given ?? Recipe(
+            title: "Crispy salmon with spinach and yoghurt sauce",
+            summary: "Uses the salmon, spinach and yoghurt before the weekend.",
+            minutes: 25,
+            servings: config.servings,
+            difficulty: .medium,
+            ingredients: [
+                RecipeIngredient(amount: "2", name: "Salmon fillet", fromPantry: true),
+                RecipeIngredient(amount: "100 g", name: "Baby spinach", fromPantry: true),
+                RecipeIngredient(amount: "150 g", name: "Greek yoghurt", fromPantry: true),
+                RecipeIngredient(amount: "1", name: "Lemon", fromPantry: false),
+            ],
+            steps: [
+                "Pat the salmon dry and season the skin with salt.",
+                "Lay it skin side down in a hot oiled pan and press it flat for the first 30 seconds, then leave it until the skin is deep golden and the flesh has turned pale two thirds of the way up.",
+                "Turn it over for a minute, then rest it on a plate.",
+                "Wilt the spinach in the same pan until it has just collapsed but is still bright green.",
+                "Stir lemon juice into the yoghurt and serve it beside the salmon and spinach.",
+            ],
+            tip: "A dry skin is what makes it crisp.",
+            source: .server
+        )
+        recipe.source = .server
+        recipe.requestId = UUID().uuidString.lowercased()
+        let dish = kind == "failed" ? nil : RecipePictureSample.make(seed: 0)
+        let stepIndices = kind == "steps" || kind == "stepsFailed" || kind == "failed" ? (kind == "stepsFailed" ? [1] : [1, 3]) : []
+        let steps = stepIndices.compactMap { index in RecipePictureSample.make(seed: index).map { (index, $0) } }
+        recipe.picture = dish.map { _ in RecipePictureSize(width: RecipePictureSample.width, height: RecipePictureSample.height) }
+        recipe.stepPictures = steps.map { RecipeStepPictureSize(step: $0.0, width: RecipePictureSample.width, height: RecipePictureSample.height) }
+        let pictures = SavedRecipePictures(dish: dish, steps: Dictionary(uniqueKeysWithValues: steps))
+        let entry = SavedRecipe(content: .recipe(recipe), thumbnail: dish.flatMap(RecipePictureThumbnail.make(from:)), pictures: pictures.isEmpty ? nil : pictures)
+        savedStore.save(entry)
+        cachePictures(entry)
+        saved = savedStore.all()
+        return entry.id
+    }
+
+    /// The lines of a result that arrived with fewer pictures (`-demoRecipePictures failed|stepsFailed`).
+    func showDemoPictureNotice(_ kind: String, entryID: String) {
+        switch kind {
+        case "failed": pictureNotices[entryID] = RecipePictureNotice(dishFailed: true, stepsFailed: false)
+        case "stepsFailed": pictureNotices[entryID] = RecipePictureNotice(dishFailed: false, stepsFailed: true)
+        default: break
+        }
+    }
+
     /// `-demoRecipeState busy`: the writing screen while every server instance is busy and the
     /// request is sent again. Nothing is sent.
     func showDemoServerBusy() {
@@ -1426,7 +1780,10 @@ final class RecipeViewModel: ObservableObject {
                 courses: set.courses == 1 ? [main] : set.courses == 2 ? [starter, main] : [starter, main, dessert]
             )
         }
-        let entry = SavedRecipe(content: .menu(given ?? RecipeMenu(days: days)))
+        var menu = given ?? RecipeMenu(days: days)
+        // As from our server, so its foot offers the report in a demo.
+        menu.requestId = menu.requestId ?? UUID().uuidString.lowercased()
+        let entry = SavedRecipe(content: .menu(menu))
         savedStore.save(entry)
         saved = savedStore.all()
         return entry.id

@@ -52,12 +52,12 @@ struct RecipeView: View {
                     switch destination {
                     case .result(let id):
                         // Shown, so read: on arrival, from Saved recipes or anywhere else.
-                        RecipeResultView(entry: model.savedRecipe(id: id)) { day, course in
+                        RecipeResultView(entry: model.savedRecipe(id: id), model: model) { day, course in
                             model.path.append(.dish(id: id, day: day, course: course))
                         }
                         .onAppear { model.markRead(id) }
                     case .dish(let id, let day, let course):
-                        RecipeResultView(entry: model.savedRecipe(id: id), dish: (day, course))
+                        RecipeResultView(entry: model.savedRecipe(id: id), dish: (day, course), model: model)
                             .onAppear { model.markRead(id) }
                     case .saved:
                         SavedRecipesView(model: model)
@@ -181,6 +181,22 @@ struct RecipeView: View {
         )
         .sheet(item: $sharedPrompt) { prompt in
             ActivityView(activityItems: [prompt.text])
+        }
+        // "Report this recipe / menu", over whichever result it was opened from.
+        .larderSheet(item: $model.reportSheet, fitsContent: true) { _ in
+            RecipeReportSheetView(model: model)
+        }
+        .larderSheet(isPresented: $model.showsPicturesSheet, fitsContent: true) {
+            RecipePicturesSheet(
+                choice: model.pictureChoice,
+                costs: credits.costs,
+                balance: credits.balance ?? 0,
+                onChoose: { level in
+                    model.setPictureLevel(level)
+                    model.showsPicturesSheet = false
+                },
+                onCancel: { model.showsPicturesSheet = false }
+            )
         }
         .larderSheet(item: $addingItems, detents: [.large]) { other in
             AddOtherItemsSheet(
@@ -434,7 +450,9 @@ struct RecipeView: View {
                 .padding(.top, LarderSpace.s2)
                 .accessibilityAddTraits(.isHeader)
             // All server instances busy: the same request is sent again shortly, said calmly.
-            Text(model.serverBusyRetrying ? L10n.recipeServerBusyRetrying : L10n.recipeWritingServerMessage(kind))
+            Text(model.serverBusyRetrying
+                ? L10n.recipeServerBusyRetrying
+                : model.writingPictures.map(L10n.recipeWritingServerPicturesMessage) ?? L10n.recipeWritingServerMessage(kind))
                 .larderFont(.body)
                 .foregroundStyle(LarderColor.onSurfaceVariant)
                 .frame(maxWidth: 320)
@@ -511,6 +529,14 @@ struct RecipeView: View {
             showSnackbar(L10n.recipeLanguageNeedsUpdate, actionTitle: L10n.recipeSettingsButton) {
                 model.path.append(.settings)
             }
+        case .picturesUnavailable:
+            // Nothing was taken; the costs are asked for again, and Try again is a new request.
+            showSnackbar(L10n.recipeImageUnavailable, actionTitle: L10n.settingsTryAgain) {
+                model.mode = .recipe
+                model.writeOnServer(from: pantry.items, staples: pantry.stapleRows)
+            }
+        case .reportSent:
+            showSnackbar(L10n.recipeReportSent)
         }
     }
 
@@ -641,6 +667,14 @@ struct RecipeView: View {
                     .larderFont(.caption)
                     .foregroundStyle(LarderColor.onSurfaceVariant)
                     .fixedSize(horizontal: false, vertical: true)
+            }
+            // Pictures: one collapsed row before More options, only while our server writes a single
+            // recipe and prices a level (`RecipePictures.choice`).
+            let pictures = model.pictureChoice
+            if !isMenu, pictures.shown {
+                RecipePicturesRow(choice: pictures, costs: credits.costs, balance: credits.balance ?? 0) {
+                    model.showsPicturesSheet = true
+                }
             }
             Button { model.path.append(.settings) } label: {
                 HStack(spacing: LarderSpace.s3) {
@@ -808,9 +842,11 @@ struct RecipeView: View {
             RecipeGoButton(
                 title: L10n.recipeGenerateRecipe,
                 icon: .sparkles,
-                cost: L10n.recipeCost(model.recipeCost),
-                // Only when a profile will really be sent with it.
-                subtitle: model.sendsTaste ? L10n.tasteUsesProfile : nil
+                // The level really sent: its price, and pictures first in the subtitle.
+                cost: L10n.recipeCost(model.serverRecipeCost),
+                // Only what will really be sent with it.
+                subtitle: [L10n.recipeImageWith(model.pictureChoice.sent), model.sendsTaste ? L10n.tasteUsesProfile : nil]
+                    .compactMap { $0 }.nilIfEmpty?.joined(separator: " · ")
             ) {
                 model.writeOnServer(from: pantry.items, staples: pantry.stapleRows)
             }
@@ -909,4 +945,8 @@ private struct AddOtherItemsSheet: View {
             }
         }
     }
+}
+
+private extension Array {
+    var nilIfEmpty: Self? { isEmpty ? nil : self }
 }

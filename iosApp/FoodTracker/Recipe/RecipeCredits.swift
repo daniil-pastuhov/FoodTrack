@@ -95,6 +95,8 @@ struct RecipeCreditsStorage {
         static let serverTakesMenuDays = "com.foodtracker.recipe.server_takes_menu_days"
         static let serverTakesTaste = "com.foodtracker.recipe.server_takes_taste"
         static let serverTakesStaples = "com.foodtracker.recipe.server_takes_staples"
+        static let serverTakesRecipeImage = "com.foodtracker.recipe.server_takes_recipe_image"
+        static let serverTakesReports = "com.foodtracker.recipe.server_takes_reports"
         static let welcomeOffer = "com.foodtracker.recipe.welcome_offer"
         static let welcomeOfferAskedAt = "com.foodtracker.recipe.welcome_offer_asked_at"
         static let welcomeClaimed = "com.foodtracker.recipe.welcome_claimed"
@@ -175,6 +177,20 @@ struct RecipeCreditsStorage {
     var serverTakesStaples: Bool {
         get { defaults.bool(forKey: Key.serverTakesStaples) }
         nonmutating set { defaults.set(newValue, forKey: Key.serverTakesStaples) }
+    }
+
+    /// The same for `acceptsRecipeImage`: only then is a picture level offered and `image` sent,
+    /// each level only while the costs price it (`RecipePictures.choice`). Cleared when a request
+    /// that carried `image` was refused as invalid.
+    var serverTakesRecipeImage: Bool {
+        get { defaults.bool(forKey: Key.serverTakesRecipeImage) }
+        nonmutating set { defaults.set(newValue, forKey: Key.serverTakesRecipeImage) }
+    }
+
+    /// The same for `acceptsReports`: only then do the results the server wrote offer a report.
+    var serverTakesReports: Bool {
+        get { defaults.bool(forKey: Key.serverTakesReports) }
+        nonmutating set { defaults.set(newValue, forKey: Key.serverTakesReports) }
     }
 
     /// The answer to sending allergens to our server (`AllergenConsent`), with its time and the
@@ -297,6 +313,11 @@ final class RecipeCredits: ObservableObject {
     /// The server's last answer with a balance said `acceptsMenuDays` (kept in `storage`):
     /// the form offers Days and one course a day.
     @Published private(set) var serverTakesMenuDays: Bool
+    /// The server's last answer with a balance said `acceptsRecipeImage` (kept in `storage`): the
+    /// form's Pictures row may show, for the levels `costs` prices.
+    @Published private(set) var serverTakesRecipeImage: Bool
+    /// The same for `acceptsReports`: server-written results offer "Report this recipe".
+    @Published private(set) var serverTakesReports: Bool
     /// The taste quiz's version as the last reply with a balance named it (`tasteQuizVersion`):
     /// when it isn't the cached one, the definition is fetched quietly (`RecipeViewModel`).
     @Published private(set) var serverTasteQuizVersion: String?
@@ -376,6 +397,8 @@ final class RecipeCredits: ObservableObject {
         self.storage = storage
         costs = storage.costs ?? .fallback
         serverTakesMenuDays = storage.serverTakesMenuDays
+        serverTakesRecipeImage = storage.serverTakesRecipeImage
+        serverTakesReports = storage.serverTakesReports
         unconfirmed = storage.unconfirmed
         paymentPending = Self.isPending(since: storage.paymentPendingSince, now: Date())
         welcomeOffer = storage.welcomeOffer
@@ -540,6 +563,10 @@ final class RecipeCredits: ObservableObject {
         setServerTakesMenuDays(response.acceptsMenuDays?.value ?? false)
         storage.serverTakesTaste = response.acceptsTaste?.value ?? false
         storage.serverTakesStaples = response.acceptsStaples?.value ?? false
+        setServerTakesRecipeImage(response.acceptsRecipeImage?.value ?? false)
+        let reports = response.acceptsReports?.value ?? false
+        storage.serverTakesReports = reports
+        if serverTakesReports != reports { serverTakesReports = reports }
         let quizVersion = response.tasteQuizVersion?.value
         if serverTasteQuizVersion != quizVersion { serverTasteQuizVersion = quizVersion }
         let welcome = WelcomeRecipes.accountRecipes(
@@ -553,6 +580,13 @@ final class RecipeCredits: ObservableObject {
     func setServerTakesMenuDays(_ takes: Bool) {
         storage.serverTakesMenuDays = takes
         if serverTakesMenuDays != takes { serverTakesMenuDays = takes }
+    }
+
+    /// Kept and republished, as `setServerTakesMenuDays`; cleared too when a request with `image`
+    /// was refused as invalid (a rolled-back server).
+    func setServerTakesRecipeImage(_ takes: Bool) {
+        storage.serverTakesRecipeImage = takes
+        if serverTakesRecipeImage != takes { serverTakesRecipeImage = takes }
     }
 
     /// The server's last answer with a balance said `acceptsTaste`: the taste profile's row shows,
@@ -1116,18 +1150,25 @@ final class RecipeCredits: ObservableObject {
     /// screenshots and layout checks. Nothing is sent anywhere.
     /// `menuSets` (unless `-demoRecipeMenuSets NO`): as from a server that says
     /// `acceptsMenuDays`, with the server's default menu-set prices; kept for this run only.
-    func showDemo(balance: Int, state: String?, menuSets: Bool = true) {
+    /// `pictures` (`-demoRecipePictureLevels both|dish|off`, both by default): as from a server
+    /// that says `acceptsRecipeImage` and prices the dish (2) and the steps (3), or only the dish,
+    /// or none. Every demo is as from a server that says `acceptsReports`.
+    func showDemo(balance: Int, state: String?, menuSets: Bool = true, pictures: String? = nil) {
         demoMode = true
         self.balance = balance
+        let dish: Int? = pictures == "off" ? nil : 2
+        let steps: Int? = pictures == "off" || pictures == "dish" ? nil : 3
+        serverTakesRecipeImage = pictures != "off"
+        serverTakesReports = true
         if menuSets {
             serverTakesMenuDays = true
             costs = RecipeCosts(recipe: 1, menu2: 4, menu3: 5, menuSets: [
                 "1": ["1": 1, "2": 2, "3": 3], "2": ["1": 2, "2": 3, "3": 4],
                 "3": ["1": 3, "2": 4, "3": 5], "4": ["1": 4, "2": 5, "3": 6],
-            ])
+            ], recipeImage: dish, recipeImageSteps: steps)
         } else {
             serverTakesMenuDays = false
-            costs = .fallback
+            costs = RecipeCosts(recipe: 1, menu2: 4, menu3: 5, recipeImage: dish, recipeImageSteps: steps)
         }
         switch state {
         case "account": account = .signedIn(uid: "demo", providers: [.apple], email: "k7x2m9@privaterelay.appleid.com")

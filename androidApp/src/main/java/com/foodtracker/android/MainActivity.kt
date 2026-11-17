@@ -69,6 +69,7 @@ class MainActivity : ComponentActivity() {
     private val recipeStateHolder: RecipeStateHolder by inject()
     private val pantryRepository: PantryRepository by inject()
     private val reviewPrompter: ReviewPrompter by inject()
+    private val recipePictureStore: com.foodtracker.recipe.RecipePictureStore by inject()
 
     // Hoisted out of the composable (rather than `remember`ed) so the Shopping List widget's
     // tap intent can navigate there via onNewIntent even when MainActivity is already running,
@@ -214,17 +215,36 @@ class MainActivity : ComponentActivity() {
         }
         when (val route = intent.getStringExtra(EXTRA_DEMO_ROUTE)) {
             "recipeResult", "recipeMenu" -> {
+                // Pictures and reports (`demoRecipePictures`, `demoReport`) bring their own sample
+                // recipe when no file is given.
+                val pictures = intent.getStringExtra(EXTRA_DEMO_RECIPE_PICTURES)
+                val report = intent.getStringExtra(EXTRA_DEMO_REPORT)
                 val raw = intent.getStringExtra(EXTRA_DEMO_RECIPE)?.let { runCatching { java.io.File(it).readText() }.getOrNull() }
-                    ?: return
+                    ?: if (route == "recipeResult" && (pictures != null || report != null)) {
+                        RecipeJson.encodeToString(Recipe.serializer(), com.foodtracker.android.recipe.RecipePictureDemo.sampleRecipe)
+                    } else {
+                        return
+                    }
                 val id = "demo-$route"
                 val now = System.currentTimeMillis()
+                // A request id only when the report is to be seen: the store screenshots stay as they were.
+                val requestId = if (report != null) demoRequestId(route) else null
                 val saved = if (route == "recipeMenu") {
-                    val menu = RecipeJson.decodeFromString(Menu.serializer(), raw)
+                    val menu = RecipeJson.decodeFromString(Menu.serializer(), raw).copy(requestId = requestId)
                     SavedRecipe.of(id, menuSavedTitle(menu.days.size), menu, now)
                 } else {
-                    SavedRecipe.of(id, RecipeJson.decodeFromString(Recipe.serializer(), raw), now)
+                    RecipeJson.decodeFromString(Recipe.serializer(), raw).let { recipe ->
+                        // Pictures and reports are only ever on a recipe our server wrote.
+                        val server = pictures != null || report != null
+                        SavedRecipe.of(id, if (server) recipe.copy(source = com.foodtracker.recipe.RecipeSource.SERVER, requestId = requestId) else recipe, now)
+                    }
+                }
+                if (pictures != null && saved.recipe != null) {
+                    showPictureDemo(saved, pictures, report)
+                    return
                 }
                 recipeStateHolder.restoreSaved(saved)
+                if (report != null) showReportDemo(saved, report)
                 // `--ez demoUnread true`: left unread in Saved recipes (the header's count), not opened.
                 if (intent.getBooleanExtra(EXTRA_DEMO_UNREAD, false)) {
                     recipeStateHolder.markSavedUnreadForDemo(id)
@@ -238,6 +258,8 @@ class MainActivity : ComponentActivity() {
             }
             "recipeSettings", "tastePromo", "tasteQuiz" -> openTasteDemo(intent, route)
             "tasteRecipe" -> openTasteDemo(intent, "recipe")
+            // Saved recipes (iOS `-demoRoute savedRecipes`): what earlier demo launches saved.
+            "savedRecipes" -> currentScreenState.value = LarderRoute.SavedRecipes
             // Settings › Staples, going back to Settings (iOS `-demoRoute staples`).
             "staples" -> currentScreenState.value = LarderRoute.Staples
             "scan" -> {
@@ -248,6 +270,59 @@ class MainActivity : ComponentActivity() {
                 ScanDemo.feed = ScanDemoFeed(picture, barcode, date)
                 currentScreenState.value = LarderRoute.Scanner()
             }
+        }
+    }
+
+    /**
+     * Recipe pictures (debug builds only, nothing sent; with `--es demoRoute recipeResult`):
+     * `--es demoRecipePictures dish|steps|dishFailed|stepsFailed|none` saves the recipe (the
+     * `demoRecipe` file, or a sample) with pictures drawn in code (RecipePictureDemo) in their real
+     * folder, and opens it; the failed ones show the quiet lines of a result that just arrived.
+     * `--es demoReport foot|open|reason|missing|sending|failed|limit|sent` (with `demoRecipeCredits`,
+     * or 12 recipes when not given) shows the report foot, or the report sheet in that state, or
+     * "You've reported this" with the snackbar; `recipeMenu` takes it too.
+     */
+    private fun showPictureDemo(saved: SavedRecipe, pictures: String, report: String?) {
+        val recipe = saved.recipe ?: return
+        lifecycleScope.launch {
+            val reply = when (pictures) {
+                "dish", "stepsFailed" -> com.foodtracker.android.recipe.RecipePictureDemo.pictures(steps = pictures == "stepsFailed")
+                "steps" -> com.foodtracker.android.recipe.RecipePictureDemo.pictures(steps = true)
+                else -> null
+            }
+            val kept = reply?.let { recipePictureStore.save(saved.id, it, recipe.steps.size) }
+            val stepsShown = if (pictures == "stepsFailed") kept?.steps?.take(1).orEmpty() else kept?.steps.orEmpty()
+            val withPictures = saved.copy(recipe = recipe.copy(picture = kept?.dish, stepPictures = stepsShown))
+            recipeStateHolder.restoreSaved(withPictures)
+            when (pictures) {
+                "dishFailed" -> recipeStateHolder.showPictureNoticeDemo(saved.id, com.foodtracker.recipe.PictureNotice(dishFailed = true, stepsFailed = false))
+                "stepsFailed" -> recipeStateHolder.showPictureNoticeDemo(saved.id, com.foodtracker.recipe.PictureNotice(dishFailed = false, stepsFailed = true))
+            }
+            recipeStateHolder.uiState.first { state -> state.saved.any { it.id == saved.id } }
+            currentScreenState.value = LarderRoute.RecipeResult(saved.id)
+            if (report != null) showReportDemo(withPictures, report)
+        }
+    }
+
+    /** The report foot or sheet in [state] on [saved] (see [showPictureDemo]). */
+    private fun showReportDemo(saved: SavedRecipe, state: String) {
+        val sheet = com.foodtracker.recipe.ReportSheet(
+            savedId = saved.id,
+            requestId = saved.requestId ?: DEMO_REQUEST_ID,
+            menu = saved.kind == com.foodtracker.recipe.SavedRecipeKind.MENU,
+            hasPictures = saved.recipe?.hasPictures == true,
+            reportId = "demo-report"
+        )
+        val note = "It says to leave the cooked rice out overnight."
+        val reason = com.foodtracker.recipe.ReportReason.UNSAFE
+        when (state) {
+            "open" -> recipeStateHolder.showReportDemo(sheet)
+            "missing" -> recipeStateHolder.showReportDemo(sheet.copy(reasonMissing = true))
+            "reason" -> recipeStateHolder.showReportDemo(sheet.copy(reason = reason, note = note))
+            "sending" -> recipeStateHolder.showReportDemo(sheet.copy(reason = reason, note = note, status = com.foodtracker.recipe.ReportStatus.SENDING))
+            "failed" -> recipeStateHolder.showReportDemo(sheet.copy(reason = reason, note = note, status = com.foodtracker.recipe.ReportStatus.FAILED))
+            "limit" -> recipeStateHolder.showReportDemo(sheet.copy(reason = reason, status = com.foodtracker.recipe.ReportStatus.LIMIT))
+            "sent" -> recipeStateHolder.showReportDemo(null, reported = saved.requestId ?: DEMO_REQUEST_ID)
         }
     }
 
@@ -274,11 +349,24 @@ class MainActivity : ComponentActivity() {
     private fun recipeDemoOf(intent: Intent): RecipeDemo? {
         val keys = listOf(
             EXTRA_DEMO_RECIPE_CREDITS, EXTRA_DEMO_RECIPE_STATE, EXTRA_DEMO_RECIPE_PACKS, EXTRA_DEMO_RECIPE_MENU_SETS,
-            EXTRA_DEMO_RECIPE_ON_DEVICE, EXTRA_DEMO_RECIPE_COPY, EXTRA_DEMO_RECIPE_MODE, EXTRA_DEMO_WELCOME
+            EXTRA_DEMO_RECIPE_ON_DEVICE, EXTRA_DEMO_RECIPE_COPY, EXTRA_DEMO_RECIPE_MODE, EXTRA_DEMO_WELCOME,
+            EXTRA_DEMO_RECIPE_PICTURE_LEVEL, EXTRA_DEMO_REPORT
         )
         if (!isDebuggable() || keys.none(intent::hasExtra)) return null
         val welcome = if (intent.hasExtra(EXTRA_DEMO_WELCOME)) intent.getIntExtra(EXTRA_DEMO_WELCOME, 0) else null
-        val credits = if (intent.hasExtra(EXTRA_DEMO_RECIPE_CREDITS)) intent.getIntExtra(EXTRA_DEMO_RECIPE_CREDITS, 0) else welcome?.let { 0 }
+        // Pictures and reports need the paid route: 12 recipes unless said otherwise.
+        val picturesOrReport = intent.hasExtra(EXTRA_DEMO_RECIPE_PICTURE_LEVEL) || intent.hasExtra(EXTRA_DEMO_REPORT)
+        val credits = if (intent.hasExtra(EXTRA_DEMO_RECIPE_CREDITS)) {
+            intent.getIntExtra(EXTRA_DEMO_RECIPE_CREDITS, 0)
+        } else {
+            welcome?.let { 0 } ?: if (picturesOrReport) 12 else null
+        }
+        // `demoRecipePictureLevel none|dish|steps`: a server that prices both levels (the default
+        // table, 2 and 3), with that choice remembered; `demoRecipePictureSheet` opens its sheet.
+        val pictureLevel = intent.getStringExtra(EXTRA_DEMO_RECIPE_PICTURE_LEVEL)?.let { value ->
+            com.foodtracker.recipe.PictureLevel.entries.firstOrNull { it.name.equals(value, ignoreCase = true) }
+        }
+        val writing = intent.getStringExtra(EXTRA_DEMO_RECIPE_STATE)
         val menuSets = intent.getBooleanExtra(EXTRA_DEMO_RECIPE_MENU_SETS, true)
         // The server's default table (functions/CONTRACT.md "Costs"), for the demo only: the app
         // itself never prices a menu set on its own.
@@ -293,11 +381,24 @@ class MainActivity : ComponentActivity() {
                 else -> null
             },
             packsOffered = intent.getBooleanExtra(EXTRA_DEMO_RECIPE_PACKS, false),
-            costs = if (menuSets) RecipeCosts(menuSets = table) else RecipeCosts(),
+            costs = (if (menuSets) RecipeCosts(menuSets = table) else RecipeCosts())
+                .let { if (pictureLevel != null || writing?.startsWith("writing") == true) it.copy(recipeImage = 2, recipeImageSteps = 3) else it },
             menuSets = menuSets,
             // A server that has the taste quiz, so its row shows.
-            takesTaste = credits != null
+            takesTaste = credits != null,
+            takesRecipeImage = pictureLevel != null,
+            takesReports = intent.hasExtra(EXTRA_DEMO_REPORT),
+            // `demoRecipeState writingDish|writingSteps`: the writing screen of a recipe with pictures.
+            writing = if (writing == "writingDish" || writing == "writingSteps") RecipeMode.RECIPE else null,
+            writingPictures = when (writing) {
+                "writingDish" -> com.foodtracker.recipe.PictureLevel.DISH
+                "writingSteps" -> com.foodtracker.recipe.PictureLevel.STEPS
+                else -> com.foodtracker.recipe.PictureLevel.NONE
+            }
         ).let { base -> if (welcome == null) base else welcomeDemoOf(intent, base, welcome) }
+        if (pictureLevel != null) {
+            recipeStateHolder.showPicturesDemo(pictureLevel, sheet = intent.getBooleanExtra(EXTRA_DEMO_RECIPE_PICTURE_SHEET, false))
+        }
         return RecipeDemo(
             paid = paid,
             onDevice = intent.getBooleanExtra(EXTRA_DEMO_RECIPE_ON_DEVICE, false),
@@ -614,6 +715,14 @@ class MainActivity : ComponentActivity() {
         private const val EXTRA_DEMO_RECIPE_DAYS = "demoRecipeDays"
         private const val EXTRA_DEMO_RECIPE_COURSES = "demoRecipeCourses"
         private const val EXTRA_DEMO_RECIPE = "demoRecipe"
+        private const val EXTRA_DEMO_RECIPE_PICTURES = "demoRecipePictures"
+        private const val EXTRA_DEMO_RECIPE_PICTURE_LEVEL = "demoRecipePictureLevel"
+        private const val EXTRA_DEMO_RECIPE_PICTURE_SHEET = "demoRecipePictureSheet"
+        private const val EXTRA_DEMO_REPORT = "demoReport"
+        private const val DEMO_REQUEST_ID = "demo-request"
+
+        /** The recipe's and the menu's own demo request ids, so reporting one doesn't mark the other. */
+        private fun demoRequestId(route: String) = if (route == "recipeMenu") "$DEMO_REQUEST_ID-menu" else DEMO_REQUEST_ID
         private const val EXTRA_DEMO_SCAN_IMAGE = "demoScanImage"
         private const val EXTRA_DEMO_SCAN_BARCODE = "demoScanBarcode"
         private const val EXTRA_DEMO_SCAN_DATE = "demoScanDate"

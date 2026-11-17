@@ -6,8 +6,11 @@ import { HttpsError } from "firebase-functions/v2/https";
 import { createHash } from "node:crypto";
 import {
   type Costs,
+  DEFAULT_MAX_STEP_IMAGES,
   DEFAULT_MENU_DAYS,
   GenerationKind,
+  IMAGE_LEVELS,
+  type ImageLevel,
   LANGUAGES,
   MAX_ALLERGENS,
   MAX_INGREDIENTS,
@@ -163,6 +166,30 @@ export interface GenerateRequest {
    * answers is the same request whatever the catalogue or the hidden list became meanwhile.
    */
   tasteSent?: [string, string[]][];
+  /**
+   * A single recipe asked with generated pictures (CONTRACT.md "Capability `acceptsRecipeImage`"):
+   * "dish" (one picture of the finished dish) or "steps" (that and up to `stepImagesMax` pictures
+   * of steps hard to follow from words alone); absent otherwise, so a request without it is
+   * exactly what it was before pictures existed.
+   */
+  image?: ImageLevel;
+  /** Level "steps": the step pictures asked at most (config/runtime `image.maxStepImages`). */
+  stepImagesMax?: number;
+}
+
+/** A step's picture in a response: `step` is the 0-based index into `recipe.steps`. */
+export interface StepImageWire {
+  step: number;
+  image: RecipeImageWire;
+}
+
+/** A delivered picture (CONTRACT.md "Recipe picture (response)"): a JPEG, base64. */
+export interface RecipeImageWire {
+  mimeType: "image/jpeg";
+  /** Standard base64 (RFC 4648 section 4, with padding) of the JPEG's bytes. */
+  data: string;
+  width: number;
+  height: number;
 }
 
 export interface RecipeIngredient {
@@ -288,6 +315,19 @@ export interface BlockFlag {
    * it is never sent names it would not use.
    */
   acceptsStaples?: true;
+  /**
+   * Present and true on every response that carries `balance` from a server that reads `image`
+   * on a recipe request (CONTRACT.md "Capability `acceptsRecipeImage`"). A client offers a
+   * picture level, and sends `image: "dish"` or `"steps"`, only after a response said so AND its
+   * `costs` carried that level's key (`recipeImage`, `recipeImageSteps`); a server from before it ignores the field and would write the recipe without
+   * a picture at the plain price.
+   */
+  acceptsRecipeImage?: true;
+  /**
+   * Present and true on every response that carries `balance` from a server that has `reportRecipe` (CONTRACT.md "Capability `acceptsReports`"). The apps show
+   * "Report this recipe" only after a response said so.
+   */
+  acceptsReports?: true;
 }
 
 /** Spread into every response that carries `balance` (see BlockFlag). */
@@ -299,6 +339,8 @@ export const CAPABILITIES = {
   acceptsTaste: true,
   acceptsWelcome: true,
   acceptsStaples: true,
+  acceptsRecipeImage: true,
+  acceptsReports: true,
 } as const;
 
 /**
@@ -314,6 +356,24 @@ export interface GenerateResponse extends BlockFlag {
   status: GenerateStatus;
   recipe?: Recipe;
   menu?: Menu;
+  /** DONE, for a request with `image` whose dish picture was made: the picture. */
+  image?: RecipeImageWire;
+  /**
+   * DONE, for a request with `image` delivered without the dish's picture: true. The dish
+   * picture's share of the cost was not kept (`balance` shows it).
+   */
+  imageFailed?: true;
+  /**
+   * DONE, level "steps", when the model marked at least one step: the step pictures made, by step
+   * index (possibly fewer than marked, or none). Absent when no step was marked.
+   */
+  stepImages?: StepImageWire[];
+  /**
+   * DONE, level "steps": true when at least one marked step's picture was not delivered (partial
+   * or total). Absent when every marked one was delivered, and when none was marked. The steps
+   * share is given back when not one step picture was delivered, whether or not this is set.
+   */
+  stepImagesFailed?: true;
   balance: number;
   charged: boolean;
   costs: CostsWire;
@@ -380,7 +440,9 @@ export type ErrorReason =
   | "APPLE_CODE_REJECTED"
   | "APPLE_UNAVAILABLE"
   | "NOT_ENOUGH_ITEMS"
-  | "SIGN_IN_REQUIRED";
+  | "SIGN_IN_REQUIRED"
+  | "IMAGE_UNAVAILABLE"
+  | "REPORT_LIMIT";
 
 export function fail(
   code: ConstructorParameters<typeof HttpsError>[0],
@@ -405,6 +467,11 @@ function oneOf<T extends string | number>(values: readonly T[], v: unknown, fiel
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** A UUID of versions 1 to 8 (the shape of every request and report id). */
+export function isUuid(v: unknown): v is string {
+  return typeof v === "string" && UUID.test(v);
+}
 
 export function isIsoDate(v: unknown): v is string {
   if (typeof v !== "string" || !DATE.test(v)) return false;
@@ -531,7 +598,12 @@ export function validateRequestId(v: unknown): string {
  * `tasteHidden` is `config/runtime.tasteQuiz.hidden`: those steps and options are dropped from
  * `taste`.
  */
-export function validateGenerateRequest(v: unknown, nowMs: number, tasteHidden: readonly string[] = []): GenerateRequest {
+export function validateGenerateRequest(
+  v: unknown,
+  nowMs: number,
+  tasteHidden: readonly string[] = [],
+  stepImagesMax: number = DEFAULT_MAX_STEP_IMAGES,
+): GenerateRequest {
   if (!isObject(v)) invalid("request must be an object");
   const requestId = validateRequestId(v.requestId);
   const kind = oneOf(["recipe", "menu"] as const, v.kind, "kind");
@@ -545,6 +617,9 @@ export function validateGenerateRequest(v: unknown, nowMs: number, tasteHidden: 
     if (present(v.courses)) invalid("courses is only allowed for a menu");
     if (present(v.days)) invalid("days is only allowed for a menu");
   }
+  // `image`: absent or null is no picture; "dish" or "steps" only on a recipe (no menu has pictures).
+  const image = present(v.image) && v.image !== false ? oneOf(IMAGE_LEVELS, v.image, "image") : undefined;
+  if (image && kind === "menu") invalid("image is only allowed for a recipe");
 
   if (!isIsoDate(v.today)) invalid("today must be a YYYY-MM-DD date");
   const todayMs = Date.parse(`${v.today}T00:00:00Z`);
@@ -590,6 +665,8 @@ export function validateGenerateRequest(v: unknown, nowMs: number, tasteHidden: 
     today: v.today,
     ...(taste ? { taste } : {}),
     ...(tasteHash ? { tasteSent: tasteHash } : {}),
+    ...(image ? { image } : {}),
+    ...(image === "steps" ? { stepImagesMax } : {}),
   };
 }
 
@@ -737,6 +814,9 @@ export function inputHashOf(req: GenerateRequest): string {
     // matches after the catalogue or the hidden list changed; absent when nothing was sent, so a
     // request without it hashes exactly as before taste profiles existed.
     ...(inputs.tasteSent ? { taste: inputs.tasteSent } : {}),
+    // Only when asked, so a request without a picture hashes exactly as before pictures existed,
+    // and the same requestId with and without a picture is two different requests.
+    ...(inputs.image ? { image: inputs.image } : {}),
   });
   return createHash("sha256").update(canonical).digest("hex");
 }

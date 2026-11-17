@@ -797,9 +797,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Din %d ubrugte opskrift går tabt og kan hverken refunderes eller gendannes. Dit login og din e-mailadresse slettes fra vores server; en registrering af købene bliver gemt, men er ikke længere knyttet til dig. Gemte opskrifter og dit forråd bliver på denne {device}.</string>
+            <string>Din %d ubrugte opskrift går tabt og kan hverken refunderes eller gendannes. Dit login og din e-mailadresse slettes fra vores server; en registrering af købene bliver gemt, men er ikke længere knyttet til dig. Eventuelle rapporter, du har sendt, bliver gemt i en begrænset periode og er heller ikke længere knyttet til dig. Gemte opskrifter og dit forråd bliver på denne {device}.</string>
             <key>other</key>
-            <string>Dine %d ubrugte opskrifter går tabt og kan hverken refunderes eller gendannes. Dit login og din e-mailadresse slettes fra vores server; en registrering af købene bliver gemt, men er ikke længere knyttet til dig. Gemte opskrifter og dit forråd bliver på denne {device}.</string>
+            <string>Dine %d ubrugte opskrifter går tabt og kan hverken refunderes eller gendannes. Dit login og din e-mailadresse slettes fra vores server; en registrering af købene bliver gemt, men er ikke længere knyttet til dig. Eventuelle rapporter, du har sendt, bliver gemt i en begrænset periode og er heller ikke længere knyttet til dig. Gemte opskrifter og dit forråd bliver på denne {device}.</string>
         </dict>
     </dict>
     <key>recipe_delete_device_message</key>
@@ -813,9 +813,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Din %d ubrugte opskrift går tabt og kan hverken refunderes eller gendannes. Det anonyme login, som denne {device} bruger, slettes fra vores server; en registrering af købene bliver gemt, men er ikke længere knyttet til dig. Gemte opskrifter og dit forråd bliver på denne {device}.</string>
+            <string>Din %d ubrugte opskrift går tabt og kan hverken refunderes eller gendannes. Det anonyme login, som denne {device} bruger, slettes fra vores server; en registrering af købene bliver gemt, men er ikke længere knyttet til dig. Eventuelle rapporter, du har sendt, bliver gemt i en begrænset periode og er heller ikke længere knyttet til dig. Gemte opskrifter og dit forråd bliver på denne {device}.</string>
             <key>other</key>
-            <string>Dine %d ubrugte opskrifter går tabt og kan hverken refunderes eller gendannes. Det anonyme login, som denne {device} bruger, slettes fra vores server; en registrering af købene bliver gemt, men er ikke længere knyttet til dig. Gemte opskrifter og dit forråd bliver på denne {device}.</string>
+            <string>Dine %d ubrugte opskrifter går tabt og kan hverken refunderes eller gendannes. Det anonyme login, som denne {device} bruger, slettes fra vores server; en registrering af købene bliver gemt, men er ikke længere knyttet til dig. Eventuelle rapporter, du har sendt, bliver gemt i en begrænset periode og er heller ikke længere knyttet til dig. Gemte opskrifter og dit forråd bliver på denne {device}.</string>
         </dict>
     </dict>
     <key>recipe_server_refused</key>
