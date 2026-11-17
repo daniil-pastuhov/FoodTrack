@@ -457,6 +457,44 @@ them with `allowSandbox` only.
   then set `config/runtime.image` to `{provider: "openai", model: "gpt-image-1-mini"}`. OpenAI then
   becomes a data processor of the picture prompts (update the privacy policy first).
 
+### 13. Owner console: switching the picture provider (functions/README.md "The owner console")
+
+A web page with a drop-down of the provider profiles, on Firebase Hosting
+(`https://bestbefore-f9ee1.firebaseapp.com/`). Until these are done the switch works from a shell
+only (`npm run admin -- image list | use <profile> --apply --project bestbefore-f9ee1`, "Provider
+profiles"), and the board shows the setup in force with a link that leads nowhere yet.
+
+- [ ] **Register a Web app** in the Firebase project (Project settings > General > Your apps > Add
+  app > Web; a nickname such as "Owner console"; Hosting can be left unticked). The page reads its
+  configuration from Hosting's `/__/firebase/init.json`, which needs one. Its browser API key may be
+  restricted to the HTTP referrers `https://bestbefore-f9ee1.firebaseapp.com/*` and
+  `https://bestbefore-f9ee1.web.app/*` (Cloud console > APIs & Services > Credentials), keeping
+  the Identity Toolkit and Token Service APIs allowed.
+- [ ] **Check** Authentication > Sign-in method > Google is enabled with its Web client (it is, for
+  Android), and Authentication > Settings > Authorized domains lists `bestbefore-f9ee1.firebaseapp.com`
+  (there by default). Nothing to add for the page itself.
+- [ ] **Set the allowlist**: Firestore > `config` > add document `owner` with a field `emails`
+  (array) holding the Google account you will sign in with (or `uids`, array, the account's uid
+  from Authentication > Users). Type it in the console only: never in the repo, a script or a
+  message.
+- [ ] Deploy the two callables and the page:
+  `cd functions && npm ci && npx firebase deploy --only functions:getProviderProfiles,functions:setProviderProfile,hosting --project bestbefore-f9ee1`
+  (the next full deploy, `--only functions,firestore`, also updates `redrawBoard`'s board with the
+  "Recipe pictures" tile; Hosting is deployed only with `hosting` named). If the project's
+  default Hosting site is already used for something else, stop and say so: the page then needs its
+  own site.
+- [ ] Apply the new alert, "Recipe: provider profile switched"
+  (`functions/alerts/policies/provider-profile-changed.json`):
+  `python3 functions/alerts/alerts.py --project bestbefore-f9ee1` (dry run), then with `--apply`.
+- [ ] **Check**: open the page signed out of everything (a private window) and see only the
+  sign-in button; sign in with another Google account and get "may not use the owner console";
+  sign in with yours and see the profiles, `flash-lite` in force and `openai` not ready. Switch to
+  `nano-banana` and back to `flash-lite` once, and see the alert email and the two
+  `providerProfileChanges/` records. On an iPhone, Safari may ask to allow the sign-in pop-up.
+- [ ] Decide whether OpenAI may ever be switched on: it stays "not ready" until the code's
+  `approved` flag for it is turned on (after the privacy policy names OpenAI) and its key is set
+  (step 12, last item).
+
 ### App Review switch
 
 Before submitting a version that sells packs, set `allowSandbox: true` and make sure the caps
