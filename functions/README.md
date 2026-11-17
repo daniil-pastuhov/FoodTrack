@@ -23,25 +23,26 @@ the caller. The client wire contract is in [CONTRACT.md](CONTRACT.md).
 | `src/core/consumption.ts` | Answers Apple's `CONSUMPTION_REQUEST` for consenting buyers |
 | `src/core/generation.ts` | `generateRecipe` (reserve, call the LLM, settle) and `getGeneration` (polling) |
 | `src/core/reports.ts` | `reportRecipe` ("Report this recipe") and keeping a deleted account's reports without its uid (see "Reports") |
-| `src/providers/profiles.ts`, `src/core/providerSwitch.ts` | The named provider setups (profiles) and the one core that switches between them, for `npm run admin -- image` and the owner console (see "Provider profiles", "The owner console") |
+| `src/providers/types.ts`, `registry.ts`, `router.ts`, `failure.ts`, `balance.ts` | The common provider interface: the descriptor every text or picture adapter exports, the registry of them (one entry each), the routers that pick the adapter per call, the shared failure taxonomy and the balance probe (see "Adding a provider") |
+| `src/providers/profiles.ts`, `src/core/providerSwitch.ts` | The named provider setups (profiles: text and pictures) and the one core that switches between them, for `npm run admin -- providers` and the owner console (see "Provider profiles", "The owner console") |
 | `src/core/recipeImage.ts` | A recipe's picture: the fixed prompt template around the checked brief, the call under its time limit, the `image_call` line (see "Recipe pictures") |
-| `src/adapters/image.ts`, `imageNormalize.ts`, `secretManager.ts` | The picture providers behind one port (Vertex AI, OpenAI, `ImageRouter`), the re-encoding of every picture to the delivered JPEG (sharp), and the run-time read of a provider's API key |
+| `src/adapters/image.ts`, `imageNormalize.ts`, `secretManager.ts` | The picture adapters (Vertex AI, OpenAI) and their descriptors, the re-encoding of every picture to the delivered JPEG (sharp), and the run-time read of a provider's API key |
 | `src/core/sweeper.ts` | Stale reservations, Play consume retries, owed consumption answers, negative-balance watch |
 | `src/core/notifications.ts` | Play RTDN, Voided Purchases poll, App Store Server Notifications v2, budget kill switch |
 | `src/core/account.ts` | `getBalance`, `mergeBalance`, `deleteAccount` |
 | `src/core/welcome.ts` | The welcome grant: `getWelcomeOffer`, `claimWelcome`, `welcomeRecipes` and the day's brake (see "Welcome grant") |
 | `src/core/appleToken.ts` | `registerAppleSignIn`, and removing the stored Sign in with Apple token (deletion, unlink, tombstones) |
 | `src/board/` | The owner's spend and sales board: reader, aggregation and renderer shared by `npm run admin -- board` and the scheduled `redrawBoard`, and `hosted.ts`, the redraw into a private bucket (see "The board") |
-| `src/admin/` | The owner's offline commands, none deployed as a function: deletion requests by email (`npm run admin`, see "Deletion requests by email"), the spend and sales board by hand (`npm run admin -- board`, see "The board"), the picture provider profiles (`npm run admin -- image list | use`, see "Provider profiles"), the prompt replay (`npm run prompt-body`) and the prompt-injection red-team runner (`npm run redteam`, `src/admin/redteam/`; see "Replaying a prompt against the live model") |
+| `src/admin/` | The owner's offline commands, none deployed as a function: deletion requests by email (`npm run admin`, see "Deletion requests by email"), the spend and sales board by hand (`npm run admin -- board`, see "The board"), the provider profiles (`npm run admin -- providers list | use`, older name `image`, see "Provider profiles"), the prompt replay (`npm run prompt-body`) and the prompt-injection red-team runner (`npm run redteam`, `src/admin/redteam/`; see "Replaying a prompt against the live model") |
 | `src/taste/` | The taste profile quiz: `catalogue.ts` (every step, option, text and prompt word; see "Taste profile quiz") and `quiz.ts` (`getTasteQuiz`, the version, cleaning a request's `taste`) |
 | `src/core/guard.ts` | Pre-Firestore throttles, client address, log sampling |
 | `src/ports.ts` | `PlayVerifier`, `AppStoreVerifier`, `RecipeGenerator`, `RecipeImageGenerator`, `AppleTokenRevoker` interfaces |
-| `src/adapters/` | Production implementations (Play Developer API, App Store Server Library, Gemini on Vertex AI, Sign in with Apple, KMS envelope encryption, the board's Cloud Storage bucket) and the prompt |
+| `src/adapters/` | Production implementations (Play Developer API, App Store Server Library, Gemini on Vertex AI (`gemini.ts`, also the `google` text descriptor), Sign in with Apple, KMS envelope encryption, the board's Cloud Storage bucket) and the provider-neutral prompt |
 | `alerts/` | The alerting as code: log-based metric (`metrics/`), alert policies (`policies/`) and `alerts.py`, which applies them (see "Alerts") |
 | `src/emulatorFakes.ts` | Fake stores and LLM, only inside the Functions emulator with `EMULATOR_FAKES=true` and a `demo-` project |
 | `src/index.ts` | Triggers, params, secrets, per-function limits |
 | `certs/AppleRootCA-G3.cer` | Apple's public root CA (SHA-256 `63:34:3A:BF:…:91:79`, checked by a test) |
-| `../owner-console/` | The owner console: a static page on Firebase Hosting with the picture setup's drop-down; everything it shows or changes goes through `getProviderProfiles` / `setProviderProfile` (see "The owner console") |
+| `../owner-console/` | The owner console: a static page on Firebase Hosting with the provider setup's drop-down (text and pictures); everything it shows or changes goes through `getProviderProfiles` / `setProviderProfile` (see "The owner console") |
 | `../firestore.rules` | Denies every client read and write; only the Admin SDK touches Firestore |
 | `../firestore.indexes.json` | Sweeper indexes and the TTL policies on `generations.expiresAt` and `recipeImages.expiresAt` |
 
@@ -56,6 +57,7 @@ the caller. The client wire contract is in [CONTRACT.md](CONTRACT.md).
 | `getProviderProfiles`, `setProviderProfile` | callable, **no App Check**, a Google sign-in listed in `config/owner` | The owner console only, never the apps: the provider profiles and the switch (see "The owner console") |
 | `sweepReservations` | every 5 min | Refunds reservations still pending 60 s after their deadline; retries Play consumes and owed consumption answers; watches negative balances |
 | `pollPlayVoidedPurchases` | daily 04:00 UTC | Voided Purchases API, last 3 days, for RTDNs that never arrived |
+| `checkProviderBalances` | hourly at :41 UTC | Asks the balance of every prepaid provider that has a probe and a threshold in `config/runtime.providerBalanceAlerts`, and logs `provider_balance_low` under it; with no threshold (the default) it reads only `config/runtime` (see "Provider balances") |
 | `redrawBoard` | hourly at :17 UTC | Redraws the owner's board (30 days) into the private bucket `BOARD_BUCKET` as `board.html` and `board.json`; read-only on Firestore, and writes nothing unless the bucket is private (see "The board", "Always on") |
 | `playNotifications` | Pub/Sub topic `PLAY_RTDN_TOPIC` | Play voided-purchase RTDNs (full and quantity-based partial refunds) |
 | `appStoreNotifications` | HTTPS (public) | App Store Server Notifications v2: `REFUND`, `REVOKE`, `REFUND_REVERSED`, `CONSUMPTION_REQUEST`; signature verified |
@@ -392,7 +394,7 @@ Every LLM call is priced before it is made and paid for by a credit:
   `gemini-3.1-flash-lite-image`, 0.06 for its fallback `gemini-nano-banana-2.1`, 0.02 for OpenAI
   `gpt-image-1-mini`), in the same transaction and against the same ceilings. Settle books each
   attempt on the model that made it: a delivered picture at its real cost from the token counts
-  the provider reported (`IMAGE_TOKEN_PRICES` in `src/constants.ts`, code, changed with a deploy),
+  the provider reported (the adapter's `tokenPrices`, e.g. `vertexImage` in `src/adapters/image.ts`, code, changed with a deploy),
   or at its model's flat price when the provider reported none or the model has no token rates;
   a failed attempt at its model's flat price when the provider may have charged (a safety refusal
   after generation, a timeout, an undecodable answer, a 5xx) and 0 when nothing was sent or the
@@ -695,6 +697,9 @@ introductory 0.75 / 3.75 until then makes the estimates conservative). When the 
 (`GEMINI_MODEL`) or Google's price changes, set `config/runtime.prices` to
 `{ inputUsdPerMTok, outputUsdPerMTok }` (numbers from 0.01 to 1000) from the Vertex AI pricing page,
 and update `DEFAULT_PRICES` in the next deploy. A price set too low makes the breaker too lenient.
+These are the `google` text provider's prices and the output judge's. Another text provider's
+prices are in its adapter (`prices` by model, at the endpoint's own rate), overridable without a
+deploy in `config/runtime.prices.textUsdPerMTok` ("Adding a provider", "Money").
 
 ### Logs to alert on
 
@@ -730,11 +735,14 @@ Create log-based alerts in Cloud Logging on `jsonPayload.message` (all are struc
 | `daily_cap_reached` | error | The first `DAILY_CAP` refusal of the UTC day (`dailyCap`, `generationUnits`, `day`); recorded as `stats/{day}.dailyCapReachedAt`. |
 | `welcome_threshold` | warning | The welcome grant that took the day's count to half of `welcome.perDay` (rounded up): `percent` 50, `grants`, `perDay`, `day`. Once per UTC day (`welcome_day_limit` is the other half). |
 | `generation_refused` | warning | `generateRecipe` refused for an account's daily limits: `reason` `USER_DAILY_LIMIT` (`why`: `generations` or `spend`) or `INFRA_FAILURE_LIMIT` (`why`: `infra_refunds`), `uidHash`. Sampled: 30 a minute per instance, with `suppressedSinceLast`. Counted by the log-based metric `recipe_generation_refused`. |
-| `image_call` | info | One per picture asked of a provider: `uidHash`, `provider`, `model` (the one that made it, or the last asked), `outcome` (`done`, `SAFETY`, `CONFIG`, `TIMEOUT`, `INFRA`, `DECODE`, `NO_TIME`), `attempts`, `fallback`, `durationMs`, `inputBytes`, `passedThrough`, `bytes`, `width`, `height`, `estimatedMicroUsd` (every attempt booked). Never the prompt or the brief. Alert on many `CONFIG` (a missing key or an unknown provider after a switch) or `INFRA`. |
+| `image_call` | info | One per picture asked of a provider: `uidHash`, `provider`, `model` (the one that made it, or the last asked), `outcome` (`done`, `SAFETY`, `CONFIG`, `OUT_OF_CREDIT`, `TIMEOUT`, `INFRA`, `DECODE`, `NO_TIME`), `attempts`, `fallback` (and `fallbackProvider` when the fallback that answered is at another provider), `durationMs`, `inputBytes`, `passedThrough`, `bytes`, `width`, `height`, `estimatedMicroUsd` (every attempt booked). Never the prompt or the brief. **Alerted on** through the metric `recipe_image_failed` (policy `image-failures`): more than 3 `CONFIG` (a missing key or an unknown provider after a switch) or 10 `INFRA` in an hour. |
 | `image_retry` | info | Informational: a picture call was refused for capacity and is asked again (quota pressure): `uidHash`, `provider`, `model`, `picture` (`dish` / `step`), `attempt` (the one about to be made), `reason` (`QUOTA` for 429, `SERVER` for 5xx), `waitMs`. A few a day are normal on Vertex's shared capacity; many in a row point at quota to raise or Provisioned Throughput. |
-| `provider_profile_changed` | info | **Alerted on** (console switches): a provider profile was switched ("Provider profiles"): `via` (`web` / `cli`), `uidHash` for the console, `from`, `to`, `provider`, `model`, `fallbackModel`, `change` (the `providerProfileChanges/` id). Never an email or uid. |
+| `provider_profile_changed` | info | **Alerted on** (console switches): a provider profile was switched ("Provider profiles"): `via` (`web` / `cli`), `uidHash` for the console, `from`, `to`, `provider`, `model`, `fallbackModel`, and `textProvider`, `textModel`, `textFallbackModel` when either side's text is not the deploy default, `change` (the `providerProfileChanges/` id). Never an email or uid. |
+| `provider_out_of_credit` | error | **Alerted on** (`provider-out-of-credit`): a text or picture provider said its prepaid balance or spending limit is exhausted ("Adding a provider"): `provider`, `model`, `surface` (`text` / `image`). Never the provider's message. The request went to the fallback or the default provider; anything not made was given back. |
+| `text_fallback` | info | **Worth watching**: the recipe text's provider failed before writing anything and the fallback was asked once: `uidHash`, `provider`, `model`, `fallbackProvider`, `fallbackModel`, `reason` (`OUT_OF_CREDIT`, `CAPACITY`, `CONFIG`). The `llm_call` line then has `provider` (who answered) and `textFallback: true`. |
+| `provider_balance_low` / `provider_balance_unavailable` | error / warning | The hourly balance probe ("Provider balances"): `provider`, `amount`, `unit`, `threshold`; or `provider`, `reason` (`TIMEOUT`, `FAILED`). The first is **alerted on** (`provider-balance-low`). |
 | `owner_call_refused` | warning | A call to the owner console's callables was refused: `function`, `reason` (`SIGN_IN`, `NOT_OWNER`, `RECENT_SIGN_IN`, `NOT_READY`, `STALE`, `UNKNOWN_PROFILE`, `PRICES_INVALID`, `INVALID_RESULT`), `suppressedSinceLast`; sampled, 10 a minute per instance. Never who. Many `NOT_OWNER` mean someone is trying the page. |
-| `image_fallback` | info | **Worth watching**: the selected model could not make a picture and the fallback model was asked once: `uidHash`, `provider`, `model`, `fallbackModel`, `picture`, `reason` (`QUOTA`, `SERVER`, `NOT_FOUND`, `REFUSED_REQUEST`, `TIMEOUT`, `DECODE`, `INFRA`), `outcome` (`done` or the failure code). Frequent fallbacks mean the primary is failing, and each such picture costs more (Nano Banana 2.1 about USD 0.0415 against 0.0336) and takes about 15 s. Never the prompt or the brief. |
+| `image_fallback` | info | **Worth watching**: the selected model could not make a picture and the fallback model was asked once: `uidHash`, `provider`, `model`, `fallbackProvider` (only when it is another provider), `fallbackModel`, `picture`, `reason` (`QUOTA`, `SERVER`, `NOT_FOUND`, `REFUSED_REQUEST`, `TIMEOUT`, `DECODE`, `INFRA`, `CONFIG`, `OUT_OF_CREDIT`), `outcome` (`done` or the failure code). Frequent fallbacks mean the primary is failing, and each such picture costs more (Nano Banana 2.1 about USD 0.0415 against 0.0336) and takes about 15 s. Never the prompt or the brief. |
 | `recipe_reported` | warning | Someone used "Report this recipe" ("Reports"): `report` (a hash of the report id; the document is `reports/<reportId>`), `reason`, `kind` (null without a snapshot), `snapshot` (whether the generation was still kept), `hasNote`, `pictures`, `imageLevel`, `platform`, `appVersion`, `language`, `uidHash`. Never the note or the recipe. **Alert on any** (or on more than a few an hour), then read the report in the console. |
 | `report_day_limit` | error | The first report of the UTC day refused at `reports.perDay` (`day`, `perDay`, `reports`); once a day (`stats/{day}.reportCapReachedAt`). Alert on it: someone may be flooding reports, or the cap is too low. |
 | `image_brief_rejected` | warning | The text model's picture brief failed its check (`rule`); the recipe was delivered without a picture and its share given back. `uidHash`, `rule` only. Many `BRIEF_TERMS` / `URL` / `LEAK` from one account point at injection attempts. |
@@ -743,9 +751,9 @@ Create log-based alerts in Cloud Logging on `jsonPayload.message` (all are struc
 ### Alerts
 
 The owner is emailed by Cloud Monitoring alert policies on the log lines above, through the
-existing email channel "Recipe backend alerts (owner)". They are code in `functions/alerts/`: one
-log-based metric (`metrics/recipe_generation_refused.json`) and twelve policies (`policies/*.json`,
-no channel in them). `alerts.py` applies them: dry run by default (local checks, every log filter
+existing email channel "Recipe backend alerts (owner)". They are code in `functions/alerts/`: two
+log-based metrics (`metrics/recipe_generation_refused.json`, `metrics/recipe_image_failed.json`)
+and fifteen policies (`policies/*.json`, no channel in them). `alerts.py` applies them: dry run by default (local checks, every log filter
 checked against the project with a read-only `gcloud logging read`, then the plan), `--apply` to
 create or update (matched by display name, so re-running is safe and prints "unchanged"). The
 channel is chosen by `--channel <id>` or `--channel-name` (default the one above); the script never
@@ -771,6 +779,9 @@ and Logs Configuration Writer (`--account` picks one other than the active accou
 | Recipe: recipe reported (`recipe-reported`) | every report made with "Report this recipe" (at most one email per 5 minutes) | `recipe_reported` |
 | Recipe: report day limit reached (`report-day-limit`) | the first report of the UTC day refused at `reports.perDay` | `report_day_limit` |
 | Recipe: provider profile switched (`provider-profile-changed`) | every switch made on the owner console (at most one email per 5 minutes); not the admin command's | `provider_profile_changed` |
+| Recipe: recipe pictures failing broadly (`image-failures`) | more than 3 `CONFIG` or more than 10 `INFRA` pictures not delivered in an hour, after their retries and fallback (metric threshold) | `image_call` through the metric `recipe_image_failed` |
+| Recipe: provider out of credit (`provider-out-of-credit`) | a text or picture provider's prepaid balance or spending limit ran out (at most one email an hour) | `provider_out_of_credit` |
+| Recipe: provider balance low (`provider-balance-low`) | a prepaid provider's balance is under its `providerBalanceAlerts` threshold (at most one email per 6 hours) | `provider_balance_low` |
 | Recipe: owner board (`owner-board`, existing) | the hourly redraw failed or the bucket check refused to write | `board_redraw_failed`, `board_bucket_public` |
 | Recipe: backend errors, refunds, blocked buyers, stuck purchases, prompt safety (existing) | as in the two "Logs to alert on" tables | see those tables |
 
@@ -1145,9 +1156,11 @@ and each Firestore document is at most 600,000 bytes plus a few fields, under 60
 2. When the selected model still could not make it for a reason about the model or capacity (an
    `INFRA` failure: quota still exhausted, a server error, a model not found or not served, a
    refused setting; a timeout; an answer that could not be decoded) and 20 s is left, the
-   **fallback model** (`image.fallbackModel`, same provider) is asked **once**, and
-   `image_fallback` is logged. Never after a `SAFETY` refusal (the same brief is not shopped
-   around to another model) or a `CONFIG` failure. A picture the fallback made is delivered like
+   **fallback model** (`image.fallbackModel`, at `image.fallbackProvider` or the same provider)
+   is asked **once**, and `image_fallback` is logged. Never after a `SAFETY` refusal (the same
+   brief is not shopped around to another model), and after a `CONFIG` failure only when the
+   fallback is at another provider. `OUT_OF_CREDIT` ("Adding a provider") is never retried and
+   goes to the fallback, or to the deploy default provider when none is named. A picture the fallback made is delivered like
    any other and booked at its own cost; the reservation already covers the dearer model.
 3. A picture that still failed follows the give-back rules ("How the money works").
 
@@ -1169,11 +1182,12 @@ else.
 
 ### Switching provider and model
 
-Every provider is an adapter behind one port, `RecipeImageGenerator` (`src/ports.ts`): a fixed
-prompt, a provider and a model in; bytes and a MIME type out; failures as `ImageGenerationError`
-(`safety` / `config` / `infra`, with whether the call may have been billed). `ImageRouter`
-(`src/adapters/image.ts`) picks the adapter per call from `config/runtime.image`, and the core
-never names a provider. Whatever comes back is normalised to the same JPEG.
+Every provider is an adapter behind one port, `RecipeImageGenerator` (`src/ports.ts`; the common
+interface is in "Adding a provider"): a fixed prompt, a provider and a model in; bytes and a MIME
+type out; failures as `ImageGenerationError` (`safety` / `config` / `infra` / `out_of_credit`, with
+whether the call may have been billed). `ImageRouter` (`src/providers/router.ts`) picks the adapter
+per call from `config/runtime.image`, and the core never names a provider. Whatever comes back is
+normalised to the same JPEG.
 
 | provider | adapter | model (default first) | credentials | price default |
 |---|---|---|---|---|
@@ -1181,7 +1195,7 @@ never names a provider. Whatever comes back is normalised to the same JPEG.
 | `openai` | `OpenAIImageGenerator`: `POST https://api.openai.com/v1/images/generations`, `n: 1`, `1536x1024` (`1024x768` for the models that take any size), `quality: "medium"`, `output_format: "jpeg"`, `output_compression: 85`, `moderation: "auto"` | `gpt-image-1-mini`; `gpt-image-2`, `gpt-image-2.5-flare` etc. need a price first | API key in Secret Manager (`OPENAI_API_KEY`), read at run time | USD 0.02 |
 | `off` | none | | | no pictures |
 
-The usual way to switch is by **provider profile** ("Provider profiles" below: `npm run admin -- image use <profile>` or the owner console), which writes the fields named here, the price included, in one checked transaction. By hand, to switch **model** at the same provider, without a deploy: put its price in
+The usual way to switch is by **provider profile** ("Provider profiles" below: `npm run admin -- providers use <profile>` or the owner console), which writes the fields named here, the price included, in one checked transaction. By hand, to switch **model** at the same provider, without a deploy: put its price in
 `config/runtime.prices.imageUsdPerImage` (e.g. `{"vertex/gemini-3.1-flash-image": 0.08}`; Flash-Lite
 Image and Nano Banana 2.1 already have default prices) and then set `config/runtime.image.model`.
 Order matters: a model without a price turns pictures off until it has one. The fallback is
@@ -1198,8 +1212,8 @@ within 10 minutes. A missing or refused key is a `CONFIG` picture failure: recip
 without pictures and their share given back, and `image_call` lines say `CONFIG`. The
 parameters `IMAGE_PROVIDER` / `IMAGE_MODEL` / `IMAGE_FALLBACK_MODEL` only set the defaults when
 `config/runtime.image` says nothing (`.env.bestbefore-f9ee1` sets Flash-Lite Image and Nano Banana
-2.1). A third provider is a new adapter class and a line in `imageRouter`
-(`src/index.ts`), plus a price: nothing in `src/core/`.
+2.1). A third provider is one adapter file and one registry entry ("Adding a provider"): nothing
+in `src/core/` or `src/index.ts`.
 
 **What a new provider means for privacy.** The provider becomes a data processor of the picture
 prompts: the fixed template and the brief, an English description of a dish written by our
@@ -1223,8 +1237,11 @@ the first deploy and raise `generateRecipe` to 512 MiB only if it is short.
 ### Provider profiles
 
 A **profile** is a named provider setup in code, `src/providers/profiles.ts`: an id, a label, the
-picture's provider, model and fallback model, the price reserved per picture of each, and what must
-hold before it can be switched on. Switching to one writes exactly that into `config/runtime`, so
+picture's provider, model and fallback (model, and its provider when it is another one), the price
+reserved per picture of each, optionally the recipe text's provider, model and fallback (`text`),
+and what must hold before it can be switched on (its own requirements plus each of its providers'
+key and privacy approval, added from the registry). A profile without `text` means the text's
+deploy default (Gemini): switching to it from a profile with a text part writes `text: {}`. Switching to one writes exactly that into `config/runtime`, so
 the owner picks a setup by name instead of typing model ids, and a switch can never leave a model
 without a price (which would turn pictures off) or a provider without its key.
 
@@ -1239,8 +1256,10 @@ without a price (which would turn pictures off) or a provider without its key.
 and the console): refuses an unknown profile (`UNKNOWN_PROFILE`) or one not ready (`NOT_READY`,
 with what is missing; a secret is checked by reading it as the service account and dropping it,
 never printed), then in one Firestore transaction reads `config/runtime` and writes, with field
-paths, only `image.provider`, `image.model`, `image.fallbackModel` (an `image` value that is not a
-map is replaced as a whole) and, where the price in force is missing or **lower** than the
+paths, only `image.provider`, `image.model`, `image.fallbackModel`, `image.fallbackProvider` when
+it changes (an `image` value that is not a map is replaced as a whole), `text.provider`,
+`text.model`, `text.fallbackProvider`, `text.fallbackModel` when the text setup changes (a missing
+`text` map is written whole, `{}` for the default) and, where the price in force is missing or **lower** than the
 profile's, `prices.imageUsdPerImage.<provider/model>` (a switch never lowers a price set higher;
 with no `prices` map at all it writes one with the default token prices beside it, and a `prices`
 map that is invalid refuses with `PRICES_INVALID`). Before writing it parses the document as it
@@ -1255,26 +1274,162 @@ the only delay; old app versions and requests see only what `config/runtime` alr
 
 ```bash
 cd functions
-npm run admin -- image list                                   # emulators; add --project bestbefore-f9ee1 for live
-npm run admin -- image use nano-banana                         # dry run: from, to, the exact writes
-npm run admin -- image use nano-banana --apply --project bestbefore-f9ee1
+npm run admin -- providers list                               # emulators; add --project bestbefore-f9ee1 for live
+npm run admin -- providers use nano-banana                     # dry run: from, to, the exact writes
+npm run admin -- providers use nano-banana --apply --project bestbefore-f9ee1
+# `image list` / `image use` still work: the same command under its first name.
 ```
 
 Live, with the credentials of "Deletion requests by email" ("Credentials"; Datastore User, and
-Secret Accessor only for the OpenAI readiness check). The command's `provider_profile_changed` goes
-to the `admin` log (resource `global`), so it is not alerted on; the console's is.
+Secret Accessor only for a provider key's readiness check). The command's `provider_profile_changed`
+goes to the `admin` log (resource `global`), so it is not alerted on; the console's is. **Decision
+(2026-11-17): admin-command switches stay unalerted.** The command needs the operator's own Google
+Cloud credentials (Datastore User on the project), which can already change `config/runtime`
+directly without any trace in that log; an alert would protect nothing that the credentials don't
+already bypass, and would email the owner about the owner's own action. The audit record
+(`providerProfileChanges/`, `actor: {via: "cli"}`) and the `admin` log line remain. The console's
+switches are alerted because a stolen browser session is the threat there.
 
-**Adding a provider** is one registry entry plus its adapter: the adapter class in
-`src/adapters/image.ts`, its line in `imageRouter` (`src/index.ts`), its name in
-`IMAGE_PROVIDERS` and its default price (`DEFAULT_IMAGE_PRICES`, `src/constants.ts`), and, when
-it needs a key, a name in `PROFILE_SECRETS` mapped to its Secret Manager secret in `ownerEnv`
-(`src/index.ts`) and `buildImageEnv` (`src/admin/cli.ts`). `registryProblems` (run by
-`test/providerProfiles.test.ts`) refuses a duplicate id, an unpriced model, a fallback equal to the
-model, and a registry in which no profile matches the deploy defaults. A profile id is never
-reused for another setup: the audit records name it. **Later, a text provider** (for example an
-"EU pair", Mistral for the recipe text and FLUX for the pictures): a profile gets a second,
-optional part beside `image` (`text`), with its own writer in `planProfile` and its own
-config field; profiles without it leave the text setup alone.
+**Adding a provider**: "Adding a provider" below. `registryProblems` (run by
+`test/providerProfiles.test.ts`) refuses a duplicate id, an unknown provider, an unpriced model
+(text or picture), a fallback equal to the model, and a registry in which no profile matches the
+deploy defaults. A profile id is never reused for another setup: the audit records name it.
+
+## Adding a provider
+
+The recipe text and the recipe pictures are each reached through one common interface
+(`src/providers/types.ts`), so a new provider is **one adapter file plus one registry entry**, and
+nothing in `src/core/`, `src/index.ts`, the profiles' code, the command or the console names it.
+`test/fakeProvider.ts` (a text provider shaped like an OpenAI-style chat API and a prepaid picture
+provider, test only) is the proof: registered as one entry, `test/providerAdapters.test.ts` selects
+it by config and by profile, prices, reserves, routes, books, falls back and logs it.
+
+### The interface
+
+An adapter file exports a **descriptor** (`TextProviderDescriptor` or `ImageProviderDescriptor`):
+
+| field | what |
+|---|---|
+| `kind`, `id`, `label` | `"text"` or `"image"`; the id written in `config/runtime` and the profiles (lower case letters and digits, 2–20, never reused), a label for the console |
+| `processing` | where it processes the prompt, in plain words |
+| `privacy` | `{approved, missing}`: whether the privacy policy's processor list names it (owner's decision). `approved: false` keeps every profile using it listed but not switchable, with `missing` as the reason |
+| `secret` | optional `{id, param, name, missing}`: the API key in Secret Manager (below) |
+| `params` | optional deploy params it reads (`{name, default, description}`), defined once by `src/index.ts` |
+| text: `defaultModel`, `defaultModelParam`, `prices` | the model when a config or profile names none; USD per 1M tokens by model (thinking or reasoning billed as output); a model without a price is never selected. `runtimeTokenPrices` is `google`'s alone (its prices are `config/runtime.prices`' two token fields) |
+| image: `usdPerImage`, `tokenPrices` | USD per delivered picture by model (reserved and booked when no token counts come back); token rates of models that report counts |
+| `create(ctx)` | builds the adapter from a `ProviderContext`: `project`, `param(name)` (its own params only), `secret()` (its key, read on first use; rejects with a fixed message), `fetch` (tests) |
+| `balance(ctx, signal)` | optional balance probe ("Provider balances") |
+
+The adapter itself implements one method:
+
+- text (`TextProvider`): `generate(request, prompt, signal, limits, target)` → `{output, usage}`.
+  `prompt` is provider-neutral (`systemInstruction`, `userText`, the JSON `schema`:
+  `adapters/prompt.ts`); `target` is `{provider, model}`; `output` is the parsed JSON, which the
+  core then checks exactly as it checks Gemini's; `usage` is `{inputTokens, outputTokens,
+  thinkingTokens, model, finishReason}` (absent when the provider reported none: the worst case is
+  then booked). It must honour `signal` and abort as `infra` once output plus thinking is seen
+  above `limits.hardTokenCeiling` (or the text above 8 characters per ceiling token).
+- picture (`ImageProvider`): `generate(prompt, target, signal)` → `{bytes, mimeType, model, usage?}`;
+  whatever it returns is re-encoded to the delivered JPEG.
+
+Everything provider-specific stays inside the adapter: endpoint and region, authentication, the
+schema dialect (the prompt's schema is plain JSON Schema; an API whose strict mode needs, say,
+`additionalProperties: false` and every property required converts it there), the reasoning or
+thinking setting, safety settings (or none where the API has none: the server's output rules,
+quality gate and judge still run), token accounting, streaming shape, the price table and the
+mapping of its errors.
+
+### Failures (one taxonomy)
+
+Every failure is a `GenerationError` (text: a money class `infra` / `content`, unchanged, plus an
+optional `kind`) or an `ImageGenerationError` (`kind`, `billed`, `retryable`, `status`,
+`retryAfterMs`). The shared kinds (`ProviderFailureKind`; `httpFailureKind(status)` in
+`src/providers/failure.ts` maps HTTP answers the same way for every adapter):
+
+| kind | HTTP | meaning | the person | fallback |
+|---|---|---|---|---|
+| `config` | 401, 403; no adapter; no key | can't be called at all; nothing sent or billed | text: refunded (known usage); picture: its share given back | text: the named fallback; picture: only a fallback at another provider |
+| `capacity` | 429, 500/502/503/504 | quota or overload | as `config` | text: the named fallback (never retried at the same provider); picture: retried after the backoff, at least `Retry-After`, then the named fallback |
+| `out_of_credit` | 402, or a 429 that says the balance or limit is exhausted | prepaid balance empty, spending limit reached; nothing made, nothing billed | refunded / given back by the existing rules | the named fallback, **else the deploy default provider** (owner's rule: an EU profile may fall back to Google); `provider_out_of_credit` is logged (error) with `provider`, `model`, `surface`, never the provider's message |
+| `safety` | a provider's own refusal | | text: a content failure and a prompt rejection, as for Gemini | **never** |
+| `content` | an answer cut off (`finish_reason: length`, MAX_TOKENS), not JSON, empty | | content-failure allowance | never |
+| `infra` | anything else; anything mid-stream | | unknown usage: the timeout allowance | never |
+
+A text fallback is asked **only when the first call generated nothing**: its error carries known
+usage with no output or thinking tokens (an adapter reports that for any refusal before the first
+token). It runs once, in what is left of the same time budget (`TIMINGS.llmAbortMs`), and logs
+`text_fallback` (`provider`, `model`, `fallbackProvider`, `fallbackModel`, `reason`). An adapter's
+error messages are fixed texts with at most an HTTP status: never the provider's own text, never
+the key.
+
+### Money
+
+The reservation covers the dearest provider a request may reach: the text at the dearer, input and
+output each, of its provider, the named fallback and the out-of-credit default
+(`textReservePricesOf`); every picture at the dearest of its model, the fallback and, when no
+fallback is named and the provider is not the default, the default's price
+(`imageReservedMicroUsdOf`). Settle books each call at its own provider's price (`Outcome.spend`;
+the judge always at Gemini's), so a cheaper provider books less than it reserved. With the deploy
+default and no fallback all of this is exactly what it was (`test/providerPin.test.ts`).
+
+### Secrets
+
+A provider's key is never bound with `defineSecret` (that would require it at every deploy,
+whichever provider is in use). The descriptor names it; `src/index.ts` defines its param (e.g.
+`MISTRAL_API_KEY_SECRET`, default the secret's name) and reads it through
+`adapters/secretManager.ts` on the first call that needs it, keeps it 10 minutes, and never logs,
+stores or returns it; readiness checks read and drop it. The functions' service account needs
+Secret Accessor on that one secret (owner, once; `docs/recipe-setup.md` step 13a):
+
+```bash
+# MISTRAL_API_KEY and BFL_API_KEY already exist in Secret Manager, with no access granted yet.
+gcloud secrets add-iam-policy-binding MISTRAL_API_KEY --project bestbefore-f9ee1 \
+  --member serviceAccount:recipe-functions@bestbefore-f9ee1.iam.gserviceaccount.com --role roles/secretmanager.secretAccessor
+gcloud secrets add-iam-policy-binding BFL_API_KEY --project bestbefore-f9ee1 \
+  --member serviceAccount:recipe-functions@bestbefore-f9ee1.iam.gserviceaccount.com --role roles/secretmanager.secretAccessor
+```
+
+### A text provider, step by step (e.g. Mistral)
+
+1. `src/adapters/mistral.ts`: the adapter class (`generate` as above) and `export const mistralText:
+   TextProviderDescriptor` (id `mistral`, `secret: {id: "mistral", param: "MISTRAL_API_KEY_SECRET",
+   name: "MISTRAL_API_KEY", missing: ...}`, `privacy`, `defaultModel`, `prices` for every model it
+   may run, **at the price of the endpoint it calls** (the EU endpoint is 1.1x), `create`).
+   `test/fakeProvider.ts` `FakeTextAdapter` is the template: the chat body with
+   `response_format: {type: "json_schema", json_schema: {strict: true, schema}}`,
+   `reasoning_effort: "none"`, `max_tokens: limits.maxOutputTokens`, `stream: true` with usage in
+   the last chunk; a delta's `content` may be a string or a list of `{type: "text", text}` parts;
+   `finish_reason: "length"` is a `content` failure; 401/403 `config`, 402 `out_of_credit`, 429 and
+   5xx `capacity`, each with known zero usage when nothing was generated; no safety settings (none
+   exist); reasoning tokens, if reported, go in `thinkingTokens`.
+2. One line in `src/providers/registry.ts` `TEXT`.
+3. A profile in `src/providers/profiles.ts` with a `text` part (e.g. an EU pair: Mistral with
+   Gemini as `fallbackProvider: "google"`, `fallbackModel: "gemini-3.8-flash"`).
+4. Tests: the adapter against a fake `fetch` (bodies, every status, streaming, ceilings), and the
+   registry and profile tests already cover the rest (`registryProblems`, `providerRegistryProblems`).
+5. Owner: the grant above, the processor list and `privacy.approved: true`, then switch.
+
+### A picture provider, step by step (e.g. FLUX by Black Forest Labs)
+
+1. `src/adapters/bfl.ts`: the adapter (submit, poll the result URL until ready within `signal`,
+   download the image) and `export const bflImage: ImageProviderDescriptor` (id `bfl`, secret
+   `BFL_API_KEY` / param `BFL_API_KEY_SECRET`, `usdPerImage`, `privacy`, `create`, and
+   `balance` from `GET https://api.bfl.ai/v1/credits`). `test/fakeProvider.ts` `FakeImageAdapter` /
+   `fakeImage` is the template: `out_of_credit` for 402, `capacity` (`retryable`) with
+   `retryAfterMs` for 429, `config` for 401/403, `billed` only when the call may have been charged.
+2. One line in `src/providers/registry.ts` `IMAGE`.
+3. A profile with `image: {provider: "bfl", model, fallbackProvider: "vertex", fallbackModel:
+   "gemini-3.1-flash-lite-image", usdPerImage: {...}}` (both prices).
+4. Optionally `config/runtime.providerBalanceAlerts: {bfl: <credits>}`.
+
+### Provider balances
+
+`checkProviderBalances` (hourly at :41 UTC) asks each provider that has a `balance` probe and a
+threshold in `config/runtime.providerBalanceAlerts` for its balance, and logs
+`provider_balance_low` (error: `provider`, `amount`, `unit`, `threshold`) under it, or
+`provider_balance_unavailable` (warning: `provider`, `reason` `TIMEOUT` / `FAILED`) when the
+probe fails. No provider implements a probe yet, and with no threshold it calls nothing. It is a new
+scheduled function: the next deploy creates its Cloud Scheduler job.
 
 ## Reports
 
@@ -1485,9 +1640,11 @@ its default, and a warning "config/runtime has invalid fields" names them. Insta
 | `refundAbuseThreshold` | integer ≥ 1 | `2` | Refund-after-use events that block a buyer (`purchasesBlocked`). |
 | `consumptionSampleContentProvided` | bool | `true` | Sent to Apple as `sampleContentProvided` in consumption answers. |
 | `costs` | map | `{recipe: 1, menu2: 4, menu3: 5}` (and `menuSets` days + courses − 1) | Credits per request. `recipeImage` optional: a recipe with a picture, an integer from `recipe` to 100; absent is twice `recipe` (at most 100), `0` turns pictures off (the table then has no `recipeImage` and no `recipeImageSteps`). `recipeImageSteps` optional: a recipe with the dish's and step pictures, from `recipeImage` to 100; absent is three times `recipe`, `0` turns that level off. `recipe`, `menu2`, `menu3` required, integers 1–100; `menu2` / `menu3` are the 3-day 2- and 3-course menus and the only source of those two prices. `menuSets` optional: `{"<days 1-4>": {"<courses 1-3>": n}}`, any cells; its 3-day `"2"` / `"3"` cells are accepted only when equal to `menu2` / `menu3`. A missing cell (all of them in a document from before menu sets) takes the default table's step from the 3-day row (±1 a day or course; the 3-day 1-course cell from `menu2`), held within [`recipe`, 100]. More days or courses never cheaper, no menu below `recipe`. Anything invalid: the whole default table is used (warning `costs`). Sent to clients in full (with `menuSets`) in every response with `balance`. |
-| `prices` | map | `{inputUsdPerMTok: 1.5, outputUsdPerMTok: 7.5}` | LLM price table for the estimates (see "Price table"). Optional `imageUsdPerImage`: `{"<provider>/<model>": USD}` (0.001–2 each, at most 50), added to or overriding the built-in picture prices (`DEFAULT_IMAGE_PRICES`) entry by entry. Anything invalid: the whole default `prices` (warning `prices`). |
+| `prices` | map | `{inputUsdPerMTok: 1.5, outputUsdPerMTok: 7.5}` | LLM price table for the estimates (see "Price table"). Optional `imageUsdPerImage`: `{"<provider>/<model>": USD}` (0.001–2 each, at most 50), added to or overriding the picture adapters' own prices entry by entry. Optional `textUsdPerMTok`: `{"<provider>/<model>": {inputUsdPerMTok, outputUsdPerMTok}}` (0.01–1000 each, at most 50), over a text adapter's own table for every provider but `google`, whose prices are the two token fields themselves. Anything invalid: the whole default `prices` (warning `prices`). |
 | `reports` | map | `{perUserPerDay: 10, perDay: 500, keepDays: 90}` | "Report this recipe" ("Reports"): reports per signed-in account per UTC day (0–1000), per day across the service (0–100,000), and days each report is kept (1–400). Either may be left out. Anything invalid: the defaults (warning `reports`). |
-| `image` | map | `{provider, model, fallbackModel, maxStepImages}` from the params `IMAGE_PROVIDER` / `IMAGE_MODEL` / `IMAGE_FALLBACK_MODEL` (`vertex`, `gemini-3.1-flash-lite-image`, fallback `gemini-nano-banana-2.1`), `maxStepImages` 2 | Usually set by provider profile ("Provider profiles": `npm run admin -- image use`, the owner console), which writes `provider`, `model`, `fallbackModel` and leaves the rest. The recipe picture's provider (`vertex`, `openai` or `off`), model id, `fallbackModel` (same provider, asked once on a capacity failure; `""` or null for none), and `maxStepImages` (integer 0–4, default 2: step pictures beside the dish's for `image: "steps"`; 0 turns that level off); each may be left out. Takes effect within 30 s, no deploy ("Recipe pictures"). Anything invalid: pictures **off** (warning `image`). A provider and model without a price in `prices.imageUsdPerImage` also turn pictures off. |
+| `image` | map | `{provider, model, fallbackModel, maxStepImages}` from the params `IMAGE_PROVIDER` / `IMAGE_MODEL` / `IMAGE_FALLBACK_MODEL` (`vertex`, `gemini-3.1-flash-lite-image`, fallback `gemini-nano-banana-2.1`), `maxStepImages` 2 | Usually set by provider profile ("Provider profiles": `npm run admin -- providers use`, the owner console), which writes `provider`, `model`, `fallbackModel` (and `fallbackProvider` when it changes) and leaves the rest. The recipe picture's provider (one in `src/providers/registry.ts`: `vertex`, `openai`; or `off`), model id, `fallbackModel` (asked once on a capacity failure; `""` or null for none), `fallbackProvider` (the fallback's provider when it is another one; absent or `""`: the same provider), and `maxStepImages` (integer 0–4, default 2: step pictures beside the dish's for `image: "steps"`; 0 turns that level off); each may be left out. Takes effect within 30 s, no deploy ("Recipe pictures"). Anything invalid: pictures **off** (warning `image`). A provider and model without a price in `prices.imageUsdPerImage` also turn pictures off. |
+| `text` | map | `{provider, model}` from the params `TEXT_PROVIDER` / `GEMINI_MODEL` (`google`, `gemini-3.8-flash`), no fallback | Usually set by provider profile. The recipe text's provider (one in `src/providers/registry.ts`), model (absent with a new provider: its adapter's default model), `fallbackProvider` and `fallbackModel` (`""` or null for none; a fallback model without a provider is at the same provider) ("Adding a provider", "Fallback"). Each may be left out; `{}` is the deploy default. Anything invalid, or a model without a price: the deploy default (warning `text`), never no text. The judge always runs on Gemini. |
+| `providerBalanceAlerts` | map | `{}` | `{"<provider>": threshold}` (0 to 1e9, the provider's own unit, at most 20): the hourly `checkProviderBalances` logs `provider_balance_low` under it, for providers with a balance probe ("Provider balances"). Anything invalid: none (warning `providerBalanceAlerts`). |
 | `budgetKillFraction` | number in (0, 2] | `1` | The budget alert flips the kill switch at cost ≥ budget × this. |
 | `welcome` | map | `{recipes: 3, perDay: 200}` | The welcome grant ("Welcome grant"): `recipes` (integer 0–20) free recipes once per Google or Apple sign-in, 0 turns it off; `perDay` (integer 0–10,000) grants at most per UTC day across all accounts, then the offer reads 0 and claims answer `OFF`. Either may be left out (its default). Anything invalid: the grant is **off** (warning `welcome`). |
 | `tasteQuiz` | map | `{hidden: []}` | `hidden`: at most 200 `"<step>"` or `"<step>:<option>"` ids left out of `getTasteQuiz` and dropped from requests' `taste` (see "Taste profile quiz"). Nothing else of the quiz is configurable here. Anything invalid: nothing hidden (warning `tasteQuiz`). |
@@ -1997,7 +2154,8 @@ which holds no secrets and may be committed), or set there beforehand:
 | param | default | what |
 |---|---|---|
 | `FUNCTIONS_SERVICE_ACCOUNT` | `recipe-functions@` | Service account the functions run as (`name@` = this project) |
-| `GEMINI_MODEL` | `gemini-3.8-flash` | Vertex AI model id. Any Flash-tier Gemini; `gemini-2.x` models get thinking budget 0 |
+| `TEXT_PROVIDER` | `google` | Default provider of the recipe text, one in `src/providers/registry.ts` (`config/runtime.text.provider` overrides it at run time); its model is the provider's own default param (`GEMINI_MODEL` for `google`) |
+| `GEMINI_MODEL` | `gemini-3.8-flash` | Vertex AI model id. Any Flash-tier Gemini; `gemini-2.x` models get thinking budget 0 (`config/runtime.text.model` overrides it) |
 | `GEMINI_THINKING_LEVEL` | `LOW` | Thinking level for Gemini 3+ (`MINIMAL` where the model supports it; 3.8 Flash does not) |
 | `VERTEX_LOCATION` | `global` | Vertex AI location. The default is `global` by the owner's decision; set a region only if the model is not offered in `global` |
 | `IMAGE_PROVIDER` | `vertex` | Default provider of recipe pictures: `vertex`, `openai` or `off` (`config/runtime.image.provider` overrides it at run time) |
@@ -2005,6 +2163,7 @@ which holds no secrets and may be committed), or set there beforehand:
 | `IMAGE_FALLBACK_MODEL` | `gemini-nano-banana-2.1` | Default fallback model at the same provider, asked once when the model fails for capacity; empty for none (`config/runtime.image.fallbackModel` overrides it) |
 | `VERTEX_IMAGE_LOCATION` | `global` | Vertex AI location of the picture models (Flash-Lite Image and Nano Banana 2.1 are offered on `global` only) |
 | `OPENAI_API_KEY_SECRET` | `OPENAI_API_KEY` | Name of the Secret Manager secret with the OpenAI API key, read at run time only while `openai` is the picture provider |
+| (each provider's own) | | A provider's params and its secret's param are declared by its adapter ("Adding a provider") and defined by `src/index.ts`: `GEMINI_*`, `VERTEX_*` and `OPENAI_API_KEY_SECRET` above are those of `google`, `vertex` and `openai`; a new one adds, say, `MISTRAL_API_KEY_SECRET` (default `MISTRAL_API_KEY`) |
 | `APPLE_APP_ID` | none | Numeric App Store app id (App Store Connect > App Information > Apple ID) |
 | `APPSTORE_KEY_ID`, `APPSTORE_ISSUER_ID` | none | App Store Server API key id and issuer id |
 | `APPLE_TEAM_ID`, `SIWA_KEY_ID` | none | Team id and Sign in with Apple key id, for exchanging codes and revoking tokens |
@@ -2025,6 +2184,8 @@ npx firebase functions:secrets:set SIWA_PRIVATE_KEY < AuthKey_YYYYYYYYYY.p8     
 # Only to make recipe pictures with OpenAI ("Recipe pictures"): not bound to any function, read
 # at run time while openai is selected; grant the service account Secret Accessor on it alone.
 npx firebase functions:secrets:set OPENAI_API_KEY
+# Any other provider's key works the same way ("Adding a provider", "Secrets"); MISTRAL_API_KEY and
+# BFL_API_KEY already exist, and need only the grant (docs/recipe-setup.md step 13a).
 ```
 
 ## One-time setup (owner)

@@ -461,7 +461,7 @@ them with `allowSandbox` only.
 
 A web page with a drop-down of the provider profiles, on Firebase Hosting
 (`https://bestbefore-f9ee1.firebaseapp.com/`). Until these are done the switch works from a shell
-only (`npm run admin -- image list | use <profile> --apply --project bestbefore-f9ee1`, "Provider
+only (`npm run admin -- providers list | use <profile> --apply --project bestbefore-f9ee1`, "Provider
 profiles"), and the board shows the setup in force with a link that leads nowhere yet.
 
 - [ ] **Register a Web app** in the Firebase project (Project settings > General > Your apps > Add
@@ -494,6 +494,24 @@ profiles"), and the board shows the setup in force with a link that leads nowher
 - [ ] Decide whether OpenAI may ever be switched on: it stays "not ready" until the code's
   `approved` flag for it is turned on (after the privacy policy names OpenAI) and its key is set
   (step 12, last item).
+
+### 13a. A new provider's API key (Mistral, Black Forest Labs) **(owner; not done)**
+
+The keys are in Secret Manager already (`MISTRAL_API_KEY`, `BFL_API_KEY`) with no access granted.
+The functions read a provider's key at run time, only while a provider using it is selected
+(functions/README.md "Adding a provider", "Secrets"); a profile using it shows "not ready" until
+the service account can read it. When the adapter is merged and before switching to it:
+
+- [ ] Grant `recipe-functions@` **Secret Manager Secret Accessor on each secret only**:
+  `gcloud secrets add-iam-policy-binding MISTRAL_API_KEY --member serviceAccount:recipe-functions@bestbefore-f9ee1.iam.gserviceaccount.com --role roles/secretmanager.secretAccessor --project bestbefore-f9ee1`
+  and the same for `BFL_API_KEY`.
+- [ ] The privacy policy's processor list names the provider (and where it processes: Mistral's EU
+  endpoint, Black Forest Labs' region), then the adapter's `privacy.approved` is set to `true` in
+  code. Until both, its profiles are listed but not switchable.
+- [ ] Optional, for a prepaid account: `config/runtime.providerBalanceAlerts`, e.g. `{bfl: 100}`
+  (its own unit), so `provider_balance_low` warns before calls fail as out of credit.
+- [ ] Apply the new alert policies (`python3 functions/alerts/alerts.py --project bestbefore-f9ee1 --apply`,
+  step 9): out of credit, balance low, pictures failing broadly.
 
 ### App Review switch
 
