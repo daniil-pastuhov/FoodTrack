@@ -545,15 +545,12 @@
 "onboarding_sample_title" = "Bør bruges snart";
 "onboarding_sample_body" = "Græsk yoghurt når sin dato i morgen.";
 "onboarding_sample_description" = "Eksempel på påmindelse: %1$@. %2$@";
-"onboarding_notifications_allow" = "Slå påmindelser til";
-"onboarding_not_now" = "Ikke nu";
 "onboarding_camera_title" = "Scan i stedet for at skrive";
 "onboarding_camera_body" = "Ret kameraet mod en vare, så udfylder %1$@ detaljerne for dig. Billederne bliver på din enhed.";
 "onboarding_camera_barcodes_title" = "Stregkoder";
 "onboarding_camera_barcodes_body" = "Finder varen og dens navn";
 "onboarding_camera_dates_title" = "Trykte datoer";
 "onboarding_camera_dates_body" = "Læser datoen på pakken";
-"onboarding_camera_allow" = "Tillad kameraet";
 "onboarding_ready_title" = "Klar til din første vare";
 "onboarding_ready_body" = "Hent noget fra køleskabet, og scan det. Det tager få sekunder.";
 "onboarding_skip" = "Spring over";

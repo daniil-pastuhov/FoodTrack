@@ -89,8 +89,9 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
         }
     }
 
-    /// For the "reminders are off" notes, when the prompt is still unanswered because of Not now
-    /// in onboarding. Anything saved since was refused by the system, so it is scheduled again.
+    /// For the "reminders are off" notes, when the prompt is still unanswered: Not now in the
+    /// onboarding of an earlier version (onboarding now always asks), or a request that failed.
+    /// Anything saved since was refused by the system, so it is scheduled again.
     public func requestAuthorization(thenSchedule items: [PantryItem]) async {
         let answer = await requestAuthorization()
         guard answer == true else {

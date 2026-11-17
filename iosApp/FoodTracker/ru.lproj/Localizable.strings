@@ -545,15 +545,12 @@
 "onboarding_sample_title" = "Лучше использовать скоро";
 "onboarding_sample_body" = "Греческий йогурт: срок годности заканчивается завтра.";
 "onboarding_sample_description" = "Пример напоминания: %1$@. %2$@";
-"onboarding_notifications_allow" = "Включить напоминания";
-"onboarding_not_now" = "Не сейчас";
 "onboarding_camera_title" = "Сканируйте, а не вводите";
 "onboarding_camera_body" = "Наведите камеру на продукт, и %1$@ заполнит данные за вас. Фото остаются на вашем устройстве.";
 "onboarding_camera_barcodes_title" = "Штрихкоды";
 "onboarding_camera_barcodes_body" = "Находит продукт и его название";
 "onboarding_camera_dates_title" = "Напечатанные даты";
 "onboarding_camera_dates_body" = "Считывает дату с упаковки";
-"onboarding_camera_allow" = "Разрешить камеру";
 "onboarding_ready_title" = "Всё готово для первого продукта";
 "onboarding_ready_body" = "Возьмите что-нибудь из холодильника и отсканируйте. Это займёт несколько секунд.";
 "onboarding_skip" = "Пока пропустить";

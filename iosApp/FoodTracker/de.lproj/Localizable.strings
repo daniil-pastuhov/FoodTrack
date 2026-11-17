@@ -545,15 +545,12 @@
 "onboarding_sample_title" = "Bald verbrauchen";
 "onboarding_sample_body" = "Griechischer Joghurt erreicht morgen das Datum.";
 "onboarding_sample_description" = "Beispiel-Erinnerung: %1$@. %2$@";
-"onboarding_notifications_allow" = "Erinnerungen einschalten";
-"onboarding_not_now" = "Nicht jetzt";
 "onboarding_camera_title" = "Scannen statt tippen";
 "onboarding_camera_body" = "Richte die Kamera auf ein Produkt, und %1$@ füllt die Details für dich aus. Fotos bleiben auf deinem Gerät.";
 "onboarding_camera_barcodes_title" = "Barcodes";
 "onboarding_camera_barcodes_body" = "Findet das Produkt und seinen Namen";
 "onboarding_camera_dates_title" = "Aufgedruckte Daten";
 "onboarding_camera_dates_body" = "Liest das Datum von der Packung";
-"onboarding_camera_allow" = "Kamera erlauben";
 "onboarding_ready_title" = "Bereit für deinen ersten Artikel";
 "onboarding_ready_body" = "Hol etwas aus dem Kühlschrank und scanne es. Das dauert nur ein paar Sekunden.";
 "onboarding_skip" = "Erst mal überspringen";

@@ -545,15 +545,12 @@
 "onboarding_sample_title" = "À consommer bientôt";
 "onboarding_sample_body" = "Le yaourt grec arrive à sa date demain.";
 "onboarding_sample_description" = "Exemple de rappel : %1$@. %2$@";
-"onboarding_notifications_allow" = "Activer les rappels";
-"onboarding_not_now" = "Plus tard";
 "onboarding_camera_title" = "Scannez au lieu de taper";
 "onboarding_camera_body" = "Visez un produit avec l'appareil photo et %1$@ remplit les détails pour vous. Les photos restent sur votre appareil.";
 "onboarding_camera_barcodes_title" = "Codes-barres";
 "onboarding_camera_barcodes_body" = "Trouve le produit et son nom";
 "onboarding_camera_dates_title" = "Dates imprimées";
 "onboarding_camera_dates_body" = "Lit la date sur l'emballage";
-"onboarding_camera_allow" = "Autoriser l'appareil photo";
 "onboarding_ready_title" = "Prêt pour votre premier produit";
 "onboarding_ready_body" = "Sortez quelque chose du frigo et scannez-le. Cela prend quelques secondes.";
 "onboarding_skip" = "Passer pour l'instant";

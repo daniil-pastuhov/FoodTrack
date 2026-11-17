@@ -545,15 +545,12 @@
 "onboarding_sample_title" = "Mejor usarlo pronto";
 "onboarding_sample_body" = "El yogur griego llega mañana a su fecha.";
 "onboarding_sample_description" = "Ejemplo de aviso: %1$@. %2$@";
-"onboarding_notifications_allow" = "Activar avisos";
-"onboarding_not_now" = "Ahora no";
 "onboarding_camera_title" = "Escanea en vez de escribir";
 "onboarding_camera_body" = "Apunta la cámara a un producto y %1$@ rellena los datos por ti. Las fotos se quedan en tu dispositivo.";
 "onboarding_camera_barcodes_title" = "Códigos de barras";
 "onboarding_camera_barcodes_body" = "Encuentra el producto y su nombre";
 "onboarding_camera_dates_title" = "Fechas impresas";
 "onboarding_camera_dates_body" = "Lee la fecha del envase";
-"onboarding_camera_allow" = "Permitir la cámara";
 "onboarding_ready_title" = "Listo para tu primer producto";
 "onboarding_ready_body" = "Saca algo de la nevera y escanéalo. Solo tardas unos segundos.";
 "onboarding_skip" = "Omitir por ahora";

@@ -967,7 +967,7 @@ var oNoCamera = oFlow(true, false)
 oNoCamera.notificationsAnswered(nil, OnboardingAsks(notifications: false, camera: false))
 expect(oNoCamera.step, .staples, "camera not asked: Staples after notifications")
 oNoCamera.staplesDone()
-expect(oNoCamera.step, .ready, "Not now is not declined: Ready")
+expect(oNoCamera.step, .ready, "no answer (a failed request) is not declined: Ready")
 var oCameraOnly = oFlow(false, true)
 expect(oCameraOnly.step, .camera, "notifications not asked: camera")
 oCameraOnly.cameraAnswered(true)
@@ -1000,6 +1000,9 @@ expect(oBack(from: .staples, oAskNone), .welcome, "Staples back to Welcome when 
 expect(oBack(from: .ready, oAskNone), .staples, "Ready back to Staples")
 var oCanBack = OnboardingFlow()
 expect(oCanBack.canGoBack, false, "no Back on Welcome")
+// App Review 5.1.1(iv): a permission screen is left only through its system prompt.
+expect(oFlow(true, true).canGoBack, false, "no Back on the notifications screen")
+expect(oFlow(false, true).canGoBack, false, "no Back on the camera screen")
 oCanBack.start(oAskNone)
 expect(oCanBack.canGoBack, true, "Back from Staples")
 // Going back and answering again replaces the answer, as on Android.
