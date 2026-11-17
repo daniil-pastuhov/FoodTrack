@@ -565,8 +565,21 @@ extension RootTabView {
             recipeViewModel.credits.showDemo(
                 balance: arguments.integer(forKey: "demoRecipeCredits"),
                 state: arguments.string(forKey: "demoRecipeState"),
-                menuSets: arguments.object(forKey: "demoRecipeMenuSets") == nil || arguments.bool(forKey: "demoRecipeMenuSets")
+                menuSets: arguments.object(forKey: "demoRecipeMenuSets") == nil || arguments.bool(forKey: "demoRecipeMenuSets"),
+                // `-demoRecipePictureLevels both|dish|off`: which picture levels the demo server prices.
+                pictures: arguments.string(forKey: "demoRecipePictureLevels")
             )
+            // `-demoPictureLevel none|dish|steps`: the Pictures row's remembered choice (with a small
+            // `-demoRecipeCredits` the row shows the level really sent and why).
+            if let level = arguments.string(forKey: "demoPictureLevel").flatMap(RecipePictureLevel.init(rawValue:)) {
+                recipeViewModel.setPictureLevel(level)
+            }
+            // `-demoRecipeState writingDish|writingSteps`: the writing screen of a recipe with pictures.
+            switch arguments.string(forKey: "demoRecipeState") {
+            case "writingDish": recipeViewModel.showDemoWritingPictures(.dish)
+            case "writingSteps": recipeViewModel.showDemoWritingPictures(.steps)
+            default: break
+            }
             if arguments.string(forKey: "demoRecipeMode") == "menu" { recipeViewModel.mode = .menu }
             // `-demoRecipeCourses 1|2|3` and `-demoRecipeDays 1|2|3|4`: the menu set, and so what it
             // takes (one course and days other than 3 only as from a server with menu sets, the
@@ -613,12 +626,26 @@ extension RootTabView {
         case "staples":
             selectedTab = .recipe
             recipeViewModel.path = [.staples]
+        // `-demoRecipePictures dish|steps|failed|stepsFailed`: a recipe from a pack with generated
+        // sample pictures (`failed`: the dish's picture not made; `stepsFailed`: some steps'), and
+        // `-demoReport sheet|noReason|sending|failed|limit|unknown|sent` (with `-demoRecipeCredits`, which
+        // gives the demo an account and a server that says acceptsReports): the report sheet over
+        // it, or its foot once reported. Nothing is sent.
         case "recipeResult":
             selectedTab = .recipe
-            recipeViewModel.path = [.result(id: recipeViewModel.saveDemoRecipe(demoFile(Recipe.self)))]
+            if let kind = arguments.string(forKey: "demoRecipePictures") {
+                let id = recipeViewModel.saveDemoPictureRecipe(kind, given: demoFile(Recipe.self))
+                recipeViewModel.path = [.result(id: id)]
+                recipeViewModel.showDemoPictureNotice(kind, entryID: id)
+                if let report = arguments.string(forKey: "demoReport") { recipeViewModel.showReportDemo(report, entryID: id, isMenu: false) }
+            } else {
+                recipeViewModel.path = [.result(id: recipeViewModel.saveDemoRecipe(demoFile(Recipe.self)))]
+            }
         case "recipeMenu":
             selectedTab = .recipe
-            recipeViewModel.path = [.result(id: recipeViewModel.saveDemoMenu(demoFile(RecipeMenu.self)))]
+            let id = recipeViewModel.saveDemoMenu(demoFile(RecipeMenu.self))
+            recipeViewModel.path = [.result(id: id)]
+            if let report = arguments.string(forKey: "demoReport") { recipeViewModel.showReportDemo(report, entryID: id, isMenu: true) }
         case "scan":
             if let path = arguments.string(forKey: "demoScanImage"), let image = UIImage(contentsOfFile: path),
                let barcode = arguments.string(forKey: "demoScanBarcode"),
@@ -632,6 +659,10 @@ extension RootTabView {
         case "buyRecipes":
             selectedTab = .recipe
             recipeViewModel.showsBuySheet = true
+        // The Pictures sheet over the form (with `-demoRecipeCredits` and `-demoPictureLevel`).
+        case "picturesSheet":
+            selectedTab = .recipe
+            recipeViewModel.showsPicturesSheet = true
         case "welcomeSignIn":
             selectedTab = .recipe
             recipeViewModel.welcomeSheet = WelcomeSheetRequest(recipes: recipeViewModel.credits.welcomeHint?.recipes ?? 0)

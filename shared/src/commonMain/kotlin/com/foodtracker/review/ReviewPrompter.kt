@@ -77,6 +77,13 @@ class ReviewPrompter(
         sessionBlocked = true
     }
 
+    /** A recipe or menu was reported ("Report this recipe" received by our server): something
+     *  was wrong in front of the person, so no rating request follows in this session (owner,
+     *  2026-11-17). Opening the sheet, or one that failed to send, doesn't count by itself. */
+    fun onReportSent() {
+        sessionBlocked = true
+    }
+
     fun onPantrySize(count: Int) {
         if (count > record.mostItemsSeen) update(record.copy(mostItemsSeen = count))
     }

@@ -41,6 +41,50 @@
       "collectionGroup": "generations",
       "fieldPath": "menu",
       "indexes": []
+    },
+    {
+      "collectionGroup": "recipeImages",
+      "fieldPath": "expiresAt",
+      "ttl": true,
+      "indexes": []
+    },
+    {
+      "collectionGroup": "recipeImages",
+      "fieldPath": "data",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "reportable",
+      "fieldPath": "expiresAt",
+      "ttl": true,
+      "indexes": []
+    },
+    {
+      "collectionGroup": "reports",
+      "fieldPath": "expiresAt",
+      "ttl": true,
+      "indexes": []
+    },
+    {
+      "collectionGroup": "reports",
+      "fieldPath": "snapshot",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "reports",
+      "fieldPath": "note",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "reportPictures",
+      "fieldPath": "expiresAt",
+      "ttl": true,
+      "indexes": []
+    },
+    {
+      "collectionGroup": "reportPictures",
+      "fieldPath": "data",
+      "indexes": []
     }
   ]
 }

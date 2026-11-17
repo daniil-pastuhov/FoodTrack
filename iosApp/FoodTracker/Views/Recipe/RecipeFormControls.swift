@@ -684,6 +684,10 @@ struct RecipeIntroSheet: View {
                             supporting: L10n.recipeIntroPacksMessage(credits.costs, menuSets: credits.serverTakesMenuDays, lowestPrice: credits.lowestPackPrice)
                         )
                     }
+                    // One sentence per picture level our server prices; nothing when it prices none.
+                    if credits.serverTakesRecipeImage, let pictures = L10n.recipeImageCostLines(credits.costs) {
+                        OnboardingRow(.image, title: L10n.recipeImageTitle, supporting: pictures)
+                    }
                 }
             }
             Text(L10n.recipeIntroAgain)

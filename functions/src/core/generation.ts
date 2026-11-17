@@ -20,11 +20,13 @@ import {
   type GenerateResponse,
   type Menu,
   type Recipe,
+  type RecipeImageWire,
 } from "../contract";
 import {
   CREDITS_PER_CONTENT_REFUND,
   CREDITS_PER_TIMEOUT_REFUND,
   GENERATION_TTL_MS,
+  IMAGE,
   JUDGE,
   MAX_OUTPUT_TOKENS,
   REVENUE_WINDOW_DAYS,
@@ -36,12 +38,17 @@ import {
 } from "../constants";
 import { buildPrompt, inputTokenBound, newCanary } from "../adapters/prompt";
 import { JUDGE_INSTRUCTION } from "../adapters/gemini";
-import { QUALITY_OUTPUT_RULES, SUSPICIOUS_OUTPUT_RULES, checkOutput, hasEnoughItems, usableStaples } from "./outputSafety";
+import { QUALITY_OUTPUT_RULES, SUSPICIOUS_OUTPUT_RULES, checkImageBrief, checkOutput, checkStepBriefs, hasEnoughItems, usableStaples } from "./outputSafety";
+import { briefRefused, makeRecipeImage, makeStepImages, type ImageOutcome } from "./recipeImage";
 import {
   assertOpen,
   costKeyOf,
   dailySpendCeiling,
+  REPORTABLE_DAYS,
+  generationImageRef,
   generationRef,
+  reportableRef,
+  imageReservedMicroUsdOf,
   isClosed,
   microUsd,
   paidAllowance,
@@ -50,6 +57,7 @@ import {
   userRef,
   utcDay,
   type GenerationDoc,
+  type GenerationImageDoc,
   type RuntimeConfig,
   type UserDoc,
 } from "../model";
@@ -65,6 +73,10 @@ import {
   type LlmUsage,
 } from "../ports";
 
+/**
+ * A generation's response without its picture, which withImage adds (it is in its own document).
+ * `imageFailed` is set on a DONE recipe that was asked with a picture and delivered without one.
+ */
 function fromDoc(doc: GenerationDoc, balance: number, costs: Costs): GenerateResponse {
   switch (doc.state) {
     case "done":
@@ -72,6 +84,8 @@ function fromDoc(doc: GenerationDoc, balance: number, costs: Costs): GenerateRes
         status: "DONE",
         ...(doc.recipe ? { recipe: doc.recipe } : {}),
         ...(doc.menu ? { menu: doc.menu } : {}),
+        ...(doc.imageFailed ? { imageFailed: true as const } : {}),
+        ...(doc.stepImagesFailed ? { stepImagesFailed: true as const } : {}),
         balance,
         charged: true,
         costs,
@@ -86,10 +100,18 @@ function fromDoc(doc: GenerationDoc, balance: number, costs: Costs): GenerateRes
 /** What one request costs in credits, may spend in tokens, and reserves in estimated money. */
 export interface Plan {
   costKey: CostKey;
+  /** With a picture: the table's `recipeImage`. */
   cost: number;
   limits: GenerationLimits;
+  /** With a picture: the picture's price included. */
   reservedMicroUsd: number;
   inputHash: string;
+  /**
+   * A request with `image` ("dish" or "steps"): the dish and steps shares of `cost` and the reserved price of every picture, or
+   * `unavailable` when pictures are off (no `recipeImage` in the table, no price for the selected
+   * provider and model): then the request is refused before anything is reserved.
+   */
+  image?: { share: number; stepsShare: number; stepsMax: number; reservedMicroUsd: number } | { unavailable: true };
 }
 
 /**
@@ -108,12 +130,34 @@ export function planFor(req: GenerateRequest, config: RuntimeConfig): Plan {
   const maxOutputTokens = MAX_OUTPUT_TOKENS[costKey];
   const hardTokenCeiling = THINKING_FACTOR * maxOutputTokens;
   const judge = config.outputJudge === "off" ? 0 : judgeWorstCaseMicroUsd(config, maxOutputTokens);
+  const text = costOf(config.costs, costKey);
+  let image: Plan["image"];
+  if (req.image) {
+    // Every picture at the dearer of the model and its fallback: either may make it.
+    const price = imageReservedMicroUsdOf(config);
+    const dish = config.costs.recipeImage;
+    const steps = config.costs.recipeImageSteps;
+    const max = req.image === "steps" ? (req.stepImagesMax ?? 0) : 0;
+    if (price === null || dish === undefined || (req.image === "steps" && (steps === undefined || max === 0))) {
+      image = { unavailable: true };
+    } else {
+      image = {
+        share: dish - text,
+        stepsShare: req.image === "steps" ? steps! - dish : 0,
+        stepsMax: max,
+        // The worst case: the dish's picture and every step picture asked, each at its price.
+        reservedMicroUsd: price * (1 + max),
+      };
+    }
+  }
+  const picture = image && "share" in image ? image : undefined;
   return {
     costKey,
-    cost: costOf(config.costs, costKey),
+    cost: text + (picture ? picture.share + picture.stepsShare : 0),
     limits: { maxOutputTokens, hardTokenCeiling },
-    reservedMicroUsd: microUsd(config.prices, inputTokenBound(req), hardTokenCeiling) + judge,
+    reservedMicroUsd: microUsd(config.prices, inputTokenBound(req), hardTokenCeiling) + judge + (picture?.reservedMicroUsd ?? 0),
     inputHash: inputHashOf(req),
+    ...(image ? { image } : {}),
   };
 }
 
@@ -125,7 +169,7 @@ const sameInputs = (doc: GenerationDoc, req: GenerateRequest, plan: Plan) =>
 
 type Reservation =
   | { reserved: true; balance: number }
-  | { reserved: false; response: GenerateResponse; user: UserDoc | undefined };
+  | { reserved: false; response: GenerateResponse; user: UserDoc | undefined; generation: GenerationDoc };
 
 /**
  * The model-spend thresholds that are logged (`spend_threshold`), each at most once per UTC day:
@@ -229,10 +273,12 @@ async function reserveTx(
       if (!sameInputs(existing, req, plan)) {
         fail("failed-precondition", "REQUEST_ID_REUSED", "This requestId was used for a different request");
       }
-      return { reserved: false, response: fromDoc(existing, user?.balance ?? 0, config.costs), user };
+      return { reserved: false, response: fromDoc(existing, user?.balance ?? 0, config.costs), user, generation: existing };
     }
 
     if (!config.generationEnabled) fail("unavailable", "GENERATION_DISABLED", "Recipe generation is paused");
+    // Pictures off (or switched to an unpriced model) since the client last saw the table.
+    if (plan.image && "unavailable" in plan.image) fail("unavailable", "IMAGE_UNAVAILABLE", "Recipe pictures are not available");
     if (!user || user.balance < cost) fail("failed-precondition", "INSUFFICIENT_CREDITS", "Not enough recipes left");
     if (user.inFlight > 0) fail("failed-precondition", "BUSY", "Another recipe is being generated");
 
@@ -316,15 +362,44 @@ async function reserveTx(
       reservedMicroUsd,
       statsDay: day,
       createdAt: Timestamp.fromMillis(now),
-      deadlineAt: Timestamp.fromMillis(now + TIMINGS[req.kind].reservationMs),
+      deadlineAt: Timestamp.fromMillis(now + TIMINGS[req.kind].reservationMs + (req.image ? IMAGE.reservationExtraMs[req.image] : 0)),
+      ...(plan.image && "share" in plan.image
+        ? {
+            imageLevel: req.image!,
+            imageCost: plan.image.share,
+            ...(req.image === "steps" ? { stepImagesCost: plan.image.stepsShare, stepImagesMax: plan.image.stepsMax } : {}),
+            imageReservedMicroUsd: plan.image.reservedMicroUsd,
+            imageProvider: config.image.provider,
+            imageModel: config.image.model,
+          }
+        : {}),
     };
     tx.create(gRef, doc);
     return { reserved: true, balance: user.balance - cost };
   });
 }
 
+/** The pictures of one recipe: the dish's, and each marked step's. */
+export interface PictureOutcome {
+  dish: ImageOutcome;
+  steps: { step: number; outcome: ImageOutcome }[];
+}
+
 export type Outcome =
-  | { ok: true; recipe?: Recipe; menu?: Menu; usage?: LlmUsage }
+  | {
+      ok: true;
+      recipe?: Recipe;
+      menu?: Menu;
+      usage?: LlmUsage;
+      /** A recipe asked with a picture: the checked brief, or why it was refused. */
+      imageBrief?: string;
+      briefRule?: string;
+      /** Level "steps": the kept step briefs (0-based step), and the rules of those refused. */
+      stepBriefs?: { step: number; brief: string }[];
+      stepBriefsRefused?: string[];
+      /** A recipe asked with pictures: what came of them (core/recipeImage.ts). */
+      picture?: PictureOutcome;
+    }
   | {
       ok: false;
       failureClass: FailureClass;
@@ -395,8 +470,14 @@ export async function settle(
 
     const reserved = gen.reservedMicroUsd ?? 0;
     const usage = outcome.usage;
+    // A picture is booked at its price when the provider may have charged for it, else at 0;
+    // with the text's usage unknown, the whole reservation stays booked.
+    const missing: ImageOutcome = { ok: false, failure: "MISSING", microUsd: 0, model: null };
+    const picture: PictureOutcome | undefined = outcome.ok && gen.imageLevel ? outcome.picture ?? { dish: missing, steps: [] } : undefined;
+    const pictures = picture ? [picture.dish, ...picture.steps.map((s) => s.outcome)] : [];
+    const pictureMicroUsd = pictures.reduce((sum, p) => sum + p.microUsd, 0);
     const actual = usage
-      ? microUsd(config.prices, usage.inputTokens, usage.outputTokens + usage.thinkingTokens)
+      ? microUsd(config.prices, usage.inputTokens, usage.outputTokens + usage.thinkingTokens) + pictureMicroUsd
       : reserved;
     const statsDay = gen.statsDay ?? utcDay(gen.createdAt.toMillis());
 
@@ -407,10 +488,30 @@ export async function settle(
     let finalDoc: GenerationDoc;
     let refunded = false;
     let rejectionsToday: number | null = null;
+    /** Credits of the picture's share given back (a recipe delivered without its picture). */
+    let givenBack = 0;
 
     if (outcome.ok) {
-      userUpdate.consumedCredits = FieldValue.increment(gen.cost);
-      chargeFreeFirst(user, gen.cost, userUpdate);
+      // The text was delivered. Without its picture, the picture's share as stored at
+      // reservation is always given back: outside the content and timeout allowances, not an
+      // infrastructure refund (infraRefundsPerDay), whatever the reason.
+      // The rule: no dish picture: the whole picture share back (dish and steps), whatever step
+      // pictures came. Dish picture, level "steps" and not one step picture delivered (none marked,
+      // or every one failed): the steps' share back. At least one step picture, even fewer than
+      // the maximum: kept.
+      const dishMissing = !!picture && !picture.dish.ok;
+      const stepsMissing = gen.imageLevel === "steps" && !!picture && !picture.steps.some((s) => s.outcome.ok);
+      givenBack = Math.max(0, Math.min(gen.cost, dishMissing
+        ? (gen.imageCost ?? 0) + (gen.stepImagesCost ?? 0)
+        : stepsMissing ? gen.stepImagesCost ?? 0 : 0));
+      const kept = gen.cost - givenBack;
+      const deliveredSteps = picture ? picture.steps.filter((s) => s.outcome.ok) : [];
+      userUpdate.consumedCredits = FieldValue.increment(kept);
+      chargeFreeFirst(user, kept, userUpdate);
+      if (givenBack > 0) {
+        userUpdate.balance = FieldValue.increment(givenBack);
+        balance += givenBack;
+      }
       finalDoc = {
         ...gen,
         state: "done",
@@ -418,7 +519,35 @@ export async function settle(
         expiresAt,
         ...(outcome.recipe ? { recipe: outcome.recipe } : {}),
         ...(outcome.menu ? { menu: outcome.menu } : {}),
+        ...(picture?.dish.ok ? { imageStored: true as const } : {}),
+        ...(picture && !picture.dish.ok ? { imageFailed: true as const, imageFailure: picture.dish.failure.slice(0, 40) } : {}),
+        ...(gen.imageLevel === "steps" && picture
+          ? {
+              stepImagesMarked: picture.steps.length,
+              stepImagesStored: deliveredSteps.map((s) => s.step),
+              // Some step picture asked was not delivered (the share follows stepsMissing).
+              ...(picture.steps.some((s) => !s.outcome.ok) ? { stepImagesFailed: true as const } : {}),
+            }
+          : {}),
       };
+      // The lasting trace that this account had this result, for reportRecipe after the generation expires.
+      tx.set(reportableRef(deps.db, uid, requestId), {
+        kind: gen.kind,
+        at: Timestamp.fromMillis(now),
+        expiresAt: Timestamp.fromMillis(now + REPORTABLE_DAYS * 86_400_000),
+      });
+      // One document per picture: each stays far below Firestore's 1 MiB limit.
+      const stored: { step?: number; out: ImageOutcome }[] = picture ? [{ out: picture.dish }, ...deliveredSteps.map((s) => ({ step: s.step, out: s.outcome }))] : [];
+      for (const { step, out } of stored) {
+        if (!out.ok) continue;
+        tx.set(generationImageRef(deps.db, uid, requestId, step), {
+          mimeType: "image/jpeg",
+          data: out.image.data,
+          width: out.image.width,
+          height: out.image.height,
+          expiresAt,
+        });
+      }
     } else {
       if (outcome.failureClass === "quality") {
         // The quality gate refused a clean answer: the service did not deliver what was paid
@@ -452,8 +581,16 @@ export async function settle(
         userUpdate.balance = FieldValue.increment(gen.cost);
         balance += gen.cost;
       } else {
-        userUpdate.consumedCredits = FieldValue.increment(gen.cost);
-        chargeFreeFirst(user, gen.cost, userUpdate);
+        // A charged text failure keeps only the text's share: no picture was attempted, so the
+        // picture shares stored at reservation always come back.
+        givenBack = Math.max(0, Math.min(gen.cost, (gen.imageCost ?? 0) + (gen.stepImagesCost ?? 0)));
+        const kept = gen.cost - givenBack;
+        userUpdate.consumedCredits = FieldValue.increment(kept);
+        chargeFreeFirst(user, kept, userUpdate);
+        if (givenBack > 0) {
+          userUpdate.balance = FieldValue.increment(givenBack);
+          balance += givenBack;
+        }
       }
       if (outcome.rejection) {
         rejectionsToday = (user?.promptRejections?.day === today ? user.promptRejections.count : 0) + 1;
@@ -485,6 +622,19 @@ export async function settle(
       [outcome.ok ? "succeeded" : `${outcome.failureClass}Failures`]: FieldValue.increment(1),
     };
     if (refunded) statsUpdate.refundedCredits = FieldValue.increment(gen.cost);
+    if (gen.imageLevel) {
+      statsUpdate.imageRequests = FieldValue.increment(1);
+      if (picture) {
+        const delivered = pictures.filter((p) => p.ok).length;
+        if (delivered) statsUpdate.imagesDelivered = FieldValue.increment(delivered);
+        if (pictures.length - delivered) statsUpdate.imageFailures = FieldValue.increment(pictures.length - delivered);
+        statsUpdate.imageMicroUsd = FieldValue.increment(pictureMicroUsd);
+      }
+      if (givenBack > 0) {
+        statsUpdate.refundedCredits = FieldValue.increment(givenBack);
+        statsUpdate.imageGivenBackCredits = FieldValue.increment(givenBack);
+      }
+    }
     if (usage) {
       statsUpdate.inputTokens = FieldValue.increment(usage.inputTokens);
       statsUpdate.outputTokens = FieldValue.increment(usage.outputTokens);
@@ -504,6 +654,16 @@ export async function settle(
     };
   }, { maxAttempts: SETTLE_ATTEMPTS });
 }
+
+/** A checked answer, with the picture briefs when pictures were asked. */
+type CheckedAnswer = {
+  recipe?: Recipe;
+  menu?: Menu;
+  imageBrief?: string;
+  briefRule?: string;
+  stepBriefs?: { step: number; brief: string }[];
+  stepBriefsRefused?: string[];
+};
 
 /** Sum of two calls' usage; unknown when either is unknown (then the worst case stays booked). */
 function addUsage(a: LlmUsage | undefined, b: LlmUsage | undefined): LlmUsage | undefined {
@@ -533,7 +693,7 @@ export async function runGenerator(
   const timer = setTimeout(() => controller.abort(), TIMINGS[req.kind].llmAbortMs);
   const canary = newCanary();
   const prompt = buildPrompt(req, canary);
-  let checked: { recipe?: Recipe; menu?: Menu };
+  let checked: CheckedAnswer;
   let usage: LlmUsage | undefined;
   try {
     const result = await deps.generator.generate(req, prompt, controller.signal, limits);
@@ -559,6 +719,17 @@ export async function runGenerator(
       };
     }
     checked = check.value;
+    if (req.image) {
+      // Only now, on an answer whose text passed: the picture's brief, checked on its own. A brief
+      // refused never makes the recipe fail; the picture is then not made.
+      const ctx = { req, canary, systemInstruction: prompt.systemInstruction };
+      const brief = checkImageBrief(result.output, ctx);
+      checked = brief.ok ? { ...checked, imageBrief: brief.brief } : { ...checked, briefRule: brief.rule };
+      if (req.image === "steps" && checked.recipe) {
+        const steps = checkStepBriefs(result.output, ctx, checked.recipe.steps.length, req.stepImagesMax ?? 0);
+        checked = { ...checked, stepBriefs: steps.steps, stepBriefsRefused: steps.refused };
+      }
+    }
   } catch (e) {
     const u = e instanceof GenerationError ? e.usage : undefined;
     if (controller.signal.aborted) return { ok: false, failureClass: "infra", reason: "timeout", usage: u };
@@ -584,14 +755,21 @@ async function runJudge(
   uid: string,
   req: GenerateRequest,
   config: RuntimeConfig,
-  checked: { recipe?: Recipe; menu?: Menu },
+  checked: CheckedAnswer,
   genUsage: LlmUsage | undefined,
 ): Promise<Outcome> {
   const enforce = config.outputJudge === "enforce";
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), JUDGE.abortMs[req.kind]);
   try {
-    const { verdict, usage } = await deps.judge.judge(checked, controller.signal);
+    // The judge sees the answer and, when a picture was asked, the brief that would draw it.
+    const judged = {
+      ...(checked.recipe ? { recipe: checked.recipe } : {}),
+      ...(checked.menu ? { menu: checked.menu } : {}),
+      ...(checked.imageBrief ? { imageBrief: checked.imageBrief } : {}),
+      ...(checked.stepBriefs?.length ? { stepBriefs: checked.stepBriefs.map((s) => s.brief) } : {}),
+    };
+    const { verdict, usage } = await deps.judge.judge(judged, controller.signal);
     const total = addUsage(genUsage, usage);
     deps.logger.info("prompt_judge_verdict", { uidHash: uidHash(uid), kind: req.kind, verdict, mode: config.outputJudge });
     if (verdict !== "ok" && enforce) {
@@ -649,7 +827,7 @@ async function recordInputRejection(deps: Deps, uid: string, details: { field: s
 export function logLlmCall(
   deps: Deps,
   uid: string,
-  gen: Pick<GenerationDoc, "kind" | "courses" | "days" | "cost" | "reservedMicroUsd"> & { taste?: boolean; staples?: number },
+  gen: Pick<GenerationDoc, "kind" | "courses" | "days" | "cost" | "reservedMicroUsd"> & { imageLevel?: string; taste?: boolean; staples?: number },
   outcome: Outcome,
   settled: Settled,
   durationMs: number | null,
@@ -662,6 +840,12 @@ export function logLlmCall(
     days: gen.kind === "menu" ? (gen.days ?? 3) : null,
     taste: gen.taste ?? null,
     staples: gen.staples ?? null,
+    // Whether a picture was asked, and what came of it (the image_call line has the rest).
+    image: gen.imageLevel ?? null,
+    imageOutcome: outcome.ok && gen.imageLevel && outcome.picture ? (outcome.picture.dish.ok ? "done" : outcome.picture.dish.failure) : null,
+    stepImages: outcome.ok && gen.imageLevel === "steps" && outcome.picture
+      ? `${outcome.picture.steps.filter((s) => s.outcome.ok).length}/${outcome.picture.steps.length}`
+      : null,
     model: u?.model ?? null,
     inputTokens: u?.inputTokens ?? null,
     outputTokens: u?.outputTokens ?? null,
@@ -693,7 +877,7 @@ export async function generateRecipe(deps: Deps, caller: Caller, data: unknown):
   const config = await deps.config();
   let req: GenerateRequest;
   try {
-    req = validateGenerateRequest(data, deps.now(), config.tasteQuiz.hidden);
+    req = validateGenerateRequest(data, deps.now(), config.tasteQuiz.hidden, config.image.maxStepImages);
   } catch (e) {
     if (e instanceof HttpsError && isNameRejection(e.details)) {
       await recordInputRejection(deps, caller.uid, e.details, isSuspiciousRejection(e.details));
@@ -708,20 +892,94 @@ export async function generateRecipe(deps: Deps, caller: Caller, data: unknown):
   }
   const plan = planFor(req, config);
   const reservation = await reserve(deps, caller.uid, req, config, plan);
-  if (!reservation.reserved) return { ...reservation.response, ...capabilitiesOf(config), ...(await blockFlag(deps.db, reservation.user, config)), ...(await welcomeFlag(deps, config)) };
+  if (!reservation.reserved) {
+    const response = await withImage(deps, caller.uid, req.requestId, reservation.generation, reservation.response);
+    return { ...response, ...capabilitiesOf(config), ...(await blockFlag(deps.db, reservation.user, config)), ...(await welcomeFlag(deps, config)) };
+  }
   const started = deps.now();
-  const outcome = await runGenerator(deps, caller.uid, req, plan.limits, config);
+  let outcome = await runGenerator(deps, caller.uid, req, plan.limits, config);
   const durationMs = deps.now() - started;
+  if (outcome.ok && req.image) {
+    // The text passed every check: now its picture, from the checked brief only.
+    if (outcome.imageBrief === undefined) {
+      deps.logger.warn("image_brief_rejected", { uidHash: uidHash(caller.uid), rule: outcome.briefRule ?? "BRIEF_MISSING" });
+    }
+    for (const rule of outcome.stepBriefsRefused ?? []) {
+      deps.logger.warn("image_brief_rejected", { uidHash: uidHash(caller.uid), rule, step: true });
+    }
+    // A generation the sweeper settled meanwhile gets no picture: it would be paid for and discarded.
+    const stillPending = (await generationRef(deps.db, caller.uid, req.requestId).get()).data()?.state === "pending";
+    const settledAway: ImageOutcome = { ok: false, failure: "SETTLED", microUsd: 0, model: null };
+    // No dish picture, no step pictures: without a dish brief none is asked at all. The dish's
+    // picture first, within IMAGE.budgetMs.dish; only when it was made, the step pictures, at most
+    // IMAGE.maxParallel at once, within IMAGE.budgetMs.steps from the same start (constants.ts IMAGE
+    // has the arithmetic). When the dish's fails, no step picture is asked (NO_DISH, nothing spent).
+    const withDish = stillPending && outcome.imageBrief !== undefined;
+    const stepBriefs = withDish ? (outcome.stepBriefs ?? []) : [];
+    const picturesFrom = deps.now();
+    const dish = !stillPending
+      ? settledAway
+      : outcome.imageBrief !== undefined
+        ? await makeRecipeImage(deps, caller.uid, outcome.imageBrief, config, picturesFrom + IMAGE.budgetMs.dish)
+        : briefRefused(outcome.briefRule ?? "MISSING");
+    const noDish: ImageOutcome = { ok: false, failure: "NO_DISH", microUsd: 0, model: null };
+    const steps = dish.ok && stepBriefs.length > 0
+      ? await makeStepImages(deps, caller.uid, stepBriefs, config, picturesFrom + IMAGE.budgetMs.steps)
+      : stepBriefs.map(() => noDish);
+    outcome = { ...outcome, picture: { dish, steps: stepBriefs.map((s, i) => ({ step: s.step, outcome: steps[i] })) } };
+  }
   const settled = await settle(deps, caller.uid, req.requestId, outcome, config);
   logLlmCall(
     deps,
     caller.uid,
-    { kind: req.kind, courses: req.courses, days: req.days, cost: plan.cost, reservedMicroUsd: plan.reservedMicroUsd, taste: req.taste !== undefined, staples: usableStaples(req).length },
+    { kind: req.kind, courses: req.courses, days: req.days, cost: plan.cost, reservedMicroUsd: plan.reservedMicroUsd, taste: req.taste !== undefined, staples: usableStaples(req).length, ...(req.image ? { imageLevel: req.image } : {}) },
     outcome,
     settled,
     durationMs,
   );
-  return { ...settled.response, ...capabilitiesOf(config), ...(await blockFlag(deps.db, settled.user, config)), ...(await welcomeFlag(deps, config)) };
+  // The pictures just made are sent from memory; a generation settled elsewhere is read back.
+  const response = settled.settledHere && outcome.ok && outcome.picture
+    ? withPictures(settled.response, settled.generation, outcome.picture)
+    : await withImage(deps, caller.uid, req.requestId, settled.generation, settled.response);
+  return { ...response, ...capabilitiesOf(config), ...(await blockFlag(deps.db, settled.user, config)), ...(await welcomeFlag(deps, config)) };
+}
+
+function wireImage(image: { data: Buffer; width: number; height: number }): RecipeImageWire {
+  return { mimeType: "image/jpeg", data: Buffer.from(image.data).toString("base64"), width: image.width, height: image.height };
+}
+
+/** A response with the pictures made in this call (only on a generation settled here as DONE). */
+function withPictures(response: GenerateResponse, gen: GenerationDoc, picture: PictureOutcome): GenerateResponse {
+  if (gen.state !== "done") return response;
+  const steps = picture.steps.flatMap((s) => (s.outcome.ok ? [{ step: s.step, image: wireImage(s.outcome.image) }] : []));
+  return {
+    ...response,
+    ...(picture.dish.ok ? { image: wireImage(picture.dish.image) } : {}),
+    ...(gen.imageLevel === "steps" && picture.steps.length > 0 ? { stepImages: steps } : {}),
+  };
+}
+
+/**
+ * A DONE generation's response with its stored pictures (recipeImages/main and step-<i>), for a
+ * retry with the same requestId and for getGeneration. A picture whose document is gone
+ * (expired) is left out.
+ */
+async function withImage(deps: Deps, uid: string, requestId: string, gen: GenerationDoc, response: GenerateResponse): Promise<GenerateResponse> {
+  if (gen.state !== "done" || !gen.imageLevel) return response;
+  const stepIndices = gen.stepImagesStored ?? [];
+  const refs = [...(gen.imageStored ? [generationImageRef(deps.db, uid, requestId)] : []), ...stepIndices.map((i) => generationImageRef(deps.db, uid, requestId, i))];
+  const snaps = refs.length ? await deps.db.getAll(...refs) : [];
+  const dish = gen.imageStored ? snaps[0]?.data() : undefined;
+  const stepSnaps = gen.imageStored ? snaps.slice(1) : snaps;
+  const steps = stepIndices.flatMap((step, i) => {
+    const d = stepSnaps[i]?.data() as GenerationImageDoc | undefined;
+    return d ? [{ step, image: wireImage(d) }] : [];
+  });
+  return {
+    ...response,
+    ...(dish ? { image: wireImage(dish as GenerationImageDoc) } : {}),
+    ...(gen.imageLevel === "steps" && (gen.stepImagesMarked ?? 0) > 0 ? { stepImages: steps } : {}),
+  };
 }
 
 /**
@@ -740,5 +998,6 @@ export async function getGeneration(deps: Deps, caller: Caller, data: unknown): 
   const gen = gSnap.data();
   if (!gen) fail("not-found", "UNKNOWN_REQUEST", "No generation with this requestId");
   const user = uSnap.data();
-  return { ...fromDoc(gen, isClosed(user) ? 0 : (user?.balance ?? 0), config.costs), ...capabilitiesOf(config), ...(await blockFlag(deps.db, user, config)), ...(await welcomeFlag(deps, config)) };
+  const response = await withImage(deps, caller.uid, requestId, gen, fromDoc(gen, isClosed(user) ? 0 : (user?.balance ?? 0), config.costs));
+  return { ...response, ...capabilitiesOf(config), ...(await blockFlag(deps.db, user, config)), ...(await welcomeFlag(deps, config)) };
 }

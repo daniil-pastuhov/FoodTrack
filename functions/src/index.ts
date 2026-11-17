@@ -21,6 +21,7 @@ import * as logger from "firebase-functions/logger";
 import { defineInt, defineSecret, defineString } from "firebase-functions/params";
 import {
   CONSUME_APP_CHECK_TOKENS,
+  DEFAULT_IMAGE_SELECTION,
   GENERATE_TIMEOUT_SECONDS,
   IOS_BUNDLE_ID,
   KMS_APPLE_TOKEN_KEY,
@@ -28,9 +29,11 @@ import {
   KMS_LOCATION,
   REGION,
 } from "./constants";
-import { RuntimeConfigCache, loadRuntimeConfig, type RuntimeConfig } from "./model";
+import { RuntimeConfigCache, loadRuntimeConfig, validImageSelection, type ImageSelection, type RuntimeConfig } from "./model";
 import type { Caller, Deps } from "./ports";
 import { GeminiOutputJudge, GeminiRecipeGenerator } from "./adapters/gemini";
+import { ImageRouter, OpenAIImageGenerator, VertexImageGenerator } from "./adapters/image";
+import { SecretReader } from "./adapters/secretManager";
 import { GooglePlayVerifier } from "./adapters/play";
 import { AppleAppStoreVerifier } from "./adapters/appstore";
 import { AppleSignInRevoker } from "./adapters/appleRevoke";
@@ -39,6 +42,7 @@ import {
   EmulatorAppStore,
   EmulatorAppleTokens,
   EmulatorGenerator,
+  EmulatorImageGenerator,
   EmulatorJudge,
   EmulatorPlay,
   emulatorFakesEnabled,
@@ -54,6 +58,7 @@ import {
 } from "./core/account";
 import { sweep } from "./core/sweeper";
 import { getTasteQuiz as tasteQuizCore } from "./taste/quiz";
+import { reportRecipe as reportCore } from "./core/reports";
 import {
   WelcomeDayCounter,
   claimWelcome as claimWelcomeCore,
@@ -91,6 +96,28 @@ const jailbreakFilter = defineString("GEMINI_JAILBREAK_FILTER", {
   default: "false",
   description: "true adds HARM_CATEGORY_JAILBREAK (Vertex Preview; only for models that support it).",
 });
+// Recipe pictures (README "Recipe pictures"). The provider and model are only defaults:
+// config/runtime.image overrides them at run time, without a deploy.
+const imageProvider = defineString("IMAGE_PROVIDER", {
+  default: DEFAULT_IMAGE_SELECTION.provider,
+  description: "Default provider of recipe pictures: vertex, openai or off (config/runtime.image.provider overrides it).",
+});
+const imageModel = defineString("IMAGE_MODEL", {
+  default: DEFAULT_IMAGE_SELECTION.model,
+  description: "Default model id of recipe pictures at that provider (config/runtime.image.model overrides it).",
+});
+const imageFallbackModel = defineString("IMAGE_FALLBACK_MODEL", {
+  default: DEFAULT_IMAGE_SELECTION.fallbackModel,
+  description: "Default fallback model id at the same provider, asked once when the model fails for capacity; empty for none (config/runtime.image.fallbackModel overrides it).",
+});
+const vertexImageLocation = defineString("VERTEX_IMAGE_LOCATION", {
+  default: "global",
+  description: "Vertex AI location of the picture models (gemini-3.1-flash-lite-image and gemini-nano-banana-2.1 are offered on global only).",
+});
+const openAiKeySecret = defineString("OPENAI_API_KEY_SECRET", {
+  default: "OPENAI_API_KEY",
+  description: "Secret Manager secret holding the OpenAI API key; read at run time only while openai is the picture provider.",
+});
 const appleAppId = defineInt("APPLE_APP_ID", { description: "Numeric App Store app id (App Store Connect > App Information)" });
 const appStoreKeyId = defineString("APPSTORE_KEY_ID", { description: "App Store Server API (In-App Purchase) key id" });
 const appStoreIssuerId = defineString("APPSTORE_ISSUER_ID", { description: "App Store Connect API issuer id" });
@@ -121,9 +148,26 @@ function appleRoots(): Buffer[] {
   return [readFileSync(join(__dirname, "..", "certs", "AppleRootCA-G3.cer"))];
 }
 
+/** The picture provider and model the parameters name; invalid ones turn pictures off (fail closed). */
+function imageDefaults(): ImageSelection {
+  const s = validImageSelection({ provider: imageProvider.value(), model: imageModel.value(), fallbackModel: imageFallbackModel.value() }, DEFAULT_IMAGE_SELECTION);
+  if (!s) logger.warn("IMAGE_PROVIDER, IMAGE_MODEL or IMAGE_FALLBACK_MODEL is invalid; recipe pictures are off");
+  return s ?? { ...DEFAULT_IMAGE_SELECTION, provider: "off" };
+}
+
 function configSource(): () => Promise<RuntimeConfig> {
-  const cache = new RuntimeConfigCache(() => loadRuntimeConfig(getFirestore(), logger), () => Date.now());
+  const defaults = imageDefaults();
+  const cache = new RuntimeConfigCache(() => loadRuntimeConfig(getFirestore(), logger, defaults), () => Date.now());
   return () => cache.get();
+}
+
+/** Every picture provider, built on first use (adapters/image.ts ImageRouter). */
+function imageRouter(project: string): ImageRouter {
+  const openAiKey = new SecretReader({ project, secret: openAiKeySecret.value() });
+  return new ImageRouter({
+    vertex: () => new VertexImageGenerator({ project, location: vertexImageLocation.value() }),
+    openai: () => new OpenAIImageGenerator({ apiKey: () => openAiKey.get() }),
+  });
 }
 
 /**
@@ -156,6 +200,7 @@ function getDeps(): Deps {
       appStore: new EmulatorAppStore(),
       generator: new EmulatorGenerator(),
       judge: new EmulatorJudge(),
+      imageGenerator: new EmulatorImageGenerator(),
       appleRevoker: new EmulatorAppleTokens(),
       sealer: new EnvelopeSealer(new LocalKeyWrapper()),
       now: () => Date.now(),
@@ -190,6 +235,7 @@ function getDeps(): Deps {
       thinkingLevel: geminiThinking.value(),
       jailbreakFilter: jailbreakFilter.value() === "true",
     }),
+    imageGenerator: imageRouter(process.env.GCLOUD_PROJECT ?? process.env.GOOGLE_CLOUD_PROJECT ?? ""),
     // Built per call: the Sign in with Apple key is a secret bound only to the functions that use it.
     appleRevoker: {
       revokeWithAuthorizationCode: (code) => appleClient().revokeWithAuthorizationCode(code),
@@ -285,6 +331,7 @@ const LIMITS = {
   mergeBalance: { maxInstances: 1, perMinute: 10 },
   deleteAccount: { maxInstances: 1, perMinute: 10 },
   registerAppleSignIn: { maxInstances: 1, perMinute: 10 },
+  reportRecipe: { maxInstances: 1, perMinute: 20 },
 } as const;
 
 const throttles = {
@@ -298,6 +345,7 @@ const throttles = {
   mergeBalance: new CallThrottle(LIMITS.mergeBalance.perMinute),
   deleteAccount: new CallThrottle(LIMITS.deleteAccount.perMinute),
   registerAppleSignIn: new CallThrottle(LIMITS.registerAppleSignIn.perMinute),
+  reportRecipe: new CallThrottle(LIMITS.reportRecipe.perMinute),
 };
 
 // --- Callables --------------------------------------------------------------------------------
@@ -432,6 +480,26 @@ export const registerAppleSignIn = onCall(
   (request) =>
     guarded("registerAppleSignIn", () =>
       withCaller(callerOf(request, throttles.registerAppleSignIn, CONSUME_APP_CHECK_TOKENS), (d, c) => registerAppleCore(d, c, request.data))),
+);
+
+// "Report this recipe" (CONTRACT.md `reportRecipe`): only results the server wrote, so a signed-in
+// caller (anonymous included) naming one of its generations. App Check enforced AND consumed
+// (each report takes a fresh limited-use token, so a script cannot replay one to fill the
+// database); throttled per uid and address, then the per-account and per-day ceilings of
+// config/runtime.reports.
+export const reportRecipe = onCall(
+  {
+    ...callable,
+    consumeAppCheckToken: CONSUME_APP_CHECK_TOKENS,
+    timeoutSeconds: 30,
+    maxInstances: LIMITS.reportRecipe.maxInstances,
+    concurrency: 1,
+  },
+  (request) =>
+    guarded("reportRecipe", () => {
+      const caller = callerOf(request, throttles.reportRecipe, CONSUME_APP_CHECK_TOKENS);
+      return reportCore(getDeps(), { uid: caller.uid }, request.data);
+    }),
 );
 
 // --- Background -------------------------------------------------------------------------------

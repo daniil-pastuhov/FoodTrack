@@ -36,6 +36,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.painter.Painter
+import android.net.Uri
+import com.foodtracker.android.recipe.RecipePictureFiles
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -260,9 +263,12 @@ private fun SavedRecipesList(
     isUnread: (String) -> Boolean = { false },
     selection: Set<String>? = null,
     onToggle: (String) -> Unit = {},
-    onStartSelection: (String) -> Unit = {}
+    onStartSelection: (String) -> Unit = {},
+    /** Previews only: drawn thumbnails by saved id, since they load no files. */
+    previewThumbnails: Map<String, Painter> = emptyMap()
 ) {
-    val resources = LocalContext.current.resources
+    val context = LocalContext.current
+    val resources = context.resources
     val navigator = LocalLarderNavigator.current
     if (saved.isEmpty()) {
         if (!loading) {
@@ -340,8 +346,14 @@ private fun SavedRecipesList(
                                         )
                                     }
                                 }
+                                // The dish's picture, kept with the saved recipe, when it has one.
+                                val picture = item.recipe?.picture
+                                val thumbnail = remember(item.id, picture) {
+                                    picture?.let { RecipePictureFiles.file(context, item.id, it) }?.let { Uri.fromFile(it).toString() }
+                                }
                                 LarderThumb(
-                                    imageUrl = null,
+                                    imageUrl = thumbnail,
+                                    painter = previewThumbnails[item.id],
                                     fallbackIcon = if (item.kind == SavedRecipeKind.MENU) LarderIcons.CalendarRange else LarderIcons.Utensils,
                                     background = if (selected) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.surfaceContainer
                                 )
@@ -399,6 +411,29 @@ internal fun SavedRecipesPreview() = LarderTheme {
             today = today,
             onDelete = {},
             isUnread = { it == "1" }
+        )
+    }
+}
+
+/** A recipe with pictures has its dish as the row's thumbnail; the others keep their icons. */
+@PreviewLightDark
+@Composable
+internal fun SavedRecipesPicturesPreview() = LarderTheme {
+    Surface(color = MaterialTheme.colorScheme.background) {
+        val today = LocalDate(2026, 11, 4)
+        val day = 86_400_000L
+        val noon = today.toEpochDays() * day + day / 2
+        SavedRecipesList(
+            saved = listOf(
+                SavedRecipe.of("1", Recipe(title = "Spinach and yoghurt eggs on sourdough toast", minutes = 15, steps = listOf("a"), source = RecipeSource.SERVER), noon),
+                SavedRecipe.of("2", Recipe(title = "Spinach yoghurt toast", minutes = 10, steps = listOf("a")), noon - day),
+                SavedRecipe.of("3", Recipe(title = "Slow-roasted salmon with spinach, yoghurt and sourdough crumb", minutes = 70, steps = listOf("a"), source = RecipeSource.SERVER), noon - 7 * day)
+            ),
+            loading = false,
+            padding = PaddingValues(0.dp),
+            today = today,
+            onDelete = {},
+            previewThumbnails = mapOf("1" to SampleDishPainter())
         )
     }
 }

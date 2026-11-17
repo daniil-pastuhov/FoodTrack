@@ -1050,17 +1050,17 @@
     <string name="recipe_allergen_consent_setting_on">You agreed on %1$s. Turn off to withdraw: our server then won\'t write recipes while allergens are set.</string>
     <string name="recipe_allergen_consent_setting_off">Needed for recipes from our server while allergens are set. We use it only for the request and don\'t keep it.</string>
     <plurals name="recipe_delete_body">
-        <item quantity="one">Your %1$d unused recipe will be lost and can\'t be refunded or restored. Your sign-in and email address are deleted from our server; a record of the purchases stays, no longer linked to you. Saved recipes and your pantry stay on this device.</item>
-        <item quantity="other">Your %1$d unused recipes will be lost and can\'t be refunded or restored. Your sign-in and email address are deleted from our server; a record of the purchases stays, no longer linked to you. Saved recipes and your pantry stay on this device.</item>
+        <item quantity="one">Your %1$d unused recipe will be lost and can\'t be refunded or restored. Your sign-in and email address are deleted from our server; a record of the purchases stays, no longer linked to you. Any reports you sent are kept for a limited time, also no longer linked to you. Saved recipes and your pantry stay on this device.</item>
+        <item quantity="other">Your %1$d unused recipes will be lost and can\'t be refunded or restored. Your sign-in and email address are deleted from our server; a record of the purchases stays, no longer linked to you. Any reports you sent are kept for a limited time, also no longer linked to you. Saved recipes and your pantry stay on this device.</item>
     </plurals>
     <!-- Deleting what our server holds for recipes kept on this device (an anonymous account). -->
     <string name="recipe_delete_device_data">Delete my data from our server</string>
     <string name="recipe_delete_device_title">Delete your data from our server?</string>
     <plurals name="recipe_delete_device_body">
-        <item quantity="one">Your %1$d unused recipe will be lost and can\'t be refunded or restored. The anonymous sign-in this device uses is deleted from our server; a record of the purchases stays, no longer linked to you. Saved recipes and your pantry stay on this device.</item>
-        <item quantity="other">Your %1$d unused recipes will be lost and can\'t be refunded or restored. The anonymous sign-in this device uses is deleted from our server; a record of the purchases stays, no longer linked to you. Saved recipes and your pantry stay on this device.</item>
+        <item quantity="one">Your %1$d unused recipe will be lost and can\'t be refunded or restored. The anonymous sign-in this device uses is deleted from our server; a record of the purchases stays, no longer linked to you. Any reports you sent are kept for a limited time, also no longer linked to you. Saved recipes and your pantry stay on this device.</item>
+        <item quantity="other">Your %1$d unused recipes will be lost and can\'t be refunded or restored. The anonymous sign-in this device uses is deleted from our server; a record of the purchases stays, no longer linked to you. Any reports you sent are kept for a limited time, also no longer linked to you. Saved recipes and your pantry stay on this device.</item>
     </plurals>
-    <string name="recipe_delete_device_body_none">The anonymous sign-in this device uses is deleted from our server; a record of any purchases stays, no longer linked to you. Saved recipes and your pantry stay on this device.</string>
+    <string name="recipe_delete_device_body_none">The anonymous sign-in this device uses is deleted from our server; a record of any purchases stays, no longer linked to you. Any reports you sent are kept for a limited time, also no longer linked to you. Saved recipes and your pantry stay on this device.</string>
     <string name="recipe_delete_device_confirm">Delete data</string>
     <string name="recipe_device_data_deleted">Your data is deleted from our server</string>
     <string name="recipe_delete_waits_for_purchase">A purchase is still being completed. You can delete once it has finished.</string>
@@ -1322,4 +1322,57 @@
         <item quantity="one">Your staple may be used too</item>
         <item quantity="other">Your %1$d staples may be used too</item>
     </plurals>
+    <!-- Recipe: pictures (recipes from packs only, single recipes; each level only when our server says acceptsRecipeImage and prices it: recipeImage, recipeImageSteps). The unit is a "recipe", never a credit. -->
+    <string name="recipe_image_row">Pictures</string>
+    <string name="recipe_image_title">Pictures, made by AI</string>
+    <string name="recipe_image_none">No pictures</string>
+    <string name="recipe_image_dish">The dish</string>
+    <string name="recipe_image_dish_desc">One picture of the finished dish</string>
+    <string name="recipe_image_steps">The dish and tricky steps</string>
+    <string name="recipe_image_steps_desc">Plus pictures of steps that are hard to follow from words alone</string>
+    <!-- %1$s is the balance (recipe_cost_recipes) -->
+    <string name="recipe_image_short">You have %1$s left: not enough for pictures.</string>
+    <!-- %1$s is the balance (recipe_cost_recipes) -->
+    <string name="recipe_image_short_steps">You have %1$s left: enough for a picture of the dish, not the steps.</string>
+    <string name="recipe_image_with">With a picture of the dish</string>
+    <string name="recipe_image_with_steps">With pictures of the dish and steps</string>
+    <string name="recipe_writing_server_image_body">Up to a minute with a picture. You can leave this screen; the recipe will be in Saved recipes.</string>
+    <string name="recipe_writing_server_images_body">Up to two minutes with pictures of the steps. You can leave this screen; the recipe will be in Saved recipes.</string>
+    <string name="recipe_image_caption">Picture made by AI. Your dish may look different.</string>
+    <string name="recipe_image_steps_caption">Step pictures are made by AI. Yours may look different.</string>
+    <!-- Screen readers: %1$s is the recipe title -->
+    <string name="recipe_image_desc">Picture of %1$s, made by AI</string>
+    <!-- Screen readers: %1$d is the step number -->
+    <string name="recipe_image_step_desc">Picture of step %1$d, made by AI</string>
+    <string name="recipe_image_failed">Couldn\'t make a picture of the dish this time.</string>
+    <string name="recipe_image_steps_failed">Couldn\'t make pictures of some steps this time.</string>
+    <!-- How recipes work and the Buy sheet; %1$s from costs.recipeImage via recipe_cost_recipes -->
+    <string name="recipe_image_cost_line">A recipe with a picture of the dish, made by AI, takes %1$s.</string>
+    <!-- Follows recipe_image_cost_line; %1$s from costs.recipeImageSteps -->
+    <string name="recipe_image_steps_cost_line">With pictures of tricky steps too, it takes %1$s.</string>
+    <!-- Recipe: Report this recipe / menu (every model-written result; only when our server says acceptsReports). -->
+    <string name="recipe_report_action">Report this recipe</string>
+    <string name="recipe_report_menu_action">Report this menu</string>
+    <string name="recipe_report_lede">What\'s wrong with it?</string>
+    <string name="recipe_report_reason_offensive">Offensive or inappropriate</string>
+    <string name="recipe_report_reason_unsafe">Unsafe food advice</string>
+    <string name="recipe_report_reason_picture">A picture is wrong or offensive</string>
+    <string name="recipe_report_reason_other">Something else</string>
+    <string name="recipe_report_reason_required">Choose a reason.</string>
+    <string name="recipe_report_note_label">Add a note (optional)</string>
+    <!-- %1$d characters typed, %2$d the limit -->
+    <string name="recipe_report_note_count">%1$d of %2$d characters</string>
+    <string name="recipe_report_sends_server">We get your reason and note, tied to this recipe, so we can look into it.</string>
+    <string name="recipe_report_sends_server_menu">We get your reason and note, tied to this menu, so we can look into it.</string>
+    <string name="recipe_report_send">Send report</string>
+    <string name="recipe_report_cancel">Cancel</string>
+    <string name="recipe_report_sending">Sending…</string>
+    <string name="recipe_report_sent">Thanks. We\'ll look at it.</string>
+    <string name="recipe_report_failed">Couldn\'t send the report. Try again when you\'re online.</string>
+    <string name="recipe_report_try_again">Try again</string>
+    <string name="recipe_report_done">You\'ve reported this</string>
+    <string name="recipe_report_limit">That\'s the limit for reports today. Try again tomorrow.</string>
+    <string name="recipe_report_unknown">This recipe can\'t be reported any more.</string>
+    <string name="recipe_image_unavailable">Pictures can\'t be made right now. No recipe was taken.</string>
+    <!-- /Recipe: pictures and reports -->
 </resources>

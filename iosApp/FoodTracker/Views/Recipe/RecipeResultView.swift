@@ -7,15 +7,29 @@ struct RecipeResultView: View {
     /// Nil when the entry was deleted while this screen was on the stack.
     let entry: SavedRecipe?
     var dish: (day: Int, course: Int)? = nil
+    /// The tab's model, for the pictures kept with the entry, the lines it arrived with and the
+    /// report action; nil in previews.
+    var model: RecipeViewModel? = nil
     var onOpenDish: (Int, Int) -> Void = { _, _ in }
 
     @State private var sharing = false
+    /// The entry's picture bytes once read (off the main actor); nil until then.
+    @State private var pictures: SavedRecipePictures?
 
     var body: some View {
         Group {
             switch entry?.content {
             case .recipe(let recipe)?:
-                RecipeDocument(recipe: recipe)
+                RecipeDocument(
+                    recipe: recipe,
+                    pictures: pictures,
+                    notice: entry.flatMap { model?.pictureNotices[$0.id] },
+                    foot: reportFoot(isMenu: false)
+                )
+                .task(id: entry?.id) {
+                    guard recipe.hasPictures, let id = entry?.id, let model else { return }
+                    pictures = await model.pictures(for: id)
+                }
                     .toolbar {
                         ToolbarItem(placement: .primaryAction) {
                             LarderIconButton(.share2, label: L10n.recipeShareRecipe, color: LarderColor.primary) {
@@ -29,9 +43,9 @@ struct RecipeResultView: View {
                     .navigationTitle(L10n.recipeResultTitle)
             case .menu(let menu)?:
                 if let dish, let course = Self.course(in: menu, day: dish.day, course: dish.course) {
-                    RecipeDishView(recipe: course, date: menu.days[dish.day].date, menuDays: menu.days.count)
+                    RecipeDishView(recipe: course, date: menu.days[dish.day].date, menuDays: menu.days.count, foot: reportFoot(isMenu: false))
                 } else {
-                    RecipeMenuView(menu: menu, onOpenDish: onOpenDish)
+                    RecipeMenuView(menu: menu, onOpenDish: onOpenDish, foot: reportFoot(isMenu: true))
                         .navigationTitle(L10n.recipeMenuResultTitle)
                 }
             case nil:
@@ -45,6 +59,12 @@ struct RecipeResultView: View {
         .shellChromeEffect(hideNav: true)
     }
 
+    /// "Report this recipe / menu" at the very end, where it applies (`RecipeViewModel.reportFoot`).
+    private func reportFoot(isMenu: Bool) -> AnyView? {
+        guard let model, let entry else { return nil }
+        return AnyView(RecipeReportFootHost(model: model, entry: entry, isMenu: isMenu))
+    }
+
     static func course(in menu: RecipeMenu, day: Int, course: Int) -> RecipeMenuCourse? {
         guard menu.days.indices.contains(day), menu.days[day].courses.indices.contains(course) else { return nil }
         return menu.days[day].courses[course]
@@ -56,13 +76,28 @@ struct RecipeDocument: View {
     let recipe: Recipe
     /// The line at the end, in place of where the recipe was written.
     var footer: String? = nil
+    /// The bytes of the pictures the recipe was saved with (`Recipe.picture` / `stepPictures`
+    /// say which); nil while they are read, when a plain surface holds their place.
+    var pictures: SavedRecipePictures? = nil
+    /// The quiet lines of a result that has just arrived with fewer pictures than asked.
+    var notice: RecipePictureNotice? = nil
+    /// "Report this recipe" at the very end, after the method and tips.
+    var foot: AnyView? = nil
 
     @ScaledMetric(relativeTo: .body) private var amountWidth: CGFloat = 72
     @ScaledMetric(relativeTo: .body) private var stepNumberSide: CGFloat = 28
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
+                // The dish picture opens the recipe, its caption always under it.
+                if recipe.picture != nil {
+                    RecipePictureFrame(data: pictures?.dish, label: L10n.recipeImageDescription(recipe.title))
+                    RecipePictureLine(L10n.recipeImageCaption)
+                        .padding(.top, LarderSpace.s2)
+                        .padding(.bottom, LarderSpace.s4)
+                }
                 Text(recipe.title)
                     .larderFont(.headline)
                     .foregroundStyle(LarderColor.onBackground)
@@ -77,6 +112,10 @@ struct RecipeDocument: View {
                         .padding(.bottom, LarderSpace.s3)
                 }
                 facts
+                if notice?.dishFailed == true {
+                    RecipePictureLine(L10n.recipeImageFailed)
+                        .padding(.top, LarderSpace.s2)
+                }
                 // Above the ingredients, never in a footer: seen as the recipe opens.
                 if let warning = L10n.recipePastDateWarning(recipe.pastDate) {
                     LarderCallout(.error, icon: .triangleAlert, message: warning)
@@ -104,9 +143,18 @@ struct RecipeDocument: View {
 
                 SectionHeader(L10n.recipeMethodTitle)
                     .padding(.top, LarderSpace.s2)
+                // One caption for every step picture, never one per picture.
+                if !recipe.stepPictures.isEmpty {
+                    RecipePictureLine(L10n.recipeImageStepsCaption)
+                        .padding(.bottom, LarderSpace.s2)
+                }
+                if notice?.stepsFailed == true {
+                    RecipePictureLine(L10n.recipeImageStepsFailed)
+                        .padding(.bottom, LarderSpace.s2)
+                }
                 VStack(alignment: .leading, spacing: LarderSpace.s4) {
                     ForEach(Array(recipe.steps.enumerated()), id: \.offset) { index, step in
-                        stepRow(number: index + 1, text: step)
+                        stepRow(number: index + 1, text: step, hasPicture: recipe.stepPictures.contains { $0.step == index }, picture: pictures?.steps[index])
                     }
                 }
 
@@ -127,6 +175,7 @@ struct RecipeDocument: View {
                     .foregroundStyle(LarderColor.onSurfaceVariant)
                     .padding(.top, LarderSpace.s6)
                 }
+                if let foot { foot }
             }
             .padding(.horizontal, LarderSpace.s4)
             .padding(.top, LarderSpace.s2)
@@ -134,6 +183,21 @@ struct RecipeDocument: View {
             .frame(maxWidth: 640, alignment: .leading)
             .frame(maxWidth: .infinity)
         }
+        .defaultScrollAnchor(Self.opensAt)
+    }
+
+    /// `-demoRecipeResultAt middle|end` (Debug): the result opens scrolled there, for layout
+    /// checks of the step pictures and the report foot.
+    static var opensAt: UnitPoint {
+        #if DEBUG
+        switch UserDefaults.standard.string(forKey: "demoRecipeResultAt") {
+        case "middle": return .center
+        case "end": return .bottom
+        default: return .top
+        }
+        #else
+        return .top
+        #endif
     }
 
     private var facts: some View {
@@ -159,41 +223,25 @@ struct RecipeDocument: View {
     }
 
     private func ingredientRow(_ ingredient: RecipeIngredient) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: LarderSpace.s3) {
+        // At accessibility sizes the chip goes under the name: beside it, the amount column, the
+        // name and the chip are wider than a phone and the whole recipe would scroll sideways.
+        let stacked = dynamicTypeSize.isAccessibilitySize
+        return HStack(alignment: .firstTextBaseline, spacing: LarderSpace.s3) {
             Text(ingredient.amount)
                 .larderFont(.label)
                 .monospacedDigit()
                 .foregroundStyle(LarderColor.onSurfaceVariant)
-                .frame(width: amountWidth, alignment: .leading)
+                .frame(width: stacked ? amountWidth * 0.75 : amountWidth, alignment: .leading)
                 .fixedSize(horizontal: false, vertical: true)
-            Text(ingredient.name)
-                .larderFont(.body)
-                .foregroundStyle(LarderColor.onSurface)
-                .fixedSize(horizontal: false, vertical: true)
+            if stacked {
+                VStack(alignment: .leading, spacing: LarderSpace.s1) {
+                    ingredientName(ingredient)
+                    ingredientChip(ingredient)
+                }
                 .frame(maxWidth: .infinity, alignment: .leading)
-            if ingredient.fromPantry {
-                HStack(spacing: 2) {
-                    LarderIcon(.check, size: .custom(14))
-                    Text(L10n.recipeInYourPantry).larderFont(.caption)
-                }
-                .foregroundStyle(LarderColor.onSuccessContainer)
-                .padding(.vertical, 1)
-                .padding(.leading, LarderSpace.s1)
-                .padding(.trailing, LarderSpace.s2)
-                .background(LarderColor.successContainer, in: RoundedRectangle(cornerRadius: LarderRadius.sm))
-                .fixedSize()
-            } else if ingredient.stapleName != nil {
-                // One of the person's staples: the same shape, neutral.
-                HStack(spacing: 2) {
-                    LarderIcon(.wheat, size: .custom(14))
-                    Text(L10n.recipeYourStaple).larderFont(.caption)
-                }
-                .foregroundStyle(LarderColor.onSurfaceVariant)
-                .padding(.vertical, 1)
-                .padding(.leading, LarderSpace.s1)
-                .padding(.trailing, LarderSpace.s2)
-                .background(LarderColor.surfaceContainerHigh, in: RoundedRectangle(cornerRadius: LarderRadius.sm))
-                .fixedSize()
+            } else {
+                ingredientName(ingredient)
+                ingredientChip(ingredient)
             }
         }
         .padding(.vertical, LarderSpace.s3)
@@ -201,7 +249,44 @@ struct RecipeDocument: View {
         .accessibilityElement(children: .combine)
     }
 
-    private func stepRow(number: Int, text: String) -> some View {
+    private func ingredientName(_ ingredient: RecipeIngredient) -> some View {
+        Text(ingredient.name)
+            .larderFont(.body)
+            .foregroundStyle(LarderColor.onSurface)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private func ingredientChip(_ ingredient: RecipeIngredient) -> some View {
+        if ingredient.fromPantry {
+            HStack(spacing: 2) {
+                LarderIcon(.check, size: .custom(14))
+                Text(L10n.recipeInYourPantry).larderFont(.caption)
+            }
+            .foregroundStyle(LarderColor.onSuccessContainer)
+            .padding(.vertical, 1)
+            .padding(.leading, LarderSpace.s1)
+            .padding(.trailing, LarderSpace.s2)
+            .background(LarderColor.successContainer, in: RoundedRectangle(cornerRadius: LarderRadius.sm))
+            .fixedSize(horizontal: !dynamicTypeSize.isAccessibilitySize, vertical: true)
+        } else if ingredient.stapleName != nil {
+            // One of the person's staples: the same shape, neutral.
+            HStack(spacing: 2) {
+                LarderIcon(.wheat, size: .custom(14))
+                Text(L10n.recipeYourStaple).larderFont(.caption)
+            }
+            .foregroundStyle(LarderColor.onSurfaceVariant)
+            .padding(.vertical, 1)
+            .padding(.leading, LarderSpace.s1)
+            .padding(.trailing, LarderSpace.s2)
+            .background(LarderColor.surfaceContainerHigh, in: RoundedRectangle(cornerRadius: LarderRadius.sm))
+            .fixedSize(horizontal: !dynamicTypeSize.isAccessibilitySize, vertical: true)
+        }
+    }
+
+    /// A step, and its picture under its text at the text's width (past the step number) when it has one.
+    private func stepRow(number: Int, text: String, hasPicture: Bool = false, picture: Data? = nil) -> some View {
         HStack(alignment: .top, spacing: LarderSpace.s3) {
             Text("\(number)")
                 .larderFont(.label)
@@ -209,14 +294,21 @@ struct RecipeDocument: View {
                 .foregroundStyle(LarderColor.onPrimaryContainer)
                 .frame(width: stepNumberSide, height: stepNumberSide)
                 .background(LarderColor.primaryContainer, in: Circle())
-            Text(text)
-                .larderFont(.body)
-                .foregroundStyle(LarderColor.onSurface)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.top, 2)
+                .accessibilityHidden(hasPicture)
+            VStack(alignment: .leading, spacing: LarderSpace.s3) {
+                Text(text)
+                    .larderFont(.body)
+                    .foregroundStyle(LarderColor.onSurface)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, 2)
+                    .accessibilityLabel(hasPicture ? "\(number). \(text)" : text)
+                if hasPicture {
+                    RecipePictureFrame(data: picture, label: L10n.recipeImageStepDescription(number))
+                }
+            }
         }
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: hasPicture ? .contain : .combine)
     }
 }
 

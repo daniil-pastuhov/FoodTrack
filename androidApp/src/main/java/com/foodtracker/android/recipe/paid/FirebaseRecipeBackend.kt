@@ -30,6 +30,19 @@ import com.foodtracker.recipe.acceptsMultiChoiceConfigOf
 import com.foodtracker.recipe.acceptsOptionalIngredientsOf
 import com.foodtracker.recipe.purchasesBlockedOf
 import com.foodtracker.recipe.recipeCostsOf
+import com.foodtracker.recipe.acceptsRecipeImageOf
+import com.foodtracker.recipe.acceptsReportsOf
+import com.foodtracker.recipe.MAX_PICTURE_BYTES
+import com.foodtracker.recipe.MAX_PICTURE_EDGE
+import com.foodtracker.recipe.PictureBytes
+import com.foodtracker.recipe.PictureLevel
+import com.foodtracker.recipe.RecipeReport
+import com.foodtracker.recipe.ReplyPictures
+import com.foodtracker.recipe.StepPictureBytes
+import com.foodtracker.android.BuildConfig
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.contentOrNull
 import com.google.firebase.FirebaseNetworkException
 import com.google.firebase.appcheck.FirebaseAppCheck
 import com.google.firebase.functions.FirebaseFunctions
@@ -54,7 +67,7 @@ import java.util.concurrent.TimeUnit
  * `getWelcomeOffer`) take an
  * ordinary token, so polling spends no Play Integrity request.
  */
-internal val CONSUMING_CALLABLES = setOf("generateRecipe", "verifyPurchase", "mergeBalance", "deleteAccount", "claimWelcome")
+internal val CONSUMING_CALLABLES = setOf("generateRecipe", "verifyPurchase", "mergeBalance", "deleteAccount", "claimWelcome", "reportRecipe")
 
 /** Whether [name] is called with a limited-use App Check token. */
 internal fun usesLimitedUseToken(name: String): Boolean = name in CONSUMING_CALLABLES
@@ -78,20 +91,51 @@ class FirebaseRecipeBackend(
 
     override suspend fun generate(request: GenerateRequest): ServerResult<GenerateReply> {
         // A recipe takes up to ~40 s and a menu up to ~2 min on the server; the contract asks
-        // for at least 70 s and 190 s.
-        val timeout = if (request.kind == WireKind.MENU) 200L else 75L
-        return call(firebase.functions(), "generateRecipe", RecipeJson.encodeToJsonElement(GenerateRequest.serializer(), request), timeout, GenerateReply.serializer())
+        // for at least 70 s and 190 s. With pictures (made after the text, retried while the
+        // picture model is busy) the server holds a recipe for 115 s with the dish's picture and
+        // 165 s with step pictures (functions/src/constants.ts IMAGE.reservationExtraMs); the
+        // contract asks for at least 130 s and 190 s, 15 s and 25 s past those reservations. A
+        // call cut off before then is recovered by polling getGeneration (RecipePaid).
+        val timeout = when {
+            request.kind == WireKind.MENU -> 200L
+            request.image == PictureLevel.STEPS -> 190L
+            request.image != null -> 130L
+            else -> 75L
+        }
+        return generateReplyOf(callRaw(firebase.functions(), "generateRecipe", RecipeJson.encodeToJsonElement(GenerateRequest.serializer(), request), timeout))
     }
 
-    // A normal App Check token (see CONSUMING_CALLABLES).
+    // A normal App Check token (see CONSUMING_CALLABLES). A recipe with pictures brings them
+    // again for as long as the server keeps the generation: a few hundred kilobytes at most.
     override suspend fun getGeneration(requestId: String): ServerResult<GenerateReply> =
-        call(
-            firebase.functions(),
-            "getGeneration",
-            JsonObject(mapOf("requestId" to JsonPrimitive(requestId))),
-            30L,
-            GenerateReply.serializer()
+        generateReplyOf(callRaw(firebase.functions(), "getGeneration", JsonObject(mapOf("requestId" to JsonPrimitive(requestId))), 45L))
+
+    // A limited-use App Check token (CONSUMING_CALLABLES). No recipe text: only the generation's
+    // id, the reason and the person's own note, with the app's platform, version and language.
+    override suspend fun reportRecipe(report: RecipeReport): ServerResult<Unit> {
+        val data = JsonObject(
+            buildMap {
+                put("reportId", JsonPrimitive(report.reportId))
+                put("requestId", JsonPrimitive(report.requestId))
+                put("reason", JsonPrimitive(report.reason.wire))
+                report.note?.let { put("note", JsonPrimitive(it)) }
+                put(
+                    "app",
+                    JsonObject(
+                        mapOf(
+                            "platform" to JsonPrimitive("android"),
+                            "version" to JsonPrimitive(BuildConfig.VERSION_NAME.filter { it.isLetterOrDigit() || it in ".+-" }.take(32)),
+                            "language" to JsonPrimitive(report.language)
+                        )
+                    )
+                )
+            }
         )
+        return when (val result = callRaw(firebase.functions(), "reportRecipe", data, 30L)) {
+            is ServerResult.Ok -> ServerResult.Ok(Unit)
+            is ServerResult.Err -> result
+        }
+    }
 
     override suspend fun verifyPurchase(purchaseToken: String): ServerResult<VerifyReply> =
         call(
@@ -134,6 +178,59 @@ class FirebaseRecipeBackend(
         }
 }
 
+/**
+ * `generateRecipe` / `getGeneration`'s reply: the pictures taken out of the JSON and decoded off
+ * the main thread ([replyPicturesOf]), the rest read as [GenerateReply]. The bytes are never
+ * logged; a reply that isn't the contract's shape is `internal`, as for any call.
+ */
+internal suspend fun generateReplyOf(result: ServerResult<JsonElement>): ServerResult<GenerateReply> = when (result) {
+    is ServerResult.Err -> result
+    is ServerResult.Ok -> withContext(Dispatchers.Default) {
+        val reply = result.value as? JsonObject
+        if (reply == null) {
+            ServerResult.Err(ServerError.INTERNAL)
+        } else {
+            try {
+                val pictures = replyPicturesOf(reply) { android.util.Base64.decode(it, android.util.Base64.DEFAULT) }
+                val rest = JsonObject(reply - "image" - "stepImages")
+                ServerResult.Ok(RecipeJson.decodeFromJsonElement(GenerateReply.serializer(), rest).copy(pictures = pictures))
+            } catch (e: IllegalArgumentException) {
+                ServerResult.Err(ServerError.INTERNAL)
+            }
+        }
+    }
+}
+
+/**
+ * A reply's `image` and `stepImages` (functions/CONTRACT.md "Recipe picture (response)"), or null
+ * with neither. A picture is kept only when it is a JPEG (by its `mimeType` and its first bytes),
+ * its base64 decodes ([decode]) to at most [MAX_PICTURE_BYTES] bytes, and its sides are whole
+ * numbers up to [MAX_PICTURE_EDGE]; anything else is left out, as if it hadn't been made.
+ */
+internal fun replyPicturesOf(reply: JsonObject, decode: (String) -> ByteArray): ReplyPictures? {
+    fun pictureOf(element: JsonElement?): PictureBytes? {
+        val picture = element as? JsonObject ?: return null
+        if ((picture["mimeType"] as? JsonPrimitive)?.contentOrNull != "image/jpeg") return null
+        val data = (picture["data"] as? JsonPrimitive)?.takeIf { it.isString }?.content ?: return null
+        // Never decoded when it can't be small enough: base64 is 4 characters for 3 bytes.
+        if (data.length > (MAX_PICTURE_BYTES / 3 + 1) * 4 + 8) return null
+        fun side(key: String) = (picture[key] as? JsonPrimitive)?.takeUnless { it.isString }?.longOrNull?.takeIf { it in 1..MAX_PICTURE_EDGE }?.toInt()
+        val width = side("width") ?: return null
+        val height = side("height") ?: return null
+        val bytes = runCatching { decode(data) }.getOrNull() ?: return null
+        val jpeg = bytes.size in 3..MAX_PICTURE_BYTES && bytes[0] == 0xFF.toByte() && bytes[1] == 0xD8.toByte()
+        return if (jpeg) PictureBytes(bytes, width, height) else null
+    }
+    val hasDish = "image" in reply
+    val steps = (reply["stepImages"] as? JsonArray).orEmpty().mapNotNull { entry ->
+        val item = entry as? JsonObject ?: return@mapNotNull null
+        val step = (item["step"] as? JsonPrimitive)?.takeUnless { it.isString }?.longOrNull?.takeIf { it in 0..99 }?.toInt() ?: return@mapNotNull null
+        pictureOf(item["image"])?.let { StepPictureBytes(step, it) }
+    }
+    if (!hasDish && steps.isEmpty()) return null
+    return ReplyPictures(pictureOf(reply["image"]), steps)
+}
+
 /** `deleteAccount`'s reply: `appleLinkRemoved` only when it is a real boolean; anything else reads
  *  as absent, so the manual Apple instruction never shows on a reply that doesn't say so. */
 internal fun deleteReplyOf(json: JsonElement): DeleteReply {
@@ -174,14 +271,14 @@ internal fun mergeReplyOf(json: JsonElement): MergeReply? {
     val reply = json as? JsonObject ?: return null
     val balance = (reply["balance"] as? JsonPrimitive)?.takeUnless { it.isString }?.longOrNull?.toInt() ?: return null
     val moved = (reply["moved"] as? JsonPrimitive)?.takeUnless { it.isString }?.longOrNull?.toInt() ?: 0
-    return MergeReply(balance, moved, recipeCostsOf(reply["costs"]), purchasesBlockedOf(reply["purchasesBlocked"]), acceptsOptionalIngredientsOf(reply["acceptsOptionalIngredients"]), acceptsMultiChoiceConfigOf(reply["acceptsMultiChoiceConfig"]), acceptsDanishOf(reply["acceptsDanish"]), acceptsMenuDaysOf(reply["acceptsMenuDays"]), acceptsTasteOf(reply["acceptsTaste"]), tasteQuizVersionOf(reply["tasteQuizVersion"]), acceptsWelcomeOf(reply["acceptsWelcome"]), welcomeRecipesFieldOf(reply["welcomeRecipes"]), acceptsStaplesOf(reply["acceptsStaples"]))
+    return MergeReply(balance, moved, recipeCostsOf(reply["costs"]), purchasesBlockedOf(reply["purchasesBlocked"]), acceptsOptionalIngredientsOf(reply["acceptsOptionalIngredients"]), acceptsMultiChoiceConfigOf(reply["acceptsMultiChoiceConfig"]), acceptsDanishOf(reply["acceptsDanish"]), acceptsMenuDaysOf(reply["acceptsMenuDays"]), acceptsTasteOf(reply["acceptsTaste"]), tasteQuizVersionOf(reply["tasteQuizVersion"]), acceptsWelcomeOf(reply["acceptsWelcome"]), welcomeRecipesFieldOf(reply["welcomeRecipes"]), acceptsStaplesOf(reply["acceptsStaples"]), acceptsRecipeImageOf(reply["acceptsRecipeImage"]), acceptsReportsOf(reply["acceptsReports"]))
 }
 
 /** `getBalance`'s reply: the count, and the costs when they came and could be read. */
 internal fun balanceReplyOf(json: JsonElement): BalanceReply? {
     val reply = json as? JsonObject ?: return null
     val balance = (reply["balance"] as? JsonPrimitive)?.longOrNull?.toInt() ?: return null
-    return BalanceReply(balance, recipeCostsOf(reply["costs"]), purchasesBlockedOf(reply["purchasesBlocked"]), acceptsOptionalIngredientsOf(reply["acceptsOptionalIngredients"]), acceptsMultiChoiceConfigOf(reply["acceptsMultiChoiceConfig"]), acceptsDanishOf(reply["acceptsDanish"]), acceptsMenuDaysOf(reply["acceptsMenuDays"]), acceptsTasteOf(reply["acceptsTaste"]), tasteQuizVersionOf(reply["tasteQuizVersion"]), acceptsWelcomeOf(reply["acceptsWelcome"]), welcomeRecipesFieldOf(reply["welcomeRecipes"]), acceptsStaplesOf(reply["acceptsStaples"]))
+    return BalanceReply(balance, recipeCostsOf(reply["costs"]), purchasesBlockedOf(reply["purchasesBlocked"]), acceptsOptionalIngredientsOf(reply["acceptsOptionalIngredients"]), acceptsMultiChoiceConfigOf(reply["acceptsMultiChoiceConfig"]), acceptsDanishOf(reply["acceptsDanish"]), acceptsMenuDaysOf(reply["acceptsMenuDays"]), acceptsTasteOf(reply["acceptsTaste"]), tasteQuizVersionOf(reply["tasteQuizVersion"]), acceptsWelcomeOf(reply["acceptsWelcome"]), welcomeRecipesFieldOf(reply["welcomeRecipes"]), acceptsStaplesOf(reply["acceptsStaples"]), acceptsRecipeImageOf(reply["acceptsRecipeImage"]), acceptsReportsOf(reply["acceptsReports"]))
 }
 
 /** `claimWelcome`'s reply: its status and `granted`, and everything a balance carries. Null without

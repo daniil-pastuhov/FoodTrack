@@ -33,12 +33,13 @@ import {
   type GenerateContentResponseUsageMetadata,
   type ThinkingConfig,
 } from "@google/genai";
-import type { GenerateRequest, Menu, Recipe } from "../contract";
+import type { GenerateRequest, Recipe } from "../contract";
 import { JUDGE } from "../constants";
 import {
   GenerationError,
   type GenerationLimits,
   type GenerationResult,
+  type JudgedOutput,
   type JudgeResult,
   type JudgeVerdict,
   type LlmUsage,
@@ -233,8 +234,11 @@ const JUDGE_SCHEMA = {
   required: ["verdict"],
 };
 
-/** What the judge sees: only the text fields the generator wrote, never the user's input. */
-export function judgeText(output: { recipe?: Recipe; menu?: Menu }): string {
+/**
+ * What the judge sees: only the text fields the generator wrote, never the user's input, and the
+ * picture's brief when one was asked (absent otherwise, so every other answer reads as before).
+ */
+export function judgeText(output: JudgedOutput): string {
   const strip = (r: Recipe) => ({
     title: r.title,
     summary: r.summary,
@@ -244,12 +248,16 @@ export function judgeText(output: { recipe?: Recipe; menu?: Menu }): string {
   });
   const doc = output.menu
     ? { menu: output.menu.days.map((d) => d.courses.map((c) => ({ course: c.course, ...strip(c.recipe) }))) }
-    : { recipe: output.recipe ? strip(output.recipe) : null };
+    : {
+        recipe: output.recipe ? strip(output.recipe) : null,
+        ...(output.imageBrief ? { imageBrief: output.imageBrief } : {}),
+        ...(output.stepBriefs?.length ? { stepBriefs: output.stepBriefs } : {}),
+      };
   return ["BEGIN_OUTPUT", JSON.stringify(doc), "END_OUTPUT"].join("\n");
 }
 
 /** An upper bound on the judge's input in bytes (and so tokens), for a given answer. */
-export function judgeInputBytes(output: { recipe?: Recipe; menu?: Menu }): number {
+export function judgeInputBytes(output: JudgedOutput): number {
   return Buffer.byteLength(JUDGE_INSTRUCTION, "utf8") + Buffer.byteLength(judgeText(output), "utf8")
     + Buffer.byteLength(JSON.stringify(JUDGE_SCHEMA), "utf8");
 }
@@ -263,7 +271,7 @@ export class GeminiOutputJudge implements OutputJudge {
       ?? new GoogleGenAI({ vertexai: true, project: options.project, location: options.location }).models;
   }
 
-  async judge(output: { recipe?: Recipe; menu?: Menu }, signal: AbortSignal): Promise<JudgeResult> {
+  async judge(output: JudgedOutput, signal: AbortSignal): Promise<JudgeResult> {
     const local = new AbortController();
     let meta: GenerateContentResponseUsageMetadata | undefined;
     let model = this.options.model;

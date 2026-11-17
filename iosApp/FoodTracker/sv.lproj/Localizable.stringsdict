@@ -797,9 +797,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Ditt %d oanvända recept går förlorat och kan inte återbetalas eller återställas. Din inloggning och e-postadress raderas från vår server; en uppgift om köpen finns kvar, inte längre kopplad till dig. Sparade recept och ditt skafferi finns kvar på din {device}.</string>
+            <string>Ditt %d oanvända recept går förlorat och kan inte återbetalas eller återställas. Din inloggning och e-postadress raderas från vår server; en uppgift om köpen finns kvar, inte längre kopplad till dig. Eventuella rapporter du har skickat sparas en begränsad tid, även de utan koppling till dig. Sparade recept och ditt skafferi finns kvar på din {device}.</string>
             <key>other</key>
-            <string>Dina %d oanvända recept går förlorade och kan inte återbetalas eller återställas. Din inloggning och e-postadress raderas från vår server; en uppgift om köpen finns kvar, inte längre kopplad till dig. Sparade recept och ditt skafferi finns kvar på din {device}.</string>
+            <string>Dina %d oanvända recept går förlorade och kan inte återbetalas eller återställas. Din inloggning och e-postadress raderas från vår server; en uppgift om köpen finns kvar, inte längre kopplad till dig. Eventuella rapporter du har skickat sparas en begränsad tid, även de utan koppling till dig. Sparade recept och ditt skafferi finns kvar på din {device}.</string>
         </dict>
     </dict>
     <key>recipe_delete_device_message</key>
@@ -813,9 +813,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Ditt %d oanvända recept går förlorat och kan inte återbetalas eller återställas. Den anonyma inloggning som din {device} använder raderas från vår server; en uppgift om köpen finns kvar, inte längre kopplad till dig. Sparade recept och ditt skafferi finns kvar på din {device}.</string>
+            <string>Ditt %d oanvända recept går förlorat och kan inte återbetalas eller återställas. Den anonyma inloggning som din {device} använder raderas från vår server; en uppgift om köpen finns kvar, inte längre kopplad till dig. Eventuella rapporter du har skickat sparas en begränsad tid, även de utan koppling till dig. Sparade recept och ditt skafferi finns kvar på din {device}.</string>
             <key>other</key>
-            <string>Dina %d oanvända recept går förlorade och kan inte återbetalas eller återställas. Den anonyma inloggning som din {device} använder raderas från vår server; en uppgift om köpen finns kvar, inte längre kopplad till dig. Sparade recept och ditt skafferi finns kvar på din {device}.</string>
+            <string>Dina %d oanvända recept går förlorade och kan inte återbetalas eller återställas. Den anonyma inloggning som din {device} använder raderas från vår server; en uppgift om köpen finns kvar, inte längre kopplad till dig. Eventuella rapporter du har skickat sparas en begränsad tid, även de utan koppling till dig. Sparade recept och ditt skafferi finns kvar på din {device}.</string>
         </dict>
     </dict>
     <key>recipe_server_refused</key>

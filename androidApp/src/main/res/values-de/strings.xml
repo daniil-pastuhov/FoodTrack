@@ -1050,17 +1050,17 @@
     <string name="recipe_allergen_consent_setting_on">Du hast am %1$s zugestimmt. Zum Widerrufen ausschalten: Unser Server erstellt dann keine Rezepte, solange Allergene festgelegt sind.</string>
     <string name="recipe_allergen_consent_setting_off">Nötig für Rezepte von unserem Server, solange Allergene festgelegt sind. Wir verwenden sie nur für die Anfrage und speichern sie nicht.</string>
     <plurals name="recipe_delete_body">
-        <item quantity="one">Dein %1$d nicht verwendetes Rezept geht verloren und kann weder erstattet noch wiederhergestellt werden. Deine Anmeldung und E-Mail-Adresse werden von unserem Server gelöscht; ein Nachweis der Käufe bleibt erhalten, aber nicht mehr mit dir verknüpft. Gespeicherte Rezepte und dein Vorrat bleiben auf diesem Gerät.</item>
-        <item quantity="other">Deine %1$d nicht verwendeten Rezepte gehen verloren und können weder erstattet noch wiederhergestellt werden. Deine Anmeldung und E-Mail-Adresse werden von unserem Server gelöscht; ein Nachweis der Käufe bleibt erhalten, aber nicht mehr mit dir verknüpft. Gespeicherte Rezepte und dein Vorrat bleiben auf diesem Gerät.</item>
+        <item quantity="one">Dein %1$d nicht verwendetes Rezept geht verloren und kann weder erstattet noch wiederhergestellt werden. Deine Anmeldung und E-Mail-Adresse werden von unserem Server gelöscht; ein Nachweis der Käufe bleibt erhalten, aber nicht mehr mit dir verknüpft. Eventuelle Meldungen von dir bleiben eine begrenzte Zeit erhalten, ebenfalls nicht mehr mit dir verknüpft. Gespeicherte Rezepte und dein Vorrat bleiben auf diesem Gerät.</item>
+        <item quantity="other">Deine %1$d nicht verwendeten Rezepte gehen verloren und können weder erstattet noch wiederhergestellt werden. Deine Anmeldung und E-Mail-Adresse werden von unserem Server gelöscht; ein Nachweis der Käufe bleibt erhalten, aber nicht mehr mit dir verknüpft. Eventuelle Meldungen von dir bleiben eine begrenzte Zeit erhalten, ebenfalls nicht mehr mit dir verknüpft. Gespeicherte Rezepte und dein Vorrat bleiben auf diesem Gerät.</item>
     </plurals>
     <!-- Deleting what our server holds for recipes kept on this device (an anonymous account). -->
     <string name="recipe_delete_device_data">Meine Daten von unserem Server löschen</string>
     <string name="recipe_delete_device_title">Deine Daten von unserem Server löschen?</string>
     <plurals name="recipe_delete_device_body">
-        <item quantity="one">Dein %1$d nicht verwendetes Rezept geht verloren und kann weder erstattet noch wiederhergestellt werden. Die anonyme Anmeldung, die dieses Gerät nutzt, wird von unserem Server gelöscht; ein Nachweis der Käufe bleibt erhalten, aber nicht mehr mit dir verknüpft. Gespeicherte Rezepte und dein Vorrat bleiben auf diesem Gerät.</item>
-        <item quantity="other">Deine %1$d nicht verwendeten Rezepte gehen verloren und können weder erstattet noch wiederhergestellt werden. Die anonyme Anmeldung, die dieses Gerät nutzt, wird von unserem Server gelöscht; ein Nachweis der Käufe bleibt erhalten, aber nicht mehr mit dir verknüpft. Gespeicherte Rezepte und dein Vorrat bleiben auf diesem Gerät.</item>
+        <item quantity="one">Dein %1$d nicht verwendetes Rezept geht verloren und kann weder erstattet noch wiederhergestellt werden. Die anonyme Anmeldung, die dieses Gerät nutzt, wird von unserem Server gelöscht; ein Nachweis der Käufe bleibt erhalten, aber nicht mehr mit dir verknüpft. Eventuelle Meldungen von dir bleiben eine begrenzte Zeit erhalten, ebenfalls nicht mehr mit dir verknüpft. Gespeicherte Rezepte und dein Vorrat bleiben auf diesem Gerät.</item>
+        <item quantity="other">Deine %1$d nicht verwendeten Rezepte gehen verloren und können weder erstattet noch wiederhergestellt werden. Die anonyme Anmeldung, die dieses Gerät nutzt, wird von unserem Server gelöscht; ein Nachweis der Käufe bleibt erhalten, aber nicht mehr mit dir verknüpft. Eventuelle Meldungen von dir bleiben eine begrenzte Zeit erhalten, ebenfalls nicht mehr mit dir verknüpft. Gespeicherte Rezepte und dein Vorrat bleiben auf diesem Gerät.</item>
     </plurals>
-    <string name="recipe_delete_device_body_none">Die anonyme Anmeldung, die dieses Gerät nutzt, wird von unserem Server gelöscht; ein Nachweis eventueller Käufe bleibt erhalten, aber nicht mehr mit dir verknüpft. Gespeicherte Rezepte und dein Vorrat bleiben auf diesem Gerät.</string>
+    <string name="recipe_delete_device_body_none">Die anonyme Anmeldung, die dieses Gerät nutzt, wird von unserem Server gelöscht; ein Nachweis eventueller Käufe bleibt erhalten, aber nicht mehr mit dir verknüpft. Eventuelle Meldungen von dir bleiben eine begrenzte Zeit erhalten, ebenfalls nicht mehr mit dir verknüpft. Gespeicherte Rezepte und dein Vorrat bleiben auf diesem Gerät.</string>
     <string name="recipe_delete_device_confirm">Daten löschen</string>
     <string name="recipe_device_data_deleted">Deine Daten sind von unserem Server gelöscht</string>
     <string name="recipe_delete_waits_for_purchase">Ein Kauf wird noch abgeschlossen. Du kannst löschen, sobald er fertig ist.</string>
@@ -1322,4 +1322,50 @@
         <item quantity="one">Deine Grundzutat darf auch verwendet werden</item>
         <item quantity="other">Deine %1$d Grundzutaten dürfen auch verwendet werden</item>
     </plurals>
+    <!-- Recipe: pictures (recipes from packs only, single recipes; each level only when our server says acceptsRecipeImage and prices it: recipeImage, recipeImageSteps). The unit is a "recipe", never a credit. -->
+    <string name="recipe_image_row">Bilder</string>
+    <string name="recipe_image_title">Bilder, von KI erstellt</string>
+    <string name="recipe_image_none">Keine Bilder</string>
+    <string name="recipe_image_dish">Das Gericht</string>
+    <string name="recipe_image_dish_desc">Ein Bild des fertigen Gerichts</string>
+    <string name="recipe_image_steps">Gericht und knifflige Schritte</string>
+    <string name="recipe_image_steps_desc">Dazu Bilder von Schritten, die sich mit Worten schwer beschreiben lassen</string>
+    <string name="recipe_image_short">Du hast noch %1$s: nicht genug für Bilder.</string>
+    <string name="recipe_image_short_steps">Du hast noch %1$s: genug für ein Bild des Gerichts, nicht für die Schritte.</string>
+    <string name="recipe_image_with">Mit Bild des Gerichts</string>
+    <string name="recipe_image_with_steps">Mit Bildern des Gerichts und der Schritte</string>
+    <string name="recipe_writing_server_image_body">Mit Bild bis zu einer Minute. Du kannst diesen Bildschirm verlassen; das Rezept landet in „Gespeicherte Rezepte“.</string>
+    <string name="recipe_writing_server_images_body">Mit Bildern der Schritte bis zu zwei Minuten. Du kannst diesen Bildschirm verlassen; das Rezept landet in „Gespeicherte Rezepte“.</string>
+    <string name="recipe_image_caption">Bild von KI erstellt. Dein Gericht kann anders aussehen.</string>
+    <string name="recipe_image_steps_caption">Die Bilder der Schritte sind von KI erstellt. Bei dir kann es anders aussehen.</string>
+    <string name="recipe_image_desc">Bild von %1$s, von KI erstellt</string>
+    <string name="recipe_image_step_desc">Bild von Schritt %1$d, von KI erstellt</string>
+    <string name="recipe_image_failed">Diesmal konnte kein Bild des Gerichts erstellt werden.</string>
+    <string name="recipe_image_steps_failed">Diesmal konnten nicht alle Bilder der Schritte erstellt werden.</string>
+    <string name="recipe_image_cost_line">Ein Rezept mit einem von KI erstellten Bild des Gerichts kostet %1$s.</string>
+    <string name="recipe_image_steps_cost_line">Mit Bildern der kniffligen Schritte kostet es %1$s.</string>
+    <!-- Recipe: Report this recipe / menu (every model-written result; only when our server says acceptsReports). -->
+    <string name="recipe_report_action">Dieses Rezept melden</string>
+    <string name="recipe_report_menu_action">Dieses Menü melden</string>
+    <string name="recipe_report_lede">Was stimmt damit nicht?</string>
+    <string name="recipe_report_reason_offensive">Anstößig oder unangemessen</string>
+    <string name="recipe_report_reason_unsafe">Unsicherer Rat zum Essen</string>
+    <string name="recipe_report_reason_picture">Ein Bild ist falsch oder anstößig</string>
+    <string name="recipe_report_reason_other">Etwas anderes</string>
+    <string name="recipe_report_reason_required">Wähle einen Grund.</string>
+    <string name="recipe_report_note_label">Notiz hinzufügen (optional)</string>
+    <string name="recipe_report_note_count">%1$d von %2$d Zeichen</string>
+    <string name="recipe_report_sends_server">Wir erhalten deinen Grund und deine Notiz, verknüpft mit diesem Rezept, damit wir es prüfen können.</string>
+    <string name="recipe_report_sends_server_menu">Wir erhalten deinen Grund und deine Notiz, verknüpft mit diesem Menü, damit wir es prüfen können.</string>
+    <string name="recipe_report_send">Meldung senden</string>
+    <string name="recipe_report_cancel">Abbrechen</string>
+    <string name="recipe_report_sending">Wird gesendet …</string>
+    <string name="recipe_report_sent">Danke. Wir sehen es uns an.</string>
+    <string name="recipe_report_failed">Die Meldung konnte nicht gesendet werden. Versuch es noch einmal, wenn du online bist.</string>
+    <string name="recipe_report_try_again">Erneut versuchen</string>
+    <string name="recipe_report_done">Du hast das gemeldet</string>
+    <string name="recipe_report_limit">Für heute ist das Limit für Meldungen erreicht. Versuch es morgen wieder.</string>
+    <string name="recipe_report_unknown">Dieses Rezept kann nicht mehr gemeldet werden.</string>
+    <string name="recipe_image_unavailable">Bilder können gerade nicht erstellt werden. Es wurde kein Rezept abgezogen.</string>
+    <!-- /Recipe: pictures and reports -->
 </resources>

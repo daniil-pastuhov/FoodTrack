@@ -62,6 +62,8 @@ import com.foodtracker.recipe.MenuCourseKind
 import com.foodtracker.recipe.MenuCourse
 import com.foodtracker.recipe.PastDateItem
 import com.foodtracker.recipe.MenuDay
+import com.foodtracker.recipe.PictureNotice
+import com.foodtracker.recipe.ReportFoot
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.heightIn
 import com.foodtracker.util.DateUtils
@@ -215,13 +217,24 @@ fun RecipeResultScreen(
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
             when {
-                recipe != null -> RecipeDocument(recipe, shopping = shopping)
-                menu != null -> MenuDocument(menu, today, onOpenDish, shopping)
+                recipe != null -> {
+                    PictureNoticeLifetime(stateHolder, savedId)
+                    RecipeDocument(
+                        recipe,
+                        shopping = shopping,
+                        pictures = rememberRecipePictures(savedId, recipe),
+                        notice = state.pictureNotices[savedId],
+                        report = saved?.let(state::reportFoot) ?: ReportFoot.HIDDEN,
+                        onReport = { stateHolder.openReport(savedId) }
+                    )
+                }
+                menu != null -> MenuDocument(menu, today, onOpenDish, shopping, report = saved?.let(state::reportFoot) ?: ReportFoot.HIDDEN, onReport = { stateHolder.openReport(savedId) })
                 // Still loading, or deleted from another screen.
                 state.savedLoaded -> EmptyState(title = stringResource(R.string.recipe_not_found), art = null)
             }
         }
     }
+    ReportHost(stateHolder, state, savedId)
 }
 
 /** One dish of a saved menu, in the recipe's own layout; its day and course in the bar. */
@@ -237,7 +250,8 @@ fun MenuDishScreen(
     val state by stateHolder.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val resources = context.resources
-    val menuDays = state.saved.firstOrNull { it.id == savedId }?.menu?.days
+    val savedMenu = state.saved.firstOrNull { it.id == savedId }
+    val menuDays = savedMenu?.menu?.days
     val menuDay = menuDays?.getOrNull(day)
     val dish = menuDay?.courses?.getOrNull(course)
     Scaffold(
@@ -264,11 +278,20 @@ fun MenuDishScreen(
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
             when {
-                dish != null -> RecipeDocument(dish.recipe, partOfMenu = true, menuDays = menuDays?.size ?: DEFAULT_MENU_DAYS, shopping = shopping)
+                dish != null -> RecipeDocument(
+                    dish.recipe,
+                    partOfMenu = true,
+                    menuDays = menuDays?.size ?: DEFAULT_MENU_DAYS,
+                    shopping = shopping,
+                    // A dish reports its menu's generation, in the recipe's own words.
+                    report = savedMenu?.let(state::reportFoot) ?: ReportFoot.HIDDEN,
+                    onReport = { stateHolder.openReport(savedId, asDish = true) }
+                )
                 state.savedLoaded -> EmptyState(title = stringResource(R.string.recipe_not_found), art = null)
             }
         }
     }
+    ReportHost(stateHolder, state, savedId)
 }
 
 /** One section of course rows per day (1 to 4, as many as the menu has), each day saying which
@@ -278,7 +301,9 @@ internal fun MenuDocument(
     menu: Menu,
     today: LocalDate,
     onOpenDish: (day: Int, course: Int) -> Unit,
-    shopping: RecipeShoppingActions = RecipeShoppingActions()
+    shopping: RecipeShoppingActions = RecipeShoppingActions(),
+    report: ReportFoot = ReportFoot.HIDDEN,
+    onReport: () -> Unit = {}
 ) {
     val resources = LocalContext.current.resources
     val courses = menu.days.maxOfOrNull { it.courses.size } ?: 0
@@ -336,6 +361,7 @@ internal fun MenuDocument(
                     }
                 }
             }
+            ReportFootRow(report, menu = true, onReport = onReport, modifier = Modifier.padding(top = LarderSpace.s6))
         }
     }
 }
@@ -346,7 +372,13 @@ internal fun RecipeDocument(
     partOfMenu: Boolean = false,
     /** The days of the menu it is part of, for "Part of Menu for N days". */
     menuDays: Int = DEFAULT_MENU_DAYS,
-    shopping: RecipeShoppingActions = RecipeShoppingActions()
+    shopping: RecipeShoppingActions = RecipeShoppingActions(),
+    /** Its pictures, from the files kept with the saved recipe. */
+    pictures: RecipeDocumentPictures = RecipeDocumentPictures(),
+    /** Pictures asked for and not made: only on the result that has just arrived. */
+    notice: PictureNotice? = null,
+    report: ReportFoot = ReportFoot.HIDDEN,
+    onReport: () -> Unit = {}
 ) {
     val resources = LocalContext.current.resources
     Column(
@@ -357,6 +389,15 @@ internal fun RecipeDocument(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Column(modifier = Modifier.widthIn(max = 640.dp).fillMaxWidth().padding(top = LarderSpace.s2, bottom = LarderSpace.s8)) {
+            // The dish's picture above the title, with what it is said under it, always.
+            pictures.dish?.let { dish ->
+                RecipePictureImage(dish, stringResource(R.string.recipe_image_desc, recipe.title))
+                PictureLine(
+                    stringResource(R.string.recipe_image_caption),
+                    Modifier.padding(top = LarderSpace.s2, bottom = LarderSpace.s3),
+                    icon = LarderIcons.Sparkles
+                )
+            }
             Text(
                 text = recipe.title,
                 modifier = Modifier.semantics { heading() },
@@ -387,6 +428,9 @@ internal fun RecipeDocument(
                     RecipeFact(LarderIcons.Smartphone, stringResource(R.string.recipe_saved_from_phone))
                 }
             }
+            if (notice?.dishFailed == true) {
+                PictureLine(stringResource(R.string.recipe_image_failed), Modifier.padding(top = LarderSpace.s3), icon = LarderIcons.ImageOff)
+            }
             // Above the ingredients, never in a footer: seen as the recipe opens.
             PastDateCallout(recipe.pastDate, Modifier.padding(top = LarderSpace.s4))
 
@@ -401,6 +445,12 @@ internal fun RecipeDocument(
             AddToShoppingButton(listOf(recipe), shopping, Modifier.padding(top = LarderSpace.s3).fillMaxWidth())
 
             SectionHeader(stringResource(R.string.recipe_method))
+            if (pictures.steps.isNotEmpty()) {
+                PictureLine(stringResource(R.string.recipe_image_steps_caption), Modifier.padding(bottom = LarderSpace.s3), icon = LarderIcons.Sparkles)
+            }
+            if (notice?.stepsFailed == true) {
+                PictureLine(stringResource(R.string.recipe_image_steps_failed), Modifier.padding(bottom = LarderSpace.s3), icon = LarderIcons.ImageOff)
+            }
             Column(verticalArrangement = Arrangement.spacedBy(LarderSpace.s4)) {
                 recipe.steps.forEachIndexed { index, step ->
                     Row(horizontalArrangement = Arrangement.spacedBy(LarderSpace.s3)) {
@@ -416,12 +466,17 @@ internal fun RecipeDocument(
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                         }
-                        Text(
-                            text = step,
-                            modifier = Modifier.weight(1f).padding(top = 2.dp),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
+                        Column(modifier = Modifier.weight(1f).padding(top = 2.dp), verticalArrangement = Arrangement.spacedBy(LarderSpace.s3)) {
+                            Text(
+                                text = step,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                            // Inside its step, at the text's width.
+                            pictures.steps[index]?.let { picture ->
+                                RecipePictureImage(picture, stringResource(R.string.recipe_image_step_desc, index + 1))
+                            }
+                        }
                     }
                 }
             }
@@ -462,6 +517,8 @@ internal fun RecipeDocument(
                     )
                 }
             }
+            // At the very end of every result our server wrote.
+            ReportFootRow(report, menu = false, onReport = onReport, modifier = Modifier.padding(top = LarderSpace.s6))
         }
     }
 }
@@ -675,4 +732,59 @@ internal fun MenuDocumentOneDayPreview() = LarderTheme {
 @Composable
 internal fun MenuDishPreview() = LarderTheme {
     Surface(color = MaterialTheme.colorScheme.background) { RecipeDocument(previewRecipe.copy(source = RecipeSource.SERVER), partOfMenu = true) }
+}
+
+/** A server recipe with the dish's picture and two step pictures, as it arrived (captions), and its report foot. */
+@PreviewLightDark
+@Composable
+internal fun RecipeDocumentPicturesPreview() = LarderTheme {
+    Surface(color = MaterialTheme.colorScheme.background) {
+        RecipeDocument(
+            previewRecipe.copy(source = RecipeSource.SERVER),
+            pictures = RecipeDocumentPictures(SampleDishPainter(), mapOf(0 to SampleDishPainter(0), 2 to SampleDishPainter(2, height = 800f))),
+            report = ReportFoot.AVAILABLE
+        )
+    }
+}
+
+/** The dish's picture only. */
+@Preview
+@Composable
+internal fun RecipeDocumentDishPicturePreview() = LarderTheme {
+    Surface(color = MaterialTheme.colorScheme.background) {
+        RecipeDocument(previewRecipe.copy(source = RecipeSource.SERVER), pictures = RecipeDocumentPictures(SampleDishPainter()), report = ReportFoot.REPORTED)
+    }
+}
+
+/** Just arrived without the dish's picture: the quiet line under the facts. */
+@Preview
+@Composable
+internal fun RecipeDocumentPictureFailedPreview() = LarderTheme {
+    Surface(color = MaterialTheme.colorScheme.background) {
+        RecipeDocument(previewRecipe.copy(source = RecipeSource.SERVER), notice = PictureNotice(dishFailed = true, stepsFailed = false), report = ReportFoot.AVAILABLE)
+    }
+}
+
+/** Just arrived with the dish but not every step picture: the line under Method. */
+@Preview
+@Composable
+internal fun RecipeDocumentStepsFailedPreview() = LarderTheme {
+    Surface(color = MaterialTheme.colorScheme.background) {
+        RecipeDocument(
+            previewRecipe.copy(source = RecipeSource.SERVER),
+            pictures = RecipeDocumentPictures(SampleDishPainter(), mapOf(1 to SampleDishPainter(1))),
+            notice = PictureNotice(dishFailed = false, stepsFailed = true)
+        )
+    }
+}
+
+/** A menu's foot: Report this menu. */
+@Preview
+@Composable
+internal fun MenuDocumentReportPreview() = LarderTheme {
+    val today = LocalDate(2026, 11, 4)
+    val menu = Menu(
+        listOf(MenuDay(date = today, uses = listOf("bread"), courses = listOf(MenuCourse(MenuCourseKind.MAIN, previewRecipe.copy(source = RecipeSource.SERVER)))))
+    )
+    Surface(color = MaterialTheme.colorScheme.background) { MenuDocument(menu, today, onOpenDish = { _, _ -> }, report = ReportFoot.AVAILABLE) }
 }

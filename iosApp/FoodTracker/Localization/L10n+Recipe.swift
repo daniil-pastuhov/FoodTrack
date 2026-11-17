@@ -726,3 +726,89 @@ extension L10n {
     static var recipeYourStaple: String { staple("recipe_your_staple") }
     static var recipePromptStaplesIntro: String { staple("recipe_prompt_staples_intro") }
 }
+
+/// Recipe pictures and "Report this recipe" (owner's decisions 2026-11-17).
+extension L10n {
+    private static func picture(_ key: String) -> String { NSLocalizedString(key, comment: "") }
+
+    static var recipeImageRow: String { picture("recipe_image_row") }
+    static var recipeImageTitle: String { picture("recipe_image_title") }
+    static func recipeImageLevel(_ level: RecipePictureLevel) -> String {
+        switch level {
+        case .none: return picture("recipe_image_none")
+        case .dish: return picture("recipe_image_dish")
+        case .steps: return picture("recipe_image_steps")
+        }
+    }
+    /// The level's line in the sheet; none has none.
+    static func recipeImageLevelDescription(_ level: RecipePictureLevel) -> String? {
+        switch level {
+        case .none: return nil
+        case .dish: return picture("recipe_image_dish_desc")
+        case .steps: return picture("recipe_image_steps_desc")
+        }
+    }
+    /// The row's value: "No pictures", or the level really sent and its cost ("The dish · 2 recipes").
+    static func recipeImageValue(_ level: RecipePictureLevel, cost: Int?) -> String {
+        guard level != .none, let cost else { return recipeImageLevel(.none) }
+        return "\(recipeImageLevel(level)) · \(recipeCost(cost))"
+    }
+    /// The row's second line when the pack holds the level lower: what is left and what it covers.
+    static func recipeImageShort(_ short: RecipePictureShort, balance: Int) -> String {
+        String(format: picture(short == .noneCovered ? "recipe_image_short" : "recipe_image_short_steps"), recipeCost(balance))
+    }
+    /// The primary's subtitle for the level sent; nil for none.
+    static func recipeImageWith(_ level: RecipePictureLevel) -> String? {
+        switch level {
+        case .none: return nil
+        case .dish: return picture("recipe_image_with")
+        case .steps: return picture("recipe_image_with_steps")
+        }
+    }
+    /// The writing screen's body for a recipe with pictures.
+    static func recipeWritingServerPicturesMessage(_ level: RecipePictureLevel) -> String {
+        withDevice(picture(level == .steps ? "recipe_writing_server_images_message" : "recipe_writing_server_image_message"))
+    }
+    static var recipeImageCaption: String { picture("recipe_image_caption") }
+    static var recipeImageStepsCaption: String { picture("recipe_image_steps_caption") }
+    static func recipeImageDescription(_ title: String) -> String { String(format: picture("recipe_image_desc"), isolated(title)) }
+    static func recipeImageStepDescription(_ number: Int) -> String { String(format: picture("recipe_image_step_desc"), number) }
+    static var recipeImageFailed: String { picture("recipe_image_failed") }
+    static var recipeImageStepsFailed: String { picture("recipe_image_steps_failed") }
+    static var recipeImageUnavailable: String { picture("recipe_image_unavailable") }
+    /// "How recipes work" and the Buy sheet: one sentence per level our server prices; nil when none.
+    static func recipeImageCostLines(_ costs: RecipeCosts) -> String? {
+        guard let dish = costs.recipeImage else { return nil }
+        var text = String(format: picture("recipe_image_cost_line"), recipeCost(dish))
+        if let steps = costs.recipeImageSteps {
+            text += " " + String(format: picture("recipe_image_steps_cost_line"), recipeCost(steps))
+        }
+        return text
+    }
+
+    static func recipeReportAction(isMenu: Bool) -> String { picture(isMenu ? "recipe_report_menu_action" : "recipe_report_action") }
+    static var recipeReportLede: String { picture("recipe_report_lede") }
+    static func recipeReportReason(_ reason: RecipeReportReason) -> String {
+        switch reason {
+        case .offensive: return picture("recipe_report_reason_offensive")
+        case .unsafe: return picture("recipe_report_reason_unsafe")
+        case .picture: return picture("recipe_report_reason_picture")
+        case .other: return picture("recipe_report_reason_other")
+        }
+    }
+    static var recipeReportReasonRequired: String { picture("recipe_report_reason_required") }
+    static var recipeReportNoteLabel: String { picture("recipe_report_note_label") }
+    static func recipeReportNoteCount(_ count: Int, of max: Int) -> String {
+        String(format: picture("recipe_report_note_count"), count, max)
+    }
+    static func recipeReportSends(isMenu: Bool) -> String { picture(isMenu ? "recipe_report_sends_server_menu" : "recipe_report_sends_server") }
+    static var recipeReportSend: String { picture("recipe_report_send") }
+    static var recipeReportCancel: String { picture("recipe_report_cancel") }
+    static var recipeReportSending: String { picture("recipe_report_sending") }
+    static var recipeReportSent: String { picture("recipe_report_sent") }
+    static var recipeReportFailed: String { picture("recipe_report_failed") }
+    static var recipeReportLimit: String { picture("recipe_report_limit") }
+    static var recipeReportUnknown: String { picture("recipe_report_unknown") }
+    static var recipeReportTryAgain: String { picture("recipe_report_try_again") }
+    static var recipeReportDone: String { picture("recipe_report_done") }
+}

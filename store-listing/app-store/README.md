@@ -345,6 +345,13 @@ Answer **None / No** to every question: violence, sexual content, profanity, dru
 horror, medical, unrestricted web access, user-generated content, chat, contests.
 The result is **4+**.
 
+Recipe pictures (when shipped): re-read the questionnaire before the release that adds them. The
+pictures are food only, made by our server with the image model's own safety filters on and a
+fixed prompt that rules out people, text and logos, so the answers above stay None / No; if
+the questionnaire then asks about AI-generated content, answer that it generates food
+pictures and recipe text and that every result can be reported in the app. Play: the same re-check of the content rating questionnaire
+(`docs/play-production.md`).
+
 ## 5. App Privacy ("nutrition label")
 
 What the app sends off the phone, and so what Apple counts as collected (data sent to you or a
@@ -391,8 +398,11 @@ the file `store-listing/google-play/data-safety.csv`, sent by `scripts/play_data
     (with "Send all products" on in Recipe settings, every pantry item's, the others as items the
     recipe may use), and the names of the person's staples (Settings > Staples), sent with every
     recipe or menu from a pack,
-    and the recipe settings sent to write a recipe or menu, and the recipe written back (kept on
-    the server for 7 days after it finished, for retries, then deleted). The request itself is
+    and the recipe settings sent to write a recipe or menu, and the recipe written back, with its
+    pictures when they were asked for (recipe pictures, when shipped) (kept on
+    the server for 7 days after it finished, for retries, then deleted). With reports (when
+    shipped): a report's reason, the person's own note and a snapshot of the reported result,
+    kept for the configured time (only results our server wrote can be reported). The request itself is
     not stored, only a hash of it; it is screened automatically for prompt injection, and
     refused attempts are counted per account per day, without their text.
   - **Health & Fitness > Health**: the **allergen list** from Settings, sent with a server-written
@@ -446,7 +456,8 @@ the file `store-listing/google-play/data-safety.csv`, sent by `scripts/play_data
     nothing in the app uses it.
   - **Other user-generated content** (the ticked items' names, dates and quantities, every pantry
     item's with "Send all products" on, and the names of the person's staples (Settings > Staples),
-    sent with every recipe or menu from a pack, the recipe settings, the recipe returned): optional,
+    sent with every recipe or menu from a pack, the recipe settings, the recipe returned, with its
+    pictures when they were asked for, and reports with their notes (when shipped)): optional,
     **App functionality**.
   - **Health and fitness > Health info** (the allergen list, "Information about a user's health,
     such as medical records or symptoms"): optional (only with allergens set, and only after the

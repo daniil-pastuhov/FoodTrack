@@ -39,6 +39,8 @@ import com.foodtracker.recipe.RecipeStore
 import com.foodtracker.recipe.RecipeConfigRepository
 import com.foodtracker.recipe.RecipeStateHolder
 import com.foodtracker.recipe.SavedRecipeRepository
+import com.foodtracker.recipe.RecipePictureStore
+import com.foodtracker.android.recipe.AndroidRecipePictureStore
 import com.foodtracker.repository.CategoryPreferenceRepository
 import com.foodtracker.repository.LocalProductRepository
 import com.foodtracker.repository.PantryRepository
@@ -95,6 +97,8 @@ val appModule = module {
     single<StapleRepository> { RoomStapleRepository(get()) }
     single<SettingsRepository> { AndroidSettingsRepository(androidContext()) }
     single<SavedRecipeRepository> { RoomSavedRecipeRepository(get()) }
+    // Server recipes' pictures, as files beside their saved rows (out of every backup).
+    single<RecipePictureStore> { AndroidRecipePictureStore(androidContext()) }
     single<RecipeConfigRepository> { AndroidRecipeConfigRepository(androidContext()) }
     single<OnDeviceRecipeModel> { GeminiNanoRecipeModel() }
     single { OpenFoodFactsApi(userAgent = OFF_USER_AGENT) }
@@ -158,7 +162,8 @@ val appModule = module {
             paidRepository = get(),
             appLanguage = { Locale.getDefault().toLanguageTag() },
             // Android 10's share sheet added its own Copy; below it the form keeps a Copy button.
-            shareSheetCopies = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q
+            shareSheetCopies = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q,
+            pictureStore = get()
         )
     }
 }

@@ -40,6 +40,7 @@ enum LarderIconName: String, CaseIterable {
     case egg
     case ellipsisVertical = "ellipsis-vertical"
     case fish
+    case flag
     case flame
     case flashlight
     case gauge

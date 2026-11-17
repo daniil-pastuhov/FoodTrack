@@ -148,6 +148,12 @@ data class PaidUiState(
     val serverTakesOptional: Boolean = false,
     /** The days of the menu being written ([writing] MENU), for the writing screen's title. */
     val writingDays: Int = DEFAULT_MENU_DAYS,
+    /** The pictures the recipe being written comes with, for the writing screen's wording. */
+    val writingPictures: PictureLevel = PictureLevel.NONE,
+    /** The server said `acceptsRecipeImage`: the Pictures row may show, for the levels [costs] prices. */
+    val takesRecipeImage: Boolean = false,
+    /** The server said `acceptsReports`: the results it wrote offer "Report this recipe". */
+    val takesReports: Boolean = false,
     /** The server won't sell to this account (earlier purchases refunded after use). */
     val purchasesBlocked: Boolean = false,
     /** The account was deleted but the server could not remove Apple's link to the app
@@ -205,6 +211,12 @@ private const val BALANCE_REFRESH_MILLIS = 60_000L
 /** How long to keep asking about a generation the server is still writing: past its reservation
  *  deadline (60 s for a recipe, 180 s for a menu) plus the sweeper's margin. */
 private const val RECIPE_POLL_MILLIS = 150_000L
+
+/** The same for a recipe with pictures: its reservation runs 55 s longer with the dish's picture
+ *  and 105 s with step pictures (functions/src/constants.ts IMAGE.reservationExtraMs), so 115 s and
+ *  165 s, plus the sweeper's minute (225 s at most): 45 s to spare even then; as long as a menu,
+ *  the same on iOS. */
+private const val PICTURE_POLL_MILLIS = 270_000L
 private const val MENU_POLL_MILLIS = 270_000L
 
 private const val HELD_GENERATION_MAX_MILLIS = 24 * 60 * 60_000L
@@ -293,7 +305,15 @@ internal class RecipePaid(
     /** Keeps [id] as unread in Saved recipes. */
     private val markUnread: (String) -> Unit = {},
     /** A reply that carries a balance has just been applied (its `tasteQuizVersion` with it). */
-    private val onTermsReply: () -> Unit = {}
+    private val onTermsReply: () -> Unit = {},
+    /** Where a reply's pictures are kept, beside the saved row. */
+    private val pictureStore: RecipePictureStore = NoRecipePictureStore,
+    /** A result saved with fewer pictures than asked for: its quiet lines, for when it is shown. */
+    private val onPictureNotice: (savedId: String, notice: PictureNotice) -> Unit = { _, _ -> },
+    /** A report of [requestId] was received by the server: remembered on this device. */
+    private val onReported: (requestId: String) -> Unit = {},
+    /** The app's language, for a report's `app.language`. */
+    private val appLanguage: () -> String = { "en" }
 ) {
     /** Set by a reply's terms, so [publish] calls [onTermsReply] once they are on screen. */
     @kotlin.concurrent.Volatile
@@ -372,8 +392,10 @@ internal class RecipePaid(
                 welcomeClaimed = key != null && key in kept.welcomeClaimed,
                 available = shown(it.packsOffered),
                 balance = kept.balance,
-                // The menu set's table only while the server says it writes them.
-                costs = (kept.costs ?: RecipeCosts()).let { costs -> if (kept.serverTakesMenuDays) costs else costs.copy(menuSets = emptyMap()) },
+                // The menu set's table only while the server says it writes them, and the picture
+                // prices only while it says it reads `image`.
+                costs = (kept.costs ?: RecipeCosts()).let { costs -> if (kept.serverTakesMenuDays) costs else costs.copy(menuSets = emptyMap()) }
+                    .let { costs -> if (kept.serverTakesRecipeImage) costs else costs.copy(recipeImage = null, recipeImageSteps = null) },
                 purchasesBlocked = kept.purchasesBlocked,
                 unconfirmedRecipes = kept.unverified.filterNot { purchase -> purchase.isElsewhere(key) }.sumOf { purchase -> purchase.recipes },
                 elsewhereRecipes = kept.unverified.filter { purchase -> purchase.isElsewhere(key) }.sumOf { purchase -> purchase.recipes },
@@ -382,7 +404,9 @@ internal class RecipePaid(
                 menuSets = kept.serverTakesMenuDays,
                 takesTaste = kept.serverTakesTaste,
                 tasteQuizVersion = kept.tasteQuizVersion,
-                serverTakesOptional = kept.serverTakesOptional
+                serverTakesOptional = kept.serverTakesOptional,
+                takesRecipeImage = kept.serverTakesRecipeImage,
+                takesReports = kept.serverTakesReports
             )
         }
         if (termsArrived) {
@@ -408,7 +432,9 @@ internal class RecipePaid(
         tasteVersion: JsonElement?,
         welcomeAccepted: JsonElement?,
         welcomeRecipes: JsonElement?,
-        staples: JsonElement?
+        staples: JsonElement?,
+        recipeImage: JsonElement?,
+        reports: JsonElement?
     ): RecipePaidSnapshot =
         also { termsArrived = true }.copy(
             costs = recipeCostsOf(costs) ?: this.costs,
@@ -419,6 +445,8 @@ internal class RecipePaid(
             serverTakesMenuDays = acceptsMenuDaysOf(menuDays),
             serverTakesTaste = acceptsTasteOf(taste),
             serverTakesStaples = acceptsStaplesOf(staples),
+            serverTakesRecipeImage = acceptsRecipeImageOf(recipeImage),
+            serverTakesReports = acceptsReportsOf(reports),
             tasteQuizVersion = tasteQuizVersionOf(tasteVersion) ?: tasteQuizVersion,
             welcomeAccount = welcomeAccountAnswerOf(acceptsWelcomeOf(welcomeAccepted), welcomeRecipesFieldOf(welcomeRecipes), nowMillis())
         )
@@ -496,7 +524,7 @@ internal class RecipePaid(
         balanceAskedAt = nowMillis()
         return when (val result = backend.getBalance()) {
             is ServerResult.Ok -> {
-                persist { it.copy(balance = result.value.balance, costs = result.value.costs ?: it.costs, purchasesBlocked = result.value.purchasesBlocked, serverTakesOptional = result.value.acceptsOptional, serverTakesMultiChoice = result.value.acceptsMultiChoice, serverTakesDanish = result.value.acceptsDanish, serverTakesMenuDays = result.value.acceptsMenuDays, serverTakesTaste = result.value.acceptsTaste, serverTakesStaples = result.value.acceptsStaples, tasteQuizVersion = result.value.tasteQuizVersion ?: it.tasteQuizVersion).withBalanceWelcome(result.value).also { termsArrived = true } }
+                persist { it.copy(balance = result.value.balance, costs = result.value.costs ?: it.costs, purchasesBlocked = result.value.purchasesBlocked, serverTakesOptional = result.value.acceptsOptional, serverTakesMultiChoice = result.value.acceptsMultiChoice, serverTakesDanish = result.value.acceptsDanish, serverTakesMenuDays = result.value.acceptsMenuDays, serverTakesTaste = result.value.acceptsTaste, serverTakesStaples = result.value.acceptsStaples, serverTakesRecipeImage = result.value.acceptsRecipeImage, serverTakesReports = result.value.acceptsReports, tasteQuizVersion = result.value.tasteQuizVersion ?: it.tasteQuizVersion).withBalanceWelcome(result.value).also { termsArrived = true } }
                 updatePaid { if (it.issue == ServerIssue.BUSY && held() == null) it.copy(issue = null) else it }
                 updatePaid { if (it.issue == ServerIssue.OFFLINE) it.copy(issue = null) else it }
                 true
@@ -787,7 +815,7 @@ internal class RecipePaid(
                             current.copy(
                                 unverified = if (settled) current.unverified.filterNot { it.token == purchase.token } else current.unverified,
                                 balance = reply.balance ?: current.balance
-                            ).withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients, reply.acceptsMultiChoiceConfig, reply.acceptsDanish, reply.acceptsMenuDays, reply.acceptsTaste, reply.tasteQuizVersion, reply.acceptsWelcome, reply.welcomeRecipes, reply.acceptsStaples)
+                            ).withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients, reply.acceptsMultiChoiceConfig, reply.acceptsDanish, reply.acceptsMenuDays, reply.acceptsTaste, reply.tasteQuizVersion, reply.acceptsWelcome, reply.welcomeRecipes, reply.acceptsStaples, reply.acceptsRecipeImage, reply.acceptsReports)
                         }
                         when (reply.status) {
                             VerifyStatus.GRANTED -> updatePaid { it.copy(event = PaidEvent.RecipesAdded(purchase.recipes)) }
@@ -891,7 +919,7 @@ internal class RecipePaid(
         when (val result = whileBusy(setOf(ServerError.OVERLOADED, ServerError.BUSY)) { account.completeMerge(merge) }) {
             is ServerResult.Ok -> {
                 val reply = result.value
-                persist { it.copy(balance = reply.balance, costs = reply.costs ?: it.costs, purchasesBlocked = reply.purchasesBlocked, serverTakesOptional = reply.acceptsOptional, serverTakesMultiChoice = reply.acceptsMultiChoice, serverTakesDanish = reply.acceptsDanish, serverTakesMenuDays = reply.acceptsMenuDays, serverTakesTaste = reply.acceptsTaste, serverTakesStaples = reply.acceptsStaples, tasteQuizVersion = reply.tasteQuizVersion ?: it.tasteQuizVersion, welcomeAccount = welcomeAccountAnswerOf(reply.acceptsWelcome, reply.welcomeRecipes, nowMillis())).also { termsArrived = true } }
+                persist { it.copy(balance = reply.balance, costs = reply.costs ?: it.costs, purchasesBlocked = reply.purchasesBlocked, serverTakesOptional = reply.acceptsOptional, serverTakesMultiChoice = reply.acceptsMultiChoice, serverTakesDanish = reply.acceptsDanish, serverTakesMenuDays = reply.acceptsMenuDays, serverTakesTaste = reply.acceptsTaste, serverTakesStaples = reply.acceptsStaples, serverTakesRecipeImage = reply.acceptsRecipeImage, serverTakesReports = reply.acceptsReports, tasteQuizVersion = reply.tasteQuizVersion ?: it.tasteQuizVersion, welcomeAccount = welcomeAccountAnswerOf(reply.acceptsWelcome, reply.welcomeRecipes, nowMillis())).also { termsArrived = true } }
                 val event = if (reply.moved != 0) PaidEvent.Merged(reply.moved) else null
                 updatePaid { it.copy(accountBusy = false, merge = null, event = event ?: it.event) }
                 if (claimAfterMerge) {
@@ -1191,7 +1219,7 @@ internal class RecipePaid(
                         serverTakesDanish = reply.acceptsDanish,
                         serverTakesMenuDays = reply.acceptsMenuDays,
                         serverTakesTaste = reply.acceptsTaste,
-                        serverTakesStaples = reply.acceptsStaples,
+                        serverTakesStaples = reply.acceptsStaples, serverTakesRecipeImage = reply.acceptsRecipeImage, serverTakesReports = reply.acceptsReports,
                         tasteQuizVersion = reply.tasteQuizVersion ?: it.tasteQuizVersion
                     ).withBalanceWelcome(reply).also { termsArrived = true }
                 }
@@ -1243,6 +1271,102 @@ internal class RecipePaid(
             if (!allergenConsentGiven(snapshot.allergenConsent)) updatePaid { it.copy(consentPrompt = ConsentPrompt.FROM_SETTINGS) }
         } else {
             persist { it.copy(allergenConsent = AllergenConsentRecord(agreed = false, atMillis = nowMillis(), version = ALLERGEN_CONSENT_VERSION)) }
+        }
+    }
+
+    // --- Report this recipe (RecipePictures.kt) ----------------------------------------------
+
+    /**
+     * Opens the report sheet for saved result [savedId], only where its foot offers it
+     * ([RecipeUiState.reportFoot]): nothing is made for it, no account and no call. [asDish]: a dish
+     * of a menu, which reports that menu's generation in the recipe's own words.
+     */
+    fun openReport(savedId: String, asDish: Boolean = false) {
+        val current = state.value
+        val saved = current.saved.firstOrNull { it.id == savedId } ?: return
+        val requestId = saved.requestId ?: return
+        if (current.reportFoot(saved) != ReportFoot.AVAILABLE || current.report != null) return
+        state.update {
+            it.copy(
+                report = ReportSheet(
+                    savedId = savedId,
+                    requestId = requestId,
+                    menu = saved.kind == SavedRecipeKind.MENU && !asDish,
+                    hasPictures = saved.recipe?.hasPictures == true,
+                    reportId = newRequestId()
+                )
+            )
+        }
+    }
+
+    fun chooseReportReason(reason: ReportReason) {
+        state.update { current ->
+            val sheet = current.report ?: return@update current
+            if (sheet.status == ReportStatus.SENDING || reason !in sheet.reasons) current
+            else current.copy(report = sheet.copy(reason = reason, reasonMissing = false))
+        }
+    }
+
+    fun setReportNote(note: String) {
+        state.update { current ->
+            val sheet = current.report ?: return@update current
+            if (sheet.status == ReportStatus.SENDING) current else current.copy(report = sheet.copy(note = cutReportNote(note)))
+        }
+    }
+
+    /** Cancel, or the sheet swiped away. A report already on its way still lands. */
+    fun dismissReport() {
+        state.update { it.copy(report = null) }
+    }
+
+    /**
+     * Send report, and its Try again: the same report id every time, so the server stores it once.
+     * Without a reason, "Choose a reason." and nothing is sent. Received: remembered here, the sheet
+     * closes and [RecipeUiState.reportSent] is raised for the snackbar.
+     */
+    fun sendReport() {
+        val sheet = state.value.report ?: return
+        if (sheet.status == ReportStatus.SENDING || sheet.status == ReportStatus.LIMIT || sheet.status == ReportStatus.UNKNOWN) return
+        val reason = sheet.reason
+        if (reason == null) {
+            state.update { it.copy(report = it.report?.copy(reasonMissing = true)) }
+            return
+        }
+        // A demo shows the states; nothing is ever sent from one.
+        if (demo) return
+        state.update { it.copy(report = it.report?.copy(status = ReportStatus.SENDING)) }
+        scope.launch {
+            val report = RecipeReport(sheet.reportId, sheet.requestId, reason, reportNoteToSend(sheet.note), appLanguage())
+            val result = try {
+                whileBusy(setOf(ServerError.OVERLOADED)) { backend.reportRecipe(report) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                ServerResult.Err(ServerError.OFFLINE)
+            }
+            fun ifStillOpen(transform: (ReportSheet) -> ReportSheet) =
+                state.update { current -> current.report?.takeIf { it.reportId == sheet.reportId }?.let { current.copy(report = transform(it)) } ?: current }
+            when (result) {
+                is ServerResult.Ok -> {
+                    onReported(sheet.requestId)
+                    state.update { current ->
+                        current.copy(report = current.report?.takeUnless { it.reportId == sheet.reportId }, reportSent = true)
+                    }
+                }
+                is ServerResult.Err -> {
+                    if (result.error == ServerError.ACCOUNT_CLOSED) handleCommonError(result.error)
+                    ifStillOpen {
+                        when (result.error) {
+                            ServerError.REPORT_LIMIT -> it.copy(status = ReportStatus.LIMIT)
+                            ServerError.UNKNOWN_REQUEST -> it.copy(status = ReportStatus.UNKNOWN)
+                            // The id was taken for another result (functions/CONTRACT.md
+                            // reportRecipe): Try again goes as a new report.
+                            ServerError.INVALID_REQUEST -> it.copy(status = ReportStatus.FAILED, reportId = newRequestId())
+                            else -> it.copy(status = ReportStatus.FAILED)
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -1329,7 +1453,10 @@ internal class RecipePaid(
             // Only to a server that reads it, and never anything for an empty profile.
             taste = wireTasteFor(current.taste, current.tasteDefinition, snapshot.serverTakesTaste),
             // Names only, and only to a server that reads them; never one already in the request.
-            staples = if (snapshot.serverTakesStaples) stapleWireNames(current.stapleNames, ingredients, optional, refusedIngredients).ifEmpty { null } else null
+            staples = if (snapshot.serverTakesStaples) stapleWireNames(current.stapleNames, ingredients, optional, refusedIngredients).ifEmpty { null } else null,
+            // Pictures: a single recipe only, the level the pack covers ([pictureChoice]), and only
+            // to a server that reads `image` and prices that level.
+            image = if (menu || !snapshot.serverTakesRecipeImage) null else current.pictures.sent.takeIf { it != PictureLevel.NONE }
         )
         return Built.Ready(request, leftOut)
     }
@@ -1363,7 +1490,7 @@ internal class RecipePaid(
             is Built.Ready -> result
         }
         val fresh = built.request
-        updatePaid { it.copy(writing = current.mode, writingDays = fresh.days ?: DEFAULT_MENU_DAYS) }
+        updatePaid { it.copy(writing = current.mode, writingDays = fresh.days ?: DEFAULT_MENU_DAYS, writingPictures = fresh.image ?: PictureLevel.NONE) }
         state.update { it.copy(event = null) }
         scope.launch {
             generationLock.withLock {
@@ -1404,7 +1531,7 @@ internal class RecipePaid(
                 val kept = snapshot.pendingGeneration?.takeIf { it.sameAskAs(next.request) }
                 val request = kept ?: next.request
                 if (kept == null) persist { it.copy(pendingGeneration = request, pendingSinceMillis = nowMillis()) }
-                updatePaid { it.copy(writing = if (request.kind == WireKind.MENU) RecipeMode.MENU else RecipeMode.RECIPE, writingDays = request.days ?: DEFAULT_MENU_DAYS) }
+                updatePaid { it.copy(writing = if (request.kind == WireKind.MENU) RecipeMode.MENU else RecipeMode.RECIPE, writingDays = request.days ?: DEFAULT_MENU_DAYS, writingPictures = request.image ?: PictureLevel.NONE) }
                 // Already sent once with these inputs: asked about, not started again.
                 send(request, interactive = true, start = kept == null, leftOut = next.leftOut)
             }
@@ -1425,7 +1552,7 @@ internal class RecipePaid(
             }
             return
         }
-        updatePaid { it.copy(writing = if (held.kind == WireKind.MENU) RecipeMode.MENU else RecipeMode.RECIPE, writingDays = held.days ?: DEFAULT_MENU_DAYS, issue = null) }
+        updatePaid { it.copy(writing = if (held.kind == WireKind.MENU) RecipeMode.MENU else RecipeMode.RECIPE, writingDays = held.days ?: DEFAULT_MENU_DAYS, writingPictures = held.image ?: PictureLevel.NONE, issue = null) }
         scope.launch {
             generationLock.withLock {
                 // A recovery in the background may have settled it while this waited for the lock.
@@ -1481,9 +1608,13 @@ internal class RecipePaid(
         retried: Boolean = false
     ): Sent {
         // What it takes as asked, before a reply can bring new costs.
-        val cost = (snapshot.costs ?: RecipeCosts()).of(request.kind, request.courses, request.days)
+        val cost = (snapshot.costs ?: RecipeCosts()).of(request.kind, request.courses, request.days, request.image)
         val began = nowMillis()
-        val deadline = began + if (request.kind == WireKind.MENU) MENU_POLL_MILLIS else RECIPE_POLL_MILLIS
+        val deadline = began + when {
+            request.kind == WireKind.MENU -> MENU_POLL_MILLIS
+            request.image != null -> PICTURE_POLL_MILLIS
+            else -> RECIPE_POLL_MILLIS
+        }
         val menu = request.kind == WireKind.MENU
         var starting = start
         var failures = 0
@@ -1512,7 +1643,7 @@ internal class RecipePaid(
                             if (saved == null) {
                                 // The contract promises the content with DONE; without it there is
                                 // nothing to show, and asking again with this id returns the same.
-                                persist { it.copy(pendingGeneration = null, balance = reply.balance).withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients, reply.acceptsMultiChoiceConfig, reply.acceptsDanish, reply.acceptsMenuDays, reply.acceptsTaste, reply.tasteQuizVersion, reply.acceptsWelcome, reply.welcomeRecipes, reply.acceptsStaples) }
+                                persist { it.copy(pendingGeneration = null, balance = reply.balance).withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients, reply.acceptsMultiChoiceConfig, reply.acceptsDanish, reply.acceptsMenuDays, reply.acceptsTaste, reply.tasteQuizVersion, reply.acceptsWelcome, reply.welcomeRecipes, reply.acceptsStaples, reply.acceptsRecipeImage, reply.acceptsReports) }
                                 finish(interactive, RecipeEvent.ServerFailed)
                                 return Sent.SETTLED
                             }
@@ -1522,7 +1653,7 @@ internal class RecipePaid(
                             // recipes as unread.
                             val shown = interactive && isOnScreen()
                             if (!shown) markUnread(saved.id)
-                            persist { it.copy(pendingGeneration = null, balance = reply.balance).withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients, reply.acceptsMultiChoiceConfig, reply.acceptsDanish, reply.acceptsMenuDays, reply.acceptsTaste, reply.tasteQuizVersion, reply.acceptsWelcome, reply.welcomeRecipes, reply.acceptsStaples) }
+                            persist { it.copy(pendingGeneration = null, balance = reply.balance).withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients, reply.acceptsMultiChoiceConfig, reply.acceptsDanish, reply.acceptsMenuDays, reply.acceptsTaste, reply.tasteQuizVersion, reply.acceptsWelcome, reply.welcomeRecipes, reply.acceptsStaples, reply.acceptsRecipeImage, reply.acceptsReports) }
                             updatePaid { if (it.issue == ServerIssue.OFFLINE || it.issue == ServerIssue.BUSY) it.copy(issue = null) else it }
                             if (shown) {
                                 state.update { current ->
@@ -1551,7 +1682,7 @@ internal class RecipePaid(
                             failures = 0
                             // The balance it reports is held, not spent: the count waits for the
                             // result. The costs and the block stand as they are.
-                            persist { it.withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients, reply.acceptsMultiChoiceConfig, reply.acceptsDanish, reply.acceptsMenuDays, reply.acceptsTaste, reply.tasteQuizVersion, reply.acceptsWelcome, reply.welcomeRecipes, reply.acceptsStaples) }
+                            persist { it.withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients, reply.acceptsMultiChoiceConfig, reply.acceptsDanish, reply.acceptsMenuDays, reply.acceptsTaste, reply.tasteQuizVersion, reply.acceptsWelcome, reply.welcomeRecipes, reply.acceptsStaples, reply.acceptsRecipeImage, reply.acceptsReports) }
                             if (nowMillis() >= deadline) {
                                 finish(interactive, null, ServerIssue.OFFLINE)
                                 return Sent.KEPT_OFFLINE
@@ -1559,7 +1690,7 @@ internal class RecipePaid(
                             pollDelay(if (nowMillis() - began < SLOW_POLL_AFTER_MILLIS) POLL_MILLIS else SLOW_POLL_MILLIS)
                         }
                         GenerateStatus.FAILED -> {
-                            persist { it.copy(pendingGeneration = null, balance = reply.balance).withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients, reply.acceptsMultiChoiceConfig, reply.acceptsDanish, reply.acceptsMenuDays, reply.acceptsTaste, reply.tasteQuizVersion, reply.acceptsWelcome, reply.welcomeRecipes, reply.acceptsStaples) }
+                            persist { it.copy(pendingGeneration = null, balance = reply.balance).withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients, reply.acceptsMultiChoiceConfig, reply.acceptsDanish, reply.acceptsMenuDays, reply.acceptsTaste, reply.tasteQuizVersion, reply.acceptsWelcome, reply.welcomeRecipes, reply.acceptsStaples, reply.acceptsRecipeImage, reply.acceptsReports) }
                             updatePaid { if (it.issue == ServerIssue.OFFLINE || it.issue == ServerIssue.BUSY) it.copy(issue = null) else it }
                             if (!interactive && reply.charged) updatePaid { it.copy(event = PaidEvent.EarlierRefused(cost)) }
                             finish(interactive, if (reply.charged) RecipeEvent.ServerRefused(cost) else RecipeEvent.ServerFailed)
@@ -1643,6 +1774,14 @@ internal class RecipePaid(
                         finish(interactive, RecipeEvent.ServerTroubleToday)
                         return Sent.SETTLED
                     }
+                    // The level asked for isn't made now: nothing was reserved. The table is asked
+                    // for again, which withdraws the level, and the next tap is a new request.
+                    ServerError.IMAGE_UNAVAILABLE -> {
+                        persist { it.copy(pendingGeneration = null, pendingSinceMillis = null) }
+                        refreshBalance()
+                        finish(interactive, RecipeEvent.PicturesUnavailable)
+                        return Sent.SETTLED
+                    }
                     ServerError.UNAUTHENTICATED -> {
                         markUnavailable()
                         finish(interactive, RecipeEvent.ServerFailed)
@@ -1715,7 +1854,9 @@ internal class RecipePaid(
                                 if (request.taste != null) persist { it.copy(serverTakesTaste = false) }
                                 // Staples likewise: the next try goes without them.
                                 if (request.staples != null) persist { it.copy(serverTakesStaples = false) }
-                                if (request.config.isMultiChoice || request.config.language == DANISH || menuSet || request.taste != null || request.staples != null) refreshBalance()
+                                // Pictures likewise: hidden until a reply says acceptsRecipeImage again.
+                                if (request.image != null) persist { it.copy(serverTakesRecipeImage = false) }
+                                if (request.config.isMultiChoice || request.config.language == DANISH || menuSet || request.taste != null || request.staples != null || request.image != null) refreshBalance()
                                 finish(interactive, RecipeEvent.ServerFailed)
                                 return Sent.SETTLED
                             }
@@ -1774,7 +1915,7 @@ internal class RecipePaid(
         }
     }
 
-    private fun savedFrom(request: GenerateRequest, reply: GenerateReply): SavedRecipe? {
+    private suspend fun savedFrom(request: GenerateRequest, reply: GenerateReply): SavedRecipe? {
         val created = nowMillis()
         // The past-date warning comes from what was sent and its dates on the day it was asked
         // for, never from the model's text.
@@ -1788,15 +1929,37 @@ internal class RecipePaid(
             // phone's own matching is only for recipes the phone wrote (parseRecipeReply).
             // The warning names exactly the past-date items the dish uses, by the ingredients'
             // item indices; an answer without them (an older server) names every ticked one.
-            WireKind.RECIPE -> reply.recipe?.let { recipe ->
+            WireKind.RECIPE -> reply.recipe?.withoutLocalFields()?.let { recipe ->
                 val past = if (recipe.hasItemIndices) recipe.pastDateByIndex(request.ingredients, optional, asked) else tickedPast
-                SavedRecipe.of(newSavedId(), recipe.copy(source = RecipeSource.SERVER, pastDate = past).withStapleNames(staples), created)
+                val id = newSavedId()
+                // The pictures go to their folder before the row exists, so the row never names one
+                // that isn't there; only for a request that asked for them.
+                val kept = request.image?.let { _ ->
+                    reply.pictures?.takeUnless { it.isEmpty }?.let { pictures ->
+                        try {
+                            pictureStore.save(id, pictures, recipe.steps.size)
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            SavedPictures()
+                        }
+                    }
+                } ?: SavedPictures()
+                pictureNoticeOf(request.image, purchasesBlockedOf(reply.imageFailed), purchasesBlockedOf(reply.stepImagesFailed), kept.dish != null)
+                    ?.let { onPictureNotice(id, it) }
+                SavedRecipe.of(
+                    id,
+                    recipe.copy(source = RecipeSource.SERVER, pastDate = past, requestId = request.requestId, picture = kept.dish, stepPictures = kept.steps)
+                        .withStapleNames(staples),
+                    created
+                )
             }
             WireKind.MENU -> reply.menu?.takeIf { it.days.isNotEmpty() }?.let { menu ->
                 val plain = Menu(
                     menu.days.map { day ->
-                        day.copy(courses = day.courses.map { it.copy(recipe = it.recipe.copy(source = RecipeSource.SERVER)) })
-                    }
+                        day.copy(courses = day.courses.map { it.copy(recipe = it.recipe.withoutLocalFields().copy(source = RecipeSource.SERVER)) })
+                    },
+                    requestId = request.requestId
                 )
                 val serverMenu = plain.withPastDateByIndex(request.ingredients, optional, asked)
                     ?: plain.withPastDate(tickedPast, pastDateOf(optional, asked))

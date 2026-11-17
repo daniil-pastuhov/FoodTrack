@@ -222,6 +222,15 @@ export interface RecipeGenerator {
   generate(request: GenerateRequest, prompt: Prompt, signal: AbortSignal, limits: GenerationLimits): Promise<GenerationResult>;
 }
 
+/** What the judge classifies: a validated answer, and the picture's brief when one was asked. */
+export interface JudgedOutput {
+  recipe?: Recipe;
+  menu?: Menu;
+  imageBrief?: string;
+  /** Level "steps": the kept step briefs. */
+  stepBriefs?: string[];
+}
+
 /** The optional second check on a validated answer (config/runtime `outputJudge`). */
 export type JudgeVerdict = "ok" | "off_topic" | "unsafe_food" | "harmful";
 
@@ -237,7 +246,78 @@ export interface OutputJudge {
    * answers with an enum. Throws GenerationError ("content" when the judge's own safety filter
    * blocked the text, "infra" otherwise).
    */
-  judge(output: { recipe?: Recipe; menu?: Menu }, signal: AbortSignal): Promise<JudgeResult>;
+  judge(output: JudgedOutput, signal: AbortSignal): Promise<JudgeResult>;
+}
+
+// --- Recipe pictures ---------------------------------------------------------------------------
+
+/**
+ * What a picture is asked from: one fixed English text the server built (core/recipeImage.ts
+ * imagePromptFor) from its own template and the text model's checked `imageBrief`. Never the
+ * person's own text, never the system instruction.
+ */
+export interface ImagePrompt {
+  text: string;
+  /** The picture's shape, width:height (IMAGE.aspectRatio); each adapter asks its provider for it or its nearest size. */
+  aspectRatio: ImageAspect;
+}
+
+/** The shapes a picture may be asked in. */
+export type ImageAspect = "4:3";
+
+/** Token counts a provider reported for one picture (for booking its real cost). */
+export interface ImageUsage {
+  inputTokens: number;
+  /** Text output and thinking, billed at the text output rate. */
+  outputTextTokens: number;
+  outputImageTokens: number;
+}
+
+/** The selected provider and model (RuntimeConfig.image), passed on every call. */
+export interface ImageTarget {
+  provider: string;
+  model: string;
+}
+
+/** A provider's answer, before core/recipeImage.ts re-encodes it to the delivered JPEG. */
+export interface GeneratedImage {
+  bytes: Buffer;
+  /** As the provider said (image/png, image/jpeg, image/webp ...); the bytes are checked anyway. */
+  mimeType: string;
+  /** The model that answered, when the provider says (logs only). */
+  model: string;
+  /** Token counts, when the provider reported them. */
+  usage?: ImageUsage;
+}
+
+/**
+ * A picture that was not made. `kind`: "safety" when the provider's own filters refused the
+ * prompt or the picture, "config" when the provider cannot be called at all (unknown provider, no
+ * API key: nothing was sent, nothing billed), "infra" otherwise (network, 4xx/5xx, timeout, an
+ * unusable answer). `billed`: whether the call may have been charged; when true the picture's
+ * reserved price is booked. The message is a fixed text (status codes, never provider text, which
+ * could quote the prompt). `retryable`: a quota or overload answer (429, 5xx) worth asking again
+ * after a pause (core/recipeImage.ts); `status`: the HTTP status, when there was one (logs only).
+ */
+export class ImageGenerationError extends Error {
+  constructor(
+    readonly kind: "safety" | "config" | "infra",
+    message: string,
+    readonly billed: boolean,
+    readonly retryable = false,
+    readonly status?: number,
+  ) {
+    super(message);
+  }
+}
+
+/**
+ * The provider-neutral port behind every recipe picture. Implementations (adapters/image.ts):
+ * Vertex AI and OpenAI, chosen per call by `target.provider` (ImageRouter), and the emulator fake.
+ * Must honour `signal`. Throws ImageGenerationError.
+ */
+export interface RecipeImageGenerator {
+  generate(prompt: ImagePrompt, target: ImageTarget, signal: AbortSignal): Promise<GeneratedImage>;
 }
 
 // --- Wiring -----------------------------------------------------------------------------------
@@ -255,10 +335,16 @@ export interface Deps {
   appStore: AppStoreVerifier;
   generator: RecipeGenerator;
   judge: OutputJudge;
+  /** Recipe pictures, whatever the provider (RecipeImageGenerator). */
+  imageGenerator: RecipeImageGenerator;
   appleRevoker: AppleTokenRevoker;
   /** Encrypts the stored Sign in with Apple refresh tokens (adapters/envelope.ts). */
   sealer: SecretSealer;
   now(): number;
+  /** Waits (the pause before a picture's retry); absent: a real timer. Tests advance their clock. */
+  sleep?(ms: number): Promise<void>;
+  /** A number in [0, 1) (the retry jitter); absent: Math.random. */
+  random?(): number;
   logger: Logger;
   /** `config/runtime`, parsed fail-closed (cached for CONFIG_CACHE_MS in production). */
   config(): Promise<RuntimeConfig>;

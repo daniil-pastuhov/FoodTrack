@@ -19,6 +19,13 @@ final class SavedRecipeRecord {
     var createdAt: Date = Date()
     /// "server" or "device" (`RecipeSource`).
     var source: String = "device"
+    /// The dish's picture (JPEG) of a recipe from a pack asked with pictures, kept on this device
+    /// only (never in a backup), outside the store's file. Nil without one, and in rows from before.
+    @Attribute(.externalStorage) var dishImage: Data? = nil
+    /// Its step pictures, a binary property list of step index (as text) to JPEG. Nil without any.
+    @Attribute(.externalStorage) var stepImages: Data? = nil
+    /// The dish picture cropped small for the Saved row. Nil without a picture.
+    var thumbnail: Data? = nil
 
     init(id: String, kind: String, payload: Data, title: String, createdAt: Date, source: String) {
         self.id = id

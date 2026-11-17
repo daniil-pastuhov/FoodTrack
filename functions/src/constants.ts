@@ -71,11 +71,29 @@ export interface Costs {
   readonly menu2: number;
   readonly menu3: number;
   readonly menuSets: MenuSetCosts;
+  /**
+   * A single recipe with a generated picture of the dish (`generateRecipe` `image: "dish"`,
+   * CONTRACT.md "Capability `acceptsRecipeImage`"). Absent when pictures are off: turned off in
+   * `config/runtime.costs` (`recipeImage: 0`), the provider is "off", or the selected provider and
+   * model have no per-image price (model.ts parseRuntimeConfig). The apps offer a picture only
+   * while the table has this key.
+   */
+  readonly recipeImage?: number;
+  /**
+   * A single recipe with a picture of the dish and pictures of up to `image.maxStepImages` of its
+   * steps (`image: "steps"`), the whole price. Absent when that level is off: whenever
+   * `recipeImage` is absent, `recipeImageSteps: 0`, or `maxStepImages` is 0.
+   */
+  readonly recipeImageSteps?: number;
 }
 
-export function costsOf(recipe: number, menuSets: MenuSetCosts): Costs {
+export function costsOf(recipe: number, menuSets: MenuSetCosts, recipeImage?: number, recipeImageSteps?: number): Costs {
   const row = menuSets[`${DEFAULT_MENU_DAYS}`];
-  return { recipe, menu2: row["2"], menu3: row["3"], menuSets };
+  return {
+    recipe, menu2: row["2"], menu3: row["3"], menuSets,
+    ...(recipeImage !== undefined ? { recipeImage } : {}),
+    ...(recipeImage !== undefined && recipeImageSteps !== undefined ? { recipeImageSteps } : {}),
+  };
 }
 
 /** Credits of a request's variant in a table. */
@@ -97,7 +115,27 @@ export const DEFAULT_MENU_SETS: MenuSetCosts = {
   "3": { "1": 3, "2": 4, "3": 5 },
   "4": { "1": 4, "2": 5, "3": 6 },
 };
-export const DEFAULT_COSTS: Costs = costsOf(1, DEFAULT_MENU_SETS);
+/**
+ * A recipe with a picture: twice a recipe by default (README "How the money works", "Recipe
+ * pictures"). A `config/runtime.costs` override without `recipeImage` gets twice its own
+ * `recipe` (at most COST_MAX); `recipeImage: 0` turns pictures off.
+ */
+export const DEFAULT_RECIPE_IMAGE_COST = 2;
+/**
+ * A recipe with the dish's picture and up to DEFAULT_MAX_STEP_IMAGES step pictures: three times a
+ * recipe by default (at most three pictures of about USD 0.034 plus the text, against at least
+ * 3 x USD 0.106 net). An override without `recipeImageSteps` gets three times its own `recipe`;
+ * `recipeImageSteps: 0` turns the level off.
+ */
+export const DEFAULT_RECIPE_IMAGE_STEPS_COST = 3;
+export const DEFAULT_COSTS: Costs = costsOf(1, DEFAULT_MENU_SETS, DEFAULT_RECIPE_IMAGE_COST, DEFAULT_RECIPE_IMAGE_STEPS_COST);
+
+/** The picture levels of `generateRecipe` `image` (CONTRACT.md "Capability `acceptsRecipeImage`"). */
+export const IMAGE_LEVELS = ["dish", "steps"] as const;
+export type ImageLevel = (typeof IMAGE_LEVELS)[number];
+/** Step pictures beside the dish's at most, by default (`config/runtime.image.maxStepImages`, 0 to MAX_STEP_IMAGES_LIMIT). */
+export const DEFAULT_MAX_STEP_IMAGES = 2;
+export const MAX_STEP_IMAGES_LIMIT = 4;
 /** An override is refused (defaults used) unless every cost is an integer in [1, COST_MAX]. */
 export const COST_MAX = 100;
 
@@ -120,6 +158,112 @@ export const JUDGE = {
   tokenCeiling: 2048,
   abortMs: { recipe: 12_000, menu: 25_000 } as Readonly<Record<GenerationKind, number>>,
 } as const;
+
+/**
+ * A recipe's picture (README "Recipe pictures"): made after the text passed every check, within
+ * the same reservation, so a recipe with pictures reserves `reservationExtraMs[level]` more.
+ *
+ * Shape: every provider is asked for `aspectRatio` (4:3, the apps' picture frame) at its 1K size
+ * (Vertex: 1200 x 896; OpenAI: its nearest landscape size, adapters/image.ts).
+ *
+ * Calls and their time (core/recipeImage.ts): the dish's picture first, then, only when it was
+ * made, the step pictures, at most `maxParallel` at once (four simultaneous calls to the Vertex
+ * model gave three 429s; one recipe never sends more than two). Each attempt is aborted after
+ * `abortMs`; a retryable failure (429, 5xx) is retried after a jittered backoff
+ * (`retryBaseMs` x 2^(n-1) x 0.5..1.5) while at most `maxAttempts` attempts are made and at least
+ * `minAttemptMs` is left of the picture's budget: `budgetMs.dish` from the start of the pictures for
+ * the dish's, `budgetMs.steps` from the same start for the step pictures. The arithmetic (text 40 s +
+ * judge 12 s before any picture): dish 40 + 12 + 50 = 102 s inside the 115 s reservation
+ * (60 + 55); steps 40 + 12 + 100 = 152 s inside the 165 s reservation (60 + 105) and the 180 s
+ * function timeout. The apps wait 130 s (dish) and 190 s (steps).
+ *
+ * Delivery (adapters/imageNormalize.ts): a provider's JPEG of at most `passThroughMaxEdge` pixels on
+ * its longer side and `passThroughMaxBytes` bytes is delivered as it came (its header and size read
+ * without decoding); anything else is decoded and re-encoded to a JPEG of at most `maxEdge` at
+ * `jpegQuality`, no metadata. A provider's answer larger than `maxInputBytes` is refused without
+ * decoding, and a re-encoded picture is at most `maxOutputBytes`. Either way one picture per
+ * Firestore document (1 MiB limit), and three in one response are at most 3 x 800,000 base64 bytes.
+ */
+export const IMAGE = {
+  aspectRatio: "4:3",
+  abortMs: 35_000,
+  budgetMs: { dish: 50_000, steps: 100_000 } as Readonly<Record<ImageLevel, number>>,
+  reservationExtraMs: { dish: 55_000, steps: 105_000 } as Readonly<Record<ImageLevel, number>>,
+  minAttemptMs: 20_000,
+  maxAttempts: 4,
+  retryBaseMs: 2_000,
+  maxParallel: 2,
+  /** Vertex's 1K 4:3 picture (1200 x 896, about 200-260 KB at its quality 85) passes through. */
+  passThroughMaxEdge: 1280,
+  passThroughMaxBytes: 400_000,
+  maxEdge: 1200,
+  jpegQuality: 80,
+  /** A provider's answer: a 1K picture is well under both (1,536 px on the long side at most). */
+  maxInputBytes: 8 * 1024 * 1024,
+  maxInputPixels: 1600 * 1600,
+  maxOutputBytes: 600_000,
+  /** The text model's `imageBrief`: plain English, these many characters at most. */
+  briefMaxChars: 200,
+  briefMinChars: 10,
+} as const;
+
+/** The image providers behind the RecipeImageGenerator port (adapters/image.ts); "off" makes none. */
+export const IMAGE_PROVIDERS = ["vertex", "openai", "off"] as const;
+export type ImageProvider = (typeof IMAGE_PROVIDERS)[number];
+
+/**
+ * The picture's default provider, model and fallback model, when neither the IMAGE_PROVIDER /
+ * IMAGE_MODEL / IMAGE_FALLBACK_MODEL parameters nor `config/runtime.image` say otherwise
+ * (owner's decision 2026-11-17): Vertex AI's Gemini 3.1 Flash-Lite Image (`gemini-3.1-flash-lite-image`:
+ * 1K only, 4:3 accepted, `global` only; about 3 s a picture, no thinking), and Nano Banana 2.1
+ * (`gemini-nano-banana-2.1`: 1K/2K/4K, `global` only; about 15 s, thinks) as the fallback, at the
+ * same provider (model pages on docs.cloud.google.com, read 2026-11-17). An empty
+ * `fallbackModel` means no fallback.
+ */
+export const DEFAULT_IMAGE_SELECTION = {
+  provider: "vertex",
+  model: "gemini-3.1-flash-lite-image",
+  fallbackModel: "gemini-nano-banana-2.1",
+  maxStepImages: 2,
+} as const;
+
+/**
+ * USD per delivered picture, by "provider/model": the conservative figure reserved against the
+ * spend ceilings for every picture a request may get, and booked for a picture whose provider
+ * reported no token counts (or whose model has no IMAGE_TOKEN_PRICES entry), and for a failed call
+ * that may have been charged. `config/runtime.prices.imageUsdPerImage` adds to or overrides them;
+ * a provider and model with no price here or there make no pictures (the costs table then has no
+ * `recipeImage`), so switching to an unpriced model can never spend unbooked money.
+ * - vertex/gemini-nano-banana-2.1: 1,120 image tokens at USD 30 per 1M (0.0336) plus its thinking,
+ *   billed as text output at USD 7.50 per 1M: 1,037 thinking tokens measured (0.0078), so about
+ *   USD 0.0415 a picture. Its thinking has no enforceable limit; 0.06 covers about 3,500 thinking
+ *   tokens.
+ * - vertex/gemini-3.1-flash-lite-image: the same 1,120 image tokens at USD 30 per 1M, no thinking
+ *   measured (USD 0.0336); 0.04 leaves room.
+ * - openai/gpt-image-1-mini: USD 8 per 1M image output tokens; a "medium" 1536x1024 picture is a
+ *   little over a thousand tokens (about USD 0.01-0.015); 0.02 leaves room.
+ */
+export const DEFAULT_IMAGE_PRICES: Readonly<Record<string, number>> = {
+  "vertex/gemini-nano-banana-2.1": 0.06,
+  "vertex/gemini-3.1-flash-lite-image": 0.04,
+  "openai/gpt-image-1-mini": 0.02,
+};
+
+/**
+ * Token rates (USD per 1M tokens) of the image models whose answers report token counts: a
+ * delivered picture is booked at input x `input` + (text output + thinking) x `outputText` +
+ * image output x `outputImage` instead of its flat price (core/recipeImage.ts). Changed with a
+ * deploy; a model without an entry is booked at its flat price.
+ * Sources, read 2026-11-17: Google's Gemini pricing page (Nano Banana 2.1: 1.50 / 7.50 / 30;
+ * Gemini 3.1 Flash-Lite Image: 0.25 / 1.50 / 30; the Vertex AI page gives the same 1K image price),
+ * OpenAI's pricing page (gpt-image-1-mini: text input 2, image output 8; output text priced as
+ * image output, the higher rate).
+ */
+export const IMAGE_TOKEN_PRICES: Readonly<Record<string, { input: number; outputText: number; outputImage: number }>> = {
+  "vertex/gemini-nano-banana-2.1": { input: 1.5, outputText: 7.5, outputImage: 30 },
+  "vertex/gemini-3.1-flash-lite-image": { input: 0.25, outputText: 1.5, outputImage: 30 },
+  "openai/gpt-image-1-mini": { input: 2, outputText: 8, outputImage: 8 },
+};
 
 /** generateRecipe's function timeout; covers the menu path, the longest one. */
 export const GENERATE_TIMEOUT_SECONDS = 180;

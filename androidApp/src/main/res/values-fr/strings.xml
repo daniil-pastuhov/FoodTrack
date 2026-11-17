@@ -1113,19 +1113,19 @@
     <string name="recipe_allergen_consent_setting_on">Vous avez accepté le %1$s. Désactivez pour retirer votre consentement : notre serveur ne rédigera alors plus de recettes tant que des allergènes sont définis.</string>
     <string name="recipe_allergen_consent_setting_off">Nécessaire pour les recettes de notre serveur tant que des allergènes sont définis. Nous l\'utilisons uniquement pour la demande et ne la conservons pas.</string>
     <plurals name="recipe_delete_body">
-        <item quantity="one">Votre %1$d recette non utilisée sera perdue, sans remboursement ni restauration possible. Votre connexion et votre adresse e-mail sont supprimées de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet appareil.</item>
-        <item quantity="many">Vos %1$d recettes non utilisées seront perdues, sans remboursement ni restauration possible. Votre connexion et votre adresse e-mail sont supprimées de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet appareil.</item>
-        <item quantity="other">Vos %1$d recettes non utilisées seront perdues, sans remboursement ni restauration possible. Votre connexion et votre adresse e-mail sont supprimées de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet appareil.</item>
+        <item quantity="one">Votre %1$d recette non utilisée sera perdue, sans remboursement ni restauration possible. Votre connexion et votre adresse e-mail sont supprimées de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les éventuels signalements que vous avez envoyés sont conservés pendant une durée limitée, eux aussi sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet appareil.</item>
+        <item quantity="many">Vos %1$d recettes non utilisées seront perdues, sans remboursement ni restauration possible. Votre connexion et votre adresse e-mail sont supprimées de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les éventuels signalements que vous avez envoyés sont conservés pendant une durée limitée, eux aussi sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet appareil.</item>
+        <item quantity="other">Vos %1$d recettes non utilisées seront perdues, sans remboursement ni restauration possible. Votre connexion et votre adresse e-mail sont supprimées de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les éventuels signalements que vous avez envoyés sont conservés pendant une durée limitée, eux aussi sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet appareil.</item>
     </plurals>
     <!-- Deleting what our server holds for recipes kept on this device (an anonymous account). -->
     <string name="recipe_delete_device_data">Supprimer mes données de notre serveur</string>
     <string name="recipe_delete_device_title">Supprimer vos données de notre serveur ?</string>
     <plurals name="recipe_delete_device_body">
-        <item quantity="one">Votre %1$d recette non utilisée sera perdue, sans remboursement ni restauration possible. La connexion anonyme qu\'utilise cet appareil est supprimée de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet appareil.</item>
-        <item quantity="many">Vos %1$d recettes non utilisées seront perdues, sans remboursement ni restauration possible. La connexion anonyme qu\'utilise cet appareil est supprimée de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet appareil.</item>
-        <item quantity="other">Vos %1$d recettes non utilisées seront perdues, sans remboursement ni restauration possible. La connexion anonyme qu\'utilise cet appareil est supprimée de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet appareil.</item>
+        <item quantity="one">Votre %1$d recette non utilisée sera perdue, sans remboursement ni restauration possible. La connexion anonyme qu\'utilise cet appareil est supprimée de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les éventuels signalements que vous avez envoyés sont conservés pendant une durée limitée, eux aussi sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet appareil.</item>
+        <item quantity="many">Vos %1$d recettes non utilisées seront perdues, sans remboursement ni restauration possible. La connexion anonyme qu\'utilise cet appareil est supprimée de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les éventuels signalements que vous avez envoyés sont conservés pendant une durée limitée, eux aussi sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet appareil.</item>
+        <item quantity="other">Vos %1$d recettes non utilisées seront perdues, sans remboursement ni restauration possible. La connexion anonyme qu\'utilise cet appareil est supprimée de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les éventuels signalements que vous avez envoyés sont conservés pendant une durée limitée, eux aussi sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet appareil.</item>
     </plurals>
-    <string name="recipe_delete_device_body_none">La connexion anonyme qu\'utilise cet appareil est supprimée de notre serveur ; une trace des éventuels achats est conservée, sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet appareil.</string>
+    <string name="recipe_delete_device_body_none">La connexion anonyme qu\'utilise cet appareil est supprimée de notre serveur ; une trace des éventuels achats est conservée, sans lien avec vous. Les éventuels signalements que vous avez envoyés sont conservés pendant une durée limitée, eux aussi sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet appareil.</string>
     <string name="recipe_delete_device_confirm">Supprimer les données</string>
     <string name="recipe_device_data_deleted">Vos données sont supprimées de notre serveur</string>
     <string name="recipe_delete_waits_for_purchase">Un achat est encore en cours. Vous pourrez supprimer une fois qu\'il sera terminé.</string>
@@ -1411,4 +1411,50 @@
         <item quantity="many">Vos %1$d produits de base peuvent aussi être utilisés</item>
         <item quantity="other">Vos %1$d produits de base peuvent aussi être utilisés</item>
     </plurals>
+    <!-- Recipe: pictures (recipes from packs only, single recipes; each level only when our server says acceptsRecipeImage and prices it: recipeImage, recipeImageSteps). The unit is a "recipe", never a credit. -->
+    <string name="recipe_image_row">Images</string>
+    <string name="recipe_image_title">Images créées par IA</string>
+    <string name="recipe_image_none">Sans image</string>
+    <string name="recipe_image_dish">Le plat</string>
+    <string name="recipe_image_dish_desc">Une image du plat terminé</string>
+    <string name="recipe_image_steps">Le plat et les étapes délicates</string>
+    <string name="recipe_image_steps_desc">Plus des images des étapes difficiles à suivre avec des mots seuls</string>
+    <string name="recipe_image_short">Il vous reste %1$s : pas assez pour des images.</string>
+    <string name="recipe_image_short_steps">Il vous reste %1$s : assez pour une image du plat, pas pour les étapes.</string>
+    <string name="recipe_image_with">Avec une image du plat</string>
+    <string name="recipe_image_with_steps">Avec des images du plat et des étapes</string>
+    <string name="recipe_writing_server_image_body">Jusqu\'à une minute avec une image. Vous pouvez quitter cet écran ; la recette sera dans Recettes enregistrées.</string>
+    <string name="recipe_writing_server_images_body">Jusqu\'à deux minutes avec des images des étapes. Vous pouvez quitter cet écran ; la recette sera dans Recettes enregistrées.</string>
+    <string name="recipe_image_caption">Image créée par IA. Votre plat peut avoir un autre aspect.</string>
+    <string name="recipe_image_steps_caption">Les images des étapes sont créées par IA. Chez vous, cela peut être différent.</string>
+    <string name="recipe_image_desc">Image de %1$s, créée par IA</string>
+    <string name="recipe_image_step_desc">Image de l\'étape %1$d, créée par IA</string>
+    <string name="recipe_image_failed">Cette fois, l\'image du plat n\'a pas pu être créée.</string>
+    <string name="recipe_image_steps_failed">Cette fois, les images de certaines étapes n\'ont pas pu être créées.</string>
+    <string name="recipe_image_cost_line">Une recette avec une image du plat créée par IA décompte %1$s.</string>
+    <string name="recipe_image_steps_cost_line">Avec des images des étapes délicates, elle décompte %1$s.</string>
+    <!-- Recipe: Report this recipe / menu (every model-written result; only when our server says acceptsReports). -->
+    <string name="recipe_report_action">Signaler cette recette</string>
+    <string name="recipe_report_menu_action">Signaler ce menu</string>
+    <string name="recipe_report_lede">Quel est le problème ?</string>
+    <string name="recipe_report_reason_offensive">Choquant ou inapproprié</string>
+    <string name="recipe_report_reason_unsafe">Conseil alimentaire dangereux</string>
+    <string name="recipe_report_reason_picture">Une image est fausse ou choquante</string>
+    <string name="recipe_report_reason_other">Autre chose</string>
+    <string name="recipe_report_reason_required">Choisissez un motif.</string>
+    <string name="recipe_report_note_label">Ajouter une note (facultatif)</string>
+    <string name="recipe_report_note_count">%1$d sur %2$d caractères</string>
+    <string name="recipe_report_sends_server">Nous recevons votre motif et votre note, liés à cette recette, pour l\'examiner.</string>
+    <string name="recipe_report_sends_server_menu">Nous recevons votre motif et votre note, liés à ce menu, pour l\'examiner.</string>
+    <string name="recipe_report_send">Envoyer</string>
+    <string name="recipe_report_cancel">Annuler</string>
+    <string name="recipe_report_sending">Envoi…</string>
+    <string name="recipe_report_sent">Merci. Nous allons regarder.</string>
+    <string name="recipe_report_failed">Le signalement n\'a pas pu être envoyé. Réessayez une fois en ligne.</string>
+    <string name="recipe_report_try_again">Réessayer</string>
+    <string name="recipe_report_done">Vous l\'avez signalé</string>
+    <string name="recipe_report_limit">C\'est la limite de signalements pour aujourd\'hui. Réessayez demain.</string>
+    <string name="recipe_report_unknown">Cette recette ne peut plus être signalée.</string>
+    <string name="recipe_image_unavailable">Les images ne peuvent pas être créées pour le moment. Aucune recette n\'a été décomptée.</string>
+    <!-- /Recipe: pictures and reports -->
 </resources>

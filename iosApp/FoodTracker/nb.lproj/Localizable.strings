@@ -750,7 +750,7 @@
 "recipe_account_busy" = "En oppskrift skrives fortsatt. Prøv igjen om et øyeblikk.";
 "recipe_delete_device_data" = "Slett dataene mine fra serveren vår";
 "recipe_delete_device_title" = "Slette dataene dine fra serveren vår?";
-"recipe_delete_device_message_none" = "Den anonyme påloggingen denne {the_device} bruker, slettes fra serveren vår; en oversikt over eventuelle kjøp blir liggende, uten kobling til deg. Lagrede oppskrifter og matlageret blir på denne {the_device}.";
+"recipe_delete_device_message_none" = "Den anonyme påloggingen denne {the_device} bruker, slettes fra serveren vår; en oversikt over eventuelle kjøp blir liggende, uten kobling til deg. Eventuelle rapporter du har sendt, blir liggende en begrenset tid, også uten kobling til deg. Lagrede oppskrifter og matlageret blir på denne {the_device}.";
 "recipe_delete_device_confirm" = "Slett dataene";
 "recipe_device_data_deleted" = "Dataene dine er slettet fra serveren vår";
 "recipe_delete_waits_for_purchase" = "Et kjøp er ikke fullført ennå. Du kan slette når det er fullført.";
@@ -931,3 +931,50 @@
 "onboarding_staples_later" = "Du kan hoppe over dette og gjøre det senere i Innstillinger › Basisvarer.";
 "onboarding_staples_continue" = "Fortsett";
 "onboarding_staples_skip" = "Hopp over";
+
+/* Recipe: pictures (recipes from packs only, single recipes; each level only when our server says acceptsRecipeImage and prices it); copied from Android's strings.xml. */
+"recipe_image_row" = "Bilder";
+"recipe_image_title" = "Bilder, laget av KI";
+"recipe_image_none" = "Ingen bilder";
+"recipe_image_dish" = "Retten";
+"recipe_image_dish_desc" = "Ett bilde av den ferdige retten";
+"recipe_image_steps" = "Retten og vanskelige trinn";
+"recipe_image_steps_desc" = "Pluss bilder av trinn som er vanskelige å følge bare med ord";
+"recipe_image_short" = "Du har %@ igjen: ikke nok til bilder.";
+"recipe_image_short_steps" = "Du har %@ igjen: nok til et bilde av retten, ikke trinnene.";
+"recipe_image_with" = "Med bilde av retten";
+"recipe_image_with_steps" = "Med bilder av retten og trinnene";
+"recipe_writing_server_image_message" = "Opptil ett minutt med bilde. Du kan gå fra denne skjermen; oppskriften havner i Lagrede oppskrifter.";
+"recipe_writing_server_images_message" = "Opptil to minutter med bilder av trinnene. Du kan gå fra denne skjermen; oppskriften havner i Lagrede oppskrifter.";
+"recipe_image_caption" = "Bildet er laget av KI. Retten din kan se annerledes ut.";
+"recipe_image_steps_caption" = "Trinnbildene er laget av KI. Ditt kan se annerledes ut.";
+"recipe_image_desc" = "Bilde av %@, laget av KI";
+"recipe_image_step_desc" = "Bilde av trinn %d, laget av KI";
+"recipe_image_failed" = "Kunne ikke lage et bilde av retten denne gangen.";
+"recipe_image_steps_failed" = "Kunne ikke lage bilder av noen av trinnene denne gangen.";
+"recipe_image_cost_line" = "En oppskrift med et bilde av retten, laget av KI, bruker %@.";
+"recipe_image_steps_cost_line" = "Med bilder av vanskelige trinn også bruker den %@.";
+"recipe_image_unavailable" = "Bilder kan ikke lages akkurat nå. Ingen oppskrift ble trukket.";
+
+/* Recipe: Report this recipe / menu (every model-written result; only when our server says acceptsReports). */
+"recipe_report_action" = "Rapporter denne oppskriften";
+"recipe_report_menu_action" = "Rapporter denne menyen";
+"recipe_report_lede" = "Hva er galt med den?";
+"recipe_report_reason_offensive" = "Støtende eller upassende";
+"recipe_report_reason_unsafe" = "Usikre råd om mat";
+"recipe_report_reason_picture" = "Et bilde er feil eller støtende";
+"recipe_report_reason_other" = "Noe annet";
+"recipe_report_reason_required" = "Velg en grunn.";
+"recipe_report_note_label" = "Legg til en merknad (valgfritt)";
+"recipe_report_note_count" = "%1$d av %2$d tegn";
+"recipe_report_sends_server" = "Vi får grunnen og merknaden din, knyttet til denne oppskriften, så vi kan se på det.";
+"recipe_report_sends_server_menu" = "Vi får grunnen og merknaden din, knyttet til denne menyen, så vi kan se på det.";
+"recipe_report_send" = "Send rapport";
+"recipe_report_cancel" = "Avbryt";
+"recipe_report_sending" = "Sender …";
+"recipe_report_sent" = "Takk. Vi ser på det.";
+"recipe_report_failed" = "Kunne ikke sende rapporten. Prøv igjen når du er på nett.";
+"recipe_report_limit" = "Det er grensen for rapporter i dag. Prøv igjen i morgen.";
+"recipe_report_unknown" = "Denne oppskriften kan ikke rapporteres lenger.";
+"recipe_report_try_again" = "Prøv igjen";
+"recipe_report_done" = "Du har rapportert dette";

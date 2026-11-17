@@ -895,11 +895,11 @@
 			<key>NSStringFormatValueTypeKey</key>
 			<string>d</string>
 			<key>one</key>
-			<string>Tu %d receta sin usar se perderá y no se podrá reembolsar ni recuperar. Tu inicio de sesión y tu correo electrónico se eliminan de nuestro servidor; se conserva un registro de las compras, ya sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este {device}.</string>
+			<string>Tu %d receta sin usar se perderá y no se podrá reembolsar ni recuperar. Tu inicio de sesión y tu correo electrónico se eliminan de nuestro servidor; se conserva un registro de las compras, ya sin vínculo contigo. Las denuncias que hayas enviado se conservan durante un tiempo limitado, también sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este {device}.</string>
 			<key>many</key>
-			<string>Tus %d recetas sin usar se perderán y no se podrán reembolsar ni recuperar. Tu inicio de sesión y tu correo electrónico se eliminan de nuestro servidor; se conserva un registro de las compras, ya sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este {device}.</string>
+			<string>Tus %d recetas sin usar se perderán y no se podrán reembolsar ni recuperar. Tu inicio de sesión y tu correo electrónico se eliminan de nuestro servidor; se conserva un registro de las compras, ya sin vínculo contigo. Las denuncias que hayas enviado se conservan durante un tiempo limitado, también sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este {device}.</string>
 			<key>other</key>
-			<string>Tus %d recetas sin usar se perderán y no se podrán reembolsar ni recuperar. Tu inicio de sesión y tu correo electrónico se eliminan de nuestro servidor; se conserva un registro de las compras, ya sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este {device}.</string>
+			<string>Tus %d recetas sin usar se perderán y no se podrán reembolsar ni recuperar. Tu inicio de sesión y tu correo electrónico se eliminan de nuestro servidor; se conserva un registro de las compras, ya sin vínculo contigo. Las denuncias que hayas enviado se conservan durante un tiempo limitado, también sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este {device}.</string>
 		</dict>
 	</dict>
 	<key>recipe_delete_device_message</key>
@@ -913,11 +913,11 @@
 			<key>NSStringFormatValueTypeKey</key>
 			<string>d</string>
 			<key>one</key>
-			<string>Tu %d receta sin usar se perderá y no se podrá reembolsar ni recuperar. El inicio de sesión anónimo que usa este {device} se elimina de nuestro servidor; se conserva un registro de las compras, ya sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este {device}.</string>
+			<string>Tu %d receta sin usar se perderá y no se podrá reembolsar ni recuperar. El inicio de sesión anónimo que usa este {device} se elimina de nuestro servidor; se conserva un registro de las compras, ya sin vínculo contigo. Las denuncias que hayas enviado se conservan durante un tiempo limitado, también sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este {device}.</string>
 			<key>many</key>
-			<string>Tus %d recetas sin usar se perderán y no se podrán reembolsar ni recuperar. El inicio de sesión anónimo que usa este {device} se elimina de nuestro servidor; se conserva un registro de las compras, ya sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este {device}.</string>
+			<string>Tus %d recetas sin usar se perderán y no se podrán reembolsar ni recuperar. El inicio de sesión anónimo que usa este {device} se elimina de nuestro servidor; se conserva un registro de las compras, ya sin vínculo contigo. Las denuncias que hayas enviado se conservan durante un tiempo limitado, también sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este {device}.</string>
 			<key>other</key>
-			<string>Tus %d recetas sin usar se perderán y no se podrán reembolsar ni recuperar. El inicio de sesión anónimo que usa este {device} se elimina de nuestro servidor; se conserva un registro de las compras, ya sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este {device}.</string>
+			<string>Tus %d recetas sin usar se perderán y no se podrán reembolsar ni recuperar. El inicio de sesión anónimo que usa este {device} se elimina de nuestro servidor; se conserva un registro de las compras, ya sin vínculo contigo. Las denuncias que hayas enviado se conservan durante un tiempo limitado, también sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este {device}.</string>
 		</dict>
 	</dict>
 	<key>recipe_server_refused</key>

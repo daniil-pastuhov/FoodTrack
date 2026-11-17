@@ -750,7 +750,7 @@
 "recipe_account_busy" = "Рецепт ещё составляется. Попробуйте чуть позже.";
 "recipe_delete_device_data" = "Удалить мои данные с сервера";
 "recipe_delete_device_title" = "Удалить ваши данные с нашего сервера?";
-"recipe_delete_device_message_none" = "Анонимный вход этого {device} будет удалён с нашего сервера; запись о покупках, если они были, останется, но уже не будет связана с вами. Сохранённые рецепты и запасы останутся на этом {device}.";
+"recipe_delete_device_message_none" = "Анонимный вход этого {device} будет удалён с нашего сервера; запись о покупках, если они были, останется, но уже не будет связана с вами. Ваши жалобы, если они были, хранятся ещё ограниченное время, тоже без связи с вами. Сохранённые рецепты и запасы останутся на этом {device}.";
 "recipe_delete_device_confirm" = "Удалить данные";
 "recipe_device_data_deleted" = "Ваши данные удалены с нашего сервера";
 "recipe_delete_waits_for_purchase" = "Покупка ещё не завершена. Удалить можно будет, когда она завершится.";
@@ -931,3 +931,50 @@
 "onboarding_staples_later" = "Можно пропустить и настроить позже: Настройки › Базовые продукты.";
 "onboarding_staples_continue" = "Продолжить";
 "onboarding_staples_skip" = "Пропустить";
+
+/* Recipe: pictures (recipes from packs only, single recipes; each level only when our server says acceptsRecipeImage and prices it); copied from Android's strings.xml. */
+"recipe_image_row" = "Изображения";
+"recipe_image_title" = "Изображения, созданные ИИ";
+"recipe_image_none" = "Без изображений";
+"recipe_image_dish" = "Блюдо";
+"recipe_image_dish_desc" = "Одно изображение готового блюда";
+"recipe_image_steps" = "Блюдо и сложные шаги";
+"recipe_image_steps_desc" = "А также изображения шагов, которые трудно понять по описанию";
+"recipe_image_short" = "У вас осталось %@: на изображения не хватит.";
+"recipe_image_short_steps" = "У вас осталось %@: хватит на изображение блюда, но не шагов.";
+"recipe_image_with" = "С изображением блюда";
+"recipe_image_with_steps" = "С изображениями блюда и шагов";
+"recipe_writing_server_image_message" = "С изображением — до минуты. С экрана можно уйти: рецепт появится в сохранённых рецептах.";
+"recipe_writing_server_images_message" = "С изображениями шагов — до двух минут. С экрана можно уйти: рецепт появится в сохранённых рецептах.";
+"recipe_image_caption" = "Изображение создано ИИ. Ваше блюдо может выглядеть иначе.";
+"recipe_image_steps_caption" = "Изображения шагов созданы ИИ. У вас может выглядеть иначе.";
+"recipe_image_desc" = "Изображение блюда «%@», созданное ИИ";
+"recipe_image_step_desc" = "Изображение шага %d, созданное ИИ";
+"recipe_image_failed" = "На этот раз изображение блюда создать не удалось.";
+"recipe_image_steps_failed" = "На этот раз не удалось создать изображения некоторых шагов.";
+"recipe_image_cost_line" = "Рецепт с изображением блюда, созданным ИИ, стоит %@.";
+"recipe_image_steps_cost_line" = "С изображениями сложных шагов — %@.";
+"recipe_image_unavailable" = "Сейчас картинки сделать нельзя. Рецепт не списан.";
+
+/* Recipe: Report this recipe / menu (every model-written result; only when our server says acceptsReports). */
+"recipe_report_action" = "Пожаловаться на рецепт";
+"recipe_report_menu_action" = "Пожаловаться на меню";
+"recipe_report_lede" = "Что с ним не так?";
+"recipe_report_reason_offensive" = "Оскорбительно или неуместно";
+"recipe_report_reason_unsafe" = "Небезопасный совет по еде";
+"recipe_report_reason_picture" = "Изображение неверное или оскорбительное";
+"recipe_report_reason_other" = "Другое";
+"recipe_report_reason_required" = "Выберите причину.";
+"recipe_report_note_label" = "Комментарий (необязательно)";
+"recipe_report_note_count" = "%1$d из %2$d символов";
+"recipe_report_sends_server" = "Мы получим причину и комментарий вместе с этим рецептом, чтобы разобраться.";
+"recipe_report_sends_server_menu" = "Мы получим причину и комментарий вместе с этим меню, чтобы разобраться.";
+"recipe_report_send" = "Отправить";
+"recipe_report_cancel" = "Отмена";
+"recipe_report_sending" = "Отправка…";
+"recipe_report_sent" = "Спасибо. Мы посмотрим.";
+"recipe_report_failed" = "Не удалось отправить жалобу. Попробуйте ещё раз, когда будете в сети.";
+"recipe_report_limit" = "На сегодня лимит жалоб исчерпан. Попробуйте завтра.";
+"recipe_report_unknown" = "На этот рецепт больше нельзя пожаловаться.";
+"recipe_report_try_again" = "Повторить";
+"recipe_report_done" = "Вы уже пожаловались";
