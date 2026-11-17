@@ -1,0 +1,5 @@
+• Sign in and get a few free recipes to try.
+• New Taste profile in Recipe settings: answer a short quiz and recipes from packs follow your tastes.
+• Menu sets now warn you when you've ticked too few items and most of the menu would need shopping.
+• Recipes written on your phone are now clearly labelled.
+• Clearer Recipe buttons; content stays clear of the status bar and the scanner's tabs fit on one line.
