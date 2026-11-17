@@ -23,6 +23,7 @@ the caller. The client wire contract is in [CONTRACT.md](CONTRACT.md).
 | `src/core/consumption.ts` | Answers Apple's `CONSUMPTION_REQUEST` for consenting buyers |
 | `src/core/generation.ts` | `generateRecipe` (reserve, call the LLM, settle) and `getGeneration` (polling) |
 | `src/core/reports.ts` | `reportRecipe` ("Report this recipe") and keeping a deleted account's reports without its uid (see "Reports") |
+| `src/providers/profiles.ts`, `src/core/providerSwitch.ts` | The named provider setups (profiles) and the one core that switches between them, for `npm run admin -- image` and the owner console (see "Provider profiles", "The owner console") |
 | `src/core/recipeImage.ts` | A recipe's picture: the fixed prompt template around the checked brief, the call under its time limit, the `image_call` line (see "Recipe pictures") |
 | `src/adapters/image.ts`, `imageNormalize.ts`, `secretManager.ts` | The picture providers behind one port (Vertex AI, OpenAI, `ImageRouter`), the re-encoding of every picture to the delivered JPEG (sharp), and the run-time read of a provider's API key |
 | `src/core/sweeper.ts` | Stale reservations, Play consume retries, owed consumption answers, negative-balance watch |
@@ -31,7 +32,7 @@ the caller. The client wire contract is in [CONTRACT.md](CONTRACT.md).
 | `src/core/welcome.ts` | The welcome grant: `getWelcomeOffer`, `claimWelcome`, `welcomeRecipes` and the day's brake (see "Welcome grant") |
 | `src/core/appleToken.ts` | `registerAppleSignIn`, and removing the stored Sign in with Apple token (deletion, unlink, tombstones) |
 | `src/board/` | The owner's spend and sales board: reader, aggregation and renderer shared by `npm run admin -- board` and the scheduled `redrawBoard`, and `hosted.ts`, the redraw into a private bucket (see "The board") |
-| `src/admin/` | The owner's offline commands, none deployed as a function: deletion requests by email (`npm run admin`, see "Deletion requests by email"), the spend and sales board by hand (`npm run admin -- board`, see "The board"), the prompt replay (`npm run prompt-body`) and the prompt-injection red-team runner (`npm run redteam`, `src/admin/redteam/`; see "Replaying a prompt against the live model") |
+| `src/admin/` | The owner's offline commands, none deployed as a function: deletion requests by email (`npm run admin`, see "Deletion requests by email"), the spend and sales board by hand (`npm run admin -- board`, see "The board"), the picture provider profiles (`npm run admin -- image list | use`, see "Provider profiles"), the prompt replay (`npm run prompt-body`) and the prompt-injection red-team runner (`npm run redteam`, `src/admin/redteam/`; see "Replaying a prompt against the live model") |
 | `src/taste/` | The taste profile quiz: `catalogue.ts` (every step, option, text and prompt word; see "Taste profile quiz") and `quiz.ts` (`getTasteQuiz`, the version, cleaning a request's `taste`) |
 | `src/core/guard.ts` | Pre-Firestore throttles, client address, log sampling |
 | `src/ports.ts` | `PlayVerifier`, `AppStoreVerifier`, `RecipeGenerator`, `RecipeImageGenerator`, `AppleTokenRevoker` interfaces |
@@ -40,6 +41,7 @@ the caller. The client wire contract is in [CONTRACT.md](CONTRACT.md).
 | `src/emulatorFakes.ts` | Fake stores and LLM, only inside the Functions emulator with `EMULATOR_FAKES=true` and a `demo-` project |
 | `src/index.ts` | Triggers, params, secrets, per-function limits |
 | `certs/AppleRootCA-G3.cer` | Apple's public root CA (SHA-256 `63:34:3A:BF:…:91:79`, checked by a test) |
+| `../owner-console/` | The owner console: a static page on Firebase Hosting with the picture setup's drop-down; everything it shows or changes goes through `getProviderProfiles` / `setProviderProfile` (see "The owner console") |
 | `../firestore.rules` | Denies every client read and write; only the Admin SDK touches Firestore |
 | `../firestore.indexes.json` | Sweeper indexes and the TTL policies on `generations.expiresAt` and `recipeImages.expiresAt` |
 
@@ -51,6 +53,7 @@ the caller. The client wire contract is in [CONTRACT.md](CONTRACT.md).
 | `getBalance`, `getGeneration`, `getTasteQuiz` | callable, App Check enforced, token not consumed | See CONTRACT.md |
 | `reportRecipe` | callable, App Check enforced and limited-use token consumed | "Report this recipe" on a result from a pack (CONTRACT.md, "Reports") |
 | `getWelcomeOffer` | callable, App Check enforced, token not consumed, **no sign-in** | See CONTRACT.md and "Welcome grant" |
+| `getProviderProfiles`, `setProviderProfile` | callable, **no App Check**, a Google sign-in listed in `config/owner` | The owner console only, never the apps: the provider profiles and the switch (see "The owner console") |
 | `sweepReservations` | every 5 min | Refunds reservations still pending 60 s after their deadline; retries Play consumes and owed consumption answers; watches negative balances |
 | `pollPlayVoidedPurchases` | daily 04:00 UTC | Voided Purchases API, last 3 days, for RTDNs that never arrived |
 | `redrawBoard` | hourly at :17 UTC | Redraws the owner's board (30 days) into the private bucket `BOARD_BUCKET` as `board.html` and `board.json`; read-only on Firestore, and writes nothing unless the bucket is private (see "The board", "Always on") |
@@ -571,6 +574,7 @@ concurrency 1 below 1 vCPU), 1 instance:
 | `claimWelcome` | 1 | 10 | 30 s |
 | `getWelcomeOffer` | 1 | 120 (per client address and instance only: no sign-in, so no uid) | 10 s |
 | `appStoreNotifications` | 1 | n/a (no Firestore before Apple's signature checks out) | 30 s |
+| `getProviderProfiles`, `setProviderProfile` | 1 each | 30 for all callers but a listed owner together, at most 5 of them per client address; a listed owner 30 apart; calls without a token refused uncounted ("The owner console") | 30 s |
 | `playNotifications`, `budgetKillSwitch`, `sweepReservations`, `pollPlayVoidedPurchases` | 1 | n/a (Pub/Sub or scheduler; not callable from the internet) | |
 | `redrawBoard` | 1 (no retry: the next hour redraws anyway) | n/a (scheduler); at most 2,000 purchases read a run (`BOARD_PURCHASES_CAP`) | 120 s |
 
@@ -728,6 +732,8 @@ Create log-based alerts in Cloud Logging on `jsonPayload.message` (all are struc
 | `generation_refused` | warning | `generateRecipe` refused for an account's daily limits: `reason` `USER_DAILY_LIMIT` (`why`: `generations` or `spend`) or `INFRA_FAILURE_LIMIT` (`why`: `infra_refunds`), `uidHash`. Sampled: 30 a minute per instance, with `suppressedSinceLast`. Counted by the log-based metric `recipe_generation_refused`. |
 | `image_call` | info | One per picture asked of a provider: `uidHash`, `provider`, `model` (the one that made it, or the last asked), `outcome` (`done`, `SAFETY`, `CONFIG`, `TIMEOUT`, `INFRA`, `DECODE`, `NO_TIME`), `attempts`, `fallback`, `durationMs`, `inputBytes`, `passedThrough`, `bytes`, `width`, `height`, `estimatedMicroUsd` (every attempt booked). Never the prompt or the brief. Alert on many `CONFIG` (a missing key or an unknown provider after a switch) or `INFRA`. |
 | `image_retry` | info | Informational: a picture call was refused for capacity and is asked again (quota pressure): `uidHash`, `provider`, `model`, `picture` (`dish` / `step`), `attempt` (the one about to be made), `reason` (`QUOTA` for 429, `SERVER` for 5xx), `waitMs`. A few a day are normal on Vertex's shared capacity; many in a row point at quota to raise or Provisioned Throughput. |
+| `provider_profile_changed` | info | **Alerted on** (console switches): a provider profile was switched ("Provider profiles"): `via` (`web` / `cli`), `uidHash` for the console, `from`, `to`, `provider`, `model`, `fallbackModel`, `change` (the `providerProfileChanges/` id). Never an email or uid. |
+| `owner_call_refused` | warning | A call to the owner console's callables was refused: `function`, `reason` (`SIGN_IN`, `RATE_LIMITED`, `NOT_OWNER`, `RECENT_SIGN_IN`, `NOT_READY`, `STALE`, `UNKNOWN_PROFILE`, `PRICES_INVALID`, `INVALID_RESULT`), `suppressedSinceLast`; sampled, 10 a minute per instance. Never who. Many `NOT_OWNER` mean someone is trying the page. |
 | `image_fallback` | info | **Worth watching**: the selected model could not make a picture and the fallback model was asked once: `uidHash`, `provider`, `model`, `fallbackModel`, `picture`, `reason` (`QUOTA`, `SERVER`, `NOT_FOUND`, `REFUSED_REQUEST`, `TIMEOUT`, `DECODE`, `INFRA`), `outcome` (`done` or the failure code). Frequent fallbacks mean the primary is failing, and each such picture costs more (Nano Banana 2.1 about USD 0.0415 against 0.0336) and takes about 15 s. Never the prompt or the brief. |
 | `recipe_reported` | warning | Someone used "Report this recipe" ("Reports"): `report` (a hash of the report id; the document is `reports/<reportId>`), `reason`, `kind` (null without a snapshot), `snapshot` (whether the generation was still kept), `hasNote`, `pictures`, `imageLevel`, `platform`, `appVersion`, `language`, `uidHash`. Never the note or the recipe. **Alert on any** (or on more than a few an hour), then read the report in the console. |
 | `report_day_limit` | error | The first report of the UTC day refused at `reports.perDay` (`day`, `perDay`, `reports`); once a day (`stats/{day}.reportCapReachedAt`). Alert on it: someone may be flooding reports, or the cap is too low. |
@@ -738,7 +744,7 @@ Create log-based alerts in Cloud Logging on `jsonPayload.message` (all are struc
 
 The owner is emailed by Cloud Monitoring alert policies on the log lines above, through the
 existing email channel "Recipe backend alerts (owner)". They are code in `functions/alerts/`: one
-log-based metric (`metrics/recipe_generation_refused.json`) and eleven policies (`policies/*.json`,
+log-based metric (`metrics/recipe_generation_refused.json`) and twelve policies (`policies/*.json`,
 no channel in them). `alerts.py` applies them: dry run by default (local checks, every log filter
 checked against the project with a read-only `gcloud logging read`, then the plan), `--apply` to
 create or update (matched by display name, so re-running is safe and prints "unchanged"). The
@@ -764,6 +770,7 @@ and Logs Configuration Writer (`--account` picks one other than the active accou
 | Recipe: spike of per-account limit refusals (`limit-refusals`) | more than 20 `USER_DAILY_LIMIT` or more than 5 `INFRA_FAILURE_LIMIT` refusals in an hour (metric threshold, summed over all accounts) | `generation_refused` through the metric `recipe_generation_refused` |
 | Recipe: recipe reported (`recipe-reported`) | every report made with "Report this recipe" (at most one email per 5 minutes) | `recipe_reported` |
 | Recipe: report day limit reached (`report-day-limit`) | the first report of the UTC day refused at `reports.perDay` | `report_day_limit` |
+| Recipe: provider profile switched (`provider-profile-changed`) | every switch made on the owner console (at most one email per 5 minutes); not the admin command's | `provider_profile_changed` |
 | Recipe: owner board (`owner-board`, existing) | the hourly redraw failed or the bucket check refused to write | `board_redraw_failed`, `board_bucket_public` |
 | Recipe: backend errors, refunds, blocked buyers, stuck purchases, prompt safety (existing) | as in the two "Logs to alert on" tables | see those tables |
 
@@ -1174,7 +1181,7 @@ never names a provider. Whatever comes back is normalised to the same JPEG.
 | `openai` | `OpenAIImageGenerator`: `POST https://api.openai.com/v1/images/generations`, `n: 1`, `1536x1024` (`1024x768` for the models that take any size), `quality: "medium"`, `output_format: "jpeg"`, `output_compression: 85`, `moderation: "auto"` | `gpt-image-1-mini`; `gpt-image-2`, `gpt-image-2.5-flare` etc. need a price first | API key in Secret Manager (`OPENAI_API_KEY`), read at run time | USD 0.02 |
 | `off` | none | | | no pictures |
 
-To switch **model** at the same provider, without a deploy: put its price in
+The usual way to switch is by **provider profile** ("Provider profiles" below: `npm run admin -- image use <profile>` or the owner console), which writes the fields named here, the price included, in one checked transaction. By hand, to switch **model** at the same provider, without a deploy: put its price in
 `config/runtime.prices.imageUsdPerImage` (e.g. `{"vertex/gemini-3.1-flash-image": 0.08}`; Flash-Lite
 Image and Nano Banana 2.1 already have default prices) and then set `config/runtime.image.model`.
 Order matters: a model without a price turns pictures off until it has one. The fallback is
@@ -1212,6 +1219,62 @@ for linux-x64 glibc, which Cloud Functions 2nd gen (Cloud Run, Node 24) uses, in
 passed-through Vertex picture). A 1K picture is about 4 MB decoded, with
 sharp's cache off and one thread, inside the 256 MiB instance; watch the function's memory after
 the first deploy and raise `generateRecipe` to 512 MiB only if it is short.
+
+### Provider profiles
+
+A **profile** is a named provider setup in code, `src/providers/profiles.ts`: an id, a label, the
+picture's provider, model and fallback model, the price reserved per picture of each, and what must
+hold before it can be switched on. Switching to one writes exactly that into `config/runtime`, so
+the owner picks a setup by name instead of typing model ids, and a switch can never leave a model
+without a price (which would turn pictures off) or a provider without its key.
+
+| id | provider / model | fallback | reserved per picture | ready |
+|---|---|---|---|---|
+| `flash-lite` | `vertex` / `gemini-3.1-flash-lite-image` (the deploy default) | `gemini-nano-banana-2.1` | USD 0.04 / 0.06 | always |
+| `nano-banana` | `vertex` / `gemini-nano-banana-2.1` | `gemini-3.1-flash-lite-image` | USD 0.06 / 0.04 | always |
+| `off` | `off` (only `image.provider` is written; the model fields are kept for the way back) | | | always |
+| `openai` | `openai` / `gpt-image-1-mini` | none | USD 0.02 | **no**: listed only. Needs the owner's privacy decision (a code flag, `approved: false`: OpenAI is not in the privacy policy's processor list, "What a new provider means for privacy") and the `OPENAI_API_KEY` secret readable by the service account |
+
+**The switch** (`activateProfile` in `src/core/providerSwitch.ts`, the one core behind the command
+and the console): refuses an unknown profile (`UNKNOWN_PROFILE`) or one not ready (`NOT_READY`,
+with what is missing; a secret is checked by reading it as the service account and dropping it,
+never printed), then in one Firestore transaction reads `config/runtime` and writes, with field
+paths, only `image.provider`, `image.model`, `image.fallbackModel` (an `image` value that is not a
+map is replaced as a whole) and, where the price in force is missing or **lower** than the
+profile's, `prices.imageUsdPerImage.<provider/model>` (a switch never lowers a price set higher;
+with no `prices` map at all it writes one with the default token prices beside it, and a `prices`
+map that is invalid refuses with `PRICES_INVALID`). Before writing it parses the document as it
+would be with `parseRuntimeConfig` and refuses (`INVALID_RESULT`) unless that selects exactly the
+profile, priced, with no field newly invalid. `image.maxStepImages`, `costs`, the kill switch and
+every other field stay as they were. The same transaction adds an audit record,
+`providerProfileChanges/{auto id}`: `at`, `actor` (`{via: "cli"}`, or `{via: "web", uid}` for the
+console), `from` and `to` (profile id, or `custom` for a setup set by hand, provider, model,
+fallback), and the `writes`; then `provider_profile_changed` is logged ("Logs to alert on"). A
+profile already in force writes nothing and records nothing. The instances' 30 s config cache is
+the only delay; old app versions and requests see only what `config/runtime` already offered.
+
+```bash
+cd functions
+npm run admin -- image list                                   # emulators; add --project bestbefore-f9ee1 for live
+npm run admin -- image use nano-banana                         # dry run: from, to, the exact writes
+npm run admin -- image use nano-banana --apply --project bestbefore-f9ee1
+```
+
+Live, with the credentials of "Deletion requests by email" ("Credentials"; Datastore User, and
+Secret Accessor only for the OpenAI readiness check). The command's `provider_profile_changed` goes
+to the `admin` log (resource `global`), so it is not alerted on; the console's is.
+
+**Adding a provider** is one registry entry plus its adapter: the adapter class in
+`src/adapters/image.ts`, its line in `imageRouter` (`src/index.ts`), its name in
+`IMAGE_PROVIDERS` and its default price (`DEFAULT_IMAGE_PRICES`, `src/constants.ts`), and, when
+it needs a key, a name in `PROFILE_SECRETS` mapped to its Secret Manager secret in `ownerEnv`
+(`src/index.ts`) and `buildImageEnv` (`src/admin/cli.ts`). `registryProblems` (run by
+`test/providerProfiles.test.ts`) refuses a duplicate id, an unpriced model, a fallback equal to the
+model, and a registry in which no profile matches the deploy defaults. A profile id is never
+reused for another setup: the audit records name it. **Later, a text provider** (for example an
+"EU pair", Mistral for the recipe text and FLUX for the pictures): a profile gets a second,
+optional part beside `image` (`text`), with its own writer in `planProfile` and its own
+config field; profiles without it leave the text setup alone.
 
 ## Reports
 
@@ -1389,6 +1452,13 @@ Server-only. Documents:
   `expiresAt` (TTL, `reports.keepDays` days); and `reports/{reportId}/reportPictures/{main | step-<i>}`,
   copies of the generation's pictures with the same `expiresAt`.
 - `config/runtime`: see below.
+- `config/owner` (set by the owner in the console, never in the repo): `uids` (Firebase uids)
+  and/or `emails` (addresses of Google accounts linked to the user, matched against its
+  `google.com` provider entry, never the user's own email), lists of at most 10, the accounts the
+  owner console accepts with a Google sign-in ("The owner console"). Missing, empty or invalid:
+  nobody.
+- `providerProfileChanges/{id}`: one per provider profile switch ("Provider profiles"): `at`,
+  `actor` (`{via: "cli"}` or `{via: "web", uid}`), `from`, `to`, `writes`. Kept; a few a month.
 
 ### `config/runtime`
 
@@ -1419,7 +1489,7 @@ its default, and a warning "config/runtime has invalid fields" names them. Insta
 | `costs` | map | `{recipe: 1, menu2: 4, menu3: 5}` (and `menuSets` days + courses − 1) | Credits per request. `recipeImage` optional: a recipe with a picture, an integer from `recipe` to 100; absent is twice `recipe` (at most 100), `0` turns pictures off (the table then has no `recipeImage` and no `recipeImageSteps`). `recipeImageSteps` optional: a recipe with the dish's and step pictures, from `recipeImage` to 100; absent is three times `recipe`, `0` turns that level off. `recipe`, `menu2`, `menu3` required, integers 1–100; `menu2` / `menu3` are the 3-day 2- and 3-course menus and the only source of those two prices. `menuSets` optional: `{"<days 1-4>": {"<courses 1-3>": n}}`, any cells; its 3-day `"2"` / `"3"` cells are accepted only when equal to `menu2` / `menu3`. A missing cell (all of them in a document from before menu sets) takes the default table's step from the 3-day row (±1 a day or course; the 3-day 1-course cell from `menu2`), held within [`recipe`, 100]. More days or courses never cheaper, no menu below `recipe`. Anything invalid: the whole default table is used (warning `costs`). Sent to clients in full (with `menuSets`) in every response with `balance`. |
 | `prices` | map | `{inputUsdPerMTok: 1.5, outputUsdPerMTok: 7.5}` | LLM price table for the estimates (see "Price table"). Optional `imageUsdPerImage`: `{"<provider>/<model>": USD}` (0.001–2 each, at most 50), added to or overriding the built-in picture prices (`DEFAULT_IMAGE_PRICES`) entry by entry. Anything invalid: the whole default `prices` (warning `prices`). |
 | `reports` | map | `{perUserPerDay: 10, perDay: 500, keepDays: 90}` | "Report this recipe" ("Reports"): reports per signed-in account per UTC day (0–1000), per day across the service (0–100,000), and days each report is kept (1–400). Either may be left out. Anything invalid: the defaults (warning `reports`). |
-| `image` | map | `{provider, model, maxStepImages}` from the params `IMAGE_PROVIDER` / `IMAGE_MODEL` (`vertex`, `gemini-nano-banana-2.1`) | The recipe picture's provider (`vertex`, `openai` or `off`), model id, and `maxStepImages` (integer 0–4, default 2: step pictures beside the dish's for `image: "steps"`; 0 turns that level off); each may be left out. Takes effect within 30 s, no deploy ("Recipe pictures"). Anything invalid: pictures **off** (warning `image`). A provider and model without a price in `prices.imageUsdPerImage` also turn pictures off. |
+| `image` | map | `{provider, model, fallbackModel, maxStepImages}` from the params `IMAGE_PROVIDER` / `IMAGE_MODEL` / `IMAGE_FALLBACK_MODEL` (`vertex`, `gemini-3.1-flash-lite-image`, fallback `gemini-nano-banana-2.1`), `maxStepImages` 2 | Usually set by provider profile ("Provider profiles": `npm run admin -- image use`, the owner console), which writes `provider`, `model`, `fallbackModel` and leaves the rest. The recipe picture's provider (`vertex`, `openai` or `off`), model id, `fallbackModel` (same provider, asked once on a capacity failure; `""` or null for none), and `maxStepImages` (integer 0–4, default 2: step pictures beside the dish's for `image: "steps"`; 0 turns that level off); each may be left out. Takes effect within 30 s, no deploy ("Recipe pictures"). Anything invalid: pictures **off** (warning `image`). A provider and model without a price in `prices.imageUsdPerImage` also turn pictures off. |
 | `budgetKillFraction` | number in (0, 2] | `1` | The budget alert flips the kill switch at cost ≥ budget × this. |
 | `welcome` | map | `{recipes: 3, perDay: 200}` | The welcome grant ("Welcome grant"): `recipes` (integer 0–20) free recipes once per Google or Apple sign-in, 0 turns it off; `perDay` (integer 0–10,000) grants at most per UTC day across all accounts, then the offer reads 0 and claims answer `OFF`. Either may be left out (its default). Anything invalid: the grant is **off** (warning `welcome`). |
 | `tasteQuiz` | map | `{hidden: []}` | `hidden`: at most 200 `"<step>"` or `"<step>:<option>"` ids left out of `getTasteQuiz` and dropped from requests' `taste` (see "Taste profile quiz"). Nothing else of the quiz is configurable here. Anything invalid: nothing hidden (warning `tasteQuiz`). |
@@ -1705,6 +1775,7 @@ Application Default Credentials impersonating `recipe-functions@bestbefore-f9ee1
 | Estimated net revenue | net recipes × `netMicroUsdPerCredit`: the config's conservative estimate, not a store payout |
 | Sandbox purchases | the same query, `env: "sandbox"`, shown apart and never as sales |
 | Free recipes (welcome grant) | `stats/{day}.welcomeGrants` / `welcomeCredits` today and over the period, against `config/runtime.welcome.perDay`; never counted as sales (`board.json` `welcome`) |
+| Recipe pictures: the profile in force, read-only, with a link to the owner console | `config/runtime.image` (as `parseRuntimeConfig` reads it, over the code's defaults) matched to a provider profile, `custom` when set by hand; "On" when it is priced and `costs.recipeImage` is on (`board.json` `pictures`). No extra read. The link is `https://<project>.firebaseapp.com/`: the board itself still makes no request |
 | Unspent recipes | one aggregation: count and `sum(balance)` of `users` with `balance > 0` |
 | Negative balances | `stats/ledger.negativeBalanceTotal` (the sweeper's last sum) |
 | Model spend per day: settled and reserved bars, the ceiling line, ▲ on days it was reached | `stats/{day}.spentMicroUsd` and `reservedMicroUsd` (reserved is in-flight worst cases, normally only today's); the line is `stats/{day}.ceilingMicroUsd` for a past day that recorded it, else (and always for today) `dailySpendCeiling` with **today's** config (past configs are not kept); ▲ where `stats/{day}.spendAlerts["100"]` is set (a reservation was refused at the ceiling). Days that reached `dailyCap` (`dailyCapReachedAt`) are listed under the chart. No extra read: the same `stats` docs. `board.json` `spendPerDay` |
@@ -1860,6 +1931,99 @@ bucket) and `gcloud iam roles delete ownerBoardWriter --project=bestbefore-f9ee1
 - The board shows 30 days. Days before the deploy show zeros where `stats` has none, as on the
   command's board. Without sales, the page is mostly zeros; that's expected.
 
+## The owner console
+
+A web page with a drop-down of the provider profiles ("Provider profiles"): the setup in force,
+each profile's readiness (and what is missing), the last change, and a switch behind a
+confirmation dialog. The board stays static and request-free and only links to it.
+
+**Where it lives, and why not beside the board.** The board's private bucket is opened through
+Google's authenticated download, which protects the download only: the page is then served from a
+random `*-apidata.googleusercontent.com` origin, and a script there gets no credential our server
+can check. That origin cannot be an authorized domain of Firebase Auth either (it changes and is
+shared), so no sign-in can happen there. The console is therefore a separate, harmless static page
+on **Firebase Hosting**, the project's default site, `https://bestbefore-f9ee1.firebaseapp.com/`
+(`firebase.json` `hosting`, files in `owner-console/`). That host is an authorized domain by default
+and is also the project's `authDomain`, so the Google sign-in runs on the page's own origin (none
+of the third-party-storage trouble of the `web.app` host, which also works). The page holds no
+data, no profile, no model id and no address; it loads its Firebase configuration from Hosting's
+`/__/firebase/init.json` and the Firebase JS SDK (13.4.0, pinned) from its own site,
+`owner-console/vendor/firebasejs/13.4.0/` (copied from `www.gstatic.com`, the source URLs and
+SHA-256 in `SOURCE.txt` there, checked by `test/providerProfiles.test.ts`; no build step), and
+writes every text with `textContent`. Its headers: a CSP that allows only itself, Google's sign-in
+(`apis.google.com`, which the SDK loads for the pop-up) and the two callables' host (no inline
+script), `frame-ancestors 'none'`, `no-store`, `noindex`, no referrer. They are set on the
+console's own files only (`firebase.json` `hosting.headers[0].regex`: `/`, `index.html`,
+`console.js`, `console.css`, the vendored SDK), never on Hosting's reserved `/__/` paths:
+`frame-ancestors 'none'` on `/__/auth/iframe` or the COOP on `/__/auth/handler` would break the
+sign-in, and the handler is also the apps' Sign in with Apple return URL.
+
+**Who gets in.** Everything it shows and does goes through two callables, `getProviderProfiles`
+and `setProviderProfile` `{profile, expect, confirm: true}` (`src/core/providerSwitch.ts`), which:
+
+- need a Firebase ID token, checked again with **revocation** (`verifyIdToken(token, true)`: a
+  disabled user or revoked tokens are refused), of a **Google** sign-in with a **verified email**;
+- accept only an account listed in `config/owner`, a Firestore document the owner sets in the
+  console: by `uids` (the Firebase user's uid, Authentication > Users), or by `emails`, the
+  address of a **Google account linked to the Firebase user**, read on the server from the user's
+  `google.com` provider entry (`auth.getUser(uid).providerData`; trimmed, compared
+  case-insensitively). Never the token's or the user's own `email`: an account made with Apple
+  keeps the Apple address after Google is linked, and one whose Google account was unlinked and
+  another linked keeps the first address. A user with no Google identity left is refused even
+  when its uid is listed. The owner's address is never in the repo, the page or a log. Missing,
+  empty or invalid: nobody;
+- for a switch, need a sign-in made in the last 30 minutes (`RECENT_SIGN_IN`; the page then asks
+  for the sign-in again) and `expect`, the profile the page showed (`STALE` if it changed meanwhile);
+- answer every refusal with fixed words (`SIGN_IN`, `NOT_OWNER`, …) and nothing about the setup;
+  log `owner_call_refused` (the reason only) and `provider_profile_changed` (`uidHash` only);
+- clear Google's name and photo from the Auth user, as the apps' callables do, once the caller
+  has passed the owner check (nothing is written for anyone else). The page signs in with
+  `inMemoryPersistence`, so the browser keeps nothing; each visit signs in afresh.
+
+Signing in on the page with a Google account that is already linked to a Firebase user (signed
+in with in the app, on Android or iOS) uses that same user: nothing in `users/` is read or
+written for it. A Google account linked to no Firebase user would get a new one from the sign-in
+itself, before any call of ours; that user would hold the Google account, so linking it in the app
+later fails ("credential already in use"). The page therefore deletes such a just-made user at
+once (`isNewUser`; on the live site only, the emulators keep theirs) and says the account has no
+account with the app; if the deletion fails it says so, and the user must be deleted by hand
+(Authentication > Users). So the owner signs in with Google in the app first, and lists that
+account.
+
+**App Check is not enforced on these two.** A web App Check provider (reCAPTCHA Enterprise) needs a
+site key, its own console setup and quota, and proves only that a real browser made the call, not
+who is in it; in this backend App Check is rate reduction, not the guard. The guard here is the
+verified Google sign-in on the owner allowlist. In front of it (`src/core/ownerCall.ts`), a call
+without a Firebase ID token is refused (`SIGN_IN`) before anything is counted; every other caller
+is limited to 5 calls a minute per client address (IPv6 by /64) and, all together, 30 a minute on
+the one instance; a listed owner (by uid, by the email of a Google session, or let in before on
+this instance) is counted apart, 30 a minute, so nobody else's calls can lock the owner out. With
+one instance each and a 30 s timeout, that bounds what anyone else can cost (each refused call is
+one token check and, past the signature, at most one Firestore read and one Auth read; the
+allowlist the throttle uses is read at most once a minute). **CORS** admits only
+`https://<project>.firebaseapp.com` and `https://<project>.web.app` (from `GCLOUD_PROJECT` at load;
+checked against the built function: other origins get no `Access-Control-Allow-Origin`), plus the
+local Hosting emulator in the Functions emulator (where firebase-tools allows every origin anyway).
+
+**One-time setup (owner)**: docs/recipe-setup.md step 13 (register a Web app, check the Google
+provider and authorized domains, set `config/owner`, check what the default Hosting site serves,
+deploy the two functions, try Hosting on a preview channel, deploy it, apply the new alert).
+Always deploy with `--only`: since `firebase.json` has a `hosting` block, a bare
+`firebase deploy` would deploy Hosting too. To test locally: the "Running the functions for the
+apps" emulators (`npm run serve`), plus, from `functions/`,
+`npx firebase emulators:start --only hosting --project demo-foodtracker --config ../firebase.local.json`
+and `http://127.0.0.1:5050/`. `firebase.local.json` is `firebase.json`'s `hosting` with the Auth
+and Functions emulators (`127.0.0.1:9099`, `:5001`) added to the CSP, which the live CSP does not
+allow, and port 5050 (5000 is AirPlay's on macOS); the test keeps the two in step. Never deploy
+with it. The page then uses the emulators, the emulator serves `/__/firebase/init.json` for the
+demo project, and `config/owner` goes in the emulator's Firestore (emulator UI) with the uid of the
+emulator's Google user.
+
+**Cost**: Hosting's free tier (a few KB, a few visits); two callables idle at zero instances, a
+few calls a month. **Turn it off**: remove `config/owner` (nobody gets in), or delete the two
+functions (`npx firebase functions:delete getProviderProfiles setProviderProfile --region europe-west1`,
+and remove their exports from `src/index.ts`) and `npx firebase hosting:disable`.
+
 ## Parameters and secrets
 
 Asked for by `firebase deploy` the first time (and saved to `functions/.env.bestbefore-f9ee1`,
@@ -1872,8 +2036,9 @@ which holds no secrets and may be committed), or set there beforehand:
 | `GEMINI_THINKING_LEVEL` | `LOW` | Thinking level for Gemini 3+ (`MINIMAL` where the model supports it; 3.8 Flash does not) |
 | `VERTEX_LOCATION` | `global` | Vertex AI location. The default is `global` by the owner's decision; set a region only if the model is not offered in `global` |
 | `IMAGE_PROVIDER` | `vertex` | Default provider of recipe pictures: `vertex`, `openai` or `off` (`config/runtime.image.provider` overrides it at run time) |
-| `IMAGE_MODEL` | `gemini-nano-banana-2.1` | Default picture model id at that provider (`config/runtime.image.model` overrides it); needs a price ("Recipe pictures") |
-| `VERTEX_IMAGE_LOCATION` | `global` | Vertex AI location of the picture model (Nano Banana 2.1 is offered on `global` only) |
+| `IMAGE_MODEL` | `gemini-3.1-flash-lite-image` | Default picture model id at that provider (`config/runtime.image.model` overrides it); needs a price ("Recipe pictures") |
+| `IMAGE_FALLBACK_MODEL` | `gemini-nano-banana-2.1` | Default fallback model at the same provider, asked once when the model fails for capacity; empty for none (`config/runtime.image.fallbackModel` overrides it) |
+| `VERTEX_IMAGE_LOCATION` | `global` | Vertex AI location of the picture models (Flash-Lite Image and Nano Banana 2.1 are offered on `global` only) |
 | `OPENAI_API_KEY_SECRET` | `OPENAI_API_KEY` | Name of the Secret Manager secret with the OpenAI API key, read at run time only while `openai` is the picture provider |
 | `APPLE_APP_ID` | none | Numeric App Store app id (App Store Connect > App Information > Apple ID) |
 | `APPSTORE_KEY_ID`, `APPSTORE_ISSUER_ID` | none | App Store Server API key id and issuer id |

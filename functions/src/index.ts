@@ -75,6 +75,13 @@ import {
 } from "./core/notifications";
 import { redrawBoard as redrawBoardCore } from "./board/hosted";
 import { CloudStorageBoardBucket } from "./adapters/boardBucket";
+import {
+  getProviderProfiles as providerProfilesCore,
+  setProviderProfile as setProviderProfileCore,
+  ownerConsoleOrigins,
+  type OwnerEnv,
+} from "./core/providerSwitch";
+import { OwnerCallGate } from "./core/ownerCall";
 
 // --- Params and secrets (see README "Parameters") ---------------------------------------------
 
@@ -536,6 +543,65 @@ export const redrawBoard = onSchedule(
     });
   },
 );
+
+// --- The owner console (README "Provider profiles", "The owner console") ----------------------
+//
+// Two callables for the owner's web page on Firebase Hosting, never for the apps. A caller must be
+// a Google sign-in (verified email) listed in config/owner; the ID token is checked again with
+// revocation, a switch needs a sign-in from the last 30 minutes, and every refusal answers the same
+// few fixed words. App Check is NOT enforced here: a web App Check provider (reCAPTCHA Enterprise)
+// would prove a browser, not who is in it, and the owner allowlist is the guard; OwnerCallGate
+// (calls without a token refused uncounted, a per-address limit under an instance ceiling, a listed
+// owner in a bucket of their own) and one instance bound what anyone else can cost. CORS admits
+// only the project's own Hosting origins.
+
+function projectId(): string {
+  if (process.env.GCLOUD_PROJECT) return process.env.GCLOUD_PROJECT;
+  if (process.env.GOOGLE_CLOUD_PROJECT) return process.env.GOOGLE_CLOUD_PROJECT;
+  try {
+    return String((JSON.parse(process.env.FIREBASE_CONFIG ?? "{}") as { projectId?: unknown }).projectId ?? "");
+  } catch {
+    return "";
+  }
+}
+
+let ownerEnvCache: OwnerEnv | undefined;
+function ownerEnv(): OwnerEnv {
+  if (ownerEnvCache) return ownerEnvCache;
+  const openAiKey = new SecretReader({ project: projectId(), secret: openAiKeySecret.value() });
+  ownerEnvCache = {
+    db: getFirestore(),
+    auth: getAuth(),
+    now: () => Date.now(),
+    logger,
+    imageDefaults: imageDefaults(),
+    // Readiness only: the key is read (as the picture adapter would) and dropped, never returned.
+    secretReadable: (secret) => (secret === "openai" ? openAiKey.get().then(() => true, () => false) : Promise.resolve(false)),
+  };
+  return ownerEnvCache;
+}
+
+let ownerGateCache: OwnerCallGate | undefined;
+const ownerGate = () => (ownerGateCache ??= new OwnerCallGate({ db: getFirestore(), logger, now: () => Date.now() }));
+
+const ownerCallable = {
+  enforceAppCheck: false,
+  invoker: "public",
+  cors: ownerConsoleOrigins(projectId(), process.env.FUNCTIONS_EMULATOR === "true"),
+  timeoutSeconds: 30,
+  maxInstances: 1,
+  concurrency: 1,
+} as const;
+
+function ownerCall<T>(name: string, request: CallableRequest, fn: (env: OwnerEnv, authorization: string | undefined) => Promise<T>): Promise<T> {
+  return guarded(name, () => ownerGate().run(name, request, (authorization) => fn(ownerEnv(), authorization)));
+}
+
+export const getProviderProfiles = onCall(ownerCallable, (request) =>
+  ownerCall("getProviderProfiles", request, (env, authorization) => providerProfilesCore(env, authorization)));
+
+export const setProviderProfile = onCall(ownerCallable, (request) =>
+  ownerCall("setProviderProfile", request, (env, authorization) => setProviderProfileCore(env, authorization, request.data)));
 
 function decodePubSub(data: string | undefined): unknown {
   if (!data) return null;

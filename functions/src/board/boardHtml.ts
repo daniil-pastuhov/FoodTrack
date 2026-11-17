@@ -470,6 +470,11 @@ export function renderBoardHtml(b: Board, hosted?: HostedOptions): string {
         `${esc(int(b.period.welcomeGrants))} in the period (${esc(int(b.period.welcomeCredits))} recipes). ` +
         (b.welcome.recipes > 0 ? `${esc(int(b.welcome.recipes))} per sign-in. Not sales.` : "Off (<code>welcome.recipes</code> is 0)."),
       meter(t.welcomeGrants, b.welcome.perDay, "Welcome grants today against the daily limit")),
+    tile("Recipe pictures",
+      b.pictures.on ? status("good", "On") : status("warn", "Off"),
+      `${esc(b.pictures.label)}` +
+        (b.pictures.provider === "off" ? "" : ` (<code>${esc(b.pictures.provider)}/${esc(b.pictures.model)}</code>, fallback ${b.pictures.fallbackModel ? `<code>${esc(b.pictures.fallbackModel)}</code>` : "none"})`) +
+        `. Read-only here; <a href="${esc(b.pictures.consoleUrl)}" rel="noopener noreferrer">switch on the owner console</a>.`),
     tile("Unspent recipes",
       esc(int(b.holders.recipes)),
       `held by ${esc(int(b.holders.accounts))} ${b.holders.accounts === 1 ? "account" : "accounts"} (positive balances now)`),
@@ -676,6 +681,8 @@ export function boardSummary(b: Board): string[] {
       `${int(p.welcomeGrants)} in the period (${int(p.welcomeCredits)} recipes); ${b.welcome.recipes > 0 ? `${int(b.welcome.recipes)} per sign-in` : "off"}.`,
     `Generations: ${int(p.succeeded)} written, ${int(p.contentFailures)} content failures, ${int(p.infraFailures)} infrastructure failures, ` +
       `${int(p.qualityFailures)} quality refusals; ${int(p.refundedCredits)} recipes refunded; ${int(p.unknownUsageCalls)} calls at worst case.`,
+    `Picture setup: ${b.pictures.profile} (${b.pictures.provider === "off" ? "off" : `${b.pictures.provider}/${b.pictures.model}, fallback ${b.pictures.fallbackModel || "none"}`}); ` +
+      `offered to the apps: ${b.pictures.on ? "yes" : "no"}. Switch: npm run admin -- image use <profile>, or ${b.pictures.consoleUrl}`,
     `Pictures: ${int(p.imageRequests)} recipes asked with pictures, ${int(p.imagesDelivered)} pictures delivered, ${int(p.imageFailures)} not. ` +
       `Reports (recipe_reported): ${int(t.reports)} today, ${int(p.reports)} in the period.`,
     ...(b.purchasesCapped
@@ -700,6 +707,13 @@ export function boardJson(b: Board): Record<string, unknown> {
     period: { firstDay: b.firstDay, lastDay: b.today, days: b.days.length },
     generationEnabled: b.generationEnabled,
     allowSandbox: b.allowSandbox,
+    pictures: {
+      profile: b.pictures.profile,
+      provider: b.pictures.provider,
+      model: b.pictures.model,
+      fallbackModel: b.pictures.fallbackModel,
+      offered: b.pictures.on,
+    },
     today: {
       day: b.today,
       estimatedSpendMicroUsd: b.todayBookedMicroUsd,

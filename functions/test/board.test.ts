@@ -286,6 +286,8 @@ describe("rendering", () => {
     expect(urls.sort()).toEqual([
       "https://console.cloud.google.com/billing",
       "https://console.firebase.google.com/project/demo-foodtracker/usage",
+      // A link (not a request) to the owner console, where the picture setup is switched.
+      "https://demo-foodtracker.firebaseapp.com/",
     ]);
     expect(html).not.toMatch(/<link|<img|@import|url\(/);
     expect(html).toContain("prefers-color-scheme:dark");

@@ -6,7 +6,11 @@
  * (uid, token, order or transaction id) ever reaches this module (see `purchaseRow`).
  */
 import { REVENUE_WINDOW_DAYS } from "../constants";
-import { dailySpendCeiling, utcDay, type RuntimeConfig } from "../model";
+import { dailySpendCeiling, imageMicroUsdOf, utcDay, type RuntimeConfig } from "../model";
+import { activeProfileOf } from "../providers/profiles";
+
+/** The owner console (README "The owner console"): the project's default Firebase Hosting site. */
+export const ownerConsoleUrl = (project: string) => `https://${project}.firebaseapp.com/`;
 
 const DAY_MS = 86_400_000;
 
@@ -127,6 +131,11 @@ export interface Board {
   netMicroUsdPerCredit: number;
   /** The welcome grant's setting (config/runtime.welcome): free recipes per claim, grants a day. */
   welcome: RuntimeConfig["welcome"];
+  /**
+   * The recipe pictures' setup in force (config/runtime.image), read-only: the matching provider
+   * profile ("custom" when set by hand) and whether the apps are offered pictures.
+   */
+  pictures: { profile: string; label: string; provider: string; model: string; fallbackModel: string; on: boolean; consoleUrl: string };
   dailySpendMaxMicroUsd: number;
   dailySpendBaseMicroUsd: number;
   /** What the breaker compares with today's ceiling: spent plus the worst cases still reserved. */
@@ -330,6 +339,7 @@ export function buildBoard(input: BoardInput): Board {
     prices: config.prices,
     netMicroUsdPerCredit: config.netMicroUsdPerCredit,
     welcome: config.welcome,
+    pictures: picturesOf(config, input.project),
     dailySpendMaxMicroUsd: config.dailySpendMaxMicroUsd,
     dailySpendBaseMicroUsd: config.dailySpendBaseMicroUsd,
     todayBookedMicroUsd,
@@ -354,5 +364,18 @@ export function buildBoard(input: BoardInput): Board {
     ledger: input.ledger,
     reads: input.reads,
     purchasesCapped: input.purchasesCapped ?? null,
+  };
+}
+
+function picturesOf(config: RuntimeConfig, project: string): Board["pictures"] {
+  const p = activeProfileOf(config.image);
+  return {
+    profile: p?.id ?? "custom",
+    label: p?.label ?? "Set by hand (no profile)",
+    provider: config.image.provider,
+    model: config.image.provider === "off" ? "" : config.image.model,
+    fallbackModel: config.image.provider === "off" ? "" : config.image.fallbackModel,
+    on: imageMicroUsdOf(config) !== null && config.costs.recipeImage !== undefined,
+    consoleUrl: ownerConsoleUrl(project),
   };
 }

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Owner console</title>
+<link rel="stylesheet" href="/console.css">
+<script type="module" src="/console.js"></script>
+</head>
+<body>
+<main>
+<h1>Owner console</h1>
+<p class="sub">Recipe backend. Only the owner's Google account gets past the sign-in; this page holds no data of its own.</p>
+<noscript><p class="alert">This page needs JavaScript.</p></noscript>
+
+<section id="signed-out" hidden>
+  <button id="sign-in" type="button" class="primary">Sign in with Google</button>
+</section>
+
+<section id="console" hidden aria-labelledby="h-pictures">
+  <h2 id="h-pictures">Recipe pictures</h2>
+  <dl class="facts">
+    <dt>In force</dt><dd id="active"></dd>
+    <dt>Models</dt><dd id="active-models"></dd>
+    <dt>Offered to the apps</dt><dd id="active-on"></dd>
+    <dt>Last change</dt><dd id="last-change"></dd>
+  </dl>
+  <label for="profile">Switch to</label>
+  <select id="profile"></select>
+  <p id="profile-summary" class="note"></p>
+  <ul id="profile-missing" class="missing"></ul>
+  <button id="switch" type="button" class="primary" disabled>Switch…</button>
+</section>
+
+<p id="message" role="status" aria-live="polite"></p>
+<p id="account" hidden><button id="sign-out" type="button">Sign out</button></p>
+
+<dialog id="confirm" aria-labelledby="confirm-title">
+  <h2 id="confirm-title">Switch recipe pictures?</h2>
+  <p id="confirm-text"></p>
+  <p class="note">New recipe requests use it within 30 seconds. Every switch is recorded and logged.</p>
+  <div class="buttons">
+    <button id="confirm-cancel" type="button">Cancel</button>
+    <button id="confirm-ok" type="button" class="primary">Switch</button>
+  </div>
+</dialog>
+</main>
+</body>
+</html>
