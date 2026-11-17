@@ -921,8 +921,9 @@ export function parseRuntimeConfig(
     }
   }
   // A fallback model without a price is never asked (it could spend unbooked money).
+  // (Pictures off clear it too, as before: no fallback is asked then.)
   const fb = imageFallbackOf(out);
-  if (fb && imagePriceMicroUsd(out, fb.provider, fb.model) === null) {
+  if (out.image.fallbackModel && (!fb || imagePriceMicroUsd(out, fb.provider, fb.model) === null)) {
     const { fallbackProvider: _dropped, ...rest } = out.image;
     void _dropped;
     out.image = { ...rest, fallbackModel: "" };

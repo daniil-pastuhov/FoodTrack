@@ -405,6 +405,9 @@ describe("pictures through the new provider", () => {
   });
 
   test("the default setup still reserves and books exactly as before (no implicit fallback added)", () => {
+    // Pictures off keep clearing the fallback model, as before the refactor.
+    expect(parseRuntimeConfig({ image: { provider: "off" } }).image).toEqual({ provider: "off", model: "gemini-3.1-flash-lite-image", fallbackModel: "", maxStepImages: 2 });
+    expect(parseRuntimeConfig({}).image).toEqual({ provider: "vertex", model: "gemini-3.1-flash-lite-image", fallbackModel: "gemini-nano-banana-2.1", maxStepImages: 2 });
     expect(planFor(validateGenerateRequest(request({ image: "dish" }), NOW), DEFAULT_RUNTIME_CONFIG).image).toMatchObject({ reservedMicroUsd: 60_000 });
   });
 
