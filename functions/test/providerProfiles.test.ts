@@ -90,9 +90,9 @@ beforeEach(async () => {
 // --- The registry -----------------------------------------------------------------------------
 
 describe("the registry", () => {
-  test("is sound, lists the four profiles and matches the deploy defaults", () => {
+  test("is sound, lists the five profiles and matches the deploy defaults", () => {
     expect(registryProblems()).toEqual([]);
-    expect(PROVIDER_PROFILES.map((p) => p.id)).toEqual(["flash-lite", "nano-banana", "off", "openai"]);
+    expect(PROVIDER_PROFILES.map((p) => p.id)).toEqual(["flash-lite", "nano-banana", "off", "openai", "flux-eu"]);
     expect(activeProfileOf({ ...DEFAULT_IMAGE_SELECTION })?.id).toBe("flash-lite");
     expect(activeProfileOf({ ...DEFAULT_IMAGE_SELECTION, provider: "off" })?.id).toBe("off");
     expect(activeProfileOf({ ...DEFAULT_IMAGE_SELECTION, model: "gemini-3-pro-image" })).toBeNull();
@@ -272,7 +272,7 @@ describe("activateProfile", () => {
     let view = await listProfiles(env);
     expect(view.active).toMatchObject({ profile: "flash-lite", provider: "vertex", picturesOn: true, maxStepImages: 2 });
     expect(view.lastChange).toBeNull();
-    expect(view.profiles.map((p) => [p.id, p.ready])).toEqual([["flash-lite", true], ["nano-banana", true], ["off", true], ["openai", false]]);
+    expect(view.profiles.map((p) => [p.id, p.ready])).toEqual([["flash-lite", true], ["nano-banana", true], ["off", true], ["openai", false], ["flux-eu", false]]);
     await activateProfile(env, "off", { apply: true, actor: { via: "cli" } });
     view = await listProfiles(env);
     expect(view.active).toMatchObject({ profile: "off", picturesOn: false });

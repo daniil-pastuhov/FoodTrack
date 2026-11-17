@@ -7,6 +7,7 @@
  * To add a provider: write its adapter file in src/adapters/ exporting a descriptor
  * (providers/types.ts) and add it to TEXT or IMAGE below. Nothing else names it.
  */
+import { bflImage } from "../adapters/bfl";
 import { googleText } from "../adapters/gemini";
 import { openaiImage, vertexImage } from "../adapters/image";
 import type {
@@ -25,6 +26,7 @@ const TEXT: TextProviderDescriptor[] = [
 const IMAGE: ImageProviderDescriptor[] = [
   vertexImage,
   openaiImage,
+  bflImage,
 ];
 
 /** The picture provider id that makes no pictures (no adapter). */
