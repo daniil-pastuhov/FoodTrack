@@ -310,12 +310,11 @@ fun TasteProfileScreen(stateHolder: RecipeStateHolder, onClose: () -> Unit) {
         onClose()
     }
     when (val screen = state.tasteQuiz) {
+        // System Back here is the root's (it closes the quiz too), so the swipe previews Recipe settings.
         null, TasteQuizScreen.Loading -> {
-            BackHandler(onBack = close)
             TasteQuizFrame(onClose = close) { TasteQuizLoading() }
         }
         TasteQuizScreen.Failed -> {
-            BackHandler(onBack = close)
             TasteQuizFrame(onClose = close) { TasteQuizError(onRetry = stateHolder::retryTasteQuiz, onClose = close) }
         }
         is TasteQuizScreen.Ready -> TasteQuizReady(stateHolder, screen, state.taste, state.tasteSeen, onClose)
