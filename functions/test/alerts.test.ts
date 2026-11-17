@@ -214,7 +214,7 @@ describe("the alert files (functions/alerts)", () => {
     }
     expect(names.size).toBeGreaterThan(15);
     for (const n of names) expect(source, n).toContain(`"${n}"`);
-    for (const n of ["spend_threshold", "daily_cap_reached", "welcome_threshold", "welcome_day_limit", "generation_refused", "board_redraw_failed"]) {
+    for (const n of ["spend_threshold", "daily_cap_reached", "welcome_threshold", "welcome_day_limit", "generation_refused", "board_redraw_failed", "recipe_reported", "report_day_limit"]) {
       expect(names).toContain(n);
     }
   });

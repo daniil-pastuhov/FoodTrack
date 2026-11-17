@@ -1,0 +1,28 @@
+{
+  "displayName": "Recipe: recipe reported",
+  "documentation": {
+    "content": "Someone used \"Report this recipe\" (`recipe_reported`: `reason`, `kind`, `snapshot`, `hasNote`, `pictures`, `imageLevel`, `platform`, `appVersion`, `language`, `uidHash`; `report` is a hash of the report id; never the note or the recipe). Read the report in the Firestore console under `reports/` (search by time and reason). See functions/README.md, \"Reports\" and \"Alerts\".",
+    "mimeType": "text/markdown"
+  },
+  "conditions": [
+    {
+      "conditionMatchedLog": {
+        "filter": "resource.type=\"cloud_run_revision\" AND jsonPayload.message=\"recipe_reported\"",
+        "labelExtractors": {
+          "platform": "EXTRACT(jsonPayload.platform)",
+          "reason": "EXTRACT(jsonPayload.reason)"
+        }
+      },
+      "displayName": "Recipe: recipe reported"
+    }
+  ],
+  "combiner": "OR",
+  "enabled": true,
+  "severity": "WARNING",
+  "alertStrategy": {
+    "autoClose": "604800s",
+    "notificationRateLimit": {
+      "period": "300s"
+    }
+  }
+}

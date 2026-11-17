@@ -737,7 +737,7 @@ Create log-based alerts in Cloud Logging on `jsonPayload.message` (all are struc
 
 The owner is emailed by Cloud Monitoring alert policies on the log lines above, through the
 existing email channel "Recipe backend alerts (owner)". They are code in `functions/alerts/`: one
-log-based metric (`metrics/recipe_generation_refused.json`) and nine policies (`policies/*.json`,
+log-based metric (`metrics/recipe_generation_refused.json`) and eleven policies (`policies/*.json`,
 no channel in them). `alerts.py` applies them: dry run by default (local checks, every log filter
 checked against the project with a read-only `gcloud logging read`, then the plan), `--apply` to
 create or update (matched by display name, so re-running is safe and prints "unchanged"). The
@@ -761,6 +761,8 @@ and Logs Configuration Writer (`--account` picks one other than the active accou
 | Recipe: budget kill switch paused generation (`kill-switch`, existing) | the billing budget flipped `generationEnabled` off | `Budget kill switch flipped: generation disabled` |
 | Recipe: free recipes (welcome grant) day limit (`welcome-grants`) | the day's welcome grants reach half of `welcome.perDay`, and when they reach it | `welcome_threshold` (`percent` 50); `welcome_day_limit` with `event` `reached` |
 | Recipe: spike of per-account limit refusals (`limit-refusals`) | more than 20 `USER_DAILY_LIMIT` or more than 5 `INFRA_FAILURE_LIMIT` refusals in an hour (metric threshold, summed over all accounts) | `generation_refused` through the metric `recipe_generation_refused` |
+| Recipe: recipe reported (`recipe-reported`) | every report made with "Report this recipe" (at most one email per 5 minutes) | `recipe_reported` |
+| Recipe: report day limit reached (`report-day-limit`) | the first report of the UTC day refused at `reports.perDay` | `report_day_limit` |
 | Recipe: owner board (`owner-board`, existing) | the hourly redraw failed or the bucket check refused to write | `board_redraw_failed`, `board_bucket_public` |
 | Recipe: backend errors, refunds, blocked buyers, stuck purchases, prompt safety (existing) | as in the two "Logs to alert on" tables | see those tables |
 
@@ -1238,8 +1240,9 @@ AI-generated content expects such a way to report offensive output in the app.
   service per UTC day (`REPORT_LIMIT`; the first refusal of the day logs `report_day_limit` and
   records `stats/{day}.reportCapReachedAt`), the per-instance throttle (20 a minute per uid), and
   the note cleaned and capped. Filling the day needs 50 accounts that each had real results.
-- **Telling the owner**: one `recipe_reported` log line per report ("Logs to alert on"; an alert
-  on it is the owner's to create, "Alerts"), and the board's daily "Reports" column and summary
+- **Telling the owner**: one `recipe_reported` log line per report ("Logs to alert on"; the
+  policy "Recipe: recipe reported" emails the owner, with "Recipe: report day limit reached" on
+  `report_day_limit`, "Alerts"), and the board's daily "Reports" column and summary
   line (`stats/{day}.reports`, `reportReasons`). Read a report in the Firestore console
   (`reports/<id>`; the log line carries a hash of the id, so search by time and reason).
 - **Account deletion** keeps the account's reports with `uid` set to null (`detachReports`), like
