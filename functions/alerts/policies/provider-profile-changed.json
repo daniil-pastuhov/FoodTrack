@@ -1,7 +1,7 @@
 {
   "displayName": "Recipe: provider profile switched",
   "documentation": {
-    "content": "The recipe picture setup was switched from the owner console (`provider_profile_changed`, with `from`, `to`, `provider`, `model`, `uidHash`). If you did not switch it, switch back on the console or with `npm run admin -- image use <profile> --apply`, remove the account from `config/owner`, and read `providerProfileChanges/` in the Firestore console. See functions/README.md, \"Provider profiles\" and \"The owner console\". Switches made with the admin command are logged to the `admin` log and not alerted on.",
+    "content": "The recipe provider setup (pictures, and the text when a profile carries it) was switched from the owner console (`provider_profile_changed`, with `from`, `to`, `provider`, `model`, `textProvider` when the text is not the default, `uidHash`). If you did not switch it, switch back on the console or with `npm run admin -- providers use <profile> --apply`, remove the account from `config/owner`, and read `providerProfileChanges/` in the Firestore console. See functions/README.md, \"Provider profiles\" and \"The owner console\". Switches made with the admin command are logged to the `admin` log and not alerted on.",
     "mimeType": "text/markdown"
   },
   "conditions": [

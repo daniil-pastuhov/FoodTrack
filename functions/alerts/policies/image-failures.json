@@ -1,0 +1,53 @@
+{
+  "displayName": "Recipe: recipe pictures failing broadly",
+  "documentation": {
+    "content": "Recipe pictures were not delivered, after their retries and fallback, for a reason about the provider rather than the brief: `CONFIG` (the provider can't be called: no or refused API key, an unknown provider after a switch) or `INFRA` (quota still exhausted, server errors, a model not found, unusable answers), counted from `image_call` lines (`provider`, `model`, `outcome`). The recipes were delivered without their pictures and the pictures' share given back, so nobody lost recipes, but pictures are effectively off. Check the provider in force (`npm run admin -- providers list`), its key's Secret Accessor grant, and the `image_retry` / `image_fallback` lines; switch to another profile if the provider is down. See functions/README.md, \"Recipe pictures\" and \"Alerts\".",
+    "mimeType": "text/markdown"
+  },
+  "conditions": [
+    {
+      "displayName": "CONFIG picture failures above 3 in an hour",
+      "conditionThreshold": {
+        "filter": "resource.type = \"cloud_run_revision\" AND metric.type = \"logging.googleapis.com/user/recipe_image_failed\" AND metric.labels.outcome = \"CONFIG\"",
+        "aggregations": [
+          {
+            "alignmentPeriod": "3600s",
+            "perSeriesAligner": "ALIGN_SUM",
+            "crossSeriesReducer": "REDUCE_SUM"
+          }
+        ],
+        "comparison": "COMPARISON_GT",
+        "thresholdValue": 3,
+        "duration": "0s",
+        "trigger": {
+          "count": 1
+        }
+      }
+    },
+    {
+      "displayName": "INFRA picture failures above 10 in an hour",
+      "conditionThreshold": {
+        "filter": "resource.type = \"cloud_run_revision\" AND metric.type = \"logging.googleapis.com/user/recipe_image_failed\" AND metric.labels.outcome = \"INFRA\"",
+        "aggregations": [
+          {
+            "alignmentPeriod": "3600s",
+            "perSeriesAligner": "ALIGN_SUM",
+            "crossSeriesReducer": "REDUCE_SUM"
+          }
+        ],
+        "comparison": "COMPARISON_GT",
+        "thresholdValue": 10,
+        "duration": "0s",
+        "trigger": {
+          "count": 1
+        }
+      }
+    }
+  ],
+  "combiner": "OR",
+  "enabled": true,
+  "severity": "ERROR",
+  "alertStrategy": {
+    "autoClose": "86400s"
+  }
+}
