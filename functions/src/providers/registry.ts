@@ -94,6 +94,16 @@ export function providerRegistryProblems(): string[] {
       }
     }
   }
+  // src/index.ts defines each param name once, with the first adapter's default: two adapters
+  // sharing a name must agree on it.
+  const params = new Map<string, string>();
+  for (const d of allProviders()) {
+    for (const p of d.params ?? []) {
+      const prior = params.get(p.name);
+      if (prior !== undefined && prior !== p.default) out.push(`param ${p.name}: declared twice with different defaults`);
+      if (prior === undefined) params.set(p.name, p.default);
+    }
+  }
   const secrets = new Map<string, string>();
   for (const d of allProviders()) {
     if (!d.secret) continue;

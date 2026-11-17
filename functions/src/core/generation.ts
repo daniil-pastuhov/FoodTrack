@@ -417,6 +417,11 @@ interface OutcomeCosts {
    * provider): its usage by price, booked at settle instead of `usage` x `config.prices`.
    */
   spend?: SpendPart[];
+  /**
+   * Set when some call is priced otherwise than `config.prices` and the usage of some call is
+   * unknown: settle then books the reservation (bookedMicroUsd), never the known part at Gemini's.
+   */
+  bookReserved?: true;
   text?: TextAnswered;
 }
 
@@ -512,9 +517,7 @@ export async function settle(
     const picture: PictureOutcome | undefined = outcome.ok && gen.imageLevel ? outcome.picture ?? { dish: missing, steps: [] } : undefined;
     const pictures = picture ? [picture.dish, ...picture.steps.map((s) => s.outcome)] : [];
     const pictureMicroUsd = pictures.reduce((sum, p) => sum + p.microUsd, 0);
-    const actual = usage
-      ? (outcome.spend ? spendMicroUsd(outcome.spend) : microUsd(config.prices, usage.inputTokens, usage.outputTokens + usage.thinkingTokens)) + pictureMicroUsd
-      : reserved;
+    const actual = bookedMicroUsd(outcome, config, reserved, pictureMicroUsd);
     const statsDay = gen.statsDay ?? utcDay(gen.createdAt.toMillis());
 
     const expiresAt = Timestamp.fromMillis(now + GENERATION_TTL_MS);
@@ -714,6 +717,19 @@ function addUsage(a: LlmUsage | undefined, b: LlmUsage | undefined): LlmUsage | 
   };
 }
 
+/**
+ * What settle books for an outcome: its measured usage (at `spend`'s prices when set, else at
+ * `config.prices`) plus its pictures; the whole reservation when the usage is unknown, or when
+ * some call priced otherwise than `config.prices` has unknown usage (`bookReserved`): the
+ * reservation is at the dearest provider the request could reach (textReservePricesOf), so a
+ * dearer provider is never booked at Gemini's prices.
+ */
+export function bookedMicroUsd(outcome: Outcome, config: RuntimeConfig, reservedMicroUsd: number, pictureMicroUsd: number): number {
+  const usage = outcome.usage;
+  if (!usage || outcome.bookReserved) return reservedMicroUsd;
+  return (outcome.spend ? spendMicroUsd(outcome.spend) : microUsd(config.prices, usage.inputTokens, usage.outputTokens + usage.thinkingTokens)) + pictureMicroUsd;
+}
+
 /** Micro-USD of usage booked at several price pairs: one rounding up over the sum, as microUsd does. */
 export function spendMicroUsd(parts: readonly SpendPart[]): number {
   const byPrice = new Map<string, SpendPart>();
@@ -731,7 +747,7 @@ export function spendMicroUsd(parts: readonly SpendPart[]): number {
 }
 
 /** Every model call of one generation, with the prices each is booked at (Outcome.spend). */
-interface CallLedger {
+export interface CallLedger {
   parts: { prices: TokenPrices; usage: LlmUsage | undefined }[];
   answered?: TextTarget;
   fallback: boolean;
@@ -803,8 +819,11 @@ async function generateText(
   }
 }
 
-/** Adds the ledger's pricing and the answering provider to an outcome (nothing for the default path). */
-function withCosts(outcome: Outcome, ledger: CallLedger, config: RuntimeConfig): Outcome {
+/**
+ * Adds the ledger's pricing and the answering provider to an outcome (nothing for the default
+ * path). Exported for the tests.
+ */
+export function withCosts(outcome: Outcome, ledger: CallLedger, config: RuntimeConfig): Outcome {
   const base = config.prices;
   const otherPrice = ledger.parts.some((p) => p.prices.inputUsdPerMTok !== base.inputUsdPerMTok || p.prices.outputUsdPerMTok !== base.outputUsdPerMTok);
   const known = ledger.parts.every((p) => p.usage !== undefined);
@@ -819,7 +838,9 @@ function withCosts(outcome: Outcome, ledger: CallLedger, config: RuntimeConfig):
   const a = ledger.answered;
   const defaultProvider = config.providerDefaults?.text.provider ?? textSelectionOf(config).provider;
   const text = a && (ledger.fallback || a.provider !== defaultProvider) ? { provider: a.provider, model: a.model, fallback: ledger.fallback } : undefined;
-  return { ...outcome, ...(spend ? { spend } : {}), ...(text ? { text } : {}) };
+  // Another price with a call of unknown usage: nothing measured can be priced honestly.
+  const bookReserved = outcome.usage && otherPrice && !known ? { bookReserved: true as const } : {};
+  return { ...outcome, ...(spend ? { spend } : {}), ...bookReserved, ...(text ? { text } : {}) };
 }
 
 /**
