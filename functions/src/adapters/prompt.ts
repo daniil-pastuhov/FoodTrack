@@ -266,7 +266,7 @@ export function systemInstruction(req: GenerateRequest, canary: string): string 
  * server's own picture template (core/recipeImage.ts).
  */
 export const IMAGE_BRIEF_LINES: readonly string[] = [
-  `- imageBrief: always in English, whatever the recipe's language: one plain sentence of at most ${IMAGE.briefMaxChars} characters saying what the finished dish looks like when served (the food, its colours and textures, the plate or bowl), for a food photographer.`,
+  `- imageBrief: always in English, whatever the recipe's language: one plain sentence of at most ${IMAGE.briefMaxChars} characters saying what the finished dish looks like when served (the food, its colours and textures, and the plate or bowl it is served on; its pan or baking dish only when the dish is served in it), for a food photographer.`,
   "- imageBrief describes only the food and its tableware: no people, hands or faces, and no text, letters, labels, packaging, brands or logos.",
 ];
 
@@ -276,7 +276,7 @@ export const IMAGE_BRIEF_LINES: readonly string[] = [
  */
 export function stepBriefLines(max: number): string[] {
   return [
-    `- stepBriefs: only for the steps a cook would follow better from a picture than from words (a technique such as folding, shaping or rolling, or a state such as how thick, how brown or "until it looks like this"), at most ${max} of them. For each, step is the step's number counted from 1, and brief is one English sentence of at most ${IMAGE.briefMaxChars} characters saying what the food looks like at that step. Leave stepBriefs empty when every step is plain.`,
+    `- stepBriefs: only for the steps a cook would follow better from a picture than from words (a technique such as folding, shaping or rolling, or a state such as how thick, how brown or "until it looks like this"), at most ${max} of them. For each, step is the step's number counted from 1, and brief is one English sentence of at most ${IMAGE.briefMaxChars} characters saying what the food looks like at that step and naming the one pan, pot, tray or bowl it is in. Leave stepBriefs empty when every step is plain.`,
     "- Every stepBriefs brief follows the imageBrief rules: only the food and its tableware.",
   ];
 }

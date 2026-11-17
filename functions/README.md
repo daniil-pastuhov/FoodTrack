@@ -954,9 +954,17 @@ person's text either ("Recipe pictures"):
   `imageFailed`, and `image_brief_rejected` logs the rule. It is not counted as a prompt
   rejection (the text passed every check), which keeps a false positive from costing an honest
   user anything; the share is given back.
-- The picture prompt is `IMAGE_PROMPT_HEAD + brief + IMAGE_PROMPT_TAIL` (`src/core/recipeImage.ts`):
-  fixed text asking for a photograph of the food only, with no people, hands, text, letters,
-  labels, packaging, brands, logos or watermark. The server copies nothing the person typed into
+- The picture prompt is `IMAGE_PROMPT_HEAD + brief + IMAGE_PROMPT_TAIL` for the dish and
+  `IMAGE_STEP_PROMPT_HEAD + brief + IMAGE_PROMPT_TAIL` for a step (`src/core/recipeImage.ts`):
+  fixed text asking for a close, slightly angled photograph of the food only (a served dish, or
+  a moment while cooking), with what real cookware looks like said positively (one pan, pot,
+  tray or dish; a frying pan has one long handle, a pot two short side handles, a baking tray or
+  oven dish none; a handle may leave the frame), at most one utensil, only the food described,
+  and no people, hands, text, letters, labels, packaging, brands, logos or watermark. It was
+  worded from the test pictures of 2026-11-17, where a third of Nano Banana's overhead frying pans
+  had two long handles and step pictures added cookware or food the brief did not name; the text
+  model is asked to say where a served dish sits (a plate or bowl; its pan or baking dish only
+  when it is served in it) and to name the one vessel of a step. The server copies nothing the person typed into
   it: no pantry, optional or staple name, allergen or taste answer as sent, no system
   instruction, no uid or other identifier (OpenAI gets no `user` / `safety_identifier`). The
   brief itself is the text model's own English, written after it saw the pantry, so a product

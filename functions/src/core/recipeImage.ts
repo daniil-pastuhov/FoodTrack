@@ -17,18 +17,30 @@ import { ImageNormalizeError, normalizeImage, type NormalizedImage } from "../ad
 import { imagePriceMicroUsd, uidHash, type RuntimeConfig } from "../model";
 import { ImageGenerationError, type Deps, type ImagePrompt, type ImageTarget, type ImageUsage } from "../ports";
 
-/** The fixed parts of every picture prompt; only the checked brief goes between them. */
-export const IMAGE_PROMPT_HEAD = "A photorealistic overhead food photograph of one home-cooked dish, served and ready to eat. The dish:";
+/**
+ * The fixed parts of every picture prompt; only the checked brief goes between them (README "The
+ * picture prompt"). Worded from the errors seen in the test pictures of 2026-11-17: frying pans
+ * drawn with two long handles (5 of 15 Nano Banana pans, all overhead shots of the whole pan),
+ * cookware or food the brief did not name, and a served dish described with "served" for a step.
+ * So: a close, slightly angled view (the handle may leave the frame), what real cookware looks
+ * like said positively, one vessel and one utensil, only the food described. Short on purpose:
+ * models follow a few plain rules better than a long list of don'ts.
+ */
+export const IMAGE_PROMPT_HEAD = "A photorealistic close-up food photograph, taken from a slight angle, of one home-cooked dish served and ready to eat. The dish:";
+/** A step picture's head: a moment while cooking, not a served dish. */
+export const IMAGE_STEP_PROMPT_HEAD = "A photorealistic close-up photograph, taken from a slight angle, of one moment while cooking at home. It shows:";
 export const IMAGE_PROMPT_TAIL = [
-  "Soft natural daylight, a plain wooden or stone table, simple everyday tableware, shallow depth of field.",
-  "Show only the food and its tableware.",
+  "Soft natural daylight on a plain wooden or stone table.",
+  "One pan, pot, tray or dish only, as described, drawn as real cookware: a frying pan has one long handle, a pot has two short side handles, a baking tray or oven dish has no long handle, and a handle may run out of the frame.",
+  "At most one utensil. Only the food described, nothing added.",
   "No people, no hands, no faces, no text, no letters, no numbers, no labels, no packaging, no brands, no logos, no watermark.",
 ].join(" ");
 
-/** The picture prompt for a checked brief (core/outputSafety.ts checkImageBrief). */
-export function imagePromptFor(brief: string): ImagePrompt {
+/** The picture prompt for a checked brief (core/outputSafety.ts checkImageBrief): the dish's, or a step's. */
+export function imagePromptFor(brief: string, kind: "dish" | "step" = "dish"): ImagePrompt {
   const sentence = /[.]$/.test(brief) ? brief : `${brief}.`;
-  return { text: `${IMAGE_PROMPT_HEAD} ${sentence} ${IMAGE_PROMPT_TAIL}`, aspectRatio: IMAGE.aspectRatio };
+  const head = kind === "step" ? IMAGE_STEP_PROMPT_HEAD : IMAGE_PROMPT_HEAD;
+  return { text: `${head} ${sentence} ${IMAGE_PROMPT_TAIL}`, aspectRatio: IMAGE.aspectRatio };
 }
 
 export type ImageOutcome =
@@ -164,7 +176,7 @@ export async function makeRecipeImage(
   /** A step's picture: its 0-based index (logs only); absent for the dish's. */
   step?: number,
 ): Promise<ImageOutcome> {
-  const prompt = imagePromptFor(brief);
+  const prompt = imagePromptFor(brief, step === undefined ? "dish" : "step");
   const primary: ImageTarget = { provider: config.image.provider, model: config.image.model };
   const fallback: ImageTarget | null = config.image.fallbackModel ? { provider: config.image.provider, model: config.image.fallbackModel } : null;
   const sleep = deps.sleep ?? realSleep;
