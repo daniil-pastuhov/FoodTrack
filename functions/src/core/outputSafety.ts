@@ -24,14 +24,19 @@ import {
   GLUTEN_FOODS_GROUP,
   NON_FOOD,
   SOLICITATION,
+  SOLICITATION_READINGS,
   STAPLE_FILLERS,
   STAPLE_WORDS,
+  compileReadings,
   compileTerms,
   foldText,
   matchesAny,
+  withoutReadings,
+  type CompiledReading,
   type CompiledTerm,
   type DietKey,
   type FoldedText,
+  type TermGroup,
 } from "./foodTerms";
 import { fold, scriptOf } from "./inputSafety";
 import { TASTE_CATALOGUE } from "../taste/catalogue";
@@ -184,6 +189,7 @@ const REPEATED_CHAR = /(.)\1{9,}/u;
 
 const NON_FOOD_TERMS = compileTerms(NON_FOOD);
 const SOLICITATION_TERMS = compileTerms(SOLICITATION);
+const SOLICITATION_READS = compileReadings(SOLICITATION_READINGS);
 /** Names of the prompt's own parts; they never belong in a recipe. */
 const PROMPT_WORDS = compileTerms(["pantry_data", "begin_pantry_data", "end_pantry_data", "begin_staples_data", "end_staples_data", "system instruction", "systeminstruks", "response schema", "pantryid"]);
 
@@ -297,7 +303,7 @@ function scan(sc: Scanner, s: string): void {
     if (run >= 4) bad("REPETITION");
   }
   if (matchesAny(folded, NON_FOOD_TERMS)) bad("NON_FOOD");
-  if (matchesAny(folded, SOLICITATION_TERMS)) bad("SOLICITATION");
+  if (matchesAny(withoutReadings(folded, SOLICITATION_READS), SOLICITATION_TERMS)) bad("SOLICITATION");
   let quote = "";
   const endRun = () => {
     if (quote && !sc.quotable.includes(fold(quote))) bad("SCRIPT");
@@ -373,29 +379,33 @@ interface Guard {
   terms: CompiledTerm[];
   exempt: CompiledTerm[];
   freeStems?: string[];
+  /** Words set aside before this guard's terms are matched (foodTerms Reading). */
+  readings?: CompiledReading[];
 }
 
-function guardOf(terms: readonly string[], exempt: readonly string[] = [], freeStems: readonly string[] = []): Guard {
-  return { terms: compileTerms(terms), exempt: compileTerms(exempt), freeStems: freeStems.map(fold) };
+function guardOf(group: TermGroup): Guard {
+  return {
+    terms: compileTerms(group.terms),
+    exempt: compileTerms(group.exempt ?? []),
+    freeStems: (group.freeStems ?? []).map(fold),
+    readings: compileReadings(group.readings ?? []),
+  };
 }
 
 function violates(name: FoldedText, guards: readonly Guard[]): boolean {
-  const t = withoutFreeFrom(name);
+  const plain = withoutFreeFrom(name);
   return guards.some((g) => {
+    const t = g.readings?.length ? withoutFreeFrom(withoutReadings(name, g.readings)) : plain;
     if (g.exempt.length && matchesAny(t, g.exempt)) return false;
     if (g.freeStems?.some((s) => t.freeOf.some((f) => f.startsWith(s)))) return false;
     return matchesAny(t, g.terms);
   });
 }
 
-const GROUP_TERMS = Object.fromEntries(
-  Object.entries(ALLERGEN_GROUPS).map(([k, g]) => [k, { terms: compileTerms(g.terms), exempt: compileTerms(g.exempt ?? []) }]),
-) as Record<string, Guard>;
+const GROUP_TERMS = Object.fromEntries(Object.entries(ALLERGEN_GROUPS).map(([k, g]) => [k, guardOf(g)])) as Record<string, Guard>;
 const ALIAS_TERMS = Object.fromEntries(Object.entries(ALLERGEN_ALIASES).map(([k, a]) => [k, compileTerms(a)])) as Record<string, CompiledTerm[]>;
-const GLUTEN_FOODS_GUARD = guardOf(GLUTEN_FOODS_GROUP.terms, GLUTEN_FOODS_GROUP.exempt, GLUTEN_FOODS_GROUP.freeStems);
-const DIET_GUARDS = Object.fromEntries(
-  Object.entries(DIET_RULES).map(([k, groups]) => [k, groups.map((g) => guardOf(g.terms, g.exempt, g.freeStems))]),
-) as Record<DietKey, Guard[]>;
+const GLUTEN_FOODS_GUARD = guardOf(GLUTEN_FOODS_GROUP);
+const DIET_GUARDS = Object.fromEntries(Object.entries(DIET_RULES).map(([k, groups]) => [k, groups.map(guardOf)])) as Record<DietKey, Guard[]>;
 
 /**
  * The guards of every diet the request selected: they all hold at once (vegetarian and
@@ -432,14 +442,20 @@ export function allergenGuards(allergens: readonly string[]): Guard[] {
   const guards: Guard[] = [];
   for (const a of allergens) {
     const t = foldText(a);
-    const groups = Object.keys(GROUP_TERMS).filter((k) => matchesAny(t, GROUP_TERMS[k].terms) || matchesAny(t, ALIAS_TERMS[k] ?? []));
+    // A group's readings apply to the allergen's own name too: "laitue" is not a milk allergen.
+    const groups = Object.keys(GROUP_TERMS).filter((k) => {
+      const g = GROUP_TERMS[k];
+      const own = g.readings?.length ? withoutReadings(t, g.readings) : t;
+      return matchesAny(own, g.terms) || matchesAny(t, ALIAS_TERMS[k] ?? []);
+    });
     const literal = [
       ...t.words.filter((w) => DENSE.test(w)).map((w) => `*${w}`),
       ...t.words.filter((w) => !DENSE.test(w) && Array.from(w).length >= 3),
       ...(t.words.length > 1 ? [`*${t.words.join(" ")}`] : []),
     ];
     const exempt = groups.flatMap((k) => GROUP_TERMS[k].exempt);
-    if (literal.length) guards.push({ terms: compileTerms(literal), exempt });
+    const readings = groups.flatMap((k) => GROUP_TERMS[k].readings ?? []);
+    if (literal.length) guards.push({ terms: compileTerms(literal), exempt, readings });
     for (const k of groups) guards.push(GROUP_TERMS[k]);
     // Bread, pasta and beer are gluten unless sold free of it, as for the glutenFree diet.
     if (groups.includes("gluten")) guards.push(GLUTEN_FOODS_GUARD);
