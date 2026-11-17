@@ -26,6 +26,32 @@ export interface TermGroup {
    * free of something; a core term still matches ("gluten-free wheat bread" is refused).
    */
   freeStems?: readonly string[];
+  /**
+   * Words of the group that name something else beside certain words (see Reading): "курячі" is
+   * meat but "курячі яйця" are eggs. Only that word is set aside, and only for this group, so the
+   * rest of the name is still matched ("Яйця курячі" stays egg for a vegan or an egg allergy).
+   */
+  readings?: readonly Reading[];
+}
+
+/**
+ * A word that reads as something else in a given context, set aside before a group's terms are
+ * matched. All lists use the term syntax, matched word by word. Without `next` or `prev` the
+ * word is always set aside ("Fruchtfleisch" is fruit pulp, not meat). With `next`, a word of it
+ * must follow ("chicken eggs", "świeżo mielony pieprz"); with `prev`, precede ("Яйця курячі",
+ * "pieprz czarny mielony"), and then only words of `between`, numbers and tokens of up to two
+ * letters may follow the word ("Яйця курячі С1", but not "яйця куряче філе"). In between, words of
+ * `between` may stand ("tomates cœur de bœuf"), plus up to `gap` other words (default none).
+ * The context never reaches across punctuation: a comma, a bracket or a full stop ends it.
+ * Precise on purpose: a reading may only set aside a word in a phrase that cannot name the food
+ * the group is about.
+ */
+export interface Reading {
+  word: readonly string[];
+  next?: readonly string[];
+  prev?: readonly string[];
+  between?: readonly string[];
+  gap?: number;
 }
 
 const PLANT_MARKERS = [
@@ -43,6 +69,18 @@ const DAIRY_EXEMPT = [
   "cashew", "anacard", "cajou", "кешью", "кеш'ю",
   "peanut", "peanøtt", "jordnøtt", "jordnød", "erdnuss", "cacahuete", "cacahuète", "arachid", "jordnöt", "арахис", "арахіс",
   "cocoa", "kakao", "cacao", "какао", "shea", "butternut", "tartar", "*æblemost",
+];
+
+/**
+ * Words of the milk group that are not dairy: French "laitue" (lettuce) starts with "lait";
+ * Russian "сырой" (raw) and its forms start with "сыр" (cheese; "сыром" is both and stays
+ * cheese); "butter beans" and "bean curd" (tofu) are beans.
+ */
+const MILK_READINGS: readonly Reading[] = [
+  { word: ["laitue"] },
+  { word: ["=сырой", "=сырая", "=сырое", "=сырые", "=сырого", "=сырую", "=сырых", "=сырым", "=сырыми", "сырокопч", "сыровял"] },
+  { word: ["butter"], next: ["bean"] },
+  { word: ["curd"], prev: ["bean"] },
 ];
 
 export const ALLERGEN_GROUPS: Readonly<Record<string, TermGroup>> = {
@@ -88,13 +126,15 @@ export const ALLERGEN_GROUPS: Readonly<Record<string, TermGroup>> = {
       "=сир", "сиру", "сирн", "сирок", "вершк", "вершков", "кефір", "сметан",
     ],
     exempt: DAIRY_EXEMPT,
+    readings: MILK_READINGS,
   },
   egg: {
     terms: [
       "egg", "~egg", "=ei", "=eier", "eigelb", "eiweiß", "eiweiss", "huevo", "œuf", "oeuf", "=uovo",
       "=uova", "tuorl", "jajk", "jaj", "ägg", "~ägg", "=æg", "~æg", "~ægget", "~æggene", "*æggeblomme", "*æggehvide", "ægge",
       "eier", "~eier", "*spiegelei", "*rührei", "*hühnerei", "*wachtelei", "*eigelb", "*eiweiß", "*eiweiss", "omelet", "frittat",
-      "яйц", "яєц", "яйк", "mayo", "majon", "майонез",
+      "яйц", "яєц", "яйк", "mayo", "majon", "maionese", "майонез",
+      "yolk", "albume", "=yema", "=yemas", "eiklar", "żółtk", "=żółtek", "желтк", "=желток", "жовтк", "=жовток",
     ],
     exempt: ["eggplant", "eierschwamm", ...PLANT_MARKERS],
   },
@@ -176,7 +216,51 @@ const MEAT: readonly string[] = [
   "бекон", "ветчин", "колбас", "сосиск", "фарш", "желатин", "м'яс", "яловичин", "=курка", "курятин",
   "куряч", "індич", "шинк", "ковбас",
 ];
-const MEAT_EXEMPT = [...PLANT_MARKERS, "soy", "soja", "soya", "tofu", "seitan", "quorn", "tempeh", "meatless", "jackfruit", "hühnerei", "hønseæg"];
+const MEAT_EXEMPT = [...PLANT_MARKERS, "soy", "soja", "soya", "tofu", "seitan", "quorn", "tempeh", "meatless", "jackfruit"];
+
+/** Words for eggs and their parts, beside which a bird's adjective names the eggs' bird. */
+const EGG_WORDS = [
+  "egg", "яйц", "яйк", "яичк", "желтк", "=желток", "белк", "=белок", "яєц", "яєчк", "жовтк", "=жовток", "білк", "=білок",
+];
+
+/** Polish nouns that "mielony" (ground) describes when it is not minced meat: spices, coffee, nuts, seeds. */
+const GROUND_PL = [
+  "pieprz", "=kawa", "=kawy", "=kawę", "=kawą", "cynamon", "imbir", "kmin", "kolendr", "gałk", "kurkum", "goździk",
+  "=ziele", "kardamon", "chili", "chilli", "papryk", "przypraw", "migdał", "orzech", "orzeszk", "siemi", "lnian",
+  "nasion", "sezam", "=mak", "=maku", "słonecznik", "pestk", "kakao", "wanili", "anyż", "jałowc", "muszkat", "gorczyc",
+];
+const GROUND_PL_BETWEEN = [
+  "świeżo", "drobno", "grubo", "czarny", "czarnego", "czarnym", "czarna", "biały", "białego", "białym", "kolorowy",
+  "kolorowego", "słodka", "słodkiej", "ostra", "ostrej", "wędzona", "wędzonej", "cejloński", "laskowe", "laskowych", "włoskie", "włoskich",
+];
+
+/**
+ * Meat words that name something else (Reading):
+ * - a bird beside its eggs: "chicken eggs", "куриные яйца", "яйцо куриное", "курячі яйця",
+ *   "Яйця курячі" (the eggs are still eggs: the egg group is matched apart);
+ * - German, Norwegian and Danish compounds for hen's eggs ("Hühnereier", "hønseegg", "hønseæg");
+ * - fruit and vegetables named after meat: fruit pulp ("Fruchtfleisch", "fruktkött", "frugtkød"),
+ *   coconut meat, beefsteak tomatoes ("Fleischtomate", "bifftomat", "beef tomato", "tomate cœur
+ *   de bœuf"), fleshy ("мясистые", "м'ясисті"), quince paste ("carne de membrillo");
+ * - Polish "mielony" (ground) beside a spice, coffee, a nut or a seed ("świeżo mielony pieprz");
+ *   "mielone" alone, "kotlet mielony" and "mięso mielone" stay meat.
+ */
+const MEAT_READINGS: readonly Reading[] = [
+  { word: ["=chicken", "=duck", "=goose", "=turkey", "курин", "куриц", "куряч", "індич"], next: EGG_WORDS },
+  { word: ["курин", "куриц", "куряч", "індич"], prev: EGG_WORDS },
+  { word: ["hühnerei", "hønseegg", "hønseæg"] },
+  {
+    word: [
+      "fruchtfleisch", "fleischtomate", "kokosfleisch", "bifftomat", "kokoskjøtt", "fruktkjøtt", "kokoskött", "fruktkött",
+      "kokoskød", "frugtkød", "мясист", "м'ясист",
+    ],
+  },
+  { word: ["beef"], next: ["tomat"] },
+  { word: ["meat"], prev: ["coconut"] },
+  { word: ["bœuf", "boeuf"], prev: ["tomate"], between: ["=de", "=cœur", "=coeur"] },
+  { word: ["=carne"], next: ["membrillo"], between: ["=de"] },
+  { word: ["mielon"], next: GROUND_PL, prev: GROUND_PL, between: GROUND_PL_BETWEEN },
+];
 
 const HONEY: readonly string[] = ["honey", "honning", "honig", "=miel", "miele", "miód", "honung", "мёд", "мед", "медов"];
 
@@ -202,14 +286,14 @@ export type DietKey = "vegetarian" | "vegan" | "pescatarian" | "glutenFree" | "d
 
 /** For each diet, the groups of terms it excludes. */
 export const DIET_RULES: Readonly<Record<DietKey, readonly TermGroup[]>> = {
-  pescatarian: [{ terms: MEAT, exempt: MEAT_EXEMPT }],
+  pescatarian: [{ terms: MEAT, exempt: MEAT_EXEMPT, readings: MEAT_READINGS }],
   vegetarian: [
-    { terms: MEAT, exempt: MEAT_EXEMPT },
+    { terms: MEAT, exempt: MEAT_EXEMPT, readings: MEAT_READINGS },
     { terms: ALLERGEN_GROUPS.fish.terms, exempt: MEAT_EXEMPT },
     { terms: ALLERGEN_GROUPS.shellfish.terms, exempt: MEAT_EXEMPT },
   ],
   vegan: [
-    { terms: MEAT, exempt: MEAT_EXEMPT },
+    { terms: MEAT, exempt: MEAT_EXEMPT, readings: MEAT_READINGS },
     { terms: ALLERGEN_GROUPS.fish.terms, exempt: MEAT_EXEMPT },
     { terms: ALLERGEN_GROUPS.shellfish.terms, exempt: MEAT_EXEMPT },
     ALLERGEN_GROUPS.milk,
@@ -245,6 +329,30 @@ export const SOLICITATION: readonly string[] = [
   "whatsapp", "discord", "promo code", "промокод", "download", "herunterladen", "télécharg",
   "pobierz", "ladda ner", "скачать", "скачай", "завантаж", "sign in", "log in", "login", "logg inn", "log ind",
   "anmelden", "войдите", "увійдіть",
+];
+
+/**
+ * Solicitation words that are also cooking verbs (Reading): Ukrainian "скачайте кульку" is "roll
+ * into a ball" (скачати), Russian "скачайте" is "download"; "завантажте в чашу мультиварки" is
+ * "put into the multicooker's bowl". Set aside only with a shaping or kitchen word a few words on.
+ */
+export const SOLICITATION_READINGS: readonly Reading[] = [
+  {
+    word: ["скачай"],
+    next: [
+      "кульк", "=кулю", "=кулі", "=куля", "кульок", "шар", "ковбаск", "джгут", "валик", "рулет", "рулон", "тіст",
+      "=тесто", "долон", "=руками", "котлет", "сирник", "клецьк", "галушк", "кругл",
+    ],
+    gap: 3,
+  },
+  {
+    word: ["завантаж"],
+    next: [
+      "мультиварк", "духовк", "=піч", "=печі", "пароварк", "аерогрил", "чаш", "форм", "кошик", "каструл", "сковор",
+      "=деко", "противн", "блендер", "хлібопіч",
+    ],
+    gap: 4,
+  },
 ];
 
 /**
@@ -349,13 +457,86 @@ export function compileTerms(terms: readonly string[]): CompiledTerm[] {
 export interface FoldedText {
   words: string[];
   flat: string;
+  /**
+   * For each word, whether only spaces or dashes separate it from the word before (false after
+   * punctuation, and for the first word). Absent: every word but the first is taken as joined.
+   */
+  joined?: boolean[];
 }
+
+const WORD_SEPARATOR = /([^\p{L}\p{M}\p{N}']+)/u;
+const JOINING = /^[\s\p{Pd}]+$/u;
 
 export function foldText(s: string): FoldedText {
   // Marks stay part of a word: fold() drops the non-spacing ones, but Indic vowel signs are
   // spacing marks, and splitting a word at them would break matching in those scripts.
-  const flat = fold(s).replace(/[\u2019\u02BC\u2018`]/g, "'").replace(/[^\p{L}\p{M}\p{N}']+/gu, " ").trim();
-  return { words: flat.length ? flat.split(" ") : [], flat: ` ${flat} ` };
+  const parts = fold(s).replace(/[\u2019\u02BC\u2018`]/g, "'").split(WORD_SEPARATOR);
+  const words: string[] = [];
+  const joined: boolean[] = [];
+  for (let i = 0; i < parts.length; i += 2) {
+    if (!parts[i]) continue;
+    joined.push(words.length > 0 && JOINING.test(parts[i - 1]));
+    words.push(parts[i]);
+  }
+  return { words, flat: ` ${words.join(" ")} `, joined };
+}
+
+export interface CompiledReading {
+  word: CompiledTerm[];
+  next: CompiledTerm[];
+  prev: CompiledTerm[];
+  between: CompiledTerm[];
+  gap: number;
+}
+
+export function compileReadings(readings: readonly Reading[]): CompiledReading[] {
+  return readings.map((r) => ({
+    word: compileTerms(r.word),
+    next: compileTerms(r.next ?? []),
+    prev: compileTerms(r.prev ?? []),
+    between: compileTerms(r.between ?? []),
+    gap: r.gap ?? 0,
+  }));
+}
+
+function wordMatches(w: string, terms: readonly CompiledTerm[]): boolean {
+  return terms.length > 0 && matchesAny({ words: [w], flat: ` ${w} ` }, terms);
+}
+
+/** A token that says nothing about what a word names: a number or a size grade ("С1", "XL", "M"). */
+const MINOR_TOKEN = /^(?:\p{N}.*|.*\p{N}|\p{L}{1,2})$/u;
+
+function readsOtherwise(t: FoldedText, i: number, r: CompiledReading): boolean {
+  const { words } = t;
+  const joined = (k: number) => t.joined?.[k] ?? k > 0;
+  if (!r.next.length && !r.prev.length) return true;
+  const search = (step: 1 | -1, context: CompiledTerm[]): boolean => {
+    let gaps = 0;
+    for (let k = i + step; k >= 0 && k < words.length && joined(step === 1 ? k : k + 1); k += step) {
+      if (wordMatches(words[k], context)) return true;
+      if (wordMatches(words[k], r.between)) continue;
+      if (gaps++ >= r.gap) return false;
+    }
+    return false;
+  };
+  if (search(1, r.next)) return true;
+  if (!search(-1, r.prev)) return false;
+  // Preceded by its context: only minor tokens may follow it, so "яйця куряче філе" stays meat.
+  for (let k = i + 1; k < words.length && joined(k); k++) {
+    if (!MINOR_TOKEN.test(words[k]) && !wordMatches(words[k], r.between)) return false;
+  }
+  return true;
+}
+
+/** The text without the words that read as something else in their context (Reading). */
+export function withoutReadings(t: FoldedText, readings: readonly CompiledReading[]): FoldedText {
+  if (!readings.length) return t;
+  const keep = t.words.map((w, i) => !readings.some((r) => wordMatches(w, r.word) && readsOtherwise(t, i, r)));
+  if (keep.every(Boolean)) return t;
+  const words = t.words.filter((_, i) => keep[i]);
+  // A word whose neighbour before it was set aside is no longer joined to anything.
+  const joined = t.words.flatMap((_, i) => (keep[i] ? [(t.joined?.[i] ?? i > 0) && keep[i - 1] === true] : []));
+  return { words, flat: ` ${words.join(" ")} `, joined };
 }
 
 /** A Latin word with an elided article or preposition ("d'oeuf", "l'arachide", "dell'uovo"). */
