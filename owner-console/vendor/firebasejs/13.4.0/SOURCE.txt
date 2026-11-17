@@ -1,0 +1,14 @@
+Firebase JS SDK 13.4.0, vendored for the owner console (functions/README.md "The owner console").
+
+Downloaded 2026-11-17 from:
+  https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js
+    SHA-256 26673f502611bc7b382edfee3230c70954dd5e4982779185c7b6b657b5f69737 (served here unchanged)
+  https://www.gstatic.com/firebasejs/13.4.0/firebase-auth.js
+    SHA-256 9be3b6574c0c46f4a0bfb8d85436c30c89871a8d5a9fbeb0e0137d90a74667e9 as downloaded
+    SHA-256 1b2db9f0c86387c117482fc698b19675d5da328a8a66269640011e084f709e49 as served here: its one
+    import, from"https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js", reads from"./firebase-app.js"
+
+Licence: Apache-2.0 (the files' own headers). Nothing else changed; no build step.
+To update: download both files of the new version, make the same one-line change, record the
+hashes here, rename the folder and the two imports in owner-console/console.js, and update the
+test "the static page ..." in functions/test/providerProfiles.test.ts.

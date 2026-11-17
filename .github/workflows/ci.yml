@@ -86,6 +86,9 @@ jobs:
             functions:
               - 'functions/**'
               - 'firebase.json'
+              - 'firebase.local.json'
+              # test/providerProfiles.test.ts checks the owner console's page, SDK copy and headers.
+              - 'owner-console/**'
               - 'firestore.rules'
               - 'firestore.indexes.json'
               - '.github/workflows/ci.yml'

@@ -473,16 +473,49 @@ profiles"), and the board shows the setup in force with a link that leads nowher
 - [ ] **Check** Authentication > Sign-in method > Google is enabled with its Web client (it is, for
   Android), and Authentication > Settings > Authorized domains lists `bestbefore-f9ee1.firebaseapp.com`
   (there by default). Nothing to add for the page itself.
-- [ ] **Set the allowlist**: Firestore > `config` > add document `owner` with a field `emails`
-  (array) holding the Google account you will sign in with (or `uids`, array, the account's uid
-  from Authentication > Users). Type it in the console only: never in the repo, a script or a
-  message.
-- [ ] Deploy the two callables and the page:
-  `cd functions && npm ci && npx firebase deploy --only functions:getProviderProfiles,functions:setProviderProfile,hosting --project bestbefore-f9ee1`
+- [ ] **Have an app account with that Google account first**: sign in with it in the app (Recipe
+  settings > Account, Android or iOS). The page refuses a Google account that has no Firebase
+  user yet: such a sign-in would make one, which would then stop that Google account being linked
+  in the app ("credential already in use"), so the page deletes it at once and says the account
+  has no account with the app (if it can't, delete it in Authentication > Users).
+- [ ] **Set the allowlist**: Firestore > `config` > add document `owner` with one of these
+  (both may be set; either lets you in):
+  - `uids` (array of strings): the account's **User UID** from Authentication > Users (the row
+    whose Providers column shows the Google icon). Preferred: it can't be confused with another
+    sign-in's address.
+  - `emails` (array of strings): the address of the **Google account** you will sign in with, as
+    Google shows it. It is matched against the Google identity linked to that Firebase user (its
+    `google.com` provider entry), not the address in the Users table's Identifier column: an
+    account made with Apple shows the Apple address there, and one whose Google account was
+    replaced still shows the old one. Case and surrounding spaces don't matter.
+
+  An empty or misspelt field, or anything not an array of strings, lets nobody in. Type it in the
+  console only: never in the repo, a script or a message.
+- [ ] **Check what the default Hosting site serves now**, since deploying Hosting replaces it:
+  `npx firebase hosting:sites:list --project bestbefore-f9ee1` and
+  `npx firebase hosting:channel:list --project bestbefore-f9ee1` (a release on `live` means
+  something is deployed), and open `https://bestbefore-f9ee1.web.app/` and
+  `https://bestbefore-f9ee1.firebaseapp.com/` (Firebase's "Site Not Found" page means unused). If
+  it serves anything, stop and say so: the page then needs its own site.
+- [ ] Deploy the two callables:
+  `cd functions && npm ci && npx firebase deploy --only functions:getProviderProfiles,functions:setProviderProfile --project bestbefore-f9ee1`
   (the next full deploy, `--only functions,firestore`, also updates `redrawBoard`'s board with the
-  "Recipe pictures" tile; Hosting is deployed only with `hosting` named). If the project's
-  default Hosting site is already used for something else, stop and say so: the page then needs its
-  own site.
+  "Recipe pictures" tile). Always name what to deploy with `--only`: `firebase.json` has a
+  `hosting` block, so a bare `firebase deploy` would deploy Hosting too.
+- [ ] **Try Hosting on a preview channel first**, which leaves the live site alone:
+  `npx firebase hosting:channel:deploy owner-check --expires 1d --project bestbefore-f9ee1`, then
+  on the URL it prints:
+  - `curl -sI <url>/` shows the `Content-Security-Policy` (with `frame-ancestors 'none'`) and
+    `Cross-Origin-Opener-Policy` headers;
+  - `curl -sI <url>/__/auth/handler` and `curl -sI <url>/__/auth/iframe` show **neither** header
+    (Hosting's own sign-in pages: with them the page's sign-in, and the apps' Sign in with Apple
+    return to the handler, could break). If either shows them, stop and say so;
+  - the page opens and its "Sign in with Google" pop-up works there (the preview channel's host
+    may first need adding to Authentication > Settings > Authorized domains; remove it after).
+    The profiles won't load there: the callables' CORS answers only the live site's two hosts.
+
+  Then deploy the live site: `npx firebase deploy --only hosting --project bestbefore-f9ee1`, and
+  run the same two `curl -sI` checks on `https://bestbefore-f9ee1.firebaseapp.com`.
 - [ ] Apply the new alert, "Recipe: provider profile switched"
   (`functions/alerts/policies/provider-profile-changed.json`):
   `python3 functions/alerts/alerts.py --project bestbefore-f9ee1` (dry run), then with `--apply`.

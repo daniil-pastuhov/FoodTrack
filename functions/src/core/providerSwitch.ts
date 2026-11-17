@@ -12,9 +12,12 @@
  * (30 s) is the only delay.
  *
  * The owner gate (`ownerCallerFromToken`, `assertOwner`) is for the web callables: a Firebase ID
- * token, checked again here with revocation, of a Google sign-in (verified email) whose uid or
- * email is in `config/owner` (`uids` / `emails`), a Firestore document only the owner edits in
- * the console. Missing or invalid: nobody is an owner (fail closed).
+ * token, checked again here with revocation, of a Google sign-in (verified email) whose uid is in
+ * `config/owner.uids`, or whose Firebase user has a linked Google identity (its `google.com`
+ * provider entry, read with `auth.getUser`) with an email in `config/owner.emails`; never the
+ * token's or the user's own email, which can belong to another sign-in method. `config/owner` is
+ * a Firestore document only the owner edits in the console. Missing, empty or invalid: nobody is
+ * an owner (fail closed).
  */
 import { FieldPath, Timestamp, type Firestore } from "firebase-admin/firestore";
 import type { Auth } from "firebase-admin/auth";
@@ -143,6 +146,9 @@ export async function ownerCallerFromToken(auth: Auth, header: string | undefine
   };
 }
 
+/** How an owner email is compared: trimmed, lower-cased. */
+export const normaliseOwnerEmail = (e: string): string => e.trim().toLowerCase();
+
 /** `config/owner`: lists of uids and lower-cased emails, each at most OWNER_LIST_MAX; null when invalid. */
 export function parseOwnerDoc(data: unknown): { uids: string[]; emails: string[] } | null {
   if (typeof data !== "object" || data === null || Array.isArray(data)) return null;
@@ -156,19 +162,43 @@ export function parseOwnerDoc(data: unknown): { uids: string[]; emails: string[]
   const uids = list(d.uids);
   const emails = list(d.emails);
   if (!uids || !emails) return null;
-  return { uids, emails: emails.map((e) => e.trim().toLowerCase()) };
+  return { uids, emails: emails.map(normaliseOwnerEmail) };
 }
 
 /**
- * Refuses (NOT_OWNER) anyone but a Google sign-in with a verified email whose uid or email is in
- * `config/owner`, and (RECENT_SIGN_IN) a write whose sign-in is older than OWNER_RECENT_SIGN_IN_S.
+ * The emails of the Google identities linked to the Firebase user `uid` (its `google.com`
+ * provider entries), normalised; null when the user can't be read or has no Google identity.
+ * Never the user's own `email`, which another sign-in method (Apple, a former Google account)
+ * may have set.
  */
-export async function assertOwner(db: Firestore, caller: OwnerCaller, opts: { write: boolean; nowMs: number }): Promise<void> {
+export async function googleIdentityEmails(auth: Auth, uid: string): Promise<string[] | null> {
+  let user;
+  try {
+    user = await auth.getUser(uid);
+  } catch {
+    return null;
+  }
+  const google = user.providerData.filter((p) => p.providerId === "google.com");
+  if (google.length === 0) return null;
+  return google.map((p) => (typeof p.email === "string" ? normaliseOwnerEmail(p.email) : "")).filter(Boolean);
+}
+
+/**
+ * Refuses (NOT_OWNER) anyone but a Google sign-in with a verified email whose Firebase user still
+ * has a Google identity and is listed in `config/owner` by uid, or by that Google identity's
+ * email; and (RECENT_SIGN_IN) a write whose sign-in is older than OWNER_RECENT_SIGN_IN_S. At most
+ * one Firestore read and, for a Google sign-in when the list is not empty, one Auth read.
+ */
+export async function assertOwner(db: Firestore, caller: OwnerCaller, opts: { write: boolean; nowMs: number; auth: Auth }): Promise<void> {
+  const refuse = () => new SwitchRefused("permission-denied", "NOT_OWNER", "This Google account may not use the owner console");
+  if (caller.signInProvider !== "google.com" || !caller.emailVerified) throw refuse();
   const owners = parseOwnerDoc((await db.doc(OWNER_DOC).get()).data() ?? null);
-  const google = caller.signInProvider === "google.com" && caller.emailVerified;
-  const listed = owners !== null &&
-    (owners.uids.includes(caller.uid) || (caller.email !== null && owners.emails.includes(caller.email.toLowerCase())));
-  if (!google || !listed) throw new SwitchRefused("permission-denied", "NOT_OWNER", "This Google account may not use the owner console");
+  if (owners === null || (owners.uids.length === 0 && owners.emails.length === 0)) throw refuse();
+  const googleEmails = await googleIdentityEmails(opts.auth, caller.uid);
+  // No Google identity left on the user (unlinked since the token was issued): nobody.
+  if (googleEmails === null) throw refuse();
+  const listed = owners.uids.includes(caller.uid) || googleEmails.some((e) => owners.emails.includes(e));
+  if (!listed) throw refuse();
   if (opts.write && opts.nowMs / 1000 - caller.authTime > OWNER_RECENT_SIGN_IN_S) {
     throw new SwitchRefused("failed-precondition", "RECENT_SIGN_IN", "Sign in again to switch (the sign-in is more than 30 minutes old)");
   }
@@ -419,7 +449,8 @@ export function ownerConsoleOrigins(project: string, emulator: boolean): string[
   return [
     `https://${project}.firebaseapp.com`,
     `https://${project}.web.app`,
-    ...(emulator ? ["http://127.0.0.1:5000", "http://localhost:5000"] : []),
+    // firebase.local.json's Hosting emulator port (5000 is taken by AirPlay on macOS).
+    ...(emulator ? ["http://127.0.0.1:5050", "http://localhost:5050"] : []),
   ];
 }
 
@@ -442,16 +473,16 @@ async function scrubOwnerProfile(env: OwnerEnv, caller: OwnerCaller): Promise<vo
 /** `getProviderProfiles`: the owner's view. Takes no input. */
 export async function getProviderProfiles(env: OwnerEnv, authorization: string | undefined): Promise<ProfilesView> {
   const caller = await ownerCallerFromToken(env.auth, authorization);
+  await assertOwner(env.db, caller, { write: false, nowMs: env.now(), auth: env.auth });
   await scrubOwnerProfile(env, caller);
-  await assertOwner(env.db, caller, { write: false, nowMs: env.now() });
   return listProfiles(env);
 }
 
 /** `setProviderProfile` `{profile, expect, confirm: true}`: switches, then answers with the new view. */
 export async function setProviderProfile(env: OwnerEnv, authorization: string | undefined, data: unknown): Promise<ProfilesView & { changed: boolean }> {
   const caller = await ownerCallerFromToken(env.auth, authorization);
+  await assertOwner(env.db, caller, { write: true, nowMs: env.now(), auth: env.auth });
   await scrubOwnerProfile(env, caller);
-  await assertOwner(env.db, caller, { write: true, nowMs: env.now() });
   const d = isObj(data) ? data : {};
   if (d.confirm !== true || typeof d.profile !== "string" || typeof d.expect !== "string") {
     throw new HttpsError("invalid-argument", "Expected {profile, expect, confirm: true}", { reason: "INVALID_REQUEST" });

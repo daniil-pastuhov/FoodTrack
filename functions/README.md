@@ -574,7 +574,7 @@ concurrency 1 below 1 vCPU), 1 instance:
 | `claimWelcome` | 1 | 10 | 30 s |
 | `getWelcomeOffer` | 1 | 120 (per client address and instance only: no sign-in, so no uid) | 10 s |
 | `appStoreNotifications` | 1 | n/a (no Firestore before Apple's signature checks out) | 30 s |
-| `getProviderProfiles`, `setProviderProfile` | 1 each | 30 (per client address and instance, before the token is looked at) | 30 s |
+| `getProviderProfiles`, `setProviderProfile` | 1 each | 30 for all callers but a listed owner together, at most 5 of them per client address; a listed owner 30 apart; calls without a token refused uncounted ("The owner console") | 30 s |
 | `playNotifications`, `budgetKillSwitch`, `sweepReservations`, `pollPlayVoidedPurchases` | 1 | n/a (Pub/Sub or scheduler; not callable from the internet) | |
 | `redrawBoard` | 1 (no retry: the next hour redraws anyway) | n/a (scheduler); at most 2,000 purchases read a run (`BOARD_PURCHASES_CAP`) | 120 s |
 
@@ -733,7 +733,7 @@ Create log-based alerts in Cloud Logging on `jsonPayload.message` (all are struc
 | `image_call` | info | One per picture asked of a provider: `uidHash`, `provider`, `model` (the one that made it, or the last asked), `outcome` (`done`, `SAFETY`, `CONFIG`, `TIMEOUT`, `INFRA`, `DECODE`, `NO_TIME`), `attempts`, `fallback`, `durationMs`, `inputBytes`, `passedThrough`, `bytes`, `width`, `height`, `estimatedMicroUsd` (every attempt booked). Never the prompt or the brief. Alert on many `CONFIG` (a missing key or an unknown provider after a switch) or `INFRA`. |
 | `image_retry` | info | Informational: a picture call was refused for capacity and is asked again (quota pressure): `uidHash`, `provider`, `model`, `picture` (`dish` / `step`), `attempt` (the one about to be made), `reason` (`QUOTA` for 429, `SERVER` for 5xx), `waitMs`. A few a day are normal on Vertex's shared capacity; many in a row point at quota to raise or Provisioned Throughput. |
 | `provider_profile_changed` | info | **Alerted on** (console switches): a provider profile was switched ("Provider profiles"): `via` (`web` / `cli`), `uidHash` for the console, `from`, `to`, `provider`, `model`, `fallbackModel`, `change` (the `providerProfileChanges/` id). Never an email or uid. |
-| `owner_call_refused` | warning | A call to the owner console's callables was refused: `function`, `reason` (`SIGN_IN`, `NOT_OWNER`, `RECENT_SIGN_IN`, `NOT_READY`, `STALE`, `UNKNOWN_PROFILE`, `PRICES_INVALID`, `INVALID_RESULT`), `suppressedSinceLast`; sampled, 10 a minute per instance. Never who. Many `NOT_OWNER` mean someone is trying the page. |
+| `owner_call_refused` | warning | A call to the owner console's callables was refused: `function`, `reason` (`SIGN_IN`, `RATE_LIMITED`, `NOT_OWNER`, `RECENT_SIGN_IN`, `NOT_READY`, `STALE`, `UNKNOWN_PROFILE`, `PRICES_INVALID`, `INVALID_RESULT`), `suppressedSinceLast`; sampled, 10 a minute per instance. Never who. Many `NOT_OWNER` mean someone is trying the page. |
 | `image_fallback` | info | **Worth watching**: the selected model could not make a picture and the fallback model was asked once: `uidHash`, `provider`, `model`, `fallbackModel`, `picture`, `reason` (`QUOTA`, `SERVER`, `NOT_FOUND`, `REFUSED_REQUEST`, `TIMEOUT`, `DECODE`, `INFRA`), `outcome` (`done` or the failure code). Frequent fallbacks mean the primary is failing, and each such picture costs more (Nano Banana 2.1 about USD 0.0415 against 0.0336) and takes about 15 s. Never the prompt or the brief. |
 | `recipe_reported` | warning | Someone used "Report this recipe" ("Reports"): `report` (a hash of the report id; the document is `reports/<reportId>`), `reason`, `kind` (null without a snapshot), `snapshot` (whether the generation was still kept), `hasNote`, `pictures`, `imageLevel`, `platform`, `appVersion`, `language`, `uidHash`. Never the note or the recipe. **Alert on any** (or on more than a few an hour), then read the report in the console. |
 | `report_day_limit` | error | The first report of the UTC day refused at `reports.perDay` (`day`, `perDay`, `reports`); once a day (`stats/{day}.reportCapReachedAt`). Alert on it: someone may be flooding reports, or the cap is too low. |
@@ -1452,9 +1452,11 @@ Server-only. Documents:
   `expiresAt` (TTL, `reports.keepDays` days); and `reports/{reportId}/reportPictures/{main | step-<i>}`,
   copies of the generation's pictures with the same `expiresAt`.
 - `config/runtime`: see below.
-- `config/owner` (set by the owner in the console, never in the repo): `emails` and/or `uids`,
-  lists of at most 10, the Google accounts the owner console accepts ("The owner console").
-  Missing or invalid: nobody.
+- `config/owner` (set by the owner in the console, never in the repo): `uids` (Firebase uids)
+  and/or `emails` (addresses of Google accounts linked to the user, matched against its
+  `google.com` provider entry, never the user's own email), lists of at most 10, the accounts the
+  owner console accepts with a Google sign-in ("The owner console"). Missing, empty or invalid:
+  nobody.
 - `providerProfileChanges/{id}`: one per provider profile switch ("Provider profiles"): `at`,
   `actor` (`{via: "cli"}` or `{via: "web", uid}`), `from`, `to`, `writes`. Kept; a few a month.
 
@@ -1945,44 +1947,77 @@ on **Firebase Hosting**, the project's default site, `https://bestbefore-f9ee1.f
 and is also the project's `authDomain`, so the Google sign-in runs on the page's own origin (none
 of the third-party-storage trouble of the `web.app` host, which also works). The page holds no
 data, no profile, no model id and no address; it loads its Firebase configuration from Hosting's
-`/__/firebase/init.json` and the Firebase JS SDK (13.4.0, pinned) from `www.gstatic.com`, and
-writes every text with `textContent`. Its headers: a CSP that allows only itself, gstatic, Google's
-sign-in and the two callables' host (no inline script), `frame-ancestors 'none'`, `no-store`,
-`noindex`, no referrer.
+`/__/firebase/init.json` and the Firebase JS SDK (13.4.0, pinned) from its own site,
+`owner-console/vendor/firebasejs/13.4.0/` (copied from `www.gstatic.com`, the source URLs and
+SHA-256 in `SOURCE.txt` there, checked by `test/providerProfiles.test.ts`; no build step), and
+writes every text with `textContent`. Its headers: a CSP that allows only itself, Google's sign-in
+(`apis.google.com`, which the SDK loads for the pop-up) and the two callables' host (no inline
+script), `frame-ancestors 'none'`, `no-store`, `noindex`, no referrer. They are set on the
+console's own files only (`firebase.json` `hosting.headers[0].regex`: `/`, `index.html`,
+`console.js`, `console.css`, the vendored SDK), never on Hosting's reserved `/__/` paths:
+`frame-ancestors 'none'` on `/__/auth/iframe` or the COOP on `/__/auth/handler` would break the
+sign-in, and the handler is also the apps' Sign in with Apple return URL.
 
 **Who gets in.** Everything it shows and does goes through two callables, `getProviderProfiles`
 and `setProviderProfile` `{profile, expect, confirm: true}` (`src/core/providerSwitch.ts`), which:
 
 - need a Firebase ID token, checked again with **revocation** (`verifyIdToken(token, true)`: a
   disabled user or revoked tokens are refused), of a **Google** sign-in with a **verified email**;
-- accept only an account listed in `config/owner` (`emails`, compared case-insensitively, and/or
-  `uids`), a Firestore document the owner sets in the console. The owner's address is never in
-  the repo, the page or a log. Missing or invalid: nobody;
+- accept only an account listed in `config/owner`, a Firestore document the owner sets in the
+  console: by `uids` (the Firebase user's uid, Authentication > Users), or by `emails`, the
+  address of a **Google account linked to the Firebase user**, read on the server from the user's
+  `google.com` provider entry (`auth.getUser(uid).providerData`; trimmed, compared
+  case-insensitively). Never the token's or the user's own `email`: an account made with Apple
+  keeps the Apple address after Google is linked, and one whose Google account was unlinked and
+  another linked keeps the first address. A user with no Google identity left is refused even
+  when its uid is listed. The owner's address is never in the repo, the page or a log. Missing,
+  empty or invalid: nobody;
 - for a switch, need a sign-in made in the last 30 minutes (`RECENT_SIGN_IN`; the page then asks
   for the sign-in again) and `expect`, the profile the page showed (`STALE` if it changed meanwhile);
 - answer every refusal with fixed words (`SIGN_IN`, `NOT_OWNER`, …) and nothing about the setup;
   log `owner_call_refused` (the reason only) and `provider_profile_changed` (`uidHash` only);
-- clear Google's name and photo from the Auth user, as the apps' callables do. The page signs in
-  with `inMemoryPersistence`, so the browser keeps nothing; each visit signs in afresh.
+- clear Google's name and photo from the Auth user, as the apps' callables do, once the caller
+  has passed the owner check (nothing is written for anyone else). The page signs in with
+  `inMemoryPersistence`, so the browser keeps nothing; each visit signs in afresh.
 
-Signing in on the page with a Google account that already has an app account uses that same
-Firebase user (one account per email): nothing in `users/` is read or written for it.
+Signing in on the page with a Google account that is already linked to a Firebase user (signed
+in with in the app, on Android or iOS) uses that same user: nothing in `users/` is read or
+written for it. A Google account linked to no Firebase user would get a new one from the sign-in
+itself, before any call of ours; that user would hold the Google account, so linking it in the app
+later fails ("credential already in use"). The page therefore deletes such a just-made user at
+once (`isNewUser`; on the live site only, the emulators keep theirs) and says the account has no
+account with the app; if the deletion fails it says so, and the user must be deleted by hand
+(Authentication > Users). So the owner signs in with Google in the app first, and lists that
+account.
 
 **App Check is not enforced on these two.** A web App Check provider (reCAPTCHA Enterprise) needs a
 site key, its own console setup and quota, and proves only that a real browser made the call, not
 who is in it; in this backend App Check is rate reduction, not the guard. The guard here is the
-verified Google sign-in on the owner allowlist; a per-address throttle (30 a minute), one instance
-each and a 30 s timeout bound what anyone else can cost (each refused call is one token check and,
-past the signature, at most one Firestore read). **CORS** admits only
+verified Google sign-in on the owner allowlist. In front of it (`src/core/ownerCall.ts`), a call
+without a Firebase ID token is refused (`SIGN_IN`) before anything is counted; every other caller
+is limited to 5 calls a minute per client address (IPv6 by /64) and, all together, 30 a minute on
+the one instance; a listed owner (by uid, by the email of a Google session, or let in before on
+this instance) is counted apart, 30 a minute, so nobody else's calls can lock the owner out. With
+one instance each and a 30 s timeout, that bounds what anyone else can cost (each refused call is
+one token check and, past the signature, at most one Firestore read and one Auth read; the
+allowlist the throttle uses is read at most once a minute). **CORS** admits only
 `https://<project>.firebaseapp.com` and `https://<project>.web.app` (from `GCLOUD_PROJECT` at load;
 checked against the built function: other origins get no `Access-Control-Allow-Origin`), plus the
 local Hosting emulator in the Functions emulator (where firebase-tools allows every origin anyway).
 
 **One-time setup (owner)**: docs/recipe-setup.md step 13 (register a Web app, check the Google
-provider and authorized domains, set `config/owner`, deploy the two functions and Hosting, apply
-the new alert). To test locally: the "Running the functions for the apps" emulators plus
-`npx firebase emulators:start --only hosting` and `http://127.0.0.1:5000/` (the page then uses the
-Auth and Functions emulators; `/__/firebase/init.json` needs a registered Web app).
+provider and authorized domains, set `config/owner`, check what the default Hosting site serves,
+deploy the two functions, try Hosting on a preview channel, deploy it, apply the new alert).
+Always deploy with `--only`: since `firebase.json` has a `hosting` block, a bare
+`firebase deploy` would deploy Hosting too. To test locally: the "Running the functions for the
+apps" emulators (`npm run serve`), plus, from `functions/`,
+`npx firebase emulators:start --only hosting --project demo-foodtracker --config ../firebase.local.json`
+and `http://127.0.0.1:5050/`. `firebase.local.json` is `firebase.json`'s `hosting` with the Auth
+and Functions emulators (`127.0.0.1:9099`, `:5001`) added to the CSP, which the live CSP does not
+allow, and port 5050 (5000 is AirPlay's on macOS); the test keeps the two in step. Never deploy
+with it. The page then uses the emulators, the emulator serves `/__/firebase/init.json` for the
+demo project, and `config/owner` goes in the emulator's Firestore (emulator UI) with the uid of the
+emulator's Google user.
 
 **Cost**: Hosting's free tier (a few KB, a few visits); two callables idle at zero instances, a
 few calls a month. **Turn it off**: remove `config/owner` (nobody gets in), or delete the two

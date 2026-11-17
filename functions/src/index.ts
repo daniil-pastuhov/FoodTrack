@@ -76,12 +76,12 @@ import {
 import { redrawBoard as redrawBoardCore } from "./board/hosted";
 import { CloudStorageBoardBucket } from "./adapters/boardBucket";
 import {
-  SwitchRefused,
   getProviderProfiles as providerProfilesCore,
   setProviderProfile as setProviderProfileCore,
   ownerConsoleOrigins,
   type OwnerEnv,
 } from "./core/providerSwitch";
+import { OwnerCallGate } from "./core/ownerCall";
 
 // --- Params and secrets (see README "Parameters") ---------------------------------------------
 
@@ -550,8 +550,10 @@ export const redrawBoard = onSchedule(
 // a Google sign-in (verified email) listed in config/owner; the ID token is checked again with
 // revocation, a switch needs a sign-in from the last 30 minutes, and every refusal answers the same
 // few fixed words. App Check is NOT enforced here: a web App Check provider (reCAPTCHA Enterprise)
-// would prove a browser, not who is in it, and the owner allowlist is the guard; the throttle and
-// one instance bound what anyone else can cost. CORS admits only the project's own Hosting origins.
+// would prove a browser, not who is in it, and the owner allowlist is the guard; OwnerCallGate
+// (calls without a token refused uncounted, a per-address limit under an instance ceiling, a listed
+// owner in a bucket of their own) and one instance bound what anyone else can cost. CORS admits
+// only the project's own Hosting origins.
 
 function projectId(): string {
   if (process.env.GCLOUD_PROJECT) return process.env.GCLOUD_PROJECT;
@@ -579,9 +581,8 @@ function ownerEnv(): OwnerEnv {
   return ownerEnvCache;
 }
 
-const OWNER_PER_MINUTE = 30;
-const ownerThrottle = new CallThrottle(OWNER_PER_MINUTE);
-const ownerRefusedLog = new LogSampler(60_000, 10);
+let ownerGateCache: OwnerCallGate | undefined;
+const ownerGate = () => (ownerGateCache ??= new OwnerCallGate({ db: getFirestore(), logger, now: () => Date.now() }));
 
 const ownerCallable = {
   enforceAppCheck: false,
@@ -593,20 +594,7 @@ const ownerCallable = {
 } as const;
 
 function ownerCall<T>(name: string, request: CallableRequest, fn: (env: OwnerEnv, authorization: string | undefined) => Promise<T>): Promise<T> {
-  return guarded(name, async () => {
-    const raw = request.rawRequest;
-    ownerThrottle.admitAddress(clientIp(raw.headers, raw.socket?.remoteAddress), Date.now());
-    try {
-      return await fn(ownerEnv(), raw.headers.authorization);
-    } catch (e) {
-      if (e instanceof SwitchRefused) {
-        const sample = ownerRefusedLog.take(Date.now());
-        // The reason only: never the caller's uid or email.
-        if (sample.log) logger.warn("owner_call_refused", { function: name, reason: e.reason, suppressedSinceLast: sample.suppressed });
-      }
-      throw e;
-    }
-  });
+  return guarded(name, () => ownerGate().run(name, request, (authorization) => fn(ownerEnv(), authorization)));
 }
 
 export const getProviderProfiles = onCall(ownerCallable, (request) =>
