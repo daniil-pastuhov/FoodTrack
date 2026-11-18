@@ -7,18 +7,27 @@
  * emulator tokens, the admin command's dry run and --apply, and the console page holding no data.
  */
 import { randomUUID } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { HttpsError } from "firebase-functions/v2/https";
 import { AdminRefusal } from "../src/admin/accountRequests";
 import { cliValue, parseConfigArgs, runConfig, type ImageEnv } from "../src/admin/cli";
-import { DEFAULT_MENU_SETS, DEFAULT_IMAGE_SELECTION, DEFAULT_TEXT_SELECTION } from "../src/constants";
-import { DEFAULT_RUNTIME_CONFIG, loadRuntimeConfig, parseRuntimeConfig, uidHash } from "../src/model";
+import { COST_MAX, DEFAULT_COSTS, DEFAULT_MENU_SETS, DEFAULT_IMAGE_SELECTION, DEFAULT_TEXT_SELECTION } from "../src/constants";
+import { DEFAULT_RUNTIME_CONFIG, loadRuntimeConfig, parseRuntimeConfig, uidHash, validCosts } from "../src/model";
+import { OwnerCallGate, refusalReason, type OwnerCallRequest } from "../src/core/ownerCall";
 import type { Logger } from "../src/ports";
 import { OWNER_DOC, PROFILE_CHANGES, RUNTIME_DOC, SwitchRefused, activateProfile, type OwnerEnv } from "../src/core/providerSwitch";
 import {
   EXCLUDED,
   FAMILIES,
+  OWNER_SENSITIVE_SIGN_IN_S,
+  PAUSED_BY,
+  WEB_UNRESTRICTED,
+  commandFor,
+  costsWebRefusal,
+  normaliseMenuSets,
+  webMenuFloor,
+  webPriceCeiling,
   READ_ONLY,
   SECTIONS,
   SENSITIVE_CONFIRM_WORD,
@@ -61,6 +70,7 @@ async function reason(p: Promise<unknown> | (() => unknown)): Promise<string> {
 }
 
 const D = { imageDefaults: DEFAULT_IMAGE_SELECTION, textDefaults: DEFAULT_TEXT_SELECTION };
+const stableJson = (v: unknown): string => JSON.stringify(v, (_k, x) => (x && typeof x === "object" && !Array.isArray(x) ? Object.fromEntries(Object.keys(x).sort().map((k) => [k, x[k]])) : x));
 const def = (id: string) => settingById(id)!;
 const runtime = async () => (await db.doc(RUNTIME_DOC).get()).data() as Record<string, unknown> | undefined;
 const audits = async () => (await db.collection(SETTING_CHANGES).orderBy("at").get()).docs.map((d) => d.data());
@@ -72,6 +82,19 @@ function warnings(data: Record<string, unknown>): string[] {
   parseRuntimeConfig(data, { info: () => undefined, error: () => undefined, warn: (_m, d) => void (fields = (d?.fields as string[]) ?? []) });
   return fields;
 }
+
+/** The document a plan's writes make over data (field paths as Firestore applies them). */
+function applyWrites(data: Record<string, unknown>, ws: { path: string[]; value?: unknown; delete?: true }[]): Record<string, unknown> {
+  const next = structuredClone(data);
+  for (const w of ws) {
+    let at = next;
+    for (const seg of w.path.slice(0, -1)) at = (at[seg] ??= {}) as Record<string, unknown>;
+    if (w.delete) delete at[w.path[w.path.length - 1]];
+    else at[w.path[w.path.length - 1]] = structuredClone(w.value);
+  }
+  return next;
+}
+const webPlan = (data: Record<string, unknown>, changes: unknown[]) => planSettings(data, parseChanges(changes, { requireExpect: false }), D, { via: "web" });
 
 /** A config/runtime with many fields, to show a change leaves every other one as it was. */
 const FULL_CONFIG = {
@@ -155,15 +178,64 @@ describe("the registry", () => {
     expect(SETTINGS.filter((s) => s.path[0] === "providerBalanceAlerts").map((s) => s.id)).toContain("providerBalanceAlerts.bfl");
   });
 
+  /**
+   * Not from the source: every leaf of DEFAULT_RUNTIME_CONFIG and of the parse of a document that
+   * sets every field (MAXIMAL, which must parse with no warning and move every editable setting
+   * off its default), recursively, is covered. A new field reaches one of the two (the type needs a
+   * default, or the fixture an entry), so it can't slip past both this and the source test.
+   */
+  const TERMINAL = new Set(["costs.menuSets", "prices.imageUsdPerImage", "prices.textUsdPerMTok", "providerBalanceAlerts", "tasteQuiz.hidden", "providerDefaults"]);
+  const isPlain = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
+  const leaves = (v: unknown, at = ""): string[] =>
+    !isPlain(v) || TERMINAL.has(at) ? [at] : Object.keys(v).flatMap((k) => leaves(v[k], at ? `${at}.${k}` : k));
+  const MAXIMAL = {
+    generationEnabled: false, allowSandbox: true, consumptionSampleContentProvided: false,
+    dailyCap: 10, sandboxDailyCap: 1, sandboxDailyCredits: 2, perUserPerMinute: 1, perUserPerDay: 2, verifyPerMinute: 1, infraRefundsPerDay: 1,
+    dailySpendBaseMicroUsd: 1, dailySpendMaxMicroUsd: 2, dailySpendRevenueFraction: 0.5, netMicroUsdPerCredit: 1, perUserDailySpendMicroUsd: 1,
+    refundAbuseThreshold: 3, budgetKillFraction: 0.5, rejectedPromptsPerDay: 1, outputJudge: "enforce",
+    costs: { recipe: 2, menu2: 5, menu3: 7, recipeImage: 5, recipeImageSteps: 6, menuSets: { "4": { "3": 9 } } },
+    prices: { inputUsdPerMTok: 2, outputUsdPerMTok: 8, imageUsdPerImage: { "vertex/gemini-3.1-flash-image": 0.08 }, textUsdPerMTok: { "mistral/mistral-medium-latest": { inputUsdPerMTok: 1, outputUsdPerMTok: 3 } } },
+    image: { provider: "vertex", model: "gemini-3.1-flash-lite-image", fallbackModel: "gemini-nano-banana-2.1", maxStepImages: 1 },
+    providerBalanceAlerts: { bfl: 5 },
+    reports: { perUserPerDay: 1, perDay: 2, keepDays: 3 },
+    tasteQuiz: { hidden: ["units"] },
+    welcome: { recipes: 1, perDay: 2 },
+  };
+
+  test("every leaf of the defaults and of a parsed maximal document is editable, read-only or excluded", () => {
+    const editable = new Set(SETTINGS.map((s) => s.id));
+    const readOnly = new Set(READ_ONLY.map((r) => r.id));
+    const covered = (p: string) => editable.has(p) || readOnly.has(p) || p in EXCLUDED || p.split(".")[0] in FAMILIES;
+    expect(warnings(MAXIMAL)).toEqual([]);
+    const parsed = parseRuntimeConfig(MAXIMAL);
+    const all = [...new Set([...leaves(DEFAULT_RUNTIME_CONFIG), ...leaves(parsed), ...leaves(MAXIMAL)])].sort();
+    expect(all).toEqual(expect.arrayContaining(["costs.recipeImageSteps", "prices.textUsdPerMTok", "image.fallbackModel", "welcome.perDay", "providerDefaults"]));
+    expect(all.filter((p) => !covered(p))).toEqual([]);
+    // The fixture really moves every editable setting (so a field it left out would show here).
+    const empty = parseRuntimeConfig({});
+    const unmoved = SETTINGS.filter((s) => stableJson(s.read(parsed, MAXIMAL)) === stableJson(s.read(empty, {}))).map((s) => s.id);
+    expect(unmoved).toEqual([]);
+    // Every top-level key of RuntimeConfig is in the fixture or excluded (no field without an entry).
+    for (const k of Object.keys(DEFAULT_RUNTIME_CONFIG)) expect(k in MAXIMAL || k in EXCLUDED || k === "text", k).toBe(true);
+  });
+
+  test("every setting has a web rule or says why it needs none", () => {
+    for (const s of SETTINGS) expect(Boolean(s.web) !== (s.id in WEB_UNRESTRICTED), s.id).toBe(true);
+    expect(Object.keys(WEB_UNRESTRICTED).sort()).toEqual(["image.maxStepImages", "tasteQuiz.hidden"]);
+    const bad: SettingDef[] = [{ ...def("dailyCap"), web: { kind: "offOnly" } }, { ...def("costs.recipe"), web: undefined }];
+    expect(settingsRegistryProblems(bad).join("\n")).toMatch(/does not fit its control[\s\S]*no web rule/);
+  });
+
   test("the sensitive ones are those that pause, spend, charge, give away or loosen a brake", () => {
     const sensitive = SETTINGS.filter((s) => s.sensitive).map((s) => s.id);
     for (const id of ["generationEnabled", "allowSandbox", "outputJudge", "dailySpendBaseMicroUsd", "dailySpendMaxMicroUsd", "dailySpendRevenueFraction",
       "netMicroUsdPerCredit", "perUserDailySpendMicroUsd", "dailyCap", "budgetKillFraction", "perUserPerMinute", "perUserPerDay", "verifyPerMinute",
       "infraRefundsPerDay", "rejectedPromptsPerDay", "refundAbuseThreshold", "sandboxDailyCap", "sandboxDailyCredits", "costs.recipe", "costs.menu2",
-      "costs.menu3", "costs.recipeImage", "costs.recipeImageSteps", "costs.menuSets", "welcome.recipes", "welcome.perDay", "image.maxStepImages"]) {
+      "costs.menu3", "costs.recipeImage", "costs.recipeImageSteps", "costs.menuSets", "welcome.recipes", "welcome.perDay", "image.maxStepImages",
+      "reports.perUserPerDay", "reports.perDay", "reports.keepDays", "providerBalanceAlerts.bfl"]) {
       expect(sensitive, id).toContain(id);
     }
-    for (const id of ["tasteQuiz.hidden", "reports.perUserPerDay", "reports.perDay", "reports.keepDays", "providerBalanceAlerts.bfl"]) expect(sensitive, id).not.toContain(id);
+    expect(SETTINGS.filter((s) => !s.sensitive).map((s) => s.id)).toEqual(["tasteQuiz.hidden"]);
     // Raw prices and the provider setup are not editable here at all.
     for (const id of ["prices.inputUsdPerMTok", "prices.imageUsdPerImage", "image.provider", "text.model"]) {
       expect(settingById(id)).toBeUndefined();
@@ -227,22 +299,46 @@ describe("every setting's validation and bounds", () => {
     // price the rest of the default table can't take excepted: the parser's own rule, tested below).
     const values = c.kind === "number" ? [c.min, c.max] : c.kind === "toggle" ? [!s.read(parseRuntimeConfig({}), {})] : c.kind === "select" ? [c.options[c.options.length - 1].value]
       : c.kind === "multi" ? [[c.options[0].value]] : [{ ...DEFAULT_MENU_SETS, "4": { "1": 4, "2": 5, "3": 7 } }];
+    // The prices only hold together with each other: read back at their extremes, all at once, below.
+    if (id.startsWith("costs.")) return;
     for (const value of values) {
-      let p;
-      try {
-        p = plan({}, [{ id, value }]);
-      } catch (e) {
-        if (id.startsWith("costs.") && e instanceof SwitchRefused && e.reason === "INVALID_RESULT") continue;
-        throw e;
-      }
-      const next: Record<string, unknown> = {};
-      for (const w of p.writes) {
-        let at = next;
-        for (const seg of w.path.slice(0, -1)) at = (at[seg] ??= {}) as Record<string, unknown>;
-        at[w.path[w.path.length - 1]] = w.value;
-      }
+      const p = plan({}, [{ id, value }]);
+      const next = applyWrites({}, p.writes);
       expect(warnings(next), `${id}=${JSON.stringify(value)}`).toEqual([]);
       expect(p.changes[0].to).toEqual(s.toStored ? s.read(parseRuntimeConfig(next), next) : value);
+    }
+  });
+
+  test("the prices read back at their extremes, all together (the parser's rule needs them to fit each other)", () => {
+    const table = (n: number) => Object.fromEntries(Object.entries(DEFAULT_MENU_SETS).map(([d, row]) => [d, Object.fromEntries(Object.keys(row).map((c) => [c, n]))]));
+    const all = (n: number, image: number) => [
+      { id: "costs.recipe", value: n }, { id: "costs.menu2", value: n }, { id: "costs.menu3", value: n },
+      { id: "costs.menuSets", value: table(n) }, { id: "costs.recipeImage", value: image }, { id: "costs.recipeImageSteps", value: image },
+    ];
+    for (const [n, image] of [[1, 1], [COST_MAX, COST_MAX], [1, 0], [COST_MAX, 0]]) {
+      // The bounds these are: a price 1 to COST_MAX, a picture price 0 (off) to COST_MAX.
+      for (const id of ["costs.recipe", "costs.menu2", "costs.menu3"]) expect(def(id).control, id).toMatchObject({ min: 1, max: COST_MAX });
+      for (const id of ["costs.recipeImage", "costs.recipeImageSteps"]) expect(def(id).control, id).toMatchObject({ min: 0, max: COST_MAX });
+      expect(def("costs.menuSets").control).toMatchObject({ min: 1, max: COST_MAX });
+      const p = plan({}, all(n, image));
+      const next = applyWrites({}, p.writes);
+      expect(warnings(next), `${n}/${image}`).toEqual([]);
+      const costs = parseRuntimeConfig(next).costs;
+      expect(costs.recipe).toBe(n);
+      expect([costs.menu2, costs.menu3]).toEqual([n, n]);
+      expect(costs.menuSets).toEqual(table(n));
+      if (image === 0) {
+        expect(costs.recipeImage).toBeUndefined();
+        expect(costs.recipeImageSteps).toBeUndefined();
+      } else {
+        expect([costs.recipeImage, costs.recipeImageSteps]).toEqual([image, image]);
+      }
+      // And each setting reads back as asked, in the plan and from the document as written.
+      for (const ch of all(n, image)) {
+        const s = def(ch.id);
+        expect(s.read(parseRuntimeConfig(next), next), ch.id).toEqual(ch.value);
+        expect(p.changes.find((c) => c.id === ch.id)?.to, ch.id).toEqual(ch.value);
+      }
     }
   });
 
@@ -304,9 +400,9 @@ describe("planSettings", () => {
     table["4"]["3"] = 8;
     const p = plan({}, [{ id: "costs.menuSets", value: table }]);
     const stored = p.writes[0].value as { menuSets: Record<string, Record<string, number>> };
-    expect(stored.menuSets["3"]).toEqual({ "1": 3 });
-    expect(stored.menuSets["4"]).toEqual({ "1": 4, "2": 5, "3": 8 });
-    expect(parseRuntimeConfig({ costs: stored }).costs.menuSets["4"]["3"]).toBe(8);
+    // Only the cell that differs from its derived value is stored.
+    expect(stored.menuSets).toEqual({ "4": { "3": 8 } });
+    expect(parseRuntimeConfig({ costs: stored }).costs.menuSets).toEqual(table);
     // Raising a recipe's price moves the derived menu cells with it, shown as a side effect.
     const raise = plan({ costs: { recipe: 1, menu2: 4, menu3: 5 } }, [{ id: "costs.recipe", value: 2 }]);
     expect(raise.sideEffects.map((s) => s.id)).toEqual(["costs.recipeImage", "costs.recipeImageSteps", "costs.menuSets"]);
@@ -334,25 +430,25 @@ describe("applySettings", () => {
   test("apply: only the fields asked change, one audit record, one log line", async () => {
     await db.doc(RUNTIME_DOC).set(FULL_CONFIG);
     const env = makeEnv();
-    const out = await applySettings(env, [{ id: "reports.keepDays", value: 30 }, { id: "tasteQuiz.hidden", value: [tasteChoices()[0].value] }], { apply: true, actor: { via: "cli" } });
+    const out = await applySettings(env, [{ id: "reports.keepDays", value: 30 }, { id: "tasteQuiz.hidden", value: [tasteChoices()[0].value] }], { apply: true, actor: { via: "cli" }, confirmSensitive: ["reports.keepDays"] });
     expect(out).toMatchObject({ applied: true, changed: true });
     expect(await runtime()).toEqual({ ...FULL_CONFIG, reports: { keepDays: 30 }, tasteQuiz: { hidden: [tasteChoices()[0].value] } });
     const [audit, ...more] = await audits();
     expect(more).toEqual([]);
     expect(audit).toMatchObject({
       actor: { via: "cli" },
-      sensitive: false,
-      sensitiveSettings: [],
+      sensitive: true,
+      sensitiveSettings: ["reports.keepDays"],
       changes: [
-        { id: "reports.keepDays", from: 90, to: 30, storedFrom: null, storedTo: 30, reset: false, sensitive: false },
+        { id: "reports.keepDays", from: 90, to: 30, storedFrom: null, storedTo: 30, reset: false, sensitive: true },
         { id: "tasteQuiz.hidden", from: ["units"], to: [tasteChoices()[0].value], storedFrom: ["units"] },
       ],
       writes: [{ path: "reports", value: { keepDays: 30 } }, { path: "tasteQuiz > hidden", value: [tasteChoices()[0].value] }],
     });
     expect(audit.at.toMillis()).toBeGreaterThan(Date.now() - 60_000);
     expect(env.logs.filter((l) => l.message === "owner_settings_changed")).toEqual([{
-      level: "info", message: "owner_settings_changed",
-      data: { via: "cli", settings: ["reports.keepDays", "tasteQuiz.hidden"], sensitive: [], changes: [{ id: "reports.keepDays", from: 90, to: 30 }, { id: "tasteQuiz.hidden", from: "(in the audit record)", to: "(in the audit record)" }], change: out.changeId },
+      level: "warn", message: "owner_settings_changed",
+      data: { via: "cli", settings: ["reports.keepDays", "tasteQuiz.hidden"], sensitive: ["reports.keepDays"], changes: [{ id: "reports.keepDays", from: 90, to: 30 }, { id: "tasteQuiz.hidden", from: "(in the audit record)", to: "(in the audit record)" }], change: out.changeId },
     }]);
     // The instances read it as asked.
     const cfg = await loadRuntimeConfig(db);
@@ -367,18 +463,18 @@ describe("applySettings", () => {
     void _gone;
     expect(await runtime()).toEqual({ ...rest, welcome: { perDay: 50 } });
     await resetEmulators();
-    await applySettings(makeEnv(), [{ id: "reports.perDay", value: 50 }], { apply: true, actor: { via: "cli" } });
+    await applySettings(makeEnv(), [{ id: "reports.perDay", value: 50 }], { apply: true, actor: { via: "cli" }, confirmSensitive: ["reports.perDay"] });
     expect(await runtime()).toEqual({ reports: { perDay: 50 } });
   });
 
   test("sensitive changes need their exact confirmation; ordinary ones don't; a dry run needs none and writes nothing", async () => {
     await db.doc(RUNTIME_DOC).set(FULL_CONFIG);
     const env = makeEnv();
-    const ask = [{ id: "generationEnabled", value: false }, { id: "reports.perDay", value: 9 }];
+    const ask = [{ id: "generationEnabled", value: false }, { id: "tasteQuiz.hidden", value: [] }];
     const dry = await applySettings(env, ask, { apply: false, actor: { via: "cli" } });
     expect(dry).toMatchObject({ applied: false, changed: true, plan: { sensitive: ["generationEnabled"] } });
     expect(await reason(applySettings(env, ask, { apply: true, actor: { via: "cli" } }))).toBe("CONFIRM_SENSITIVE");
-    expect(await reason(applySettings(env, ask, { apply: true, actor: { via: "cli" }, confirmSensitive: ["reports.perDay"] }))).toBe("CONFIRM_SENSITIVE");
+    expect(await reason(applySettings(env, ask, { apply: true, actor: { via: "cli" }, confirmSensitive: ["tasteQuiz.hidden"] }))).toBe("CONFIRM_SENSITIVE");
     expect(await reason(applySettings(env, ask, { apply: true, actor: { via: "cli" }, confirmSensitive: ["generationEnabled", "dailyCap"] }))).toBe("CONFIRM_SENSITIVE");
     expect(await runtime()).toEqual(FULL_CONFIG);
     expect(await audits()).toEqual([]);
@@ -388,7 +484,7 @@ describe("applySettings", () => {
     const [audit] = await audits();
     expect(audit).toMatchObject({ sensitive: true, sensitiveSettings: ["generationEnabled"] });
     const line = env.logs.find((l) => l.message === "owner_settings_changed")!;
-    expect(line).toMatchObject({ level: "warn", data: { sensitive: ["generationEnabled"], changes: [{ id: "generationEnabled", from: true, to: false }, { id: "reports.perDay", from: 500, to: 9 }] } });
+    expect(line).toMatchObject({ level: "warn", data: { sensitive: ["generationEnabled"], changes: [{ id: "generationEnabled", from: true, to: false }, { id: "tasteQuiz.hidden", from: "(in the audit record)", to: "(in the audit record)" }] } });
   });
 
   test("a refusal anywhere refuses everything; a value already so writes nothing and records nothing", async () => {
@@ -417,7 +513,7 @@ describe("applySettings", () => {
   test("listSettings: values, defaults, markers and the last change per setting", async () => {
     await db.doc(RUNTIME_DOC).set(FULL_CONFIG);
     const env = makeEnv();
-    await applySettings(env, [{ id: "reports.keepDays", value: 30 }], { apply: true, actor: { via: "cli" } });
+    await applySettings(env, [{ id: "reports.keepDays", value: 30 }], { apply: true, actor: { via: "cli" }, confirmSensitive: ["reports.keepDays"] });
     const view = await listSettings(env);
     const v = (id: string) => view.sections.flatMap((s) => s.settings).find((s) => s.id === id)!;
     expect(v("dailyCap")).toMatchObject({ value: 77, default: 1000, stored: 77, overridden: true, changed: true, lastChange: null });
@@ -426,6 +522,349 @@ describe("applySettings", () => {
     expect(v("costs.recipe")).toMatchObject({ value: 1, default: 1, overridden: true, changed: false });
     expect(view.lastChange).toMatchObject({ via: "cli", settings: ["reports.keepDays"] });
     expect(view.readOnly.find((r) => r.id === "prices.inputUsdPerMTok")).toMatchObject({ value: 2, default: 1.5 });
+  });
+});
+
+// --- The console's envelope (web) against the command's whole range ------------------------
+
+describe("the console's envelope", () => {
+  const webReason = (data: Record<string, unknown>, changes: unknown[]) => reason(() => webPlan(data, changes));
+  const ok = async (data: Record<string, unknown>, changes: unknown[]) => expect(await webReason(data, changes), JSON.stringify(changes)).toBe("no refusal");
+  const no = async (data: Record<string, unknown>, changes: unknown[]) => expect(await webReason(data, changes), JSON.stringify(changes)).toBe("WEB_LIMIT");
+  const set = (id: string, value: unknown) => [{ id, value }];
+
+  test.each([
+    // id, the most the page may set over the defaults, the least it refuses
+    ["dailySpendBaseMicroUsd", 3_000_000, 3_010_000],
+    ["dailySpendMaxMicroUsd", 5_000_000, 5_010_000],
+    ["perUserDailySpendMicroUsd", 900_000, 910_000],
+    ["dailyCap", 2500, 2501],
+    ["perUserPerMinute", 6, 7],
+    ["perUserPerDay", 80, 81],
+    ["verifyPerMinute", 20, 21],
+    ["infraRefundsPerDay", 6, 7],
+    ["rejectedPromptsPerDay", 10, 11],
+    ["sandboxDailyCap", 20, 21],
+    ["sandboxDailyCredits", 200, 201],
+    ["welcome.recipes", 5, 6],
+    ["welcome.perDay", 500, 501],
+  ] as const)("%s: up to %d on the page, any lower value, the whole range with the command", async (id, most, refused) => {
+    await ok({}, set(id, most));
+    await no({}, set(id, refused));
+    await ok({}, set(id, 0));
+    const c = def(id).control as { max: number };
+    expect(plan({}, set(id, c.max)).changes[0].to).toBe(c.max);
+    // A value set higher with the command can be lowered on the page, not raised further.
+    const [field, key] = def(id).path;
+    const stored = (n: number) => (key ? { [field]: { [key]: n } } : { [field]: n });
+    await ok(stored(c.max), set(id, c.max - 1));
+    await no(stored(c.max - 1), set(id, c.max));
+  });
+
+  test("lowering only: the revenue share, the net per recipe, the budget alert's fraction, the refund threshold", async () => {
+    for (const [id, lower, higher] of [
+      ["dailySpendRevenueFraction", 0.2, 0.3], ["netMicroUsdPerCredit", 100_000, 130_000], ["budgetKillFraction", 0.5, 1.05], ["refundAbuseThreshold", 1, 3],
+    ] as const) {
+      await ok({}, set(id, lower));
+      await no({}, set(id, higher));
+      // Relative to the value in force: once lowered, the page can't raise it back, not even by a reset.
+      await no({ [id]: lower }, set(id, (DEFAULT_RUNTIME_CONFIG as unknown as Record<string, number>)[id]));
+      await no({ [id]: lower }, [{ id, reset: true }]);
+      expect(plan({ [id]: lower }, [{ id, reset: true }]).writes).toEqual([{ path: [id], delete: true }]);
+      expect(plan({}, set(id, higher)).changes[0].to).toBe(higher);
+    }
+  });
+
+  test("switches and the judge: sandbox only off, the judge only stricter", async () => {
+    await no({}, set("allowSandbox", true));
+    await ok({ allowSandbox: true }, set("allowSandbox", false));
+    expect(plan({}, set("allowSandbox", true)).changes[0].to).toBe(true);
+    await ok({}, set("outputJudge", "shadow"));
+    await ok({ outputJudge: "shadow" }, set("outputJudge", "enforce"));
+    await no({ outputJudge: "enforce" }, set("outputJudge", "shadow"));
+    await no({ outputJudge: "shadow" }, set("outputJudge", "off"));
+    await no({ outputJudge: "enforce" }, [{ id: "outputJudge", reset: true }]);
+    // Stored invalid reads as enforce: the page can't loosen it either.
+    await no({ outputJudge: "lax" }, set("outputJudge", "off"));
+    expect(plan({ outputJudge: "enforce" }, set("outputJudge", "off")).changes[0].to).toBe("off");
+  });
+
+  test("reports: floors on the page, any raise; balances: never cleared or 0 on the page", async () => {
+    for (const [id, floor] of [["reports.perUserPerDay", 1], ["reports.perDay", 10], ["reports.keepDays", 30]] as const) {
+      await ok({}, set(id, floor));
+      await no({}, set(id, floor - 1));
+      expect(plan({}, set(id, floor - 1)).changes[0].to).toBe(floor - 1);
+    }
+    // Set lower with the command: the page may raise it, even while still under the floor.
+    await ok({ reports: { perDay: 5 } }, set("reports.perDay", 8));
+    await no({ reports: { perDay: 5 } }, set("reports.perDay", 4));
+    await ok({}, set("providerBalanceAlerts.bfl", 500));
+    await no({}, set("providerBalanceAlerts.bfl", 0));
+    await ok({ providerBalanceAlerts: { bfl: 500 } }, set("providerBalanceAlerts.bfl", 1));
+    await ok({ providerBalanceAlerts: { bfl: 500 } }, set("providerBalanceAlerts.bfl", 5000));
+    await no({ providerBalanceAlerts: { bfl: 500 } }, [{ id: "providerBalanceAlerts.bfl", reset: true }]);
+    expect(plan({ providerBalanceAlerts: { bfl: 500 } }, [{ id: "providerBalanceAlerts.bfl", reset: true }]).writes).toEqual([{ path: ["providerBalanceAlerts"], delete: true }]);
+  });
+
+  test("unrestricted: step pictures and the quiz's hidden choices", async () => {
+    await ok({}, set("image.maxStepImages", 4));
+    await ok({}, set("image.maxStepImages", 0));
+    await ok({}, set("tasteQuiz.hidden", tasteChoices().slice(0, 5).map((o) => o.value)));
+  });
+
+  test("prices: lower (a menu down to half a recipe a dish), or 1 more a save up to 1.5 x the default", async () => {
+    const stored = { costs: { recipe: 1, menu2: 4, menu3: 5, recipeImage: 2, recipeImageSteps: 3 } };
+    expect([webPriceCeiling(1), webPriceCeiling(4), webPriceCeiling(5), webPriceCeiling(6)]).toEqual([2, 6, 8, 9]);
+    expect([webMenuFloor(1, 1), webMenuFloor(1, 6), webMenuFloor(1, 9), webMenuFloor(1, 12), webMenuFloor(2, 9)]).toEqual([1, 3, 5, 6, 9]);
+    // Every default menu is at or above its floor (so the floor never blocks the defaults).
+    for (const [d, row] of Object.entries(DEFAULT_MENU_SETS)) for (const [c, n] of Object.entries(row)) expect(n, `${d}x${c}`).toBeGreaterThanOrEqual(webMenuFloor(1, Number(d) * Number(c)));
+    await ok({}, set("costs.menu2", 5));
+    await no({ costs: { recipe: 1, menu2: 4, menu3: 8 } }, set("costs.menu2", 6));
+    // Derived cells count: at menu2 6 the 1-day 1-course menu (derived, unstored) would reach 3, above its own ceiling.
+    expect(() => webPlan({ costs: { recipe: 1, menu2: 5, menu3: 6 } }, set("costs.menu2", 6))).toThrow(/A 1-day menu of 1 course: 3; at most 2 here/);
+    await ok({ costs: { recipe: 1, menu2: 5, menu3: 6, menuSets: { "1": { "1": 2, "2": 3 }, "2": { "1": 3 } } } }, set("costs.menu2", 6));
+    await no({ costs: { recipe: 1, menu2: 6, menu3: 8 } }, set("costs.menu2", 7));
+    await ok({}, set("costs.menu2", 3));
+    await no({}, set("costs.menu2", 2));
+    await no({}, set("costs.menu3", 4));
+    // A recipe's price raised alone moves the unstored picture prices by 2 (twice and three times a recipe): refused.
+    expect(await reason(() => webPlan({}, set("costs.recipe", 2)))).toBe("WEB_LIMIT");
+    expect(() => webPlan({}, set("costs.recipe", 2))).toThrow(/A recipe with a picture: 2 to 4; at most 1 more a save here[\s\S]*npm run admin -- config set costs.recipe <value> --apply --confirm costs.recipe/);
+    await ok(stored, set("costs.recipe", 2));
+    await no({ costs: { recipe: 2, menu2: 4, menu3: 5, recipeImage: 3, recipeImageSteps: 3 } }, set("costs.recipe", 3));
+    // Pictures: off and on again up to the ceiling.
+    await ok(stored, set("costs.recipeImage", 0));
+    await ok({ costs: { ...stored.costs, recipeImage: 0, recipeImageSteps: 0 } }, [{ id: "costs.recipeImage", value: 3 }, { id: "costs.recipeImageSteps", value: 5 }]);
+    await no({ costs: { ...stored.costs, recipeImage: 0, recipeImageSteps: 0 } }, set("costs.recipeImage", 4));
+    // The table, cell by cell.
+    const table = (cell: [string, string, number]) => {
+      const t2 = structuredClone(DEFAULT_MENU_SETS) as Record<string, Record<string, number>>;
+      t2[cell[0]][cell[1]] = cell[2];
+      return t2;
+    };
+    await ok({}, set("costs.menuSets", table(["4", "3", 7])));
+    await no({}, set("costs.menuSets", table(["4", "3", 8])));
+    await no({}, set("costs.menuSets", table(["4", "3", 5])));
+    await ok({}, set("costs.menuSets", table(["1", "3", 2])));
+    // The whole parser range stays with the command.
+    expect(plan({}, set("costs.menuSets", table(["4", "3", COST_MAX]))).changes[0].to).toEqual(table(["4", "3", COST_MAX]));
+    expect(costsWebRefusal(DEFAULT_COSTS, DEFAULT_COSTS)).toBe("");
+  });
+
+  test("the view shows the page's range and the command for anything larger", () => {
+    const v = (data: Record<string, unknown>, id: string) => settingsViewOf(data, D).sections.flatMap((s) => s.settings).find((s) => s.id === id)!;
+    expect(v({}, "dailyCap")).toMatchObject({ web: { text: "up to 2500 or any lower value", max: 2500 }, command: "npm run admin -- config set dailyCap <value> --apply --confirm dailyCap" });
+    expect(v({ dailyCap: 9000 }, "dailyCap").web).toMatchObject({ max: 9000 });
+    expect(v({}, "dailySpendMaxMicroUsd").web?.text).toBe("up to USD 5.00 or any lower value");
+    expect(v({}, "budgetKillFraction").web).toMatchObject({ text: "only lower than the value in force (1)", max: 1 });
+    expect(v({}, "allowSandbox").web?.text).toBe("only off");
+    expect(v({}, "outputJudge").web?.text).toBe("only stricter: Off -> Shadow (log only) -> Enforce");
+    expect(v({}, "reports.keepDays").web).toMatchObject({ min: 30 });
+    expect(v({}, "providerBalanceAlerts.bfl").web?.text).toBe("at least 1; never cleared");
+    expect(v({}, "costs.menu2").web).toMatchObject({ min: 3, max: 5 });
+    expect(v({}, "costs.menuSets").web?.cells?.["4"]["3"]).toEqual({ min: 6, max: 7 });
+    expect(v({}, "costs.menuSets").command).toBe("npm run admin -- config set costs.menuSets '<table as JSON>' --apply --confirm costs.menuSets");
+    expect(v({ generationEnabled: false, disabledBy: "budget alert b: 10 of 10" }, "generationEnabled").web?.text).toMatch(/budget alert's, so only the command/);
+    expect(v({}, "tasteQuiz.hidden")).toMatchObject({ web: null, command: commandFor(def("tasteQuiz.hidden")) });
+    for (const s of SETTINGS) expect(commandFor(s)).toContain(`config set ${s.id} `);
+  });
+});
+
+describe("generationEnabled and the budget kill switch's pause", () => {
+  const killed = { generationEnabled: false, disabledBy: "budget alert Recipe budget: 120 of 100", disabledAt: "then" };
+
+  test("the page pauses at any time and records it; it turns on a pause of its own or by hand, clearing the marks", async () => {
+    const off = webPlan({}, [{ id: "generationEnabled", value: false }]);
+    expect(off.writes).toEqual([
+      { path: ["generationEnabled"], value: false },
+      { path: ["disabledBy"], value: PAUSED_BY.web },
+      { path: ["disabledAt"], value: "(the time of the change)", now: true },
+    ]);
+    for (const paused of [{ generationEnabled: false, disabledBy: PAUSED_BY.web, disabledAt: "then" }, { generationEnabled: false }, { generationEnabled: false, disabledBy: "by hand" }]) {
+      const on = webPlan(paused, [{ id: "generationEnabled", value: true }]);
+      expect(applyWrites(paused, on.writes)).toEqual({ generationEnabled: true });
+    }
+  });
+
+  test("after the budget alert's pause only the command turns it on, and clears disabledBy / disabledAt", async () => {
+    expect(await reason(() => webPlan(killed, [{ id: "generationEnabled", value: true }]))).toBe("WEB_LIMIT");
+    expect(await reason(() => webPlan(killed, [{ id: "generationEnabled", reset: true }]))).toBe("WEB_LIMIT");
+    const on = plan(killed, [{ id: "generationEnabled", value: true }]);
+    expect(applyWrites(killed, on.writes)).toEqual({ generationEnabled: true });
+    // Against the emulators, through the command.
+    await db.doc(RUNTIME_DOC).set({ ...killed, dailyCap: 77 });
+    const lines: string[] = [];
+    await runConfig(parseConfigArgs(["config", "set", "generationEnabled", "on", "--apply", "--confirm", "generationEnabled"]), { ...makeEnv(), print: (l: string) => void lines.push(l) });
+    expect(await runtime()).toEqual({ generationEnabled: true, dailyCap: 77 });
+    expect(lines.join("\n")).toContain("  - disabledBy deleted");
+    // The command's own pause says so, with the time.
+    await runConfig(parseConfigArgs(["config", "set", "generationEnabled", "off", "--apply", "--confirm", "generationEnabled"]), { ...makeEnv(), print: () => undefined });
+    const after = (await runtime())!;
+    expect(after).toMatchObject({ generationEnabled: false, disabledBy: PAUSED_BY.cli });
+    expect((after.disabledAt as { toMillis(): number }).toMillis()).toBeGreaterThan(Date.now() - 60_000);
+  });
+});
+
+// --- The menu table as stored ---------------------------------------------------------------
+
+describe("the menu table as stored", () => {
+  test("a stored table holding the 3-day cells does not stop menu2 / menu3 being changed", async () => {
+    const data = { costs: { recipe: 1, menu2: 4, menu3: 5, menuSets: { "3": { "1": 3, "2": 4, "3": 5 }, "4": { "3": 7 } } } };
+    expect(warnings(data)).toEqual([]);
+    for (const via of ["cli", "web"] as const) {
+      const p = planSettings(data, parseChanges([{ id: "costs.menu2", value: 5 }], { requireExpect: false }), D, { via });
+      const next = applyWrites(data, p.writes);
+      expect(warnings(next)).toEqual([]);
+      // The copies of menu2 / menu3 go; the cells set by hand stay as stored.
+      expect((next.costs as { menuSets: unknown }).menuSets).toEqual({ "3": { "1": 3 }, "4": { "3": 7 } });
+      expect(parseRuntimeConfig(next).costs).toMatchObject({ menu2: 5, menu3: 5 });
+    }
+  });
+
+  test("editing one cell freezes no other: a later price change still moves every derived cell", () => {
+    const table = structuredClone(DEFAULT_MENU_SETS) as Record<string, Record<string, number>>;
+    table["4"]["3"] = 8;
+    const first = applyWrites({}, plan({}, [{ id: "costs.menuSets", value: table }]).writes);
+    expect((first.costs as { menuSets: unknown }).menuSets).toEqual({ "4": { "3": 8 } });
+    const second = applyWrites(first, plan(first, [{ id: "costs.menu3", value: 6 }]).writes);
+    const t2 = parseRuntimeConfig(second).costs.menuSets;
+    expect([t2["1"]["3"], t2["2"]["3"], t2["3"]["3"], t2["4"]["3"]]).toEqual([4, 5, 6, 8]);
+    // A table equal to the derived one stores nothing; asking for what is in force writes nothing.
+    expect(plan(first, [{ id: "costs.menuSets", value: parseRuntimeConfig(first).costs.menuSets }]).writes).toEqual([]);
+    const back = applyWrites(first, plan(first, [{ id: "costs.menuSets", value: DEFAULT_MENU_SETS }]).writes);
+    expect(back).toEqual({ costs: { recipe: 1, menu2: 4, menu3: 5 } });
+  });
+
+  test("round trip: any valid table stored as its differing cells parses back to itself", () => {
+    let seed = 7;
+    const rnd = (n: number) => (seed = (seed * 1103515245 + 12345) % 2 ** 31) % n;
+    let checked = 0;
+    for (let i = 0; i < 400; i++) {
+      const recipe = 1 + rnd(3);
+      const raw: Record<string, Record<string, number>> = {};
+      for (const d of ["1", "2", "3", "4"]) for (const c of ["1", "2", "3"]) if (rnd(3) === 0) (raw[d] ??= {})[c] = recipe + rnd(8);
+      const menu2 = recipe + rnd(6);
+      const menu3 = menu2 + rnd(4);
+      const costs = { recipe, menu2, menu3, menuSets: { ...raw, "3": { ...(raw["3"] ?? {}), "2": menu2, "3": menu3 } } };
+      const want = validCosts(costs);
+      if (!want) continue;
+      checked++;
+      const stored = structuredClone(costs) as Record<string, unknown>;
+      normaliseMenuSets(stored);
+      expect(stored.menuSets === undefined || !(stored.menuSets as Record<string, Record<string, number>>)["3"]?.["2"]).toBe(true);
+      expect(validCosts(stored)?.menuSets, JSON.stringify(costs)).toEqual(want.menuSets);
+      expect(parseRuntimeConfig({ costs: stored }).costs.menuSets).toEqual(want.menuSets);
+      // And the editor's plan for that table writes the same.
+      const p = plan({ costs: { recipe, menu2, menu3 } }, [{ id: "costs.menuSets", value: want.menuSets }]);
+      expect(parseRuntimeConfig(applyWrites({ costs: { recipe, menu2, menu3 } }, p.writes)).costs.menuSets).toEqual(want.menuSets);
+    }
+    expect(checked).toBeGreaterThan(50);
+  });
+});
+
+// --- The confirm is bound to the dry run -----------------------------------------------------
+
+describe("the confirm is bound to the dry run", () => {
+  test("the token is the plan's digest: the same plan the same token, a different one (derived cells included) another", () => {
+    const a = plan({ costs: { recipe: 1, menu2: 4, menu3: 5 } }, [{ id: "costs.recipeImage", value: 3 }]);
+    expect(plan({ costs: { recipe: 1, menu2: 4, menu3: 5 } }, [{ id: "costs.recipeImage", value: 3 }]).token).toBe(a.token);
+    // A stored value that changes neither what is written nor what is shown leaves it as it was.
+    const b = plan({ costs: { recipe: 1, menu2: 5, menu3: 5 } }, [{ id: "costs.recipeImage", value: 3 }]);
+    expect(b.changes).toEqual(a.changes);
+    expect(b.token).toBe(a.token);
+    // The same change with other things moving with it (here the step pictures' derived price): another token.
+    const c = plan({ costs: { recipe: 1, menu2: 4, menu3: 5 } }, [{ id: "costs.recipe", value: 2 }]);
+    const c2 = plan({ costs: { recipe: 1, menu2: 4, menu3: 5, recipeImage: 2 } }, [{ id: "costs.recipe", value: 2 }]);
+    expect(c2.token).not.toBe(c.token);
+  });
+
+  test("a confirm whose plan is no longer the dry run's is refused as STALE and writes nothing", async () => {
+    await db.doc(RUNTIME_DOC).set({ costs: { recipe: 1, menu2: 4, menu3: 5, recipeImage: 2, recipeImageSteps: 3 } });
+    const env = makeEnv();
+    const actor = { via: "web" as const, uid: "owner" };
+    const ask = [{ id: "costs.recipe", value: 2, expect: 1 }];
+    const dry = await applySettings(env, ask, { apply: false, actor });
+    // Meanwhile the command changes the 3-course menu: costs.recipe's own value is untouched, but
+    // what the save would move with it (the menu table) is not what the dialog showed.
+    await applySettings(env, [{ id: "costs.menu3", value: 6 }], { apply: true, actor: { via: "cli" }, confirmSensitive: ["costs.menu3"] });
+    expect(await reason(applySettings(env, ask, { apply: true, actor, confirmSensitive: ["costs.recipe"], expectToken: dry.plan.token }))).toBe("STALE");
+    expect(((await runtime())!.costs as { recipe: number }).recipe).toBe(1);
+    const fresh = await applySettings(env, ask, { apply: false, actor });
+    expect(fresh.plan.token).not.toBe(dry.plan.token);
+    const done = await applySettings(env, ask, { apply: true, actor, confirmSensitive: ["costs.recipe"], expectToken: fresh.plan.token });
+    expect(done.applied).toBe(true);
+  });
+});
+
+// --- A sensitive save needs a sign-in from the last 5 minutes -------------------------------
+
+describe("sign-in age", () => {
+  test("a sensitive save needs a sign-in from the last 5 minutes; an ordinary one 30; a check (dry run) 30", async () => {
+    const owner = await googleUser();
+    await db.doc(OWNER_DOC).set({ uids: [owner.uid] });
+    const later = makeEnv({ now: () => Date.now() + (OWNER_SENSITIVE_SIGN_IN_S + 60) * 1000 });
+    const sensitive = [{ id: "welcome.recipes", value: 4, expect: null }];
+    const dry = await setOwnerSettings(later, bearer(owner.idToken), { changes: sensitive, dryRun: true });
+    expect(await reason(setOwnerSettings(later, bearer(owner.idToken), { changes: sensitive, confirm: true, token: dry.plan.token, sensitive: ["welcome.recipes"], typed: SENSITIVE_CONFIRM_WORD }))).toBe("RECENT_SIGN_IN");
+    expect(await runtime()).toBeUndefined();
+    const ordinary = [{ id: "tasteQuiz.hidden", value: [tasteChoices()[0].value], expect: null }];
+    const dry2 = await setOwnerSettings(later, bearer(owner.idToken), { changes: ordinary, dryRun: true });
+    expect((await setOwnerSettings(later, bearer(owner.idToken), { changes: ordinary, confirm: true, token: dry2.plan.token })).changed).toBe(true);
+    // Right after the sign-in, the sensitive one goes through.
+    const now = makeEnv();
+    const dry3 = await setOwnerSettings(now, bearer(owner.idToken), { changes: sensitive, dryRun: true });
+    expect((await setOwnerSettings(now, bearer(owner.idToken), { changes: sensitive, confirm: true, token: dry3.plan.token, sensitive: ["welcome.recipes"], typed: SENSITIVE_CONFIRM_WORD })).changed).toBe(true);
+    // The command has no sign-in: no age.
+    expect((await applySettings(makeEnv(), [{ id: "welcome.recipes", value: 3 }], { apply: true, actor: { via: "cli" }, confirmSensitive: ["welcome.recipes"] })).applied).toBe(true);
+  });
+
+  test("the server's envelope holds whatever the page sends", async () => {
+    const owner = await googleUser();
+    await db.doc(OWNER_DOC).set({ uids: [owner.uid] });
+    const env = makeEnv();
+    for (const [id, value] of [["dailyCap", 100_000], ["allowSandbox", true], ["welcome.recipes", 20], ["budgetKillFraction", 2], ["costs.menu2", 1]] as const) {
+      expect(await reason(setOwnerSettings(env, bearer(owner.idToken), { changes: [{ id, value, expect: null }], dryRun: true })), id).toBe("WEB_LIMIT");
+    }
+    expect(await runtime()).toBeUndefined();
+  });
+});
+
+// --- Refusals are logged and alerted on ------------------------------------------------------
+
+describe("refusals of the owner callables", () => {
+  test("every refusal past the throttle is logged with a fixed reason and the uid hash; INVALID_REQUEST and WEB_LIMIT too", async () => {
+    const env = makeEnv();
+    const gate = new OwnerCallGate(env);
+    const owner = await googleUser();
+    await db.doc(OWNER_DOC).set({ uids: [owner.uid] });
+    const req = (): OwnerCallRequest => ({
+      auth: { uid: owner.uid, token: { email: owner.email, firebase: { sign_in_provider: "google.com" } } },
+      rawRequest: { headers: { "x-forwarded-for": "192.0.2.10", authorization: bearer(owner.idToken) } },
+    });
+    const call = (data: unknown) => gate.run("setOwnerSettings", req(), (authorization) => setOwnerSettings(env, authorization, data));
+    expect(await reason(call({ changes: [] }))).toBe("invalid-argument:INVALID_REQUEST");
+    expect(await reason(call({ changes: [{ id: "dailyCap", value: 100_000, expect: null }], dryRun: true }))).toBe("WEB_LIMIT");
+    expect(await reason(call({ changes: [{ id: "nope", value: 1, expect: null }], dryRun: true }))).toBe("UNKNOWN_SETTING");
+    const refused = env.logs.filter((l) => l.message === "owner_call_refused").map((l) => l.data);
+    expect(refused).toEqual(["INVALID_REQUEST", "WEB_LIMIT", "UNKNOWN_SETTING"].map((r) => ({ function: "setOwnerSettings", reason: r, uidHash: uidHash(owner.uid) })));
+    const logged = JSON.stringify(env.logs);
+    expect(logged).not.toContain(owner.uid);
+    expect(logged).not.toContain(owner.email);
+    // Fixed codes only.
+    expect(refusalReason(new HttpsError("invalid-argument", "x <script>"))).toBe("INVALID_ARGUMENT");
+    expect(refusalReason(new HttpsError("invalid-argument", "x", { reason: "lower case <b>" }))).toBe("INVALID_ARGUMENT");
+    expect(refusalReason(new Error("boom"))).toBeNull();
+  });
+
+  test("an alert policy covers every reason but NOT_OWNER, SIGN_IN and RATE_LIMITED", () => {
+    const policy = JSON.parse(readFileSync(join(__dirname, "../alerts/policies/owner-refusals.json"), "utf8"));
+    const filter: string = policy.conditions[0].conditionMatchedLog.filter;
+    expect(filter).toBe('resource.type="cloud_run_revision" AND jsonPayload.message="owner_call_refused" AND NOT jsonPayload.reason=("NOT_OWNER" OR "SIGN_IN" OR "RATE_LIMITED")');
+    const readme = readFileSync(join(__dirname, "../README.md"), "utf8");
+    const count = readdirSync(join(__dirname, "../alerts/policies")).filter((f) => f.endsWith(".json")).length;
+    expect(count).toBe(17);
+    expect(readme).toContain("and seventeen policies (");
+    expect(readme).toContain("(`owner-refusals`)");
   });
 });
 
@@ -440,8 +879,9 @@ describe("pin", () => {
     await applySettings(env, [{ id: "dailyCap", value: 5 }], { apply: false, actor: { via: "cli" } });
     expect(await runtime()).toEqual(FULL_CONFIG);
     expect(await loadRuntimeConfig(db)).toEqual(before);
-    await applySettings(env, [{ id: "reports.perDay", value: 7 }, { id: "providerBalanceAlerts.bfl", value: 10 }], { apply: true, actor: { via: "cli" } });
-    await applySettings(env, [{ id: "reports.perDay", reset: true }, { id: "providerBalanceAlerts.bfl", reset: true }], { apply: true, actor: { via: "cli" } });
+    const both = ["reports.perDay", "providerBalanceAlerts.bfl"];
+    await applySettings(env, [{ id: "reports.perDay", value: 7 }, { id: "providerBalanceAlerts.bfl", value: 10 }], { apply: true, actor: { via: "cli" }, confirmSensitive: both });
+    await applySettings(env, [{ id: "reports.perDay", reset: true }, { id: "providerBalanceAlerts.bfl", reset: true }], { apply: true, actor: { via: "cli" }, confirmSensitive: both });
     expect(await runtime()).toEqual(FULL_CONFIG);
     expect(await loadRuntimeConfig(db)).toEqual(before);
     // An empty document reads as the defaults, exactly as before the settings existed.
@@ -495,28 +935,37 @@ describe("the owner callables", () => {
     expect(view.sections.map((s) => s.id)).toEqual(SECTIONS.map((s) => s.id));
     expect((await auth.getUser(owner.uid)).displayName).toBeUndefined();
 
-    const changes = [{ id: "welcome.recipes", value: 5, expect: null }, { id: "reports.perDay", value: 9, expect: null }];
+    const hide = tasteChoices()[0].value;
+    const changes = [{ id: "welcome.recipes", value: 5, expect: null }, { id: "tasteQuiz.hidden", value: [hide], expect: null }];
     expect(await reason(setOwnerSettings(env, bearer(owner.idToken), { changes }))).toBe("invalid-argument:INVALID_REQUEST");
-    expect(await reason(setOwnerSettings(env, bearer(owner.idToken), { changes: [{ id: "reports.perDay", value: 9 }], confirm: true }))).toBe("invalid-argument:INVALID_REQUEST");
+    expect(await reason(setOwnerSettings(env, bearer(owner.idToken), { changes: [{ id: "tasteQuiz.hidden", value: [hide] }], dryRun: true }))).toBe("invalid-argument:INVALID_REQUEST");
     const dry = await setOwnerSettings(env, bearer(owner.idToken), { changes, dryRun: true });
-    expect(dry).toMatchObject({ changed: false, plan: { sensitive: ["welcome.recipes"], changes: [{ id: "welcome.recipes", from: 3, to: 5, sensitive: true }, { id: "reports.perDay", from: 500, to: 9 }] } });
+    expect(dry).toMatchObject({ changed: false, plan: { sensitive: ["welcome.recipes"], changes: [{ id: "welcome.recipes", from: 3, to: 5, sensitive: true }, { id: "tasteQuiz.hidden", from: [], to: [hide] }] } });
+    const token = dry.plan.token;
+    expect(token).toMatch(/^[\w-]{20,}$/);
     expect(await runtime()).toBeUndefined();
+    // A confirm without the dry run's token is refused before anything else.
+    expect(await reason(setOwnerSettings(env, bearer(owner.idToken), { changes, confirm: true, sensitive: ["welcome.recipes"], typed: SENSITIVE_CONFIRM_WORD }))).toBe("invalid-argument:INVALID_REQUEST");
     // Server-side, whatever the page did: the typed word, and exactly the sensitive ids.
-    expect(await reason(setOwnerSettings(env, bearer(owner.idToken), { changes, confirm: true }))).toBe("CONFIRM_SENSITIVE");
-    expect(await reason(setOwnerSettings(env, bearer(owner.idToken), { changes, confirm: true, sensitive: ["welcome.recipes"], typed: "change" }))).toBe("CONFIRM_SENSITIVE");
-    expect(await reason(setOwnerSettings(env, bearer(owner.idToken), { changes, confirm: true, sensitive: ["reports.perDay"], typed: SENSITIVE_CONFIRM_WORD }))).toBe("CONFIRM_SENSITIVE");
+    expect(await reason(setOwnerSettings(env, bearer(owner.idToken), { changes, confirm: true, token }))).toBe("CONFIRM_SENSITIVE");
+    expect(await reason(setOwnerSettings(env, bearer(owner.idToken), { changes, confirm: true, token, sensitive: ["welcome.recipes"], typed: "change" }))).toBe("CONFIRM_SENSITIVE");
+    expect(await reason(setOwnerSettings(env, bearer(owner.idToken), { changes, confirm: true, token, sensitive: ["tasteQuiz.hidden"], typed: SENSITIVE_CONFIRM_WORD }))).toBe("CONFIRM_SENSITIVE");
+    // Another token (another dry run's) is stale.
+    expect(await reason(setOwnerSettings(env, bearer(owner.idToken), { changes, confirm: true, token: token.slice(0, -1) + (token.endsWith("A") ? "B" : "A"), sensitive: ["welcome.recipes"], typed: SENSITIVE_CONFIRM_WORD }))).toBe("STALE");
     expect(await runtime()).toBeUndefined();
-    const done = await setOwnerSettings(env, bearer(owner.idToken), { changes, confirm: true, sensitive: ["welcome.recipes"], typed: SENSITIVE_CONFIRM_WORD });
+    const done = await setOwnerSettings(env, bearer(owner.idToken), { changes, confirm: true, token, sensitive: ["welcome.recipes"], typed: SENSITIVE_CONFIRM_WORD });
     expect(done.changed).toBe(true);
-    expect(await runtime()).toEqual({ welcome: { recipes: 5 }, reports: { perDay: 9 } });
+    expect(await runtime()).toEqual({ welcome: { recipes: 5 }, tasteQuiz: { hidden: [hide] } });
     const v = done.sections.flatMap((s) => s.settings).find((s) => s.id === "welcome.recipes")!;
     expect(v).toMatchObject({ value: 5, stored: 5, overridden: true, lastChange: { via: "web" } });
     const [audit] = await audits();
     expect(audit.actor).toEqual({ via: "web", uid: owner.uid });
     // An ordinary change alone needs no word.
-    await setOwnerSettings(env, bearer(owner.idToken), { changes: [{ id: "reports.keepDays", value: 9, expect: null }], confirm: true });
+    const ordinary = [{ id: "tasteQuiz.hidden", value: [], expect: [hide] }];
+    const dry2 = await setOwnerSettings(env, bearer(owner.idToken), { changes: ordinary, dryRun: true });
+    await setOwnerSettings(env, bearer(owner.idToken), { changes: ordinary, confirm: true, token: dry2.plan.token });
     // The stale view: what the page saw is no longer stored.
-    expect(await reason(setOwnerSettings(env, bearer(owner.idToken), { changes: [{ id: "reports.perDay", value: 10, expect: null }], confirm: true }))).toBe("STALE");
+    expect(await reason(setOwnerSettings(env, bearer(owner.idToken), { changes: [{ id: "welcome.recipes", value: 4, expect: null }], confirm: true, token, sensitive: ["welcome.recipes"], typed: SENSITIVE_CONFIRM_WORD }))).toBe("STALE");
     // Logs carry a uid hash at most.
     const logged = JSON.stringify(env.logs);
     expect(logged).not.toContain(owner.uid);
@@ -583,7 +1032,7 @@ describe("npm run admin -- config", () => {
     expect(text).toContain("Dry run, nothing changed. --apply would write to config/runtime:");
     expect(text).toContain("  - dailyCap = 5");
     expect(text).toContain('  - reports = {"perDay":9}');
-    expect(text).toContain('To write: npm run admin -- config set dailyCap "5" reports.perDay "9" --apply --confirm dailyCap');
+    expect(text).toContain('To write: npm run admin -- config set dailyCap "5" reports.perDay "9" --apply --confirm dailyCap,reports.perDay');
     expect(await runtime()).toEqual(FULL_CONFIG);
     expect(await audits()).toEqual([]);
 

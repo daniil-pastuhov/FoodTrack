@@ -541,16 +541,20 @@ works as soon as it is merged).
 - [ ] Deploy the page: `npx firebase deploy --only hosting --project bestbefore-f9ee1`, then the
   two `curl -sI` checks of step 13 on `https://bestbefore-f9ee1.firebaseapp.com` (the headers are
   unchanged).
-- [ ] Apply the new alert, "Recipe: owner settings changed"
-  (`functions/alerts/policies/owner-settings-changed.json`):
+- [ ] Apply the two new alerts, "Recipe: owner settings changed" and "Recipe: owner console
+  refusals" (`functions/alerts/policies/owner-settings-changed.json`, `owner-refusals.json`):
   `python3 functions/alerts/alerts.py --project bestbefore-f9ee1` (dry run), then with `--apply`.
-- [ ] **Check**: sign in on the page, see the sections with `config/runtime`'s values; save one
-  ordinary change (e.g. Reports > Days a report is kept) and reset it, then one sensitive change
-  (it asks for `CHANGE`) and reset it; see the alert emails and the `ownerSettingChanges/`
-  records. On a phone, check a section with the menu table scrolls sideways.
-- [ ] Decide the editor's bounds where the parser has none (functions/README.md "Settings",
-  table: e.g. the absolute spend ceiling at most USD 50 a day, a recipe at most 100), and whether
-  any of the read-only fields (the raw prices) should become editable.
+- [ ] **Check**: sign in on the page, see the sections with `config/runtime`'s values and, under
+  each, what the page may change ("On this page: …") and the command for more; save one ordinary
+  change (Taste quiz: hide one option) and undo it, then one sensitive change within the page's
+  range (e.g. Reports > Days a report is kept, 60; it asks for `CHANGE` and a sign-in from the
+  last 5 minutes) and reset it; try one outside it (e.g. Recipes a day, 5000) and see `WEB_LIMIT`
+  and the refusal alert; see the alert emails and the `ownerSettingChanges/` records. On a phone,
+  check a section with the menu table scrolls sideways.
+- [ ] Check the page's envelope fits how you work (functions/README.md "The console's envelope":
+  e.g. the spend ceilings at most 2.5 × their defaults on the page; the live base ceiling of USD 5
+  can only be lowered there), and whether any of the read-only fields (the raw prices) should
+  become editable with the command.
 
 ### 13a. A new provider's API key (Mistral, Black Forest Labs) **(owner; not done)**
 

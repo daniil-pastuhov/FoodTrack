@@ -37,11 +37,12 @@
 
 <section id="settings" hidden aria-labelledby="h-settings">
   <h2 id="h-settings">Settings</h2>
-  <p class="sub">What the server allows, uses and charges, without hand-editing Firestore. Each section saves on its own, after a check by the server and a confirmation; sensitive ones ask you to type a word. Every change is recorded, logged and emailed to you.</p>
+  <p class="sub">What the server allows, uses and charges, without hand-editing Firestore. Each section saves on its own, after a check by the server and a confirmation; sensitive ones ask you to type a word. This page makes only small, safe changes (each setting says how far); anything larger is made with the admin command, which needs your own cloud credentials. Every change is recorded, logged and emailed to you.</p>
   <div id="settings-sections"></div>
 </section>
 
 <p id="message" role="status" aria-live="polite"></p>
+<p id="reauth" hidden><button id="reauth-button" type="button" class="primary">Sign in again</button></p>
 <p id="account" hidden><button id="sign-out" type="button">Sign out</button></p>
 
 <dialog id="confirm" aria-labelledby="confirm-title">
@@ -62,6 +63,7 @@
     <p id="settings-confirm-sensitive-text" class="warn"></p>
     <label id="settings-typed-label" for="settings-typed"></label>
     <input id="settings-typed" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false">
+    <p id="settings-confirm-signin" class="note"></p>
   </div>
   <p class="note">New requests use them within 30 seconds. Every change is recorded and logged.</p>
   <div class="buttons">

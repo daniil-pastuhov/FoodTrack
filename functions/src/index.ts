@@ -617,7 +617,8 @@ export const redrawBoard = onSchedule(
 // Four callables for the owner's web page on Firebase Hosting, never for the apps: the provider
 // profiles and the runtime settings (core/ownerSettings.ts). A caller must be
 // a Google sign-in (verified email) listed in config/owner; the ID token is checked again with
-// revocation, a switch needs a sign-in from the last 30 minutes, and every refusal answers the same
+// revocation, a switch or a save needs a sign-in from the last 30 minutes (a sensitive save 5, and
+// only within the console's envelope, core/ownerSettings.ts WebRule), and every refusal answers the same
 // few fixed words. App Check is NOT enforced here: a web App Check provider (reCAPTCHA Enterprise)
 // would prove a browser, not who is in it, and the owner allowlist is the guard; OwnerCallGate
 // (calls without a token refused uncounted, a per-address limit under an instance ceiling, a listed

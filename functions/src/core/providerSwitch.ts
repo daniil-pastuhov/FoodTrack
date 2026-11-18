@@ -60,7 +60,8 @@ export type SwitchRefusal =
   | "UNKNOWN_SETTING"
   | "INVALID_VALUE" // outside the setting's bounds or choices
   | "STORED_INVALID" // the setting's map in config/runtime is invalid as stored: fixed by hand first
-  | "CONFIRM_SENSITIVE"; // a sensitive change without its own confirmation
+  | "CONFIRM_SENSITIVE" // a sensitive change without its own confirmation
+  | "WEB_LIMIT"; // outside the console's envelope: only the admin command makes it
 
 export class SwitchRefused extends HttpsError {
   constructor(code: ConstructorParameters<typeof HttpsError>[0], readonly reason: SwitchRefusal, message: string) {
@@ -225,7 +226,7 @@ export async function assertOwner(db: Firestore, caller: OwnerCaller, opts: { wr
   const listed = owners.uids.includes(caller.uid) || googleEmails.some((e) => owners.emails.includes(e));
   if (!listed) throw refuse();
   if (opts.write && opts.nowMs / 1000 - caller.authTime > OWNER_RECENT_SIGN_IN_S) {
-    throw new SwitchRefused("failed-precondition", "RECENT_SIGN_IN", "Sign in again to switch (the sign-in is more than 30 minutes old)");
+    throw new SwitchRefused("failed-precondition", "RECENT_SIGN_IN", "Sign in again (the sign-in is more than 30 minutes old)");
   }
 }
 

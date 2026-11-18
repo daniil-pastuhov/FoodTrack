@@ -433,6 +433,7 @@ export async function runConfig(args: ConfigArgs, env: ImageEnv): Promise<void> 
         const marks = [x.overridden ? "set" : "", x.changed ? "changed from default" : "", x.sensitive ? "sensitive" : "", x.blocked ? "BLOCKED" : ""].filter(Boolean);
         print(`  ${x.id.padEnd(30)} ${showSetting(x.control, x.value)}   (default ${showSetting(x.control, x.default)})${marks.length ? `  [${marks.join(", ")}]` : ""}`);
         if (x.lastChange) print(`  ${"".padEnd(30)} last changed ${x.lastChange.at} (${x.lastChange.via})`);
+        if (x.web) print(`  ${"".padEnd(30)} on the console: ${x.web.text}; this command: the whole range`);
       }
     }
     print("## Read-only here");

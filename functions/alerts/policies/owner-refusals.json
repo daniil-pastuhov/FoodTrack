@@ -1,0 +1,24 @@
+{
+  "displayName": "Recipe: owner console refusals",
+  "documentation": {
+    "content": "A call to the owner console's callables was refused for a reason other than NOT_OWNER, SIGN_IN or RATE_LIMITED (`owner_call_refused`: `function`, `reason`, `uidHash`). Those reasons are reached only past the owner check, so they come from a listed owner's session: `RECENT_SIGN_IN`, `STALE`, `CONFIRM_SENSITIVE`, `INVALID_REQUEST`, `INVALID_VALUE`, `UNKNOWN_SETTING`, `STORED_INVALID`, `INVALID_RESULT`, `WEB_LIMIT` (a change outside what the page may make), and the profile switch's `NOT_READY`, `UNKNOWN_PROFILE`, `PRICES_INVALID`. Your own mistyped saves or an expired sign-in explain a few; if you were not using the console, someone may be in your browser session: sign out everywhere (revoke the Google session), remove the account from `config/owner`, and read `ownerSettingChanges/` and `providerProfileChanges/` in the Firestore console. See functions/README.md, \"The owner console\".",
+    "mimeType": "text/markdown"
+  },
+  "conditions": [
+    {
+      "conditionMatchedLog": {
+        "filter": "resource.type=\"cloud_run_revision\" AND jsonPayload.message=\"owner_call_refused\" AND NOT jsonPayload.reason=(\"NOT_OWNER\" OR \"SIGN_IN\" OR \"RATE_LIMITED\")"
+      },
+      "displayName": "Recipe: owner console refusals"
+    }
+  ],
+  "combiner": "OR",
+  "enabled": true,
+  "severity": "WARNING",
+  "alertStrategy": {
+    "autoClose": "604800s",
+    "notificationRateLimit": {
+      "period": "300s"
+    }
+  }
+}

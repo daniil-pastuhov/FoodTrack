@@ -24,10 +24,21 @@ const local = location.hostname === "127.0.0.1" || location.hostname === "localh
 let auth;
 let projectId = "";
 let view = null;
+/** What to do again after a fresh sign-in the server asked for (RECENT_SIGN_IN); run only on a click. */
+let retry = null;
 
 function say(text, error = false) {
   $("message").textContent = text;
   $("message").className = error ? "error" : "";
+  if (!retry) $("reauth").hidden = true;
+}
+
+// The server wants a newer sign-in. Google's sign-in is never opened by itself: the page says so
+// and waits for a click on "Sign in again", which then repeats what was refused.
+function askSignInAgain(text, again) {
+  retry = again;
+  say(text, true);
+  $("reauth").hidden = false;
 }
 
 function show(signedIn) {
@@ -172,10 +183,16 @@ async function doSwitch() {
     view = await call("setProviderProfile", body);
   } catch (e) {
     if (e.reason !== "RECENT_SIGN_IN") throw e;
-    say("Sign in again to confirm the switch.");
-    await signIn();
-    view = await call("setProviderProfile", body);
+    askSignInAgain(`Not switched: ${e.message}. Sign in again, then the switch is sent once more.`, () => sendSwitch(body, p));
+    return;
   }
+  render();
+  say(`Switched to ${p.label}.`);
+}
+
+async function sendSwitch(body, p) {
+  say("Switching…");
+  view = await call("setProviderProfile", body);
   render();
   say(`Switched to ${p.label}.`);
 }
@@ -244,9 +261,12 @@ function controlFor(s, fid) {
   }
   if (c.kind === "number") {
     const k = isUsd(c) ? 1e6 : 1;
+    // The bounds the page may use now (the server's envelope), else the control's own.
+    const min = s.web?.min ?? c.min;
+    const max = s.web?.max ?? c.max;
     const box = el("input", {
       type: "number", id: fid, inputMode: c.integer && !isUsd(c) ? "numeric" : "decimal",
-      min: String(c.min / k), max: String(c.max / k), step: String(c.step / k),
+      min: String(min / k), max: String(max / k), step: String(c.step / k),
       value: s.value === null ? "" : String(s.value / k), disabled: Boolean(s.blocked),
     });
     if (c.emptyMeans) box.placeholder = `empty: ${c.emptyMeans}`;
@@ -281,7 +301,8 @@ function controlFor(s, fid) {
     const head = el("tr", {}, el("th", { text: "" }), ...c.cols.map((k) => el("th", { scope: "col", text: k.label })));
     const rows = c.rows.map((r) => el("tr", {}, el("th", { scope: "row", text: r.label }), ...c.cols.map((k) => {
       const fixed = c.fixed.some((f) => f.row === r.value && f.col === k.value);
-      const box = el("input", { type: "number", inputMode: "numeric", min: String(c.min), max: String(c.max), step: "1", value: String(s.value?.[r.value]?.[k.value] ?? ""), disabled: fixed || Boolean(s.blocked) });
+      const b = s.web?.cells?.[r.value]?.[k.value] ?? { min: c.min, max: c.max };
+      const box = el("input", { type: "number", inputMode: "numeric", min: String(b.min), max: String(b.max), step: "1", value: String(s.value?.[r.value]?.[k.value] ?? ""), disabled: fixed || Boolean(s.blocked) });
       box.setAttribute("aria-label", `${r.label}, ${k.label}${fixed ? " (set above)" : ""}`);
       cells.push({ r: r.value, k: k.value, box });
       return el("td", {}, box);
@@ -302,6 +323,10 @@ function controlFor(s, fid) {
   return { node: el("p", { class: "note", text: "This server sent a kind of setting this page doesn't know; use the admin command." }), get: () => s.value };
 }
 
+function commandText(s) {
+  return s.command + (local ? "" : ` --project ${projectId}`);
+}
+
 function viaText(via) {
   return via === "web" ? "this console" : "admin command";
 }
@@ -320,6 +345,8 @@ function settingNode(s) {
     el("p", { class: "note", text: s.help }),
     ctl.node,
     el("p", { class: "meta", text: meta.join(" · ") }),
+    s.web ? el("p", { class: "range", text: `On this page: ${s.web.text}.` }) : null,
+    s.web ? el("p", { class: "range" }, el("span", { text: "Larger changes: use the command " }), el("code", { text: commandText(s) })) : null,
     s.blocked ? el("p", { class: "warn", text: s.blocked }) : null,
   );
   if (s.overridden && !s.blocked) {
@@ -374,17 +401,6 @@ function sectionChanges(sec) {
   return changes;
 }
 
-async function callWrite(name, body) {
-  try {
-    return await call(name, body);
-  } catch (e) {
-    if (e.reason !== "RECENT_SIGN_IN") throw e;
-    say("Sign in again to confirm.");
-    await signIn();
-    return call(name, body);
-  }
-}
-
 async function saveSection(sec) {
   const changes = sectionChanges(sec);
   if (changes.length === 0) {
@@ -392,7 +408,14 @@ async function saveSection(sec) {
     return;
   }
   say("Checking…");
-  const answer = await callWrite("setOwnerSettings", { changes, dryRun: true });
+  let answer;
+  try {
+    answer = await call("setOwnerSettings", { changes, dryRun: true });
+  } catch (e) {
+    if (e.reason !== "RECENT_SIGN_IN") throw e;
+    askSignInAgain(`Not checked: ${e.message}. Sign in again, then the check runs once more.`, () => saveSection(sec).catch(saveFailed));
+    return;
+  }
   const plan = answer.plan;
   if (plan.changes.length === 0) {
     say(`Nothing to save in ${sec.title}: already so.`);
@@ -410,6 +433,9 @@ async function saveSection(sec) {
     : "";
   const sensitive = plan.sensitive.length > 0;
   $("settings-confirm-sensitive").hidden = !sensitive;
+  $("settings-confirm-signin").textContent = sensitive
+    ? `A sensitive save needs a sign-in from the last ${settingsView.sensitiveSignInMinutes} minutes; if yours is older, the server says so and you sign in again.`
+    : "";
   $("settings-typed").value = "";
   if (sensitive) {
     $("settings-confirm-sensitive-text").textContent = `${plan.changes.filter((c) => c.sensitive).map((c) => c.label).join(", ")}: sensitive (${plan.changes.filter((c) => c.sensitive).map((c) => settingById(c.id)?.sensitiveWhy).filter(Boolean).join("; ")}).`;
@@ -425,7 +451,20 @@ async function confirmSave() {
   const sensitive = p.plan.sensitive;
   $("settings-confirm").close();
   say("Saving…");
-  settingsView = await callWrite("setOwnerSettings", { changes: p.changes, confirm: true, sensitive, typed: sensitive.length ? $("settings-typed").value.trim() : "" });
+  // The token binds the save to the check the dialog showed: a different plan now is refused as STALE.
+  const body = { changes: p.changes, confirm: true, token: p.plan.token, sensitive, typed: sensitive.length ? $("settings-typed").value.trim() : "" };
+  await sendSave(body);
+}
+
+async function sendSave(body) {
+  say("Saving…");
+  try {
+    settingsView = await call("setOwnerSettings", body);
+  } catch (e) {
+    if (e.reason !== "RECENT_SIGN_IN") throw e;
+    askSignInAgain(`Not saved: ${e.message}. Sign in again, then the same save is sent once more.`, () => sendSave(body).catch(saveFailed));
+    return;
+  }
   pendingPlan = null;
   renderSettings();
   say("Saved. New requests use it within 30 seconds.");
@@ -455,7 +494,13 @@ async function start() {
   await setPersistence(auth, inMemoryPersistence);
   show(false);
   $("sign-in").addEventListener("click", () => signIn().then(load).catch(signInFailed));
-  $("sign-out").addEventListener("click", () => signOut(auth).then(() => { view = null; settingsView = null; show(false); say("Signed out."); }));
+  $("reauth-button").addEventListener("click", () => {
+    const again = retry;
+    retry = null;
+    $("reauth").hidden = true;
+    signIn().then(() => again?.()).catch((e) => (e.reason ? say(`Not done: ${e.message}`, true) : signInFailed(e)));
+  });
+  $("sign-out").addEventListener("click", () => signOut(auth).then(() => { view = null; settingsView = null; retry = null; show(false); say("Signed out."); }));
   $("settings-typed").addEventListener("input", () => {
     $("settings-confirm-ok").disabled = $("settings-typed").value.trim() !== settingsView?.confirmWord;
   });
