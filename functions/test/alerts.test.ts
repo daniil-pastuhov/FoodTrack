@@ -236,6 +236,31 @@ for sev in ["INFO", "SEVERITY_UNSPECIFIED", "warning", None, "WARNING", "ERROR",
     ]);
   });
 
+  test("the offline checks of label extractors and the documentation template", () => {
+    const out = py(`
+import json
+base = json.load(open(alerts.os.path.join(alerts.HERE, "policies", "weekly-report.json")))
+def check(mut):
+    p = json.loads(json.dumps(base))
+    mut(p)
+    try:
+        alerts.validate([], [("x.json", p)])
+        return "ok"
+    except alerts.Fail as e:
+        return "refused"
+ex = lambda p: p["conditions"][0]["conditionMatchedLog"]["labelExtractors"]
+print(check(lambda p: None))
+print(check(lambda p: ex(p).update({"eleventh": "EXTRACT(jsonPayload.eleventh)"})))
+print(check(lambda p: ex(p).pop("console")))
+print(check(lambda p: ex(p).update({"period": "EXTRACT(timestamp)"})))
+print(check(lambda p: ex(p).update({"period": "jsonPayload.period"})))
+print(check(lambda p: p["documentation"].update({"subject": "x" * 300})))
+print(check(lambda p: p["documentation"].update({"content": "y" * 9000})))
+print(check(lambda p: p["documentation"].update({"links": [{}, {}, {}, {}]})))
+`);
+    expect(out.trim().split("\n")).toEqual(["ok", "refused", "refused", "refused", "refused", "refused", "refused", "refused"]);
+  });
+
   test("an apply goes on past a failure and returns every failure", () => {
     const out = py(`
 import json, tempfile

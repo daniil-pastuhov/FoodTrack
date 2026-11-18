@@ -34,7 +34,8 @@ import {
 import { RuntimeConfigCache, loadRuntimeConfig, validImageSelection, type ImageSelection, type RuntimeConfig } from "./model";
 import type { Caller, Deps, TextTarget } from "./ports";
 import { GeminiOutputJudge, GeminiPromptReviewer } from "./adapters/gemini";
-import { runPromptReview } from "./core/promptReview";
+import { lastCompleteWeek, runPromptReview } from "./core/promptReview";
+import { runWeeklyJobs, runWeeklyReport } from "./core/weeklyReport";
 import { FirestoreJudgeLog } from "./core/judgeLog";
 import { SecretReader } from "./adapters/secretManager";
 import { allProviders, imageProviderIds, imageProviders, providerSecrets, textProviderById, textProviders } from "./providers/registry";
@@ -628,22 +629,35 @@ export const checkModelLifecycle = onSchedule(
 // (promptReviews/{YYYY-Www}); off with config/runtime.promptReviewEnabled. One model call at most,
 // its worst case reserved against the day's spend ceiling. No retry: a failure is logged
 // (prompt_review_failed, alerted on) and `npm run admin -- judge review --run --apply` runs it again.
+// The same job makes the weekly app report (README "Weekly app report", core/weeklyReport.ts; no
+// scheduler job of its own: the project pays per job), side by side with the review and
+// independent of it; off with config/runtime.weeklyReportEnabled. No model call; its
+// weekly_report_ready line is what the owner's report email is made of (alerts/policies/weekly-report.json).
 export const weeklyPromptReview = onSchedule(
   { schedule: "41 3 * * 1", timeZone: "Etc/UTC", timeoutSeconds: 300, retryCount: 0, maxInstances: 1, concurrency: 1 },
   async () => {
     const db = getFirestore();
-    // Always Gemini on Vertex AI, like the judge (the emulators: a fixed answer, no call).
-    const reviewer = emulatorFakesEnabled()
-      ? new EmulatorPromptReviewer()
-      : new GeminiPromptReviewer({
-          project: projectId(),
-          location: providerParam("VERTEX_LOCATION"),
-          model: promptReviewModel.value() || providerParam("GEMINI_MODEL"),
-          jailbreakFilter: providerParam("GEMINI_JAILBREAK_FILTER") === "true",
-        });
-    await runPromptReview(
-      { db, reviewer, logger, now: () => Date.now(), config: () => loadRuntimeConfig(db, logger, imageDefaults(), textDefaults()) },
-      { trigger: "schedule" },
+    const now = () => Date.now();
+    const config = () => loadRuntimeConfig(db, logger, imageDefaults(), textDefaults());
+    const project = projectId();
+    await runWeeklyJobs(
+      {
+        report: () => runWeeklyReport({ db, logger, now, config, project }, { trigger: "schedule" }),
+        review: () => {
+          // Always Gemini on Vertex AI, like the judge (the emulators: a fixed answer, no call).
+          const reviewer = emulatorFakesEnabled()
+            ? new EmulatorPromptReviewer()
+            : new GeminiPromptReviewer({
+                project,
+                location: providerParam("VERTEX_LOCATION"),
+                model: promptReviewModel.value() || providerParam("GEMINI_MODEL"),
+                jailbreakFilter: providerParam("GEMINI_JAILBREAK_FILTER") === "true",
+              });
+          return runPromptReview({ db, reviewer, logger, now, config }, { trigger: "schedule" });
+        },
+      },
+      logger,
+      { week: lastCompleteWeek(now()), project },
     );
   },
 );

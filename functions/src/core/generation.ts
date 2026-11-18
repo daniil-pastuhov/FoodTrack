@@ -375,6 +375,9 @@ async function reserveTx(
       {
         generationUnits: FieldValue.increment(cost),
         generations: FieldValue.increment(1),
+        // Menus apart, written on every reservation (0 included) so a day with the field is a day
+        // it was counted (the weekly report's recipes / menus split; older days lack it).
+        menuGenerations: FieldValue.increment(req.kind === "menu" ? 1 : 0),
         reservedMicroUsd: FieldValue.increment(reservedMicroUsd),
         // The ceiling this reservation was checked against, for the owner's board (a day's
         // history: config/runtime itself keeps none).
