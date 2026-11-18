@@ -1,0 +1,24 @@
+{
+  "displayName": "Recipe: model lifecycle table stale",
+  "documentation": {
+    "content": "A model in use has a lifecycle entry last checked more than 60 days ago, or none at all (`model_lifecycle_stale`: `provider`, `model`, `roles`, `checkedOn`, `checkedDaysAgo`, `reason` `OLD_CHECK` / `NO_ENTRY`; repeated weekly while stale). The retirement dates in functions/src/providers/lifecycle.ts are kept by hand: re-read each entry's `source` page (and the provider's release notes), update `retiresOn` and `checkedOn`, and deploy. This is the reminder of the periodic review in functions/README.md, \"Model lifecycle\".",
+    "mimeType": "text/markdown"
+  },
+  "conditions": [
+    {
+      "conditionMatchedLog": {
+        "filter": "resource.type=\"cloud_run_revision\" AND jsonPayload.message=\"model_lifecycle_stale\""
+      },
+      "displayName": "Recipe: model lifecycle table stale"
+    }
+  ],
+  "combiner": "OR",
+  "enabled": true,
+  "severity": "INFO",
+  "alertStrategy": {
+    "autoClose": "604800s",
+    "notificationRateLimit": {
+      "period": "21600s"
+    }
+  }
+}

@@ -56,6 +56,7 @@ import {
 import { httpFailureKind } from "../providers/failure";
 import type { ProviderFailureKind, TextProviderDescriptor } from "../providers/types";
 import type { Prompt } from "./prompt";
+import { vertexModelInfo } from "./modelProbes";
 
 export interface GeminiOptions {
   project: string;
@@ -283,6 +284,7 @@ export const googleText: TextProviderDescriptor = {
       description: "true adds HARM_CATEGORY_JAILBREAK (Vertex Preview; only for models that support it).",
     },
   ],
+  modelInfo: (ctx, model, signal) => vertexModelInfo({ project: ctx.project, location: ctx.param("VERTEX_LOCATION"), model, signal, ...(ctx.fetch ? { fetch: ctx.fetch } : {}) }),
   create: (ctx) => new GeminiRecipeGenerator({
     project: ctx.project,
     location: ctx.param("VERTEX_LOCATION"),

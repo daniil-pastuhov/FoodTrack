@@ -63,6 +63,17 @@ export interface ProviderBalance {
   unit: string;
 }
 
+/** What a model metadata probe reports (DescriptorBase.modelInfo). */
+export interface ModelInfo {
+  /** false: the provider says the model id is not found or not served there. */
+  served: boolean;
+  /**
+   * The retirement / shutdown date its API reports (YYYY-MM-DD), null when it reports none;
+   * absent when the API has no such field.
+   */
+  retiresOn?: string | null;
+}
+
 /** A deploy parameter a provider reads (defined generically by src/index.ts with defineString). */
 export interface ProviderParam {
   name: string;
@@ -116,6 +127,13 @@ interface DescriptorBase {
   privacy: { approved: boolean; missing: string };
   secret?: ProviderSecret;
   params?: readonly ProviderParam[];
+  /**
+   * Optional free metadata probe of one model (README "Model lifecycle"): whether the provider
+   * still serves the id (false for its "not found"), and a retirement date if its API reports one.
+   * Never a generating (billed) call. The daily checkModelLifecycle asks it; throws on any other
+   * failure (a fixed message), which is never an alarm.
+   */
+  modelInfo?(ctx: ProviderContext, model: string, signal: AbortSignal): Promise<ModelInfo>;
   /**
    * Optional balance probe (prepaid providers): the scheduled `checkProviderBalances` calls it for
    * providers in use with a threshold in `config/runtime.providerBalanceAlerts`, and logs

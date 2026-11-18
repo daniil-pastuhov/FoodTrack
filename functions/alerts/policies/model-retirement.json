@@ -1,0 +1,24 @@
+{
+  "displayName": "Recipe: model retirement near",
+  "documentation": {
+    "content": "The daily `checkModelLifecycle` found a model the server uses (`inUse: true`: selected, a fallback, the output judge or a deploy default) or only lists in a profile (`inUse: false`) within 90, 30 or 7 days of its announced retirement date, or past it (`model_retirement_near`: `provider`, `model`, `roles`, `retiresOn`, `daysLeft`, `band`, `from` table or api, `earliest` for a \"this date or later\" date; told once per band, and every day once past while in use), or a provider's API reported a retirement date earlier than the table's or one the table lacks (`model_lifecycle_changed`: `tableRetiresOn`, `apiRetiresOn`). Follow docs/recipe-setup.md \"A model is being retired\": pick the replacement, price it, switch the profile, update the table (functions/src/providers/lifecycle.ts). `npm run admin -- models --probe --project bestbefore-f9ee1` shows them all. See functions/README.md, \"Model lifecycle\".",
+    "mimeType": "text/markdown"
+  },
+  "conditions": [
+    {
+      "conditionMatchedLog": {
+        "filter": "resource.type=\"cloud_run_revision\" AND jsonPayload.message=(\"model_retirement_near\" OR \"model_lifecycle_changed\")"
+      },
+      "displayName": "Recipe: model retirement near"
+    }
+  ],
+  "combiner": "OR",
+  "enabled": true,
+  "severity": "WARNING",
+  "alertStrategy": {
+    "autoClose": "604800s",
+    "notificationRateLimit": {
+      "period": "3600s"
+    }
+  }
+}

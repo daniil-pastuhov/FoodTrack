@@ -6,6 +6,7 @@
  *   npm run admin -- board  [--days 30] [--out <file.html>]   (README "The board": read-only)
  *   npm run admin -- providers list | use <profile> [--apply]  (README "Provider profiles"; `image` is the older name)
  *   npm run admin -- config list | set <id> <value> ... | reset <id> ... [--apply [--confirm <id,id>]]  (README "The owner console")
+ *   npm run admin -- models [--probe]  (README "Model lifecycle": read-only)
  *   npm run admin -- judge summary | export [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--out <file.jsonl>]  (README "Prompt injection defences" item 5: read-only)
  *
  * Against the emulators (project demo-foodtracker, 127.0.0.1:8080 / :9099) unless `--project` names
@@ -18,7 +19,7 @@ import { parseArgs } from "node:util";
 import { getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
-import { IOS_BUNDLE_ID, KMS_APPLE_TOKEN_KEY, KMS_KEY_RING, KMS_LOCATION } from "../constants";
+import { IOS_BUNDLE_ID, JUDGE, KMS_APPLE_TOKEN_KEY, KMS_KEY_RING, KMS_LOCATION } from "../constants";
 import { loadRuntimeConfig } from "../model";
 import type { AppStoreVerifier, Deps, Logger, OutputJudge, PlayVerifier, RecipeGenerator, RecipeImageGenerator, TextTarget } from "../ports";
 import { AppleSignInRevoker } from "../adapters/appleRevoke";
@@ -41,6 +42,8 @@ import { readBoardInput } from "../board/boardReader";
 import { LiveStoreLookups, accessSecret, cloudLogger, emulatorStoreLookups } from "./stores";
 import { DEFAULT_IMAGE_SELECTION, DEFAULT_TEXT_SELECTION } from "../constants";
 import { providerSecrets, textProviderById } from "../providers/registry";
+import { assessModels, modelsInUse, type ModelReport } from "../providers/lifecycle";
+import type { ProviderContext, ProviderDescriptor } from "../providers/types";
 import { validImageSelection, type ImageSelection } from "../model";
 import { SwitchRefused, activateProfile, listProfiles, type PlannedWrite, type SetupView, type SwitchEnv } from "../core/providerSwitch";
 import { HttpsError } from "firebase-functions/v2/https";
@@ -66,6 +69,7 @@ const USAGE = `usage:
   npm run admin -- config list [--project <id>]
   npm run admin -- config set <id> <value> [<id> <value> ...] [--apply [--confirm <sensitive id,...>]] [--project <id>]
   npm run admin -- config reset <id> [<id> ...] [--apply [--confirm <sensitive id,...>]] [--project <id>]
+  npm run admin -- models [--probe] [--project <id>]        (read-only; --probe needs --project)
   npm run admin -- judge summary [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--project <id>]
   npm run admin -- judge export  [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--out <file.jsonl>] [--project <id>]
 Without --project: the local emulators (${EMULATOR_PROJECT}). delete, providers use and config set / reset are dry runs without --apply.`;
@@ -351,6 +355,114 @@ export function buildImageEnv(project: string): ImageEnv {
   };
 }
 
+// --- Model lifecycle (README "Model lifecycle"): read-only --------------------------------------
+
+const MODELS_OPTIONS = { project: { type: "string" }, probe: { type: "boolean" } } as const;
+
+export interface ModelsArgs {
+  probe: boolean;
+  project: string;
+}
+
+export function parseModelsArgs(argv: string[]): ModelsArgs {
+  let parsed;
+  try {
+    parsed = parseArgs({ args: argv, options: MODELS_OPTIONS, allowPositionals: true, strict: true });
+  } catch (e) {
+    throw new AdminRefusal(`${(e as Error).message}\n${USAGE}`);
+  }
+  const { values, positionals } = parsed;
+  if (positionals[0] !== "models" || positionals.length !== 1) throw new AdminRefusal(USAGE);
+  const project = values.project ?? EMULATOR_PROJECT;
+  // The probes ask the real providers about this project's models: never with the emulators' demo id.
+  if (values.probe && project.startsWith("demo-")) throw new AdminRefusal("--probe asks the providers themselves: give --project <live project>.");
+  return { probe: values.probe === true, project };
+}
+
+export interface ModelsEnv {
+  db: Firestore;
+  imageDefaults: ImageSelection;
+  textDefaults: TextTarget;
+  /** The output judge's model as the functions read it (judgeModelOf: GEMINI_JUDGE_MODEL, its default JUDGE.model, empty: GEMINI_MODEL). */
+  judgeModel: string;
+  context(d: ProviderDescriptor): ProviderContext;
+  now(): number;
+  print(line: string): void;
+}
+
+/** Prints the models in use and listed, their roles and dates, and (with --probe) what the providers say. Writes and logs nothing. */
+export async function runModels(args: ModelsArgs, env: ModelsEnv): Promise<ModelReport[]> {
+  const config = await loadRuntimeConfig(env.db, undefined, env.imageDefaults, env.textDefaults);
+  const models = modelsInUse(config, { provider: "google", model: env.judgeModel });
+  const reports = await assessModels({ models, context: env.context, now: env.now, probe: args.probe });
+  const today = new Date(env.now()).toISOString().slice(0, 10);
+  env.print(`Models as of ${today} (config/runtime over the deploy params over the defaults; output judge ${config.outputJudge}).`);
+  for (const group of [true, false]) {
+    const rows = reports.filter((r) => r.inUse === group);
+    if (!rows.length) continue;
+    env.print(group ? "In use:" : "Only in listed profiles:");
+    for (const r of rows) {
+      const retires = r.retiresOn === null
+        ? (r.entry ? "no retirement announced" : "NO LIFECYCLE ENTRY")
+        : `retires ${r.retiresOn}${r.entry?.earliest && r.retiresOnFrom === "table" ? " or later" : ""} (${r.daysLeft! <= 0 ? "PAST" : `${r.daysLeft} days left`}${r.retiresOnFrom === "api" ? ", from the API" : ""})`;
+      const checked = r.entry ? `checked ${r.entry.checkedOn} (${r.checkedDaysAgo} days ago${r.stale ? ", STALE" : ""})` : "never checked";
+      const probe = r.probe === "skipped" ? "" : `; probe: ${r.probe === "none" ? "none for this provider" : r.probe === "failed" ? `failed (${r.probeReason})` : r.probe}`;
+      env.print(`  ${r.provider}/${r.model}  [${r.roles.join(", ")}]`);
+      env.print(`    ${retires}; ${checked}${probe}${r.changed ? `; API says ${r.apiRetiresOn}, the table ${r.entry?.retiresOn ?? "none"}: update the table` : ""}`);
+      if (r.entry) env.print(`    source: ${r.entry.source}`);
+    }
+  }
+  if (!args.probe) env.print("Add --probe (with --project) to ask the providers now (free metadata calls only).");
+  return reports;
+}
+
+/**
+ * The output judge's model as the functions read it (src/index.ts): the GEMINI_JUDGE_MODEL param,
+ * JUDGE.model when the deploy doesn't set it, GEMINI_MODEL when it is set empty.
+ */
+export function judgeModelOf(params: Readonly<Record<string, string>>, geminiModel: string): string {
+  const set = Object.prototype.hasOwnProperty.call(params, "GEMINI_JUDGE_MODEL");
+  return (set ? params.GEMINI_JUDGE_MODEL : JUDGE.model) || geminiModel;
+}
+
+export function buildModelsEnv(project: string): ModelsEnv {
+  const base = buildImageEnv(project);
+  const live = !project.startsWith("demo-");
+  const params = live ? deployParams(project) : {};
+  const paramOf = (d: ProviderDescriptor, name: string) => {
+    const p = (d.params ?? []).find((x) => x.name === name);
+    if (!p) throw new Error(`${d.id} did not declare the param ${name}`);
+    return params[name] || p.default;
+  };
+  const google = textProviderById("google");
+  const geminiModel = google ? paramOf(google, "GEMINI_MODEL") : DEFAULT_TEXT_SELECTION.model;
+  // A person's credentials need a quota project on Google APIs; the functions' service account doesn't.
+  const quotaFetch: typeof fetch = (input, init) => {
+    const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+    if (!/^https:\/\/([a-z0-9-]+-)?aiplatform\.googleapis\.com\//.test(url)) return fetch(input, init);
+    const headers = new Headers(init?.headers);
+    headers.set("x-goog-user-project", project);
+    return fetch(input, { ...init, headers });
+  };
+  return {
+    db: base.db,
+    imageDefaults: base.imageDefaults ?? { ...DEFAULT_IMAGE_SELECTION },
+    textDefaults: base.textDefaults ?? { provider: DEFAULT_TEXT_SELECTION.provider, model: DEFAULT_TEXT_SELECTION.model },
+    judgeModel: judgeModelOf(params, geminiModel),
+    context: (d) => ({
+      project,
+      param: (name) => paramOf(d, name),
+      secret: () => {
+        const s = d.secret;
+        return live && s ? accessSecret(project, params[s.param] || s.name) : Promise.reject(new Error("secret unavailable"));
+      },
+      fetch: quotaFetch,
+    }),
+    now: () => Date.now(),
+    print: (l) => console.log(l),
+  };
+}
+
 // --- Runtime settings (README "The owner console", "config/runtime") ---------------------------
 
 const CONFIG_OPTIONS = { project: { type: "string" }, apply: { type: "boolean" }, confirm: { type: "string" } } as const;
@@ -626,6 +738,13 @@ async function main(): Promise<void> {
       } finally {
         await configEnv.flush?.();
       }
+      return;
+    }
+    if (argv[0] === "models") {
+      const args = parseModelsArgs(argv);
+      const modelsEnv = buildModelsEnv(args.project);
+      console.log(args.project.startsWith("demo-") ? `[emulators, ${args.project}]` : `[LIVE project ${args.project}, read-only]`);
+      await runModels(args, modelsEnv);
       return;
     }
     if (argv[0] === "judge") {

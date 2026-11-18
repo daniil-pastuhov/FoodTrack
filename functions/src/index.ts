@@ -38,6 +38,7 @@ import { SecretReader } from "./adapters/secretManager";
 import { allProviders, imageProviderIds, imageProviders, providerSecrets, textProviderById, textProviders } from "./providers/registry";
 import { ImageRouter, TextRouter } from "./providers/router";
 import { checkProviderBalances as checkProviderBalancesCore } from "./providers/balance";
+import { assessModels, logModelLifecycle, modelsInUse } from "./providers/lifecycle";
 import type { ProviderContext, ProviderDescriptor } from "./providers/types";
 import { GooglePlayVerifier } from "./adapters/play";
 import { AppleAppStoreVerifier } from "./adapters/appstore";
@@ -597,6 +598,20 @@ export const checkProviderBalances = onSchedule(
     const config = await loadRuntimeConfig(getFirestore(), logger, imageDefaults(), textDefaults());
     if (Object.keys(config.providerBalanceAlerts).length === 0) return;
     await checkProviderBalancesCore({ providers: allProviders(), thresholds: config.providerBalanceAlerts, context: providerContext, logger });
+  },
+);
+
+// Model lifecycle (README "Model lifecycle"): daily, the retirement dates of the models in use and
+// of the listed profiles, the table's age, and each provider's free metadata probe. Best effort:
+// it never touches a request, and a probe that fails is only an info line.
+export const checkModelLifecycle = onSchedule(
+  { schedule: "23 6 * * *", timeZone: "Etc/UTC", timeoutSeconds: 120, retryCount: 0, maxInstances: 1, concurrency: 1 },
+  async () => {
+    const config = await loadRuntimeConfig(getFirestore(), logger, imageDefaults(), textDefaults());
+    // The output judge is always Gemini on Vertex AI (deps above).
+    const judge = { provider: "google", model: judgeModel.value() || providerParam("GEMINI_MODEL") };
+    const reports = await assessModels({ models: modelsInUse(config, judge), context: providerContext, now: () => Date.now(), probe: true });
+    await logModelLifecycle(reports, { db: getFirestore(), logger, now: () => Date.now() });
   },
 );
 
