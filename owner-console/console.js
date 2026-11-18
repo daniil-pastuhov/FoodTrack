@@ -641,6 +641,7 @@ function reviewNode(reviews) {
       el("span", { text: `${latest.week}: ${REVIEW_STATUS[latest.status] ?? latest.status} (${why}).` })));
     if (earlier) box.append(el("p", { class: "eyebrow r-earlier", text: `Latest report, ${earlier.week}` }), reviewReport(earlier));
   }
+  if (latest.email) box.append(el("p", { class: "note r-email", text: latest.email }));
   box.append(el("p", { class: "note r-foot", text: "Advice only: nothing was changed. Prompts are code; a change goes through review, the red-team run and a deploy. Full text: npm run admin -- judge review." }));
   return box;
 }
@@ -666,6 +667,7 @@ function weeklyNode(weekly) {
     el("div", { class: "f-value w-value" }, el("span", { text: r.value }), r.change ? el("span", { class: "w-change", text: r.change }) : null),
     r.note ? el("p", { class: "f-note", text: r.note }) : null))));
   for (const c of latest.caveats) box.append(el("p", { class: "r-warn w-caveat", text: c }));
+  if (latest.email) box.append(el("p", { class: "note w-email", text: latest.email }));
   if (history.length > 1) {
     const head = ["Week", "Net revenue", "Model spend", "Margin", "Purchases", "Requests", "Free used"];
     const cell = (t) => el("td", { text: t });
@@ -675,7 +677,7 @@ function weeklyNode(weekly) {
         el("tbody", {}, ...history.map((h) => el("tr", {},
           el("th", { scope: "row", text: h.week }), cell(h.revenue), cell(h.spend), cell(h.margin), cell(h.purchases), cell(h.requests), cell(h.freeUsed)))))));
   }
-  box.append(el("p", { class: "note r-foot", text: "Estimates: revenue is the net per recipe set under Spending limits, not a store payout; spend is the server's token estimate, not the Cloud bill. Emailed by the alert policy “Recipe: weekly app report”. Full text: npm run admin -- report weekly." }));
+  box.append(el("p", { class: "note r-foot", text: "Estimates: revenue is the net per recipe set under Spending limits, not a store payout; spend is the server's token estimate, not the Cloud bill. Emailed to the owner on Mondays, once. Full text: npm run admin -- report weekly." }));
   return box;
 }
 

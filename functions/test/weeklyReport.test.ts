@@ -2,12 +2,12 @@
  * The weekly app report (src/core/weeklyReport.ts, README "Weekly app report"): the arithmetic over
  * a seeded week, its boundaries (UTC, Monday to Sunday), the changes against the week before (stored
  * or worked out), one report per week (idempotent, also when two runs race), the off switch, an
- * empty week, the log line the email is made of and the alert policy that reads it, independence
+ * empty week, its log lines and stored short lines, independence
  * from the prompt review in both directions, the console's view, the admin command, and the
  * menu counter a reservation now writes.
  */
 import { randomUUID } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { Timestamp } from "firebase-admin/firestore";
 import { DEFAULT_IMAGE_SELECTION, DEFAULT_TEXT_SELECTION, JUDGE_LOG, PROMPT_REVIEW, WEEKLY_REPORT } from "../src/constants";
@@ -26,6 +26,7 @@ import { listSettings, SETTINGS, WEB_UNRESTRICTED } from "../src/core/ownerSetti
 import { generateRecipe } from "../src/core/generation";
 import { parseWeeklyArgs, runWeeklyCommand } from "../src/admin/weeklyReportCli";
 import { AdminRefusal } from "../src/admin/accountRequests";
+import { RecordingMailer } from "../src/emulatorFakes";
 import { emptyUser, judgePricesOf, loadRuntimeConfig, microUsd, parseRuntimeConfig, statsRef, utcDay } from "../src/model";
 import type { LlmUsage, Logger, PromptReviewer } from "../src/ports";
 import { callerFor, db, makeDeps, resetEmulators, setConfig, type LogLine } from "./helpers";
@@ -36,7 +37,6 @@ const WEEK = "2026-W46";
 const PREV = "2026-W45";
 const PROJECT = "demo-foodtracker";
 const CONSOLE = "https://demo-foodtracker.firebaseapp.com/";
-const DOLLAR_BRACE = "$" + "{";
 const at = (iso: string) => Date.parse(iso);
 
 let logs: LogLine[];
@@ -245,7 +245,7 @@ describe("the figures", () => {
 });
 
 describe("one report per week, and the off switch", () => {
-  test("a second run leaves the stored report alone and sends no second email", async () => {
+  test("a second run leaves the stored report alone", async () => {
     await seedWeek();
     await runWeeklyReport(env(), { trigger: "schedule" });
     const first = await stored();
@@ -257,7 +257,7 @@ describe("one report per week, and the off switch", () => {
     expect(lines("weekly_report_skipped").map((l) => l.data?.reason)).toEqual(["ALREADY_DONE"]);
   });
 
-  test("two runs at once: one report, one email", async () => {
+  test("two runs at once: one report", async () => {
     await seedWeek();
     const outs = await Promise.all([runWeeklyReport(env(), { trigger: "schedule" }), runWeeklyReport(env(), { trigger: "cli" })]);
     expect(outs.map((o) => o.status).sort()).toEqual(["already", "done"]);
@@ -275,69 +275,40 @@ describe("one report per week, and the off switch", () => {
   });
 });
 
-describe("the email: the log line and the alert policy that reads it", () => {
-  const policy = JSON.parse(readFileSync(join(__dirname, "../alerts/policies/weekly-report.json"), "utf8"));
-  const cond = policy.conditions[0].conditionMatchedLog;
-
-  test("weekly_report_ready carries every label the policy extracts, as short strings", async () => {
+describe("its log lines (the report is emailed by the job itself: test/reportEmail.test.ts)", () => {
+  test("weekly_report_ready names the week only; the short lines are stored, each cut to its cap", async () => {
     await seedWeek();
     await runWeeklyReport(env(), { trigger: "schedule" });
     const [line] = lines("weekly_report_ready");
-    expect(line.level).toBe("info");
-    expect(Object.keys(line.data!).sort()).toEqual([...WEEKLY_REPORT_LABELS, "trigger", "week"].sort());
-    expect(line.data).toMatchObject({ week: WEEK, trigger: "schedule", console: CONSOLE });
-    for (const k of WEEKLY_REPORT_LABELS) {
-      expect(typeof line.data![k], k).toBe("string");
-      expect(Array.from(line.data![k] as string).length, k).toBeLessThanOrEqual(WEEKLY_REPORT.labelChars);
-    }
-    // The stored report holds the same lines.
-    expect((await stored())!.lines).toEqual(Object.fromEntries(WEEKLY_REPORT_LABELS.map((k) => [k, line.data![k]])));
+    expect(line).toEqual({ level: "info", message: "weekly_report_ready", data: { week: WEEK, trigger: "schedule" } });
+    const stored_ = (await stored())!.lines as Record<string, string>;
+    expect(Object.keys(stored_)).toEqual([...WEEKLY_REPORT_LABELS]);
+    for (const k of WEEKLY_REPORT_LABELS) expect(Array.from(stored_[k]).length, k).toBeLessThanOrEqual(WEEKLY_REPORT.labelChars);
+    expect(stored_.console).toBe(CONSOLE);
   });
 
-  test("a failed run sends the same fields, saying so", async () => {
+  test("a failed run logs weekly_report_failed with its reason (alerted on)", async () => {
     const out = await runWeeklyReport(env({ config: () => Promise.reject(new Error("down")) }), { trigger: "schedule" });
     expect(out).toEqual({ status: "failed", week: WEEK, reason: "CONFIG_UNAVAILABLE" });
-    const [line] = lines("weekly_report_failed");
-    expect(line.level).toBe("error");
-    for (const k of WEEKLY_REPORT_LABELS) expect(typeof line.data![k], k).toBe("string");
-    expect(line.data!.problems).toContain("CONFIG_UNAVAILABLE");
-    expect(line.data!.problems).toContain("report weekly --run --week " + WEEK);
+    expect(lines("weekly_report_failed")).toEqual([{ level: "error", message: "weekly_report_failed", data: { week: WEEK, trigger: "schedule", reason: "CONFIG_UNAVAILABLE" } }]);
   });
 
-  test("a field too long is cut, never dropped", async () => {
+  test("a line too long is cut, never dropped", async () => {
     await statsRef(db, "2026-11-10").set({ reports: 40, reportReasons: Object.fromEntries(Array.from({ length: 40 }, (_, i) => ["reason_" + String.fromCharCode(97 + (i % 26)) + String.fromCharCode(97 + Math.floor(i / 26)), 1])) });
     await runWeeklyReport(env(), { trigger: "schedule" });
-    const p = lines("weekly_report_ready")[0].data!.problems as string;
+    const p = ((await stored())!.lines as Record<string, string>).problems;
     expect(Array.from(p).length).toBe(WEEKLY_REPORT.labelChars);
     expect(p.endsWith("…")).toBe(true);
     expect(Array.from(reportLines((await stored())!.figures as WeeklyFigures, null, CONSOLE).problems).length).toBeGreaterThan(WEEKLY_REPORT.labelChars);
   });
 
-  test("the policy: those labels and no more than ten, the two lines, WARNING, and a template that names only them", () => {
-    expect(Object.keys(cond.labelExtractors)).toEqual([...WEEKLY_REPORT_LABELS]);
-    expect(WEEKLY_REPORT_LABELS.length).toBeLessThanOrEqual(10);
-    for (const k of WEEKLY_REPORT_LABELS) expect(cond.labelExtractors[k]).toBe("EXTRACT(jsonPayload." + k + ")");
-    expect(cond.filter).toContain('"weekly_report_ready"');
-    expect(cond.filter).toContain('"weekly_report_failed"');
-    expect(policy.severity).toBe("WARNING");
-    const used = [...(policy.documentation.content + policy.documentation.subject).matchAll(/\$\{log\.extracted_label\.([a-z_]+)\}/g)].map((m) => m[1]);
-    expect(new Set(used)).toEqual(new Set(WEEKLY_REPORT_LABELS));
-    expect(policy.documentation.content).toContain("not a problem");
-    expect(policy.documentation.content).toContain("To stop these emails");
-  });
-
-  test("the email as it reads, for the seeded week (the policy's template filled in with the line's fields)", async () => {
-    await seedWeek();
-    await runWeeklyReport(env(), { trigger: "schedule" });
-    const data = lines("weekly_report_ready")[0].data!;
-    const fill = (s: string) => s.replace(/\$\{log\.extracted_label\.([a-z_]+)\}/g, (_, k: string) => String(data[k]));
-    const subject = fill(policy.documentation.subject);
-    expect(new TextEncoder().encode(subject).length).toBeLessThanOrEqual(255);
-    expect(subject).toBe("Recipe: weekly app report 2026-W46 (9–15 Nov 2026, UTC)");
-    const body = fill(policy.documentation.content);
-    expect(body).not.toContain(DOLLAR_BRACE);
-    expect(body).toContain("- **Estimated net revenue:** USD 1.20 (+1.20)");
-    expect(body).toContain(CONSOLE);
+  test("the alert policies: the report's failure is alerted on, the report itself no longer is", () => {
+    const failed = JSON.parse(readFileSync(join(__dirname, "../alerts/policies/weekly-report-failed.json"), "utf8"));
+    expect(failed.conditions[0].conditionMatchedLog.filter).toContain('"weekly_report_failed"');
+    expect(failed.severity).toBe("WARNING");
+    const all = readdirSync(join(__dirname, "../alerts/policies")).map((f) => readFileSync(join(__dirname, "../alerts/policies", f), "utf8")).join("\n");
+    expect(all).not.toContain("weekly_report_ready");
+    expect(all).not.toContain("extracted_label");
   });
 });
 
@@ -421,7 +392,7 @@ describe("independent of the prompt review", () => {
     await db.collection(PROMPT_REVIEW.collection).doc(WEEK).delete();
     await runWeeklyJobs({ report: () => { throw new Error("boom"); }, review: () => runPromptReview(reviewEnv(r), { trigger: "schedule" }) }, logger, { week: WEEK, project: PROJECT });
     expect(lines("weekly_report_failed")).toHaveLength(2);
-    expect(lines("weekly_report_failed")[1].data).toMatchObject({ week: WEEK, reason: "ERROR", console: CONSOLE });
+    expect(lines("weekly_report_failed")[1].data).toEqual({ week: WEEK, trigger: "schedule", reason: "ERROR" });
     expect(await reviewDoc()).toMatchObject({ status: "not_enough_data" });
 
     await db.collection(PROMPT_REVIEW.collection).doc(WEEK).delete();
@@ -470,12 +441,12 @@ describe("where it shows", () => {
 
     await seedWeek();
     const out: string[] = [];
-    const cmdEnv = { db, now: () => clock, print: (l: string) => out.push(l), logger, config: () => loadRuntimeConfig(db) };
+    const cmdEnv = { db, now: () => clock, print: (l: string) => out.push(l), logger, config: () => loadRuntimeConfig(db), mailer: () => new RecordingMailer() };
     await runWeeklyCommand(parse("report weekly --run"), cmdEnv);
     expect(await stored()).toBeUndefined();
     expect(lines("weekly_report_ready")).toHaveLength(0);
     expect(out[0]).toBe("Dry run for 2026-W46, nothing written.");
-    expect(out.join("\n")).toContain("The email's fields (weekly_report_ready):");
+    expect(out.join("\n")).toContain("The report in short lines (stored as `lines`):");
     expect(out.join("\n")).toContain("  Estimated net revenue   USD 1.20 (+1.20)");
 
     out.length = 0;

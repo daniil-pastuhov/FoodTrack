@@ -1,0 +1,24 @@
+{
+  "displayName": "Recipe: report email not sent",
+  "documentation": {
+    "content": "A weekly report email (the app report or the prompt review) was not sent (`report_email_failed`: `report` (`weekly_report`, `prompt_review`), `week`, `trigger`, `reason`, `maybeSent`; functions/README.md, \"Report emails\"). The report itself is stored and on the owner console. Reasons: `NOT_CONFIGURED` (the secrets REPORT_EMAIL or REPORT_SMTP_PASSWORD are missing or empty: docs/recipe-setup.md, \"Report emails\"); `AUTH_FAILED` (Gmail refused the app password: revoked, the account's password changed, or 2-step verification turned off; make a new app password, add it as a new version of REPORT_SMTP_PASSWORD and redeploy `weeklyPromptReview`); `CONNECTION`, `TIMEOUT` (Gmail not reached); `REJECTED` (Gmail refused the message); `RENDER_FAILED`, `CLAIM_FAILED`, `ERROR` (a bug or Firestore). When it is fixed, send it with `npm run admin -- report weekly --send --apply --week <week> --project <id>` (or `judge review --send --apply`), with REPORT_EMAIL and REPORT_SMTP_PASSWORD set from Secret Manager. With `maybeSent` true the email may have arrived anyway: look in the inbox first; only `--force` sends it again. A report is never emailed twice by itself.",
+    "mimeType": "text/markdown"
+  },
+  "conditions": [
+    {
+      "conditionMatchedLog": {
+        "filter": "resource.type=\"cloud_run_revision\" AND jsonPayload.message=\"report_email_failed\""
+      },
+      "displayName": "Recipe: report email not sent"
+    }
+  ],
+  "combiner": "OR",
+  "enabled": true,
+  "severity": "WARNING",
+  "alertStrategy": {
+    "autoClose": "604800s",
+    "notificationRateLimit": {
+      "period": "3600s"
+    }
+  }
+}

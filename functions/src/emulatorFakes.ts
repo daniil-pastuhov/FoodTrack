@@ -19,6 +19,7 @@
  *   ingredient named "fail image" makes the picture fail (the recipe is delivered without it).
  * - Sign in with Apple: any authorization code is exchanged for a random fake refresh token, and
  *   revoking succeeds; the token is sealed with an in-memory key (LocalKeyWrapper), not Cloud KMS.
+ * - Report emails: kept in memory (RecordingMailer), never sent.
  */
 import { randomBytes } from "node:crypto";
 import { coursesFor, menuDates, menuDaysOf, type GenerateRequest } from "./contract";
@@ -38,12 +39,15 @@ import {
   type ImageTarget,
   type JudgeResult,
   type LlmUsage,
+  type MailError,
+  type Mailer,
   type OutputJudge,
   type PlayPurchase,
   type PromptReviewer,
   type PlayVerifier,
   type RecipeGenerator,
   type RecipeImageGenerator,
+  type ReportMail,
   type VoidedPurchase,
 } from "./ports";
 
@@ -202,6 +206,25 @@ export class EmulatorPromptReviewer implements PromptReviewer {
       text: JSON.stringify({ summary: "Emulator: no model ran; the counts above are real.", promptProblems: [], judgeProblems: [] }),
       usage: { inputTokens: 12_000, outputTokens: 60, thinkingTokens: 0, model: "emulator-fake", finishReason: "STOP" },
     };
+  }
+}
+
+/**
+ * The report emails under the emulators, in the admin command against them, and in the tests: the
+ * messages are kept in memory and nothing is sent. `fail` makes every send throw that error (after
+ * recording nothing); `gate` holds a send until it resolves (for races).
+ */
+export class RecordingMailer implements Mailer {
+  readonly sent: ReportMail[] = [];
+  fail: MailError | null = null;
+  gate: Promise<void> | null = null;
+  calls = 0;
+
+  async send(mail: ReportMail): Promise<void> {
+    this.calls++;
+    if (this.gate) await this.gate;
+    if (this.fail) throw this.fail;
+    this.sent.push(mail);
   }
 }
 

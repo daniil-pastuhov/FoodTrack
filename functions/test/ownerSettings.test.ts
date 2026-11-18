@@ -934,8 +934,8 @@ describe("refusals of the owner callables", () => {
     expect(filter).toBe('resource.type="cloud_run_revision" AND jsonPayload.message="owner_call_refused" AND NOT jsonPayload.reason=("NOT_OWNER" OR "SIGN_IN" OR "RATE_LIMITED")');
     const readme = readFileSync(join(__dirname, "../README.md"), "utf8");
     const count = readdirSync(join(__dirname, "../alerts/policies")).filter((f) => f.endsWith(".json")).length;
-    expect(count).toBe(22);
-    expect(readme).toContain("and twenty-two policies (");
+    expect(count).toBe(23);
+    expect(readme).toContain("and twenty-three policies (");
     expect(readme).toContain("(`owner-refusals`)");
   });
 });

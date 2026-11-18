@@ -1,0 +1,24 @@
+{
+  "displayName": "Recipe: weekly app report failed",
+  "documentation": {
+    "content": "The Monday `weeklyPromptReview` (functions/README.md, \"Weekly app report\") could not make the weekly app report (`weekly_report_failed`: `week`, `trigger` (`schedule` / `cli`), `reason` (`CONFIG_UNAVAILABLE`, `BAD_WEEK`, `READ_FAILED`, `WRITE_FAILED`, `ERROR`)). Nothing user-facing is affected; nothing was stored, so no report email goes out this week. Look at the reason, then make it again with `npm run admin -- report weekly --run --week <week> --project <id>` (a dry run) and `--apply`, and send its email with `npm run admin -- report weekly --send --apply --week <week> --project <id>` (functions/README.md, \"Report emails\"). The report itself arrives as a real email, not through this policy.",
+    "mimeType": "text/markdown"
+  },
+  "conditions": [
+    {
+      "conditionMatchedLog": {
+        "filter": "resource.type=\"cloud_run_revision\" AND jsonPayload.message=\"weekly_report_failed\""
+      },
+      "displayName": "Recipe: weekly app report failed"
+    }
+  ],
+  "combiner": "OR",
+  "enabled": true,
+  "severity": "WARNING",
+  "alertStrategy": {
+    "autoClose": "604800s",
+    "notificationRateLimit": {
+      "period": "21600s"
+    }
+  }
+}

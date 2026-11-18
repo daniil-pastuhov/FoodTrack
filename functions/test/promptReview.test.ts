@@ -29,6 +29,7 @@ import { listSettings } from "../src/core/ownerSettings";
 import { lifecycleProblems, MODEL_LIFECYCLE, modelsInUse } from "../src/providers/lifecycle";
 import { parseReviewArgs, runReviewCommand, type ReviewCommandEnv } from "../src/admin/promptReviewCli";
 import { AdminRefusal } from "../src/admin/accountRequests";
+import { RecordingMailer } from "../src/emulatorFakes";
 import { DEFAULT_IMAGE_SELECTION, DEFAULT_TEXT_SELECTION } from "../src/constants";
 import { loadRuntimeConfig, microUsd, parseRuntimeConfig, statsRef } from "../src/model";
 import { GenerationError, type LlmUsage, type PromptReviewer, type ReviewPrompt } from "../src/ports";
@@ -462,7 +463,7 @@ describe("where it shows", () => {
     expect(() => parseReviewArgs(["judge", "review", "--week", "2026-46"], "demo-x")).toThrow(/ISO week/);
     await seedWeek();
     const printed: string[] = [];
-    const cmd: ReviewCommandEnv = { ...env(), print: (l) => printed.push(l), reviewer: () => reviewer, reviewerModel: reviewer.model };
+    const cmd: ReviewCommandEnv = { ...env(), print: (l) => printed.push(l), reviewer: () => reviewer, reviewerModel: reviewer.model, mailer: () => new RecordingMailer() };
     await runReviewCommand({ project: "demo-x", run: false, apply: false }, cmd);
     expect(printed).toEqual(["No prompt review stored yet."]);
     printed.length = 0;

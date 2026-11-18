@@ -55,8 +55,11 @@ import {
   EmulatorJudge,
   EmulatorPlay,
   EmulatorPromptReviewer,
+  RecordingMailer,
   emulatorFakesEnabled,
 } from "./emulatorFakes";
+import { gmailMailerOf } from "./adapters/gmailSmtp";
+import { sendWeeklyEmails } from "./core/reportEmail";
 import { registerAppleSignIn as registerAppleCore } from "./core/appleToken";
 import { generateRecipe as generateCore, getGeneration as getGenerationCore } from "./core/generation";
 import { verifyPurchase as verifyCore } from "./core/purchases";
@@ -158,6 +161,19 @@ const appStorePrivateKey = defineSecret("APPSTORE_PRIVATE_KEY");
 const appleTeamId = defineString("APPLE_TEAM_ID", { description: "Apple developer team id" });
 const siwaKeyId = defineString("SIWA_KEY_ID", { description: "Sign in with Apple key id" });
 const siwaPrivateKey = defineSecret("SIWA_PRIVATE_KEY");
+// The owner's report emails (README "Report emails"): the Gmail app password, and the owner's own
+// address (SMTP user, From and To). The address is a secret too: the repository is public. Bound
+// only to weeklyPromptReview, the one function that sends.
+const reportSmtpPassword = defineSecret("REPORT_SMTP_PASSWORD");
+const reportEmailAddress = defineSecret("REPORT_EMAIL");
+/** A bound secret's value, "" when it cannot be read (then the emails are "not configured"). */
+function secretValue(s: ReturnType<typeof defineSecret>): string {
+  try {
+    return s.value();
+  } catch {
+    return "";
+  }
+}
 const playRtdnTopic = defineString("PLAY_RTDN_TOPIC", { default: "play-rtdn" });
 const budgetTopic = defineString("BUDGET_ALERT_TOPIC", { default: "budget-alerts" });
 const boardBucket = defineString("BOARD_BUCKET", {
@@ -631,18 +647,21 @@ export const checkModelLifecycle = onSchedule(
 // (prompt_review_failed, alerted on) and `npm run admin -- judge review --run --apply` runs it again.
 // The same job makes the weekly app report (README "Weekly app report", core/weeklyReport.ts; no
 // scheduler job of its own: the project pays per job), side by side with the review and
-// independent of it; off with config/runtime.weeklyReportEnabled. No model call; its
-// weekly_report_ready line is what the owner's report email is made of (alerts/policies/weekly-report.json).
+// independent of it; off with config/runtime.weeklyReportEnabled. No model call. When both are
+// stored, each is emailed to the owner once (core/reportEmail.ts, README "Report emails"), through
+// the owner's Gmail with the two secrets above; missing secrets: the reports are still stored and
+// report_email_failed (NOT_CONFIGURED) is logged and alerted on.
 export const weeklyPromptReview = onSchedule(
-  { schedule: "41 3 * * 1", timeZone: "Etc/UTC", timeoutSeconds: 300, retryCount: 0, maxInstances: 1, concurrency: 1 },
+  { schedule: "41 3 * * 1", timeZone: "Etc/UTC", timeoutSeconds: 300, retryCount: 0, maxInstances: 1, concurrency: 1, secrets: [reportSmtpPassword, reportEmailAddress] },
   async () => {
     const db = getFirestore();
     const now = () => Date.now();
     const config = () => loadRuntimeConfig(db, logger, imageDefaults(), textDefaults());
     const project = projectId();
+    const week = lastCompleteWeek(now());
     await runWeeklyJobs(
       {
-        report: () => runWeeklyReport({ db, logger, now, config, project }, { trigger: "schedule" }),
+        report: () => runWeeklyReport({ db, logger, now, config, project }, { trigger: "schedule", week }),
         review: () => {
           // Always Gemini on Vertex AI, like the judge (the emulators: a fixed answer, no call).
           const reviewer = emulatorFakesEnabled()
@@ -653,11 +672,23 @@ export const weeklyPromptReview = onSchedule(
                 model: promptReviewModel.value() || providerParam("GEMINI_MODEL"),
                 jailbreakFilter: providerParam("GEMINI_JAILBREAK_FILTER") === "true",
               });
-          return runPromptReview({ db, reviewer, logger, now, config }, { trigger: "schedule" });
+          return runPromptReview({ db, reviewer, logger, now, config }, { trigger: "schedule", week });
+        },
+        emails: async () => {
+          // Under the emulators the messages are only recorded; nothing is sent.
+          const mailer = emulatorFakesEnabled() ? new RecordingMailer() : gmailMailerOf(secretValue(reportEmailAddress), secretValue(reportSmtpPassword));
+          let enabled = { weeklyReportEnabled: true, promptReviewEnabled: true };
+          try {
+            const c = await config();
+            enabled = { weeklyReportEnabled: c.weeklyReportEnabled, promptReviewEnabled: c.promptReviewEnabled };
+          } catch {
+            // Without the config, whatever was stored this week is still emailed.
+          }
+          return sendWeeklyEmails({ db, logger, now, project, mailer }, { week, trigger: "schedule", ...enabled });
         },
       },
       logger,
-      { week: lastCompleteWeek(now()), project },
+      { week, project },
     );
   },
 );

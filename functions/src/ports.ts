@@ -456,6 +456,36 @@ export interface RecipeImageGenerator {
 
 // --- Wiring -----------------------------------------------------------------------------------
 
+/**
+ * One of the owner's report emails (core/reportEmail.ts): the subject and both bodies. The sender
+ * and the recipient are not here: they are the mailer's own (the owner's address, a secret), so no
+ * caller ever holds or logs the address.
+ */
+export interface ReportMail {
+  subject: string;
+  text: string;
+  html: string;
+}
+
+/** Why a report email was not sent: fixed codes, never the server's reply (which could name the address). */
+export type MailFailure = "NOT_CONFIGURED" | "AUTH_FAILED" | "CONNECTION" | "TIMEOUT" | "REJECTED" | "RENDER_FAILED" | "ERROR";
+
+export class MailError extends Error {
+  constructor(
+    readonly reason: MailFailure,
+    /** The message may have reached the server anyway (the connection broke after it was handed over): never sent again by itself. */
+    readonly maybeSent: boolean,
+  ) {
+    super("mail not sent: " + reason);
+    this.name = "MailError";
+  }
+}
+
+/** Sends one message to the owner, once: no retry inside. Throws MailError. */
+export interface Mailer {
+  send(mail: ReportMail): Promise<void>;
+}
+
 export interface Logger {
   info(message: string, data?: Record<string, unknown>): void;
   warn(message: string, data?: Record<string, unknown>): void;

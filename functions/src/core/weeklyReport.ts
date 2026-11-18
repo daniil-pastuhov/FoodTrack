@@ -20,11 +20,11 @@
  * too few judge answers, or with the review failing; and its own failure never stops the review.
  * Off with config/runtime `weeklyReportEnabled` (default on): nothing is read or written.
  *
- * **Sending it**: the run writes one log line, `weekly_report_ready`, whose fields are short
- * preformatted strings (WEEKLY_REPORT_LABELS); the log-based alert policy
- * functions/alerts/policies/weekly-report.json extracts them and its documentation template puts them
- * in the email to the existing owner channel. A report, not a problem: severity WARNING, the lowest.
- * A failed run writes `weekly_report_failed` with the same fields (saying so), matched by the same policy.
+ * **Sending it**: a real email to the owner (core/reportEmail.ts, README "Report emails"), sent by
+ * the Monday job once both this report and the prompt review are stored, exactly once per week. A
+ * report that could not be made logs `weekly_report_failed` (alerted on:
+ * functions/alerts/policies/weekly-report-failed.json); a stored one logs `weekly_report_ready` (not
+ * alerted on).
  */
 import { Timestamp, type Firestore } from "firebase-admin/firestore";
 import { PACKS, STORES, buildBoard, ownerConsoleUrl, type Board, type Pack, type Store } from "../board/boardData";
@@ -32,6 +32,7 @@ import { readBoardInput } from "../board/boardReader";
 import { JUDGE, JUDGE_LOG, WEEKLY_REPORT } from "../constants";
 import { judgePricesOf, microUsd, type RuntimeConfig } from "../model";
 import type { Logger } from "../ports";
+import { emailRecordOf, emailStatusText } from "./emailState";
 import { lastCompleteWeek, previousWeek, weekRange } from "./promptReview";
 
 const DAY_MS = 86_400_000;
@@ -352,8 +353,8 @@ const PACK_LABEL: Record<Pack, string> = { recipes_10: "10", recipes_50: "50", r
 const STORE_LABEL: Record<Store, string> = { appstore: "App Store", play: "Google Play", other: "other" };
 
 /**
- * The email's fields (WEEKLY_REPORT_LABELS, extracted by the alert policy): each a short line of
- * text, changes against the week before in brackets. Pure. `prev` null: the first report.
+ * The report in short lines (WEEKLY_REPORT_LABELS), stored as `lines` and printed by the admin
+ * command's dry run: changes against the week before in brackets. Pure. `prev` null: the first report.
  */
 export function reportLines(f: WeeklyFigures, prev: WeeklyFigures | null, consoleUrl: string): Record<WeeklyReportLabel, string> {
   const g = f.generations;
@@ -386,14 +387,11 @@ export function reportLines(f: WeeklyFigures, prev: WeeklyFigures | null, consol
   };
 }
 
-/**
- * The fields of `weekly_report_ready` / `weekly_report_failed`, which the alert policy extracts
- * (one label each; functions/alerts/policies/weekly-report.json). Ten: no more are used per policy.
- */
+/** The short lines' keys (`lines` on the stored report). */
 export const WEEKLY_REPORT_LABELS = ["period", "revenue", "purchases", "spend", "margin", "recipes", "free", "refunds", "problems", "console"] as const;
 export type WeeklyReportLabel = (typeof WEEKLY_REPORT_LABELS)[number];
 
-/** Every field cut to WEEKLY_REPORT.labelChars code points (a notification is no place for a page). */
+/** Every line cut to WEEKLY_REPORT.labelChars code points. */
 function capped(lines: Record<WeeklyReportLabel, string>): Record<WeeklyReportLabel, string> {
   const out = {} as Record<WeeklyReportLabel, string>;
   for (const k of WEEKLY_REPORT_LABELS) {
@@ -403,16 +401,6 @@ function capped(lines: Record<WeeklyReportLabel, string>): Record<WeeklyReportLa
   return out;
 }
 
-/** The failure line's fields: the same labels, saying the report could not be made. */
-export function failureLines(week: string, reason: string, consoleUrl: string): Record<WeeklyReportLabel, string> {
-  const none = "not available: the report failed";
-  return {
-    period: week + " (" + weekSpanOf(week) + ", UTC)",
-    revenue: none, purchases: none, spend: none, margin: none, recipes: none, free: none, refunds: none,
-    problems: "The weekly report could not be made (" + reason + "). Nothing user-facing is affected. Run it again: npm run admin -- report weekly --run --week " + week,
-    console: consoleUrl,
-  };
-}
 
 // --- The run -------------------------------------------------------------------------------------
 
@@ -444,7 +432,7 @@ export async function runWeeklyReport(env: WeeklyReportEnv, opts: { week?: strin
   const consoleUrl = ownerConsoleUrl(env.project);
   const base = { week, trigger: opts.trigger };
   const fail = (reason: string): WeeklyReportOutcome => {
-    if (write) env.logger.error("weekly_report_failed", { ...base, reason, ...failureLines(week, reason, consoleUrl) });
+    if (write) env.logger.error("weekly_report_failed", { ...base, reason });
     return { status: "failed", week, reason };
   };
   let config: RuntimeConfig;
@@ -506,22 +494,34 @@ export async function runWeeklyReport(env: WeeklyReportEnv, opts: { week?: strin
     }
     return fail("WRITE_FAILED");
   }
-  env.logger.info("weekly_report_ready", { ...base, ...lines });
+  env.logger.info("weekly_report_ready", base);
   return { status: "done", week, doc, lines };
 }
 
 /**
  * The Monday job: the weekly report and the prompt review side by side, neither waiting on or
- * stopped by the other. A job that throws (neither should) is logged as its own failure line.
+ * stopped by the other; then, once both are done (whatever came of them), their emails
+ * (core/reportEmail.ts sendWeeklyEmails), so an empty week's review note can go in the report's
+ * email. A job that throws (none should) is logged as its own failure line.
  */
-export async function runWeeklyJobs(jobs: { report(): Promise<unknown>; review(): Promise<unknown> }, logger: Logger, ctx: { week: string; project: string }): Promise<void> {
+export async function runWeeklyJobs(
+  jobs: { report(): Promise<unknown>; review(): Promise<unknown>; emails?(): Promise<unknown> },
+  logger: Logger,
+  ctx: { week: string; project: string },
+): Promise<void> {
   const { week } = ctx;
   const [report, review] = await Promise.allSettled([
     Promise.resolve().then(() => jobs.report()),
     Promise.resolve().then(() => jobs.review()),
   ]);
-  if (report.status === "rejected") logger.error("weekly_report_failed", { week, trigger: "schedule", reason: "ERROR", ...failureLines(week, "ERROR", ownerConsoleUrl(ctx.project)) });
+  if (report.status === "rejected") logger.error("weekly_report_failed", { week, trigger: "schedule", reason: "ERROR" });
   if (review.status === "rejected") logger.error("prompt_review_failed", { week, trigger: "schedule", reason: "ERROR", costMicroUsd: 0 });
+  if (!jobs.emails) return;
+  try {
+    await jobs.emails();
+  } catch {
+    logger.error("report_email_failed", { report: "weekly_jobs", week, trigger: "schedule", reason: "ERROR", maybeSent: true, recorded: false });
+  }
 }
 
 // --- The console's view --------------------------------------------------------------------------
@@ -542,6 +542,8 @@ export interface WeeklyReportView {
   rows: WeeklyReportRow[];
   /** What the figures could not count fully (read caps, days before a counter existed). */
   caveats: string[];
+  /** Its email: sent, not sent and why, or null before one was tried (core/emailState.ts). */
+  email: string | null;
 }
 
 /** The last few weeks in one line each, newest first. */
@@ -610,10 +612,11 @@ export function weeklyReportViewOf(d: Record<string, unknown>): WeeklyReportView
     previousWeek: typeof prev?.week === "string" ? prev.week : null,
     rows: rowsOf(f, prev?.figures?.sales ? prev.figures : null),
     caveats: caveatsOf(f),
+    email: emailStatusText(emailRecordOf(d), "weekly_report"),
   };
 }
 
-function historyOf(d: Record<string, unknown>): WeeklyHistoryRow | null {
+export function historyOf(d: Record<string, unknown>): WeeklyHistoryRow | null {
   const f = d.figures as WeeklyFigures | undefined;
   if (!f?.sales) return null;
   return {
@@ -643,6 +646,7 @@ export function renderWeeklyReport(v: WeeklyReportView): string[] {
   const w = Math.max(...v.rows.map((r) => r.label.length));
   for (const r of v.rows) out.push("  " + r.label.padEnd(w) + "  " + r.value + (r.change ? " (" + r.change + ")" : "") + (r.note ? "   " + r.note : ""));
   for (const c of v.caveats) out.push("  Note: " + c);
+  if (v.email) out.push("  " + v.email);
   out.push("Estimates: revenue is the config's net per recipe, not a store payout; spend is the server's token estimate, not the Cloud bill.");
   return out;
 }

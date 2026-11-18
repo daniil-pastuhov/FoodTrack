@@ -24,7 +24,8 @@ the caller. The client wire contract is in [CONTRACT.md](CONTRACT.md).
 | `src/core/generation.ts` | `generateRecipe` (reserve, call the LLM, settle) and `getGeneration` (polling) |
 | `src/core/judgeLog.ts`, `src/admin/judgeAnswers.ts` | Keeping every output judge answer in `judgeAnswers`, and `npm run admin -- judge summary | export` to read them (see "Prompt injection defences" item 5) |
 | `src/core/promptReview.ts`, `src/admin/promptReviewCli.ts` | The weekly prompt review: a week of judge answers counted, sampled and sent with the current prompts to one model for advice, stored in `promptReviews`; `npm run admin -- judge review` (see "Weekly prompt review") |
-| `src/core/weeklyReport.ts`, `src/admin/weeklyReportCli.ts` | The weekly app report: last week's sales, spend, recipes, free recipes, refunds and problems from the board's own arithmetic, stored in `weeklyReports` and emailed through a log-based alert; `npm run admin -- report weekly` (see "Weekly app report") |
+| `src/core/weeklyReport.ts`, `src/admin/weeklyReportCli.ts` | The weekly app report: last week's sales, spend, recipes, free recipes, refunds and problems from the board's own arithmetic, stored in `weeklyReports`; `npm run admin -- report weekly` (see "Weekly app report") |
+| `src/core/reportEmail.ts`, `reportEmailRender.ts`, `emailState.ts`, `src/adapters/gmailSmtp.ts`, `src/admin/reportEmailCli.ts` | The two weekly reports as real emails to the owner, through the owner's Gmail over SMTP, each sent once; `--send` on both commands, `npm run admin -- report email-test` (see "Report emails") |
 | `src/core/reports.ts` | `reportRecipe` ("Report this recipe") and keeping a deleted account's reports without its uid (see "Reports") |
 | `src/providers/types.ts`, `registry.ts`, `router.ts`, `failure.ts`, `balance.ts` | The common provider interface: the descriptor every text or picture adapter exports, the registry of them (one entry each), the routers that pick the adapter per call, the shared failure taxonomy and the balance probe (see "Adding a provider") |
 | `src/providers/lifecycle.ts`, `src/adapters/modelProbes.ts` | The model lifecycle table (announced retirement dates, their source, when last checked), which models a config puts in use, the daily check and its log lines, and the providers' free metadata probes (see "Model lifecycle") |
@@ -65,7 +66,7 @@ the caller. The client wire contract is in [CONTRACT.md](CONTRACT.md).
 | `pollPlayVoidedPurchases` | daily 04:00 UTC | Voided Purchases API, last 3 days, for RTDNs that never arrived |
 | `checkProviderBalances` | hourly at :41 UTC | Asks the balance of every prepaid provider that has a probe and a threshold in `config/runtime.providerBalanceAlerts`, and logs `provider_balance_low` under it; with no threshold (the default) it reads only `config/runtime` (see "Provider balances") |
 | `checkModelLifecycle` | daily 06:23 UTC | For every model in use (text, its fallback, the output judge, pictures, their fallback, the deploy defaults) and every model of a listed profile: the announced retirement date against 90 / 30 / 7 days, the age of the table's last check, and each provider's free metadata probe; logs `model_retirement_near`, `model_unavailable`, `model_lifecycle_changed`, `model_lifecycle_stale` (see "Model lifecycle") |
-| `weeklyPromptReview` | Mondays 03:41 UTC | Counts the past ISO week's output judge answers, samples those that were not ok or scored low, and asks one model (`PROMPT_REVIEW_MODEL`) for advice on the writer's and the judge's prompts; stores it in `promptReviews/{week}`. Never changes a prompt (see "Weekly prompt review"). Beside it, independent of it, the weekly app report (`weeklyReports/{week}`, no model call; see "Weekly app report") |
+| `weeklyPromptReview` | Mondays 03:41 UTC | Counts the past ISO week's output judge answers, samples those that were not ok or scored low, and asks one model (`PROMPT_REVIEW_MODEL`) for advice on the writer's and the judge's prompts; stores it in `promptReviews/{week}`. Never changes a prompt (see "Weekly prompt review"). Beside it, independent of it, the weekly app report (`weeklyReports/{week}`, no model call; see "Weekly app report"); then each is emailed to the owner, once (secrets `REPORT_EMAIL`, `REPORT_SMTP_PASSWORD`; see "Report emails") |
 | `redrawBoard` | hourly at :17 UTC | Redraws the owner's board (30 days) into the private bucket `BOARD_BUCKET` as `board.html` and `board.json`; read-only on Firestore, and writes nothing unless the bucket is private (see "The board", "Always on") |
 | `playNotifications` | Pub/Sub topic `PLAY_RTDN_TOPIC` | Play voided-purchase RTDNs (full and quantity-based partial refunds) |
 | `appStoreNotifications` | HTTPS (public) | App Store Server Notifications v2: `REFUND`, `REVOKE`, `REFUND_REVERSED`, `CONSUMPTION_REQUEST`; signature verified |
@@ -607,7 +608,7 @@ concurrency 1 below 1 vCPU), 1 instance:
 | `getProviderProfiles`, `setProviderProfile`, `getOwnerSettings`, `setOwnerSettings` | 1 each | 30 for all callers but a listed owner together, at most 5 of them per client address; a listed owner 30 apart; calls without a token refused uncounted ("The owner console") | 30 s |
 | `playNotifications`, `budgetKillSwitch`, `sweepReservations`, `pollPlayVoidedPurchases` | 1 | n/a (Pub/Sub or scheduler; not callable from the internet) | |
 | `checkModelLifecycle` | 1 (no retry: the next day checks again) | n/a (scheduler); one free probe per model, 10 s each | 120 s |
-| `weeklyPromptReview` | 1 (no retry: idempotent per week, run again by hand) | n/a (scheduler); one model call, at most USD 0.19, reserved against the day's spend ceiling | 300 s |
+| `weeklyPromptReview` | 1 (no retry: idempotent per week, run again by hand) | n/a (scheduler); one model call, at most USD 0.19, reserved against the day's spend ceiling; at most two emails, each sent once | 300 s |
 | `redrawBoard` | 1 (no retry: the next hour redraws anyway) | n/a (scheduler); at most 2,000 purchases read a run (`BOARD_PURCHASES_CAP`) | 120 s |
 
 Before any Firestore access, every callable is throttled per instance in memory: 30 calls a minute
@@ -779,7 +780,10 @@ Create log-based alerts in Cloud Logging on `jsonPayload.message` (all are struc
 | `model_lifecycle_stale` | warning | **Alerted on** (`model-lifecycle-stale`): a model in use whose lifecycle entry was last checked more than 60 days ago (`reason` `OLD_CHECK`), or which has none (`NO_ENTRY`: set by hand in `config/runtime`): `provider`, `model`, `roles`, `checkedOn`, `checkedDaysAgo`, `staleDays`. Weekly while it lasts. The reminder of the review in "Model lifecycle". |
 | `model_probe_failed` / `model_lifecycle_checked` / `model_lifecycle_marks_unavailable` | info / info / warning | Informational: a probe failed for another reason than "not found" (`reason` `TIMEOUT` / `FAILED`; never the provider's text; never an alarm); the run's summary (`models`, `inUse`, `soonestDaysLeft`, `stale`, `unavailable`, `probeFailed`); the marks could not be read or written (`reason`; then lines may repeat). |
 | `prompt_review_failed` | error | **Alerted on** (`prompt-review-failed`): the weekly prompt review produced no report ("Weekly prompt review"): `week`, `trigger` (`schedule` / `cli`), `reason` (`MALFORMED_ANSWER`, `BLOCKED`, `TOKEN_CEILING`, `TIMEOUT`, `MODEL_ERROR`, `MODEL_REFUSED`, `READ_FAILED`, `RESERVE_FAILED`, `CLAIM_FAILED`, `CONFIG_UNAVAILABLE`, `WRITE_FAILED`, `SETTLE_FAILED`, `BAD_WEEK`, `ERROR`), `answers`, `costMicroUsd`. Never model text. Nothing user-facing is affected. |
-| `weekly_report_ready` / `weekly_report_failed` | info / error | **Alerted on** (`weekly-report`), **a report, not a problem**: the weekly app report was stored, or could not be made ("Weekly app report"): `week`, `trigger`, and the email's fields `period`, `revenue`, `purchases`, `spend`, `margin`, `recipes`, `free`, `refunds`, `problems` (on a failure: the `reason` (`CONFIG_UNAVAILABLE`, `BAD_WEEK`, `READ_FAILED`, `WRITE_FAILED`, `ERROR`) and how to run it again), `console`. Totals only, nothing about a person. |
+| `weekly_report_failed` | error | **Alerted on** (`weekly-report-failed`): the weekly app report could not be made ("Weekly app report"): `week`, `trigger`, `reason` (`CONFIG_UNAVAILABLE`, `BAD_WEEK`, `READ_FAILED`, `WRITE_FAILED`, `ERROR`). Nothing stored, so no report email that week. |
+| `weekly_report_ready` | info | Informational: the weekly app report was stored (`week`, `trigger`). Not alerted on: the report itself is emailed ("Report emails"). |
+| `report_email_failed` | error | **Alerted on** (`report-email-failed`): a report email was not sent ("Report emails"): `report` (`weekly_report`, `prompt_review`; `weekly_jobs` when the email step itself threw), `week`, `trigger`, `reason` (`NOT_CONFIGURED`, `AUTH_FAILED`, `CONNECTION`, `TIMEOUT`, `REJECTED`, `RENDER_FAILED`, `CLAIM_FAILED`, `ERROR`), `maybeSent`, `recorded`. Never the address, the SMTP server's reply or an error message. |
+| `report_email_sent` / `report_email_skipped` | info | Informational: a report email was sent (`report`, `week`, `trigger`, `combined`: the prompt review's empty-week note went with it, `recorded`), or not tried (`reason` `NOTHING_TO_SEND`, `ALREADY_SENT`, `SENDING`, `UNCERTAIN`, `WITH_WEEKLY_REPORT`). |
 | `weekly_report_skipped` | info | Informational: no report made (`reason` `OFF`, `ALREADY_DONE`). |
 | `prompt_review_done` / `prompt_review_skipped` | info / info or warning | Informational: a report was stored (`week`, `answers`, `sampled`, `promptProblems`, `judgeProblems`, `dropped`, token counts, `costMicroUsd`); or no call was made (`reason` `OFF`, `ALREADY_DONE`, `RUNNING`, `NOT_ENOUGH_DATA`, and at warning `SPEND_CEILING` / `PAUSED` with `worstMicroUsd`). |
 | `provider_balance_unprobed` | warning | A `providerBalanceAlerts` threshold nothing can probe ("Provider balances"): `provider`, `reason` (`UNKNOWN_PROVIDER`, `NO_PROBE`); once per such threshold per hourly run. Remove the threshold or fix its id. |
@@ -796,9 +800,9 @@ Create log-based alerts in Cloud Logging on `jsonPayload.message` (all are struc
 The owner is emailed by Cloud Monitoring alert policies on the log lines above, through the
 existing email channel "Recipe backend alerts (owner)". They are code in `functions/alerts/`: two
 log-based metrics (`metrics/recipe_generation_refused.json`, `metrics/recipe_image_failed.json`)
-and twenty-two policies (`policies/*.json`, no channel in them). `alerts.py` applies them: dry run by default (local checks, every log filter
+and twenty-three policies (`policies/*.json`, no channel in them). `alerts.py` applies them: dry run by default (local checks, every log filter
 checked against the project with a read-only `gcloud logging read`, then the plan), `--apply` to
-create or update (matched by display name, so re-running is safe and prints "unchanged"). The
+create, update or delete (matched by display name, so re-running is safe and prints "unchanged"). Removing a policy's file does not remove the live policy: its display name goes into `RETIRED_POLICIES` in `alerts.py`, and `--apply` deletes it (the dry run shows `delete … (retired)`). The
 channel is chosen by `--channel <id>` or `--channel-name` (default the one above); the script never
 reads or prints a channel's address. If the project has no such channel, create an email channel
 in the console (Monitoring > Alerting > Edit notification channels) and type the address there.
@@ -835,7 +839,8 @@ refuse anything else.
 | Recipe: model retirement near (`model-retirement`) | a model in use or in a listed profile is within 90 / 30 / 7 days of its announced retirement, or past it (once per band; daily once past while in use), or a provider's API reports an earlier retirement than the table (at most one email an hour) | `model_retirement_near`, `model_lifecycle_changed` |
 | Recipe: model not served (`model-unavailable`) | a provider's metadata probe says a model id is not found or not served there (at most one email per 6 hours; the check is daily) | `model_unavailable` |
 | Recipe: weekly prompt review failed (`prompt-review-failed`) | the Monday review (or one run by hand) produced no report: a malformed or blocked answer, the token ceiling, a model or Firestore error (at most one email per 6 hours) | `prompt_review_failed` |
-| Recipe: weekly app report (`weekly-report`) | **a report, not a problem**: every Monday, last week's figures in the email itself ("Weekly app report"); also when the report could not be made, saying why | `weekly_report_ready`, `weekly_report_failed` (their fields pulled into the email by label extractors) |
+| Recipe: weekly app report failed (`weekly-report-failed`) | the Monday report (or one run by hand) could not be made (at most one email per 6 hours). The report itself is a real email now ("Report emails"); the old policy "Recipe: weekly app report", which mailed it through Cloud Monitoring, is retired: `alerts.py --apply` deletes it (`RETIRED_POLICIES`) | `weekly_report_failed` |
+| Recipe: report email not sent (`report-email-failed`) | a weekly report or prompt review email could not be sent, the secrets missing included (at most one email an hour) | `report_email_failed` |
 | Recipe: model lifecycle table stale (`model-lifecycle-stale`) | the lifecycle entry of a model in use is older than 60 days, or missing (weekly while it lasts) | `model_lifecycle_stale` |
 | Recipe: owner board (`owner-board`, existing) | the hourly redraw failed or the bucket check refused to write | `board_redraw_failed`, `board_bucket_public` |
 | Recipe: backend errors, refunds, blocked buyers, stuck purchases, prompt safety (existing) | as in the two "Logs to alert on" tables | see those tables |
@@ -1879,6 +1884,9 @@ three writes: at 1,000 answers a week about 4,500 reads a month, under USD 0.01.
 this is the project's sixth scheduled job, and only three a billing account are free, so it adds
 **USD 0.10 a month**. Instance time: under a minute a week.
 
+**Emailed** to the owner by the same Monday run once it is stored: a review with advice as its own
+email, one with too few answers as a note in the weekly app report's email ("Report emails").
+
 **Turn it off**: the card "Weekly prompt review" on the owner console, or
 `npm run admin -- config set promptReviewEnabled off --apply`. Off, the run reads nothing else and
 writes nothing (`prompt_review_skipped`, `OFF`); the lifecycle check stops counting its model as in use.
@@ -1908,7 +1916,7 @@ days.
 
 ## Weekly app report
 
-Once a week the owner gets the app's figures by email: what was sold, what the models cost, what
+Once a week the owner gets the app's figures by email (a real email from the job, "Report emails"): what was sold, what the models cost, what
 was written, what free recipes cost, what was refunded and what went wrong, each against the week
 before (`src/core/weeklyReport.ts`). **No model call**: arithmetic over what the server already
 stores, so it costs Firestore reads and nothing else.
@@ -1954,62 +1962,17 @@ the estimate uses today's judge prices); *the Cloud bill* (Cloud Billing is not 
 emails stay the backstop). Nothing about a person: no uid, purchase id, token or order id is read
 into or kept in a report.
 
-**Sending it** without a new vendor or secret: the run writes one log line, `weekly_report_ready`,
-whose fields are short preformatted strings (`WEEKLY_REPORT_LABELS`: `period`, `revenue`,
-`purchases`, `spend`, `margin`, `recipes`, `free`, `refunds`, `problems`, `console`; each at
-most 300 characters, cut with "…"). The log-based alert policy "Recipe: weekly app report"
-(`alerts/policies/weekly-report.json`, applied by `alerts.py` like the others, to the existing email
-channel) extracts them with ten label extractors (`EXTRACT(jsonPayload.<field>)`) and its
-documentation template puts them in the email with `${log.extracted_label.<field>}`; its subject is
-"Recipe: weekly app report ${log.extracted_label.period}". A report that could not be made writes
-`weekly_report_failed` with the same fields, "Problems" saying why and how to run it again, so the
-same policy tells the owner. It is an alert policy only because that is how the backend emails the
-owner: **a report, not a problem**, severity `WARNING` (the lowest Cloud Monitoring has), and its
-text says so. Each week's values differ, so each week opens its own alert; it closes itself after 30
-minutes (`autoClose` 1800 s, the minimum).
-
-What was checked in Google's documentation (Cloud Monitoring "Using Markdown and variables in
-documentation templates", "Configure log-based alerting policies", the AlertPolicy REST reference,
-"Cloud Monitoring quotas and limits"): `${log.extracted_label.KEY}` is resolved for log-based
-policies in the email (and Chat, Slack, Pub/Sub, webhooks, PagerDuty); subjects take variables and are
-cut to 255 bytes after expansion; the documentation's content is at most 8,192 characters and 10,240
-bytes; at most 3 links; a log-based policy has one condition, needs `notificationRateLimit`, and
-sends at most 20 notifications a day; `autoClose` is at least 1,800 s; the timestamp must never be
-extracted. **Not found** in the documentation: a maximum number of label extractors per log-based
-policy (the code keeps to ten, the log-based metrics' label limit, and `alerts.py` refuses more),
-a maximum length of an extracted value (the code keeps each under 300 characters), and whether the
-email renders the Markdown (the text reads the same either way: one "- " line per figure). An unset
-variable shows as `null`; every field is always written.
-
-`alerts.py --check-files` (run by `npm test`) checks the template: every variable names one of the
-policy's extractors, at most ten extractors, each `EXTRACT` / `REGEXP_EXTRACT` of a `jsonPayload`
-field and never the timestamp, and the documentation's size limits; `test/weeklyReport.test.ts`
-checks that the log line carries exactly those fields and fills the template the way Cloud Monitoring
-does.
-
-The email for a sample week (`test/weeklyReport.test.ts` fills it the same way):
-
-```text
-Subject: Recipe: weekly app report 2026-W46 (9–15 Nov 2026, UTC)
-
-The weekly app report, not a problem: nothing needs doing. 2026-W46 (9–15 Nov 2026, UTC).
-
-- Estimated net revenue: USD 139.20 (+75.60) from 1,160 recipes sold net of refunds, at USD 0.120 a recipe (not a store payout)
-- Purchases: 32 (+7): 16 × 10, 12 × 50, 4 × 100 · App Store 14, Google Play 18
-- Model spend: USD 15.08 (+1.28): text 6.75, pictures 7.97, second check 0.30, prompt review 0.06 · USD 0.025 a recipe (−0.002)
-- Estimated margin: USD 124.12 (+74.32): net revenue minus all model spend
-- Recipes: 426 requests (+58): 361 recipes, 65 menus · 611 recipes charged, 568 of them bought · 10 given back
-- Free recipes: 60 granted (+6) to 20 sign-ins · 43 used (+4), model cost USD 1.06
-- Refunds: 0 purchases (−2) refunded by the stores, 0 recipes
-- Problems: spend passed 80 % of the ceiling Thu 12 Nov · 2 recipe reports (±0): 2 unsafe · 17 failed answers (−3) (7 content, 10 infrastructure, 0 quality gate) · 2 pictures not delivered
-
-Changes against the week before are in brackets. ... The full report and the last weeks:
-https://<project>.firebaseapp.com/ (card "Weekly report"), or npm run admin -- report weekly --project <id>.
-```
+**Sending it**: once stored, the report is emailed to the owner by the same Monday run, as an HTML
+email with a plain-text twin, exactly once ("Report emails"). A report that could not be made logs
+`weekly_report_failed`, alerted on (`alerts/policies/weekly-report-failed.json`), and has no email
+that week. Until 2026-11-18 the report reached the owner as a Cloud Monitoring log-based alert built
+from the fields of `weekly_report_ready`; that policy is retired, and the fields are kept only as the
+stored `lines` (each at most 300 characters, `WEEKLY_REPORT.labelChars`), which the admin command's
+dry run prints.
 
 **Where else**: the owner console's card "Weekly report" shows the latest report, every figure with
 its change and a note, the caveats, and the last six weeks in a table (up to six document reads per
-page load); `npm run admin -- report weekly` prints it.
+page load); `npm run admin -- report weekly` prints it; both say whether and when it was emailed.
 
 **What it costs**: no model call. Firestore, per run: `config/runtime`, the `stats` documents the
 board's reader takes for a 7-day period (the week, the month to its Sunday and the revenue window
@@ -2017,16 +1980,13 @@ before: about 40), the week's purchases (one read each, at least one), one aggre
 the refunded purchases of the week, one read per judge answer of the week (for the second check's
 spend), the week before's report and the week's own; the first report reads the week before's
 figures again (about as many). At 400 recipes a week, about 500 reads and one write: well under
-USD 0.001 a week. No Cloud Scheduler job (it rides on `weeklyPromptReview`), no new API, role,
-secret or vendor; the alert policy and its notifications are free.
+USD 0.001 a week. No Cloud Scheduler job (it rides on `weeklyPromptReview`) and no new API or role;
+its email goes through the owner's own Gmail (two Secret Manager secrets, "Report emails"), free.
 
-**Turning it off or muting it**: to stop the email but keep the report, disable the policy "Recipe:
-weekly app report" in Cloud Monitoring (Alerting > Policies; or set `"enabled": false` in
-`alerts/policies/weekly-report.json` and apply it, which also keeps `alerts.py` from turning it back
-on), or snooze it for a while. To stop the report itself: the toggle "Make and email the weekly
-report" on the console's card, or `npm run admin -- config set weeklyReportEnabled off --apply`; off,
-the Monday run reads, stores and logs nothing for it (`weekly_report_skipped`, `OFF`), and the prompt
-review runs as before.
+**Turning it off**: the toggle "Make and email the weekly report" on the console's card, or
+`npm run admin -- config set weeklyReportEnabled off --apply`; off, the Monday run reads, stores, logs
+and emails nothing for it (`weekly_report_skipped`, `OFF`), and the prompt review runs as before. There
+is no switch for the email alone ("Report emails").
 
 **Reading and running it**:
 
@@ -2034,16 +1994,132 @@ review runs as before.
 cd functions
 npm run admin -- report weekly                                        # the latest stored report (emulators)
 npm run admin -- report weekly --week 2026-W46 --project bestbefore-f9ee1   # one week's, live, read-only
-npm run admin -- report weekly --run --project bestbefore-f9ee1             # dry run: works it out, prints it and the email's fields; writes nothing
+npm run admin -- report weekly --run --project bestbefore-f9ee1             # dry run: works it out, prints it and its short lines; writes nothing
 npm run admin -- report weekly --run --apply --project bestbefore-f9ee1     # store it now (last complete week, or --week)
 ```
 
-The command logs to stderr, never to Cloud Logging, so **it sends no email**: only the scheduled
-run's line is alerted on. A week already stored is left alone. To re-make a report, delete its
-`weeklyReports` document first (it is a summary, not a record anything else depends on).
+The command logs to stderr, never to Cloud Logging. Storing a report sends no email: the Monday run
+emails it, or `--send --apply` ("Report emails"). A week already stored is left alone. To re-make a
+report, delete its `weeklyReports` document first (it is a summary, not a record anything else
+depends on; the new one is emailed as a new report).
 
 **Kept** with no TTL: a report is a few KB of totals with nothing about a person, and a year of
 them is what shows the trend.
+
+## Report emails
+
+The two weekly reports reach the owner as real emails, sent by the Monday job itself
+(`weeklyPromptReview`) through the owner's own Gmail: the **weekly app report** ("Weekly app report")
+and the **weekly prompt review** ("Weekly prompt review"). Alerts stay alerts (Cloud Monitoring,
+"Alerts"); only reports are emails. Code: `src/core/reportEmail.ts` (sending once),
+`src/core/reportEmailRender.ts` (the HTML and text), `src/core/emailState.ts` (the stored state),
+`src/adapters/gmailSmtp.ts` (SMTP), `src/admin/reportEmailCli.ts` (the commands).
+
+**How it is sent**: SMTP to `smtp.gmail.com` on port 465 with implicit TLS (TLS 1.2 or later, the
+certificate checked; never plain text), signed in with a Gmail **app password**, from the owner's
+address to the same address (`REPORT_EMAIL` in `src/constants.ts`: 10 s to connect, 10 s for the
+greeting, 30 s of silence at most, no connection pool). The library is nodemailer (10.6.0, licence
+MIT-0, no dependencies, about 1.8 MB unpacked), loaded only when an email is sent, so no other
+function's cold start pays for it. It never retries, and neither does the job: the sign-in is checked
+on a connection of its own first (a failure there is certainly "not sent"), then the message is sent
+once.
+
+**Secrets** (Secret Manager, bound only to `weeklyPromptReview`, the one function that sends):
+`REPORT_SMTP_PASSWORD`, the app password, and `REPORT_EMAIL`, the owner's address (the SMTP user,
+From and To). The address is a secret, not a param, because the repository is public: it is in no
+file, test, log line, stored document or console field. No caller ever holds it (the mailer does),
+and failures are fixed codes, never the SMTP server's reply. Creating them, the app password and
+the grant: docs/recipe-setup.md, "Report emails". Firebase pins a secret's version when it deploys,
+so after a new version (a new app password) redeploy `weeklyPromptReview`.
+
+**Not configured**: with either secret missing, empty or unusable, the reports are still made and
+stored, the job does not fail, and `report_email_failed` (`reason` `NOT_CONFIGURED`) is logged and
+alerted on ("Recipe: report email not sent"). A function that declares a secret cannot be deployed
+before the secret exists, so this is mostly an empty or destroyed version.
+
+**Exactly once** (per report and week): before anything goes out, the run claims the email in a
+transaction on the stored document, `email` on `weeklyReports/{week}` and `promptReviews/{week}`
+(`state` `sending` / `sent` / `failed`, `claimedAt`, `sentAt`, `failedAt`, `reason`, `maybeSent`,
+`attempts`, `trigger`, `via`; never an address or the message). A rerun, or a run racing it, finds the
+claim and sends nothing (`report_email_skipped`). After the send the outcome is written:
+
+- `sent`: never again.
+- `failed` with a reason: the next run, or the command below, may send it (`attempts` counts).
+- `failed` with `maybeSent` (the connection broke while the message was being handed over, or the
+  mailer threw something unexpected): it may have arrived, so it is never sent again by itself; look
+  in the inbox, then `--force`.
+- still `sending` (the instance died between the send and the record): the same; `--force` is
+  accepted only 10 minutes after the claim (`REPORT_EMAIL.staleSendingMs`), so it cannot race a
+  send in progress.
+
+**When**: the Monday job runs the report and the review side by side as before, and when both are
+done (whatever came of them) sends the weekly report's email, then the review's. A report turned
+off (`weeklyReportEnabled`, `promptReviewEnabled`) is not emailed, even when one is stored.
+
+**One email in an empty week**: a review with too few answers (`not_enough_data`) has no email of
+its own. Its one paragraph ("Prompt review: 12 judge answers last week, fewer than the 20 the review
+needs, so no model was asked and nothing was spent…") goes into the weekly report's email, and the
+review's document is claimed in the same transaction (`via: "weekly_report"`), so it is sent once,
+with the report; if that email fails, the note waits for it (`WITH_WEEKLY_REPORT`) and goes with
+the resend. Only when there is no weekly report to carry it (the report off, or failed) does the
+note go as a short email of its own ("… · not enough data"). A review that was skipped or failed
+gets one line in the weekly report's email (a failure is also alerted on) and no email of its own.
+
+**What they say**: the weekly report: subject "BestBefore weekly report · 2026-W46 (9–15 Nov)";
+four headline tiles (estimated net revenue, model spend, estimated margin, purchases, each with its
+change against the week before), the sections the stored report has (sales, model spend and margin,
+recipes, free recipes, problems, balances), every figure with its change and note, the caveats, the
+review's note when there is one, the last six weeks (from the stored reports, one query) and a link to
+the owner console. The prompt review: subject "BestBefore prompt review · 2026-W46"; answers
+analysed, not ok, quality average and the run's cost as tiles, the counts and the top issues against
+the week before, the summary, each prompt and judge problem with its issue, count, confidence, cause,
+example ids and its before → after wording in monospace blocks (and the warning when "before" is not
+in the current prompt word for word), and the reminder that nothing is changed automatically.
+
+**Built for mail clients**: tables for layout, inline styles, no external image, font, script or
+stylesheet, one link (the console); readable at phone width; a small `<style>` gives the dark
+colours to clients that honour `prefers-color-scheme` (Apple Mail, iOS); Gmail's apps apply their
+own dark inversion to the light colours, which are mid-tones that survive it. Every value is
+HTML-escaped where it is put in, the figures as well as the model's text.
+
+**Model text is untrusted**: the prompt review's summary and problems were written by a model that
+read recipes made from user input. They are cut again to their caps (summary 800, title 120, cause
+600, before 800, after 1,200 characters; at most 5 problems a list and 5 example ids), stripped of
+control, zero-width and direction-override characters, their links defused (a word joiner after
+`://` and in `www.`, so no client makes them clickable), and set only as escaped text, never as HTML.
+
+**Privacy**: the emails hold aggregate figures (totals of purchases, spend, recipes, refunds) and
+the model's advice about the prompts, with judge-answer ids; nothing about a person, no uid, no
+purchase or order id, no recipe text a person asked for. They go from the owner's account to the
+owner's account. Nothing in the privacy policy changes (docs/privacy-policy-changes.md is untouched).
+
+**Commands** (`cd functions`; a dry run unless `--apply`, like every admin command):
+
+```bash
+npm run admin -- report weekly --send --week 2026-W46 --project bestbefore-f9ee1                         # its state and subject; reads only
+npm run admin -- report weekly --send --to-self /tmp/weekly.html --week 2026-W46 --project bestbefore-f9ee1   # also writes the email (and .txt) to a file
+npm run admin -- judge review  --send --to-self /tmp/review.html --week 2026-W46 --project bestbefore-f9ee1   # the same for the prompt review
+REPORT_EMAIL=$(gcloud secrets versions access latest --secret=REPORT_EMAIL --project=bestbefore-f9ee1) \
+REPORT_SMTP_PASSWORD=$(gcloud secrets versions access latest --secret=REPORT_SMTP_PASSWORD --project=bestbefore-f9ee1) \
+  npm run admin -- report weekly --send --apply --week 2026-W46 --project bestbefore-f9ee1               # send it now, if not sent (--force: see above)
+npm run admin -- report email-test --to-self /tmp/test.html                                               # both emails from made-up figures, to files
+REPORT_EMAIL=… REPORT_SMTP_PASSWORD=… npm run admin -- report email-test --apply --project bestbefore-f9ee1   # send those two, subject "[test] …"
+```
+
+`--send --apply` claims and records like the job (`trigger` `cli`), so it never sends a sent report
+again. `report email-test` reads and writes no report: it renders `src/core/reportEmailSamples.ts`
+(invented figures and advice) and sends them, the way to check the secrets and the look after a
+deploy. Against the emulators nothing is sent: the message is recorded and its subject printed.
+
+**Alerts**: `report_email_failed` ("Recipe: report email not sent", `report-email-failed.json`,
+WARNING, at most one email an hour) with `reason`, `maybeSent` and `recorded`; the report's own
+failures as before (`weekly_report_failed`, `prompt_review_failed`).
+
+**There is no switch for the emails alone**: the reports' own toggles stop both report and email.
+To stop the emails but keep the reports, disable the secret's version in Secret Manager (then every
+Monday alerts `NOT_CONFIGURED`). **Not verified**: sending through Gmail from Cloud Functions
+(tests use a recording fake and a mocked nodemailer; nothing was sent from this repository's
+work), and Gmail's dark-mode rendering (checked in Chrome with `prefers-color-scheme` only).
 
 ## Reports
 
@@ -2232,11 +2308,13 @@ Server-only. Documents:
   `finishedAt`, `answers`, `truncated`, `aggregates` (the week's counts), `previous` (the week before's), `sample`
   (`count`, `ids`: judgeAnswers ids, `withText`, `groups`), `prompts` (hashes of the prompts reviewed, `judgeVersion`,
   `reviewVersion`), `inputBytes`, `reservedMicroUsd`, `model`, `modelVersion`, `usage`, `costMicroUsd`, `costKnown`,
-  `report` (`summary`, `promptProblems`, `judgeProblems`, `dropped`), `expiresAt` (TTL, 365 days). No uid, nothing
+  `report` (`summary`, `promptProblems`, `judgeProblems`, `dropped`), `email` (whether it was emailed, or noted in
+  the weekly report's email: "Report emails"), `expiresAt` (TTL, 365 days). No uid, nothing
   about a person; the advice is model text.
 - `weeklyReports/{YYYY-Www}` ("Weekly app report"): one per ISO week: `week`, `from`, `to`, `trigger`, `version`,
   `generatedAt`, `figures` (the week's totals), `previous` (`week`, `source` `stored` / `computed`, its `figures`),
-  `lines` (the email's fields). Kept (no TTL): totals only, no uid, no purchase id, nothing about a person.
+  `lines` (the report in short lines), `email` (whether it was emailed: "Report emails"; no address). Kept (no TTL):
+  totals only, no uid, no purchase id, nothing about a person.
 - `config/runtime`: see below.
 - `config/owner` (set by the owner in the console, never in the repo): `uids` (Firebase uids)
   and/or `emails` (addresses of Google accounts linked to the user, matched against its
@@ -2265,8 +2343,8 @@ its default, and a warning "config/runtime has invalid fields" names them. Insta
 |---|---|---|---|
 | `generationEnabled` | bool | `true` | Kill switch for new generations. The budget alert sets it to `false` (with `disabledBy` `budget alert …` and `disabledAt`); only you set it back: with `npm run admin -- config set generationEnabled on --apply --confirm generationEnabled`, which also deletes `disabledBy` / `disabledAt`, or by hand in the Firestore console (then delete those two as well). The owner console turns it back on only after a pause of its own or one by hand, never after the budget alert's ("The console's envelope"). |
 | `outputJudgeKeepText` | bool | `false` | Keep the judged recipe text with each output judge answer (`judgeAnswers.text`, "Prompt injection defences" item 5). Only after the privacy policy says so. |
-| `promptReviewEnabled` | bool | `true` | Run the weekly prompt review ("Weekly prompt review"). Off: the Monday run reads and spends nothing. Invalid reads as `false`. |
-| `weeklyReportEnabled` | bool | `true` | Make the weekly app report and send its email ("Weekly app report"). Off: nothing is read, stored or logged for it. Invalid reads as `false`. |
+| `promptReviewEnabled` | bool | `true` | Run the weekly prompt review and email it ("Weekly prompt review", "Report emails"). Off: the Monday run reads, spends and emails nothing for it. Invalid reads as `false`. |
+| `weeklyReportEnabled` | bool | `true` | Make the weekly app report and email it ("Weekly app report", "Report emails"). Off: nothing is read, stored, logged or emailed for it. Invalid reads as `false`. |
 | `allowSandbox` | bool | `false` | Grant credits for Play licence-tester and App Store sandbox/TestFlight purchases. Turn on for App Review and your own testing, off otherwise. Anyone with a TestFlight build can then get free credits, up to the two caps below. |
 | `sandboxDailyCap` | integer ≥ 0 | `20` | Sandbox purchases that may grant credits per UTC day, across all users. Over it: `RETRY`. |
 | `sandboxDailyCredits` | integer ≥ 0 | `200` | Credits sandbox purchases may grant per UTC day, across all users. Over it: `RETRY`; one purchase worth more than this: `REJECTED_PERMANENT`. |
@@ -3078,6 +3156,9 @@ npx firebase functions:secrets:set SIWA_PRIVATE_KEY < AuthKey_YYYYYYYYYY.p8     
 # Only to make recipe pictures with OpenAI ("Recipe pictures"): not bound to any function, read
 # at run time while openai is selected; grant the service account Secret Accessor on it alone.
 npx firebase functions:secrets:set OPENAI_API_KEY
+# The weekly report emails ("Report emails"; docs/recipe-setup.md "Report emails"): the Gmail app
+# password and the owner's address, both bound to weeklyPromptReview.
+#   REPORT_SMTP_PASSWORD, REPORT_EMAIL
 # Any other provider's key works the same way ("Adding a provider", "Secrets"); MISTRAL_API_KEY and
 # BFL_API_KEY already exist; BFL_API_KEY's grant is made (2026-11-18), MISTRAL_API_KEY's still
 # needed (docs/recipe-setup.md step 13a).
@@ -3094,7 +3175,7 @@ What a developer needs to know about the live project `bestbefore-f9ee1`:
   policy on `generations.expiresAt` go out with `--only functions,firestore`.
 - **Service account** `recipe-functions@bestbefore-f9ee1.iam.gserviceaccount.com`
   (`FUNCTIONS_SERVICE_ACCOUNT`), with only: Cloud Datastore User, Vertex AI User, Firebase
-  Authentication Admin, Secret Manager Secret Accessor (meant for the two secrets only), Logs
+  Authentication Admin, Secret Manager Secret Accessor (meant for the secrets bound to functions only: the two keys above and the report emails' two), Logs
   Writer, Cloud Run Invoker and Eventarc Event Receiver (the scheduled and Pub/Sub triggers invoke
   as this account), and **Firebase App Check Token Verifier** (`roles/firebaseappcheck.tokenVerifier`):
   `generateRecipe`, `verifyPurchase`, `mergeBalance`, `deleteAccount` and `registerAppleSignIn`
