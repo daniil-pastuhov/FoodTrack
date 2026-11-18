@@ -426,6 +426,14 @@ them with `allowSandbox` only.
   after `config/runtime.reports.keepDays`, 90 days, and on `reportable.expiresAt`, the year-long
   record of each delivered result), then check `gcloud firestore fields ttls list` shows all
   four ACTIVE.
+- [ ] **Output judge answers** (functions/README.md "Prompt injection defences" item 5; 2026-11-18):
+  the deploy that ships the lite judge also adds the TTL policy on `judgeAnswers.expiresAt` (90
+  days) through `firestore.indexes.json`: check `gcloud firestore fields ttls list` shows it
+  ACTIVE before turning `outputJudge` on. To collect answers without blocking anything, set
+  `outputJudge: "shadow"` (console or `npm run admin -- config set outputJudge shadow --apply
+  --confirm outputJudge`), and read them with `npm run admin -- judge summary --project
+  bestbefore-f9ee1`. Leave `outputJudgeKeepText` off unless the privacy policy first says that
+  generated recipes, without any link to the person, are kept 90 days to improve the prompts.
 - [x] (Done 2026-11-17: made in the console, then kept as code in `functions/alerts/policies/`,
   `recipe-reported.json` and `report-day-limit.json`, and applied with `alerts.py`.) **Alert on
   reports** (functions/README.md "Reports", "Alerts"): "Recipe: recipe reported" on

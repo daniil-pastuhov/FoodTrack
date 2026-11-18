@@ -186,6 +186,16 @@ const URL_PATTERNS: readonly RegExp[] = [
   /(?:^|[^\p{L}\p{N}])[\p{L}\p{N}][\p{L}\p{N}-]*\.(?:com|net|org|info|biz|io|co|app|dev|xyz|site|online|shop|store|top|link|click|me|tv|ly|gl|to|cc|ru|su|ua|uk|no|se|dk|fi|de|at|ch|fr|es|it|pl|nl|be|eu|us|ca|au|in|cn|jp|kr|br|ws|gg|im|ai|sh|gd|onion|\u0440\u0444)(?![\p{L}\p{N}])/iu,
 ];
 const PHONE = /\+?\d[\d \-()./]{5,}\d/g;
+
+/**
+ * Model text the owner reads (the judge's note, core/judgeLog.ts) with every word that looks like a
+ * link, a scheme, a domain or an email address replaced by "[link]" and phone-like runs of digits
+ * by "[number]", so a hostile answer can't plant a working link or contact in it.
+ */
+export function redactLinks(s: string): string {
+  const words = s.split(/(\s+)/u).map((w) => (/\S@\S/u.test(w) || URL_PATTERNS.some((p) => p.test(` ${w} `)) ? "[link]" : w));
+  return words.join("").replace(PHONE, "[number]");
+}
 const REPEATED_CHAR = /(.)\1{9,}/u;
 
 const NON_FOOD_TERMS = compileTerms(NON_FOOD);

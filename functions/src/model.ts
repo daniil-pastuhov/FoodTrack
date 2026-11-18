@@ -12,6 +12,7 @@ import {
   DEFAULT_MENU_SETS,
   DEFAULT_PRICES,
   DEFAULT_TEXT_SELECTION,
+  JUDGE_PRICES,
   MENU_COURSES,
   MENU_DAYS,
   PURCHASE_TOKEN_NAMESPACE,
@@ -375,6 +376,12 @@ export interface RuntimeConfig {
    */
   outputJudge: OutputJudgeMode;
   /**
+   * Keep the judged text (adapters/gemini.ts judgeText: the generated fields only) with each judge
+   * answer in `judgeAnswers` (core/judgeLog.ts). Off by default: the privacy policy says a result
+   * is kept 7 days, and these are kept 90; turn it on only with a policy line saying so.
+   */
+  outputJudgeKeepText: boolean;
+  /**
    * The table in force. Its `recipeImage` is left out when pictures cannot be made:
    * `recipeImage: 0`, the provider "off", or no price for the selected provider and model.
    */
@@ -474,6 +481,7 @@ export const DEFAULT_RUNTIME_CONFIG: Readonly<RuntimeConfig> = {
   budgetKillFraction: 1,
   rejectedPromptsPerDay: 5,
   outputJudge: "off",
+  outputJudgeKeepText: false,
   costs: DEFAULT_COSTS,
   prices: { ...DEFAULT_PRICES, imageUsdPerImage: defaultImagePrices() },
   image: { ...DEFAULT_IMAGE_SELECTION },
@@ -715,6 +723,20 @@ export function textPricesOf(config: Pick<RuntimeConfig, "prices">, target: Text
   return textDefaultPrices(target.provider, target.model) ?? null;
 }
 
+/**
+ * USD per 1M tokens of the output judge's model (always Gemini on Vertex AI, whichever provider
+ * writes the recipe): `prices.textUsdPerMTok["google/<model>"]` when config/runtime sets it, else
+ * its JUDGE_PRICES entry, else the generator's `prices` (a model with no known price, e.g. the
+ * generator's own when GEMINI_JUDGE_MODEL is empty, is booked as before the judge had prices).
+ */
+export function judgePricesOf(config: Pick<RuntimeConfig, "prices">, model: string): TokenPrices {
+  const over = config.prices.textUsdPerMTok;
+  const key = `google/${model}`;
+  if (over && Object.prototype.hasOwnProperty.call(over, key)) return over[key];
+  if (Object.prototype.hasOwnProperty.call(JUDGE_PRICES, model)) return JUDGE_PRICES[model];
+  return { inputUsdPerMTok: config.prices.inputUsdPerMTok, outputUsdPerMTok: config.prices.outputUsdPerMTok };
+}
+
 /** The text's named fallback target, or null. */
 export function textFallbackOf(config: Partial<Pick<RuntimeConfig, "text">>): TextTarget | null {
   const t = textSelectionOf(config);
@@ -845,7 +867,7 @@ export function parseRuntimeConfig(
     },
   };
   const bad: string[] = [];
-  for (const key of ["generationEnabled", "allowSandbox", "consumptionSampleContentProvided"] as const) {
+  for (const key of ["generationEnabled", "allowSandbox", "consumptionSampleContentProvided", "outputJudgeKeepText"] as const) {
     if (data[key] === undefined) continue;
     if (typeof data[key] === "boolean") {
       out[key] = data[key] as boolean;

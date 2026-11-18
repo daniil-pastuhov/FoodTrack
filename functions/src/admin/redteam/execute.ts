@@ -9,11 +9,13 @@ import { GeminiOutputJudge, GeminiRecipeGenerator, type GeminiOptions, type Stre
 import type { Prompt } from "../../adapters/prompt";
 import type { GenerateRequest, Menu, Recipe } from "../../contract";
 import { judgeWorstCaseMicroUsd, planFor, runGenerator } from "../../core/generation";
-import { microUsd, type Prices } from "../../model";
+import { judgePricesOf, microUsd, type Prices } from "../../model";
 import {
   GenerationError,
   type GenerationLimits,
   type GenerationResult,
+  type JudgeEntry,
+  type JudgeLog,
   type JudgeResult,
   type LlmUsage,
   type Logger,
@@ -54,6 +56,9 @@ class RecordingJudge implements OutputJudge {
   usage?: LlmUsage;
   called = false;
   constructor(private readonly inner: OutputJudge) {}
+  get model(): string {
+    return this.inner.model;
+  }
   async judge(output: { recipe?: Recipe; menu?: Menu }, signal: AbortSignal): Promise<JudgeResult> {
     this.called = true;
     try {
@@ -78,6 +83,8 @@ export interface AttemptResult {
   verdict: string;
   failureClass?: string;
   judgeVerdict?: string;
+  /** The judge's description (where, issues, quality, note), as kept in judgeAnswers. */
+  judgeAnswer?: Pick<JudgeEntry, "where" | "issues" | "quality" | "note" | "latencyMs">;
   usage?: LlmUsage;
   judgeUsage?: LlmUsage;
   /** Booked as the server would: measured, or the bound when usage is unknown. */
@@ -111,7 +118,7 @@ export async function runAttempt(p: PlannedCase, attempt: number, deps: ExecDeps
   const generator = new RecordingGenerator(new GeminiRecipeGenerator(deps.options, models));
   const judge = new RecordingJudge(new GeminiOutputJudge({ ...deps.options, model: deps.judgeModel }, models));
   const config = runtimeConfigFor(p.judge, deps.prices);
-  const plan = planFor(req, config);
+  const plan = planFor(req, config, deps.judgeModel);
   const started = deps.now();
   const logger: Logger = {
     ...silent,
@@ -119,7 +126,9 @@ export async function runAttempt(p: PlannedCase, attempt: number, deps: ExecDeps
       if (message === "prompt_judge_verdict" && typeof data?.verdict === "string") judge.verdict = data.verdict;
     },
   };
-  const outcome = await runGenerator({ generator, judge, logger }, "redteam", req, plan.limits, config);
+  const kept: JudgeEntry[] = [];
+  const judgeLog: JudgeLog = { record: async (e) => void kept.push(e) };
+  const outcome = await runGenerator({ generator, judge, judgeLog, logger }, "redteam", req, plan.limits, config);
   const durationMs = deps.now() - started;
 
   const genBound = microUsd(deps.prices, p.estimate!.inputBytes, plan.limits.hardTokenCeiling);
@@ -129,8 +138,8 @@ export async function runAttempt(p: PlannedCase, attempt: number, deps: ExecDeps
   const judgeCost = !judge.called
     ? 0
     : judge.usage
-      ? microUsd(deps.prices, judge.usage.inputTokens, judge.usage.outputTokens + judge.usage.thinkingTokens)
-      : judgeWorstCaseMicroUsd(config, plan.limits.maxOutputTokens);
+      ? microUsd(judgePricesOf(config, deps.judgeModel), judge.usage.inputTokens, judge.usage.outputTokens + judge.usage.thinkingTokens)
+      : judgeWorstCaseMicroUsd(config, plan.limits.maxOutputTokens, deps.judgeModel);
 
   const verdict = verdictOf(outcome, judge.verdict);
   const violations: Violation[] = [];
@@ -149,6 +158,7 @@ export async function runAttempt(p: PlannedCase, attempt: number, deps: ExecDeps
     verdict,
     ...(outcome.ok ? {} : { failureClass: outcome.failureClass }),
     ...(judge.verdict ? { judgeVerdict: judge.verdict } : {}),
+    ...(kept[0] ? { judgeAnswer: { where: kept[0].where, issues: kept[0].issues, quality: kept[0].quality, note: kept[0].note, latencyMs: kept[0].latencyMs } } : {}),
     ...(generator.usage ? { usage: generator.usage } : {}),
     ...(judge.usage ? { judgeUsage: judge.usage } : {}),
     costMicroUsd: genCost + judgeCost,

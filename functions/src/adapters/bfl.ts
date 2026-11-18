@@ -314,8 +314,8 @@ export class BflImageGenerator implements RecipeImageGenerator {
  * attempt would abandon about half of them, already charged, to the fallback. While BFL is the
  * selected model each attempt gets up to 45 s, and the dish's picture 65 s: 45 s for FLUX, then the
  * fallback's 20 s (IMAGE.minAttemptMs; Flash-Lite Image takes about 3 s). The reservation for
- * "dish" is 60 + 68 = 128 s, covering text 40 s + judge 12 s + 65 s = 117 s with 11 s to spare
- * and under the apps' 130 s wait; "steps" keeps 100 s / 105 s (40 + 12 + 100 = 152 s inside 165 s,
+ * "dish" is 60 + 68 = 128 s, covering text 40 s + judge 10 s + 65 s = 115 s with 13 s to spare
+ * and under the apps' 130 s wait; "steps" keeps 100 s / 105 s (40 + 10 + 100 = 150 s inside 165 s,
  * the 180 s function timeout and the apps' 190 s).
  */
 export const bflImage: ImageProviderDescriptor = {

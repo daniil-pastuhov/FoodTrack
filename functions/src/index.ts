@@ -24,6 +24,7 @@ import {
   DEFAULT_IMAGE_SELECTION,
   GENERATE_TIMEOUT_SECONDS,
   IOS_BUNDLE_ID,
+  JUDGE,
   KMS_APPLE_TOKEN_KEY,
   KMS_KEY_RING,
   KMS_LOCATION,
@@ -32,6 +33,7 @@ import {
 import { RuntimeConfigCache, loadRuntimeConfig, validImageSelection, type ImageSelection, type RuntimeConfig } from "./model";
 import type { Caller, Deps, TextTarget } from "./ports";
 import { GeminiOutputJudge } from "./adapters/gemini";
+import { FirestoreJudgeLog } from "./core/judgeLog";
 import { SecretReader } from "./adapters/secretManager";
 import { allProviders, imageProviderIds, imageProviders, providerSecrets, textProviderById, textProviders } from "./providers/registry";
 import { ImageRouter, TextRouter } from "./providers/router";
@@ -122,8 +124,8 @@ const textProvider = defineString("TEXT_PROVIDER", {
   description: `Default provider of the recipe text: one of ${textProviders().map((d) => d.id).join(", ")} (config/runtime.text.provider overrides it).`,
 });
 const judgeModel = defineString("GEMINI_JUDGE_MODEL", {
-  default: "",
-  description: "Vertex AI model id of the output judge (config/runtime outputJudge); empty means GEMINI_MODEL.",
+  default: JUDGE.model,
+  description: "Vertex AI model id of the output judge (config/runtime outputJudge), a lite model by default; empty means GEMINI_MODEL. Booked at its JUDGE_PRICES entry, else at prices.",
 });
 // Recipe pictures (README "Recipe pictures"). The provider and model are only defaults:
 // config/runtime.image overrides them at run time, without a deploy.
@@ -269,6 +271,7 @@ function getDeps(): Deps {
       appStore: new EmulatorAppStore(),
       generator: new EmulatorGenerator(),
       judge: new EmulatorJudge(),
+      judgeLog: new FirestoreJudgeLog(getFirestore(), () => Date.now()),
       imageGenerator: new EmulatorImageGenerator(),
       appleRevoker: new EmulatorAppleTokens(),
       sealer: new EnvelopeSealer(new LocalKeyWrapper()),
@@ -296,9 +299,11 @@ function getDeps(): Deps {
       project: process.env.GCLOUD_PROJECT ?? process.env.GOOGLE_CLOUD_PROJECT ?? "",
       location: providerParam("VERTEX_LOCATION"),
       model: judgeModel.value() || providerParam("GEMINI_MODEL"),
-      thinkingLevel: providerParam("GEMINI_THINKING_LEVEL"),
+      // No thinkingLevel: the judge takes the least its model allows (judgeThinkingConfigFor).
       jailbreakFilter: providerParam("GEMINI_JAILBREAK_FILTER") === "true",
     }),
+    // Every judge answer, kept for the owner (core/judgeLog.ts).
+    judgeLog: new FirestoreJudgeLog(getFirestore(), () => Date.now()),
     imageGenerator: imageRouter(),
     // Built per call: the Sign in with Apple key is a secret bound only to the functions that use it.
     appleRevoker: {

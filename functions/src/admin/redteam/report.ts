@@ -71,6 +71,10 @@ function detail(r: AttemptResult, c: CaseSummary | undefined): string[] {
     `- Checklist: ${c?.checklist ?? ""}`,
     `- Server verdict: \`${r.verdict}\`${r.failureClass ? ` (${r.failureClass} failure)` : ""}${r.judgeVerdict ? `; judge: \`${r.judgeVerdict}\`` : ""}`,
     `- Classified ${r.status}: ${r.reason}`,
+    // The judge's note is model text about untrusted content: quoted, never a link or markup here.
+    ...(r.judgeAnswer
+      ? [`- Judge: where \`${r.judgeAnswer.where ?? "-"}\`, issues ${r.judgeAnswer.issues.length ? r.judgeAnswer.issues.map((i) => `\`${i}\``).join(", ") : "none"}, quality ${r.judgeAnswer.quality ?? "-"}, ${r.judgeAnswer.latencyMs} ms${r.judgeAnswer.note ? `; note: ${quote(JSON.stringify(r.judgeAnswer.note).replace(/[`<>[\]]/g, " "))}` : ""}`]
+      : []),
   ];
   for (const v of r.violations) {
     out.push(`- \`${v.type}\` (${v.severity}${v.heuristic ? ", heuristic" : ""})${v.note ? `: ${v.note}` : ""}`);

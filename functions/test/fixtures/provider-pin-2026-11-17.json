@@ -12,7 +12,7 @@
     "hardTokenCeiling": 8192
    },
    "reservedMicroUsd": 67910,
-   "reservedWithJudge": 91564,
+   "reservedWithJudge": 70748,
    "image": null
   },
   "config-recipe-2026-11-14/dish": {
@@ -27,7 +27,7 @@
     "hardTokenCeiling": 8192
    },
    "reservedMicroUsd": 128787,
-   "reservedWithJudge": 152441,
+   "reservedWithJudge": 131625,
    "image": {
     "share": 1,
     "stepsShare": 0,
@@ -47,7 +47,7 @@
     "hardTokenCeiling": 8192
    },
    "reservedMicroUsd": 250080,
-   "reservedWithJudge": 273734,
+   "reservedWithJudge": 252918,
    "image": {
     "share": 1,
     "stepsShare": 1,
@@ -67,7 +67,7 @@
     "hardTokenCeiling": 28000
    },
    "reservedMicroUsd": 217421,
-   "reservedWithJudge": 257417,
+   "reservedWithJudge": 223527,
    "image": null
   },
   "config-menu3-2026-11-14/plain": {
@@ -82,7 +82,7 @@
     "hardTokenCeiling": 40000
    },
    "reservedMicroUsd": 307622,
-   "reservedWithJudge": 357517,
+   "reservedWithJudge": 315708,
    "image": null
   },
   "taste-recipe-2026-11-15/plain": {
@@ -97,7 +97,7 @@
     "hardTokenCeiling": 8192
    },
    "reservedMicroUsd": 69818,
-   "reservedWithJudge": 93472,
+   "reservedWithJudge": 72656,
    "image": null
   },
   "taste-recipe-2026-11-15/dish": {
@@ -112,7 +112,7 @@
     "hardTokenCeiling": 8192
    },
    "reservedMicroUsd": 130695,
-   "reservedWithJudge": 154349,
+   "reservedWithJudge": 133533,
    "image": {
     "share": 1,
     "stepsShare": 0,
@@ -132,7 +132,7 @@
     "hardTokenCeiling": 8192
    },
    "reservedMicroUsd": 251988,
-   "reservedWithJudge": 275642,
+   "reservedWithJudge": 254826,
    "image": {
     "share": 1,
     "stepsShare": 1,
@@ -152,27 +152,27 @@
     "hardTokenCeiling": 28000
    },
    "reservedMicroUsd": 217473,
-   "reservedWithJudge": 257469,
+   "reservedWithJudge": 223579,
    "image": null
   },
   "judgeSent": [
-   "73b93c2e4303a3e042e29eeab997383c979b8dc6a3a696db88fc5e14a5539f17",
-   "064893e68cc540c3905987a56ee7ea9da0c5db1ae46863786eb3f9aefca8684c"
+   "1ad84cf1e02549404f0b3ea7127a9b493e71110b0b71c5857686b38917603ecd",
+   "2bcfc40c231eae8d720db21bcdcf73ee0d5a59bfa55b2793e5de8f4e51bfd668"
   ],
   "judgeWorstCase": {
-   "recipe": 23654,
-   "menu1x1": 21846,
-   "menu1x2": 25145,
-   "menu1x3": 28446,
-   "menu2x1": 25971,
-   "menu2x2": 32570,
-   "menu2x3": 38346,
-   "menu3x1": 30920,
-   "menu3x2": 39996,
-   "menu3x3": 49895,
-   "menu4x1": 35871,
-   "menu4x2": 48245,
-   "menu4x3": 56496
+   "recipe": 2838,
+   "menu1x1": 2476,
+   "menu1x2": 3136,
+   "menu1x3": 3796,
+   "menu2x1": 3301,
+   "menu2x2": 4621,
+   "menu2x3": 5776,
+   "menu3x1": 4291,
+   "menu3x2": 6106,
+   "menu3x3": 8086,
+   "menu4x1": 5281,
+   "menu4x2": 7756,
+   "menu4x3": 9406
   }
  },
  "images": {

@@ -17,7 +17,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
-import { DEFAULT_PRICES } from "../../constants";
+import { DEFAULT_PRICES, JUDGE } from "../../constants";
 import { loadCases, selectCases, type LoadedCase } from "./cases";
 import { runAll } from "./execute";
 import { bytesPerToken, defaultMaxMicroUsd, planCases, renderPlan, requestFile, totalsOf, usd, type PlanOptions } from "./plan";
@@ -85,7 +85,8 @@ function main(): void {
   const model = values.model ?? env.GEMINI_MODEL ?? "gemini-3.8-flash";
   const thinkingLevel = values.thinking ?? env.GEMINI_THINKING_LEVEL ?? "LOW";
   const location = values.location ?? env.VERTEX_LOCATION ?? "global";
-  const judgeModel = values["judge-model"] ?? (env.GEMINI_JUDGE_MODEL || model);
+  // As the deployed function: the param's value, its default (JUDGE.model) when the file has none, GEMINI_MODEL when empty.
+  const judgeModel = values["judge-model"] ?? (env.GEMINI_JUDGE_MODEL === undefined ? JUDGE.model : env.GEMINI_JUDGE_MODEL || model);
   const jailbreakFilter = env.GEMINI_JAILBREAK_FILTER === "true";
   const repeat = Number(values.repeat);
   if (!Number.isInteger(repeat) || repeat < 1 || repeat > 10) fail("--repeat must be 1 to 10");
@@ -105,7 +106,7 @@ function main(): void {
   const prices = { ...DEFAULT_PRICES };
   const liveMenu = requestFile(join(ROOT, "test/fixtures/live-menu-2026-11-14.json"));
   const bpt = bytesPerToken(liveMenu);
-  const base: PlanOptions = { prices, bytesPerToken: bpt, model, thinkingLevel, repeat, repeatSections, judge };
+  const base: PlanOptions = { prices, bytesPerToken: bpt, model, thinkingLevel, judgeModel, repeat, repeatSections, judge };
   const planned = planCases(selected, base);
   const totals = totalsOf(planned);
   const recommended = repeat === 1 ? totalsOf(planCases(selected, { ...base, repeat: 3, repeatSections: DEFAULT_REPEAT_SECTIONS })) : undefined;

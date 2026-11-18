@@ -87,7 +87,7 @@ export class RestStreamingModels implements StreamingModels {
     const f = this.options.fetch ?? fetch;
     const signal = params.config?.abortSignal;
     const sleep = this.options.sleep ?? ((ms: number) => abortableSleep(ms, signal));
-    // 1 + 2 + 4 s: under the judge's shortest abort time (12 s), so retries end before the deadline.
+    // 1 + 2 + 4 s: under the judge's shortest abort time (JUDGE.abortMs.recipe, 10 s), so retries end before the deadline.
     const retries = this.options.retries ?? 3;
     let wait = this.options.backoffMs ?? 1000;
     const body = JSON.stringify(restBodyOf(params));

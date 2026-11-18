@@ -58,6 +58,17 @@ don't offer them). Checked against `functions/README.md` "Recipe pictures" and "
   expire, up to 90 days, but no longer linked to it. Recipes written on your device
   can't be reported and never leave it.
 
+- **Output judge answers, only if `outputJudgeKeepText` is ever turned on** (functions/README.md
+  "Prompt injection defences" item 5). With the judge on (`shadow` or `enforce`), our server
+  asks Google's model on Vertex AI, a second time, to check the recipe it wrote, and keeps that
+  check's answer for 90 days: codes, a score and a short note, with no account, device or request
+  identifier and nothing you typed, so it needs no policy line. Keeping the checked recipe text
+  with it does: wording to add before turning `outputJudgeKeepText` on: "To improve how recipes
+  are written, we may keep a copy of a recipe or menu our server wrote, without anything that
+  links it to you or your account, for 90 days, then delete it." The checked text is the
+  generated recipe only (it may name foods from your items), never the items, allergens or
+  settings you sent.
+
 ## Store forms that must say the same
 
 The answers, ready to paste, are in [store-listing/app-store/README.md](../store-listing/app-store/README.md),
