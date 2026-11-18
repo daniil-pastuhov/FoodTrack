@@ -1,0 +1,4 @@
+• Les recettes des packs peuvent désormais inclure des images créées par IA (le plat, ou aussi les étapes délicates). Votre plat peut différer, et les images coûtent des recettes en plus, comme l'indique le formulaire.
+• Les recettes enregistrées gardent leurs images ; celle du plat est dans la liste.
+• « Signaler cette recette » : dites-nous si une recette ou un menu d'un pack est choquant, dangereux ou faux.
+• La suppression du compte dit que les signalements sont gardés un temps limité.

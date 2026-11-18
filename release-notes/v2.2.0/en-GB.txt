@@ -1,0 +1,4 @@
+• Recipes from packs can now come with pictures made by AI: the finished dish, or the tricky steps too. Your dish may look different, and pictures take extra recipes from your pack, as the form shows.
+• Saved recipes keep their pictures; the dish picture shows in the list.
+• "Report this recipe": tell us if a recipe or menu from a pack is offensive, unsafe or wrong.
+• Deleting your account now says that reports you sent are kept for a limited time.
