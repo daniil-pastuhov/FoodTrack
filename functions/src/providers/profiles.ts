@@ -112,7 +112,7 @@ export function withProviderRequirements(p: Omit<ProviderProfile, "requires"> & 
 
 const FLASH_LITE = "gemini-3.1-flash-lite-image";
 const NANO_BANANA = "gemini-nano-banana-2.1";
-const OPENAI_MINI = "gpt-image-1-mini";
+const OPENAI_FLARE = "gpt-image-2.6-flare";
 const FLUX_KLEIN = "flux-3-image-klein";
 
 export const PROVIDER_PROFILES: readonly ProviderProfile[] = ([
@@ -149,9 +149,9 @@ export const PROVIDER_PROFILES: readonly ProviderProfile[] = ([
   },
   {
     id: "openai",
-    label: "OpenAI gpt-image-1-mini (no fallback)",
-    summary: "OpenAI's Images API; needs its API key in Secret Manager and OpenAI named as a processor in the privacy policy.",
-    image: { provider: "openai", model: OPENAI_MINI, fallbackModel: "", usdPerImage: price("openai", OPENAI_MINI) },
+    label: "OpenAI gpt-image-2.6-flare (no fallback)",
+    summary: "OpenAI's Images API (not tried live); needs its API key in Secret Manager and OpenAI named as a processor in the privacy policy.",
+    image: { provider: "openai", model: OPENAI_FLARE, fallbackModel: "", usdPerImage: price("openai", OPENAI_FLARE) },
     // From the provider (adapters/image.ts openaiImage): the privacy approval, then the key.
     requires: [],
   },

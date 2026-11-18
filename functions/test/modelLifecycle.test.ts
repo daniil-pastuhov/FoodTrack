@@ -125,7 +125,7 @@ describe("which models are in use", () => {
       ["vertex/gemini-nano-banana-2.1", ["image_fallback", "profile:flash-lite", "profile:nano-banana"]],
     ]);
     expect(off.filter((u) => !u.inUse).map((u) => [`${u.provider}/${u.model}`, u.roles])).toEqual([
-      ["openai/gpt-image-1-mini", ["profile:openai"]],
+      ["openai/gpt-image-2.6-flare", ["profile:openai"]],
       ["bfl/flux-3-image-klein", ["profile:flux-eu"]],
     ]);
     // The judge's own model is in use only while the judge runs.
@@ -341,8 +341,7 @@ describe("npm run admin -- models (read-only)", () => {
     expect(text).toContain("google/gemini-3.8-flash  [text, judge, text_default]");
     expect(text).toContain("retires 2027-09-02 or later (288 days left); checked 2026-11-18 (0 days ago)");
     expect(text).toContain("Only in listed profiles:");
-    expect(text).toContain("openai/gpt-image-1-mini  [profile:openai]");
-    expect(text).toContain("retires 2026-12-01 (13 days left)");
+    expect(text).toContain("openai/gpt-image-2.6-flare  [profile:openai]");
     expect(text).toContain("no retirement announced");
     expect(text).toContain("Add --probe");
     expect(reports.every((r) => r.probe === "skipped")).toBe(true);

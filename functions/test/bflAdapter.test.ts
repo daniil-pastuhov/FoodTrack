@@ -483,10 +483,10 @@ describe("the time each picture attempt gets", () => {
   });
 
   test("OpenAI without a fallback: one attempt, aborted at 35 s, booked at its price", async () => {
-    const config = parseRuntimeConfig({ image: { provider: "openai", model: "gpt-image-1-mini", fallbackModel: "" } });
+    const config = parseRuntimeConfig({ image: { provider: "openai", model: "gpt-image-2.6-flare", fallbackModel: "" } });
     const { out, aborts } = await timed(config, "openai", IMAGE.budgetMs.dish, IMAGE.budgetMs.dish);
     expect(aborts).toEqual([35_000]);
-    expect(out).toMatchObject({ ok: false, failure: "TIMEOUT", microUsd: 20_000 });
+    expect(out).toMatchObject({ ok: false, failure: "TIMEOUT", microUsd: 35_000 });
   });
 
   test("BFL selected: the first attempt is aborted only at 45 s, booked (BFL finishes and charges it), then Flash-Lite Image gets the remaining time", async () => {

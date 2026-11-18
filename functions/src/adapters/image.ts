@@ -162,8 +162,10 @@ interface OpenAIImagesResponse {
 
 /**
  * The models that take any WIDTHxHEIGHT (both divisible by 16, ratio 1:3 to 3:1), as the API
- * reference lists them (read 2026-11-17). Every other GPT Image model takes only 1024x1024,
- * 1536x1024 and 1024x1536 (or "auto").
+ * reference lists them (read 2026-11-17), and GPT-Image-2.6 Sunburst and Flare, which the image
+ * generation guide says take custom dimensions too (multiples of 16, 655,360 to 8,294,400 pixels;
+ * read 2026-11-18). Every other GPT Image model takes only 1024x1024, 1536x1024 and 1024x1536 (or
+ * "auto").
  */
 const OPENAI_FREE_SIZE_MODELS: ReadonlySet<string> = new Set([
   "gpt-image-2",
@@ -172,6 +174,8 @@ const OPENAI_FREE_SIZE_MODELS: ReadonlySet<string> = new Set([
   "gpt-image-2.5-sunburst-2026-09-08",
   "gpt-image-2.5-flare",
   "gpt-image-2.5-flare-2026-09-08",
+  "gpt-image-2.6-sunburst",
+  "gpt-image-2.6-flare",
 ]);
 
 /**
@@ -185,8 +189,10 @@ export function openAISize(model: string, aspectRatio: ImagePrompt["aspectRatio"
 
 /**
  * The request body of POST /v1/images/generations (OpenAI API reference, "Create image", read
- * 2026-11-17): one JPEG in the prompt's shape (openAISize), compression 85, moderation "auto" (the
- * stricter of the two). No `safety_identifier` and no `user`: OpenAI gets no identifier of the
+ * 2026-11-17, and again 2026-11-18 for GPT-Image-2.6): one JPEG in the prompt's shape (openAISize),
+ * compression 85, moderation "auto" (the stricter of the two). GPT-Image-2.6's `complexity` is
+ * left out (the model's default, `high`; "no separate fee", but it can add latency): to be
+ * compared once the profile is tried live. No `safety_identifier` and no `user`: OpenAI gets no identifier of the
  * person.
  */
 export function openAIImageBody(prompt: ImagePrompt, model: string, quality: "low" | "medium" | "high"): Record<string, unknown> {
@@ -307,11 +313,17 @@ export const vertexImage: ImageProviderDescriptor = {
 };
 
 /**
- * OpenAI's GPT Image models (provider id "openai"), Images API. gpt-image-1-mini: USD 8 per 1M
- * image output tokens; a "medium" 1536x1024 picture is a little over a thousand tokens (about USD
- * 0.01-0.015); 0.02 leaves room. Token rates (OpenAI's pricing page, read 2026-11-17): text input 2,
- * image output 8; output text priced as image output, the higher rate. Not yet switchable: OpenAI
- * is not in the privacy policy's processor list.
+ * OpenAI's GPT Image models (provider id "openai"), Images API. gpt-image-2.6-flare, one of the two
+ * replacements OpenAI names for gpt-image-1-mini (shut down 2026-12-01; deprecations page, read
+ * 2026-11-18), the one for "fast iteration"; Sunburst, the other, is for detailed visual work at
+ * the same token rates and the same token counts (the guide's calculator treats the two alike).
+ * Price (OpenAI's pricing page and the image generation guide's calculator, read 2026-11-18): USD
+ * 30 per 1M image output tokens; a "medium" 1024x768 picture is 993 output tokens (USD 0.0298;
+ * low 563, high 1,204), plus the prompt's text input at USD 5 per 1M (the fixed head and tail and
+ * a brief of at most 200 characters: about 250 tokens, USD 0.0013), so about USD 0.031; 0.035
+ * leaves room. Token rates: text input 5, image output 30;
+ * OpenAI lists no text output rate for the model, so output text is priced as image output. Not
+ * tried live, and not yet switchable: OpenAI is not in the privacy policy's processor list.
  */
 export const openaiImage: ImageProviderDescriptor = {
   kind: "image",
@@ -326,8 +338,8 @@ export const openaiImage: ImageProviderDescriptor = {
     name: "OPENAI_API_KEY",
     missing: "The OpenAI API key is not in Secret Manager, or the service account can't read it",
   },
-  usdPerImage: { "gpt-image-1-mini": 0.02 },
-  tokenPrices: { "gpt-image-1-mini": { input: 2, outputText: 8, outputImage: 8 } },
+  usdPerImage: { "gpt-image-2.6-flare": 0.035 },
+  tokenPrices: { "gpt-image-2.6-flare": { input: 5, outputText: 30, outputImage: 30 } },
   create: (ctx) => new OpenAIImageGenerator({ apiKey: () => ctx.secret(), ...(ctx.fetch ? { fetch: ctx.fetch } : {}) }),
   modelInfo: async (ctx, model, signal) => openaiModelInfo({ model, apiKey: await ctx.secret(), signal, ...(ctx.fetch ? { fetch: ctx.fetch } : {}) }),
 };

@@ -622,9 +622,11 @@ probe reads the key only once that grant exists, and its marks are in Firestore 
   `model-unavailable.json`, `model-lifecycle-stale.json`):
   `python3 functions/alerts/alerts.py --project bestbefore-f9ee1` (dry run), then
   `python3 functions/alerts/alerts.py --project bestbefore-f9ee1 --apply`.
-- [ ] Expect one email soon after: `gpt-image-1-mini` (profile `openai`, listed only) is shut down by
-  OpenAI on 2026-12-01. Decide whether to drop the `openai` profile or move it to a current OpenAI
-  image model (runbook below); nothing in use depends on it.
+- [x] **(done 2026-11-18, agent, owner's request "openai should use newer model")** `gpt-image-1-mini`
+  (profile `openai`, listed only) is shut down by OpenAI on 2026-12-01: the profile now names
+  `gpt-image-2.6-flare`, one of the two replacements OpenAI names, with no retirement announced
+  (functions/README.md "Recipe pictures", "OpenAI's model"). Not tried live: OpenAI stays
+  unapproved and its key ungranted, so the profile stays listed only.
 - [ ] Monthly (and when "model lifecycle table stale" arrives): the review in functions/README.md
   "Model lifecycle": re-read each entry's source page, update `retiresOn` / `checkedOn` in
   `functions/src/providers/lifecycle.ts`, deploy.
