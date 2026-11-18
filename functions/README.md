@@ -2574,7 +2574,7 @@ emulator's Google user.
 
 Beside the provider profiles the console shows every other runtime setting the owner may change,
 instead of hand-editing `config/runtime`, as cards: one per section, each setting compactly with
-its label, control, a "sensitive" and a "changed from default" mark (with the default), and,
+its label, control, a "sensitive" (lock) and a "changed" from the default mark (with the default), and,
 folded under "About", its help, default, "set here" / "default in force", when it was last changed
 (and how), its range on the page and the command for anything larger; read-only fields (what can't
 be changed there and why) sit folded in the card they belong to (`ReadOnlyDef.section`; the

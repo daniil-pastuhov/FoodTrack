@@ -5,71 +5,109 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
 <meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="light dark">
 <title>Owner console</title>
 <link rel="stylesheet" href="/console.css">
 <script type="module" src="/console.js"></script>
 </head>
 <body>
 <header class="top">
-  <div class="brand">
-    <h1>Owner console</h1>
-    <p class="sub">Recipe backend. Only the owner's Google account gets past the sign-in; this page holds no data of its own.</p>
+  <div class="top-inner">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <div>
+        <h1>Owner console</h1>
+        <p class="sub">Recipe backend. Only the owner's Google account gets past the sign-in; this page holds no data of its own.</p>
+      </div>
+    </div>
+    <nav class="top-actions" aria-label="Account">
+      <a id="board-link" class="button ghost external" hidden target="_blank" rel="noopener noreferrer">Open the board</a>
+      <span id="account" hidden><button id="sign-out" type="button" class="ghost">Sign out</button></span>
+    </nav>
   </div>
-  <nav class="top-actions" aria-label="Account">
-    <a id="board-link" class="button" hidden target="_blank" rel="noopener noreferrer">Open the board</a>
-    <span id="account" hidden><button id="sign-out" type="button">Sign out</button></span>
-  </nav>
 </header>
 <main>
 <noscript><p class="alert">This page needs JavaScript.</p></noscript>
 
-<section id="signed-out" class="card signin" hidden aria-labelledby="h-signin">
+<section id="signed-out" class="signin" hidden aria-labelledby="h-signin">
+  <span class="signin-mark" aria-hidden="true"></span>
   <h2 id="h-signin">Sign in</h2>
   <p class="help">With the owner's Google account. Nothing is kept in this browser: each visit signs in afresh.</p>
-  <button id="sign-in" type="button" class="primary">Sign in with Google</button>
+  <button id="sign-in" type="button" class="primary wide-button">Sign in with Google</button>
 </section>
 
+<section id="load-failed" class="empty" hidden role="alert" aria-labelledby="load-failed-title">
+  <span class="empty-mark" aria-hidden="true"></span>
+  <h2 id="load-failed-title"></h2>
+  <p id="load-failed-text" class="help"></p>
+</section>
+
+<div id="loading" class="loading" hidden aria-busy="true" aria-label="Loading">
+  <div class="skel-strip"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+  <div class="skel-cards"><span></span><span></span></div>
+</div>
+
 <section id="status-strip" hidden aria-labelledby="h-status">
-  <h2 id="h-status" class="strip-title">In force now</h2>
-  <div id="status" class="tiles"></div>
+  <div class="section-head">
+    <h2 id="h-status" class="section-title">In force now</h2>
+    <p id="status-summary" class="summary"></p>
+    <p id="settings-last" class="section-note"></p>
+  </div>
   <p id="settings-invalid" class="alert" hidden></p>
-  <p id="settings-last" class="note"></p>
+  <div id="status" class="tiles"></div>
 </section>
 
 <section id="settings" hidden aria-labelledby="h-settings">
-  <details class="about">
-    <summary id="h-settings">How changes are made here</summary>
-    <p class="note">What the server allows, uses and charges, without hand-editing Firestore. Each group saves on its own (or all of them at once from the bar at the bottom), after a check by the server and a confirmation; sensitive ones ask you to type a word. This page makes only small, safe changes (each setting says how far); anything larger is made with the admin command, which needs your own cloud credentials. Every change is recorded, logged and emailed to you.</p>
-  </details>
+  <div class="section-head">
+    <h2 class="section-title">Providers and settings</h2>
+    <details class="about">
+      <summary id="h-settings">How changes are made here</summary>
+      <p class="note">What the server allows, uses and charges, without hand-editing Firestore. Each group saves on its own (or all of them at once from the bar at the bottom), after a check by the server and a confirmation; sensitive ones ask you to type a word. This page makes only small, safe changes (each setting says how far); anything larger is made with the admin command, which needs your own cloud credentials. Every change is recorded, logged and emailed to you.</p>
+    </details>
+  </div>
 </section>
 
 <div id="cards" class="grid">
   <section id="console" class="card wide" hidden aria-labelledby="h-providers">
     <header class="card-head">
-      <div>
+      <div class="card-title">
         <h2 id="h-providers">Providers</h2>
         <p class="help">Who writes the recipe text and draws the pictures: the profile in force, each profile's readiness, and the switch.</p>
       </div>
     </header>
-    <dl class="facts">
-      <dt>In force</dt><dd id="active"></dd>
-      <dt>Recipe text</dt><dd id="active-text"></dd>
-      <dt>Pictures</dt><dd id="active-models"></dd>
-      <dt>Pictures for the apps</dt><dd id="active-on"></dd>
-      <dt>Last change</dt><dd id="last-change"></dd>
-    </dl>
-    <fieldset class="profiles">
-      <legend>Switch to</legend>
-      <ul id="profile" class="profile-list"></ul>
-    </fieldset>
-    <p id="profile-summary" class="note"></p>
-    <ul id="profile-missing" class="missing"></ul>
-    <div class="card-foot"><button id="switch" type="button" class="primary" disabled>Switch…</button></div>
+    <div class="prov">
+      <div class="inforce">
+        <p class="eyebrow">In force</p>
+        <p id="active" class="inforce-name"></p>
+        <dl class="facts">
+          <dt>Recipe text</dt><dd id="active-text" class="mono"></dd>
+          <dt>Pictures</dt><dd id="active-models" class="mono"></dd>
+          <dt>Pictures for the apps</dt><dd id="active-on"></dd>
+          <dt>Last change</dt><dd id="last-change"></dd>
+        </dl>
+      </div>
+      <fieldset class="profiles">
+        <legend>Switch to</legend>
+        <ul id="profile" class="profile-list"></ul>
+      </fieldset>
+    </div>
     <div id="providers-readonly"></div>
+    <div class="card-foot prov-foot">
+      <div class="selection">
+        <p id="profile-summary" class="note"></p>
+        <ul id="profile-missing" class="missing"></ul>
+      </div>
+      <button id="switch" type="button" class="primary" disabled>Switch…</button>
+    </div>
   </section>
 </div>
 
 <div id="dock" class="dock" hidden>
+  <div id="pending-review" class="pending-review" hidden>
+    <h2 class="review-title">Unsaved changes</h2>
+    <ul id="pending-list" class="changes"></ul>
+    <p class="note">The server checks them and the confirmation shows exactly what it will write.</p>
+  </div>
   <div class="dock-inner">
     <div class="dock-text">
       <p id="pending" class="pending" hidden></p>
@@ -78,22 +116,17 @@
     <div class="dock-actions">
       <span id="reauth" hidden><button id="reauth-button" type="button" class="primary">Sign in again</button></span>
       <span id="pending-actions" hidden>
-        <button id="review-all" type="button" aria-expanded="false" aria-controls="pending-review">Review</button>
+        <button id="review-all" type="button" class="ghost" aria-expanded="false" aria-controls="pending-review">Review</button>
         <button id="discard-all" type="button">Discard</button>
         <button id="save-all" type="button" class="primary">Save all…</button>
       </span>
     </div>
   </div>
-  <div id="pending-review" class="pending-review" hidden>
-    <h2 class="review-title">Unsaved changes</h2>
-    <ul id="pending-list" class="changes"></ul>
-    <p class="note">The server checks them and the confirmation shows exactly what it will write.</p>
-  </div>
 </div>
 
 <dialog id="confirm" aria-labelledby="confirm-title">
   <h2 id="confirm-title">Switch the recipe providers?</h2>
-  <p id="confirm-text"></p>
+  <p id="confirm-text" class="dialog-lead"></p>
   <p class="note">New recipe requests use it within 30 seconds. Every switch is recorded and logged.</p>
   <div class="buttons">
     <button id="confirm-cancel" type="button">Cancel</button>
@@ -103,9 +136,9 @@
 
 <dialog id="settings-confirm" aria-labelledby="settings-confirm-title">
   <h2 id="settings-confirm-title">Save these changes?</h2>
-  <ul id="settings-confirm-list" class="changes"></ul>
+  <ul id="settings-confirm-list" class="changes boxed"></ul>
   <p id="settings-confirm-side" class="note"></p>
-  <div id="settings-confirm-sensitive" hidden>
+  <div id="settings-confirm-sensitive" class="sensitive-box" hidden>
     <p id="settings-confirm-sensitive-text" class="warn"></p>
     <label id="settings-typed-label" for="settings-typed"></label>
     <input id="settings-typed" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false">
