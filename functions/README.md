@@ -1175,7 +1175,8 @@ and each Firestore document is at most 600,000 bytes plus a few fields, under 60
    configured) is left of the picture's budget after the pause. Each retry logs `image_retry`.
 2. When the selected model still could not make it for a reason about the model or capacity (an
    `INFRA` failure: quota still exhausted, a server error, a model not found or not served, a
-   refused setting; a timeout; an answer that could not be decoded) and 20 s is left, the
+   refused setting; a timeout; an answer that could not be decoded) and 20 s is left (18 s will
+   do, `handoffMs`: a first attempt cut off at its timer ends a moment later), the
    **fallback model** (`image.fallbackModel`, at `image.fallbackProvider` or the same provider)
    is asked **once**, and `image_fallback` is logged. Never after a `SAFETY` refusal (the same
    brief is not shopped around to another model), and after a `CONFIG` failure only when the
@@ -1192,7 +1193,9 @@ dish 50 s = 102 s inside the 115 s reservation (60 + 55) for `"dish"`; 40 + 12 +
 inside the 165 s reservation (60 + 105) and the 180 s function timeout for `"steps"`; the apps
 wait 130 s and 190 s. Typically: Flash-Lite Image about 3 s a picture (a recipe with two step
 pictures about 6 s more than without); a 429 retried once adds 2–6 s; the fallback Nano Banana 2.1
-about 15 s.
+about 15 s. A provider may set longer times of its own while it is the selected model (`timing` on
+its descriptor): only `bfl` does, 45 s an attempt and 65 s for the dish's picture, reserved 128 s
+("FLUX by Black Forest Labs").
 
 **Money**: "How the money works" (the share given back) and "Spend control" (the price reserved
 and booked). `IMAGE_UNAVAILABLE` refuses a level before anything is reserved while it is off.
@@ -1247,9 +1250,13 @@ our server). Before switching, the privacy policy and processor list must name i
 processes: OpenAI's API has no EU-only processing by default), its data terms checked (OpenAI
 says API data is not used for training by default and kept up to 30 days for abuse monitoring),
 and the App Privacy / Data safety answers re-read. Vertex AI is already our processor for the
-recipe text. Black Forest Labs (`bfl`) processes on its EU clusters by default (`BFL_REGION`), but
+recipe text. Black Forest Labs (`bfl`) processes on its EU clusters by default (`BFL_REGION`), and
 its API terms let it keep and train on the prompts and pictures, with no retention period stated
-("FLUX by Black Forest Labs"): the policy must say that too.
+("FLUX by Black Forest Labs"). **Owner's decision (2026-11-18): `bfl` is approved
+(`privacy.approved: true`) without waiting for the policy to name it**, because no user data goes
+to the picture model: the picture is generated for a generated recipe (the fixed template and the
+dish brief), which is not user data. The drafted policy wording stays in
+docs/privacy-policy-changes.md ("Pending"). OpenAI's approval is unchanged (`approved: false`).
 
 **Dependency**: `sharp` (libvips) decodes and re-encodes the pictures. It ships prebuilt binaries
 for linux-x64 glibc, which Cloud Functions 2nd gen (Cloud Run, Node 24) uses, installed by
@@ -1276,7 +1283,7 @@ without a price (which would turn pictures off) or a provider without its key.
 | `nano-banana` | `vertex` / `gemini-nano-banana-2.1` | `gemini-3.1-flash-lite-image` | USD 0.06 / 0.04 | always |
 | `off` | `off` (only `image.provider` is written; the model fields are kept for the way back) | | | always |
 | `openai` | `openai` / `gpt-image-1-mini` | none | USD 0.02 | **no**: listed only. Needs the owner's privacy decision (a code flag, `approved: false`: OpenAI is not in the privacy policy's processor list, "What a new provider means for privacy") and the `OPENAI_API_KEY` secret readable by the service account |
-| `flux-eu` | `bfl` / `flux-3-image-klein` on BFL's EU endpoint; the text stays Gemini | `vertex` / `gemini-3.1-flash-lite-image` | USD 0.01 / 0.04 | **no**: listed only, for the same two reasons (BFL's `approved: false`, `BFL_API_KEY` readable). The picture half of a later "EU pair" profile (the same picture part plus an EU text provider); read "FLUX by Black Forest Labs" on its latency before switching |
+| `flux-eu` | `bfl` / `flux-3-image-klein` on BFL's EU endpoint; the text stays Gemini | `vertex` / `gemini-3.1-flash-lite-image` | USD 0.01 / 0.04 | when `BFL_API_KEY` is readable by the service account (granted 2026-11-18; privacy approved by the owner the same day). Each attempt up to 45 s, the dish's picture 65 s ("FLUX by Black Forest Labs"). The picture half of a later "EU pair" profile (the same picture part plus an EU text provider) |
 
 **The switch** (`activateProfile` in `src/core/providerSwitch.ts`, the one core behind the command
 and the console): refuses an unknown profile (`UNKNOWN_PROFILE`) or one not ready (`NOT_READY`,
@@ -1338,11 +1345,12 @@ An adapter file exports a **descriptor** (`TextProviderDescriptor` or `ImageProv
 |---|---|
 | `kind`, `id`, `label` | `"text"` or `"image"`; the id written in `config/runtime` and the profiles (lower case letters and digits, 2–20, never reused), a label for the console |
 | `processing` | where it processes the prompt, in plain words |
-| `privacy` | `{approved, missing}`: whether the privacy policy's processor list names it (owner's decision). `approved: false` keeps every profile using it listed but not switchable, with `missing` as the reason |
+| `privacy` | `{approved, missing}`: the owner's privacy approval, normally once the privacy policy's processor list names it (`bfl`: approved on 2026-11-18 before that, "What a new provider means for privacy"). `approved: false` keeps every profile using it listed but not switchable, with `missing` as the reason |
 | `secret` | optional `{id, param, name, missing}`: the API key in Secret Manager (below) |
 | `params` | optional deploy params it reads (`{name, default, description}`), defined once by `src/index.ts` |
 | text: `defaultModel`, `defaultModelParam`, `prices` | the model when a config or profile names none; USD per 1M tokens by model (thinking or reasoning billed as output); a model without a price is never selected. `runtimeTokenPrices` is `google`'s alone (its prices are `config/runtime.prices`' two token fields) |
 | image: `usdPerImage`, `tokenPrices` | USD per delivered picture by model (reserved and booked when no token counts come back); token rates of models that report counts |
+| image: `timing` | optional `{abortMs, budgetMs, reservationExtraMs}` (any part), used while it is the selected picture model in place of `IMAGE`'s (`imageTimingOf` in `src/providers/registry.ts`); `providerRegistryProblems` checks the dish's budget still leaves the fallback `minAttemptMs` and each reservation covers its budget, `test/recipeImage.test.ts` the reservations against the function timeout and the apps' waits. Only `bfl` sets it |
 | `create(ctx)` | builds the adapter from a `ProviderContext`: `project`, `param(name)` (its own params only), `secret()` (its key, read on first use; rejects with a fixed message), `fetch` (tests) |
 | `balance(ctx, signal)` | optional balance probe ("Provider balances") |
 
@@ -1412,7 +1420,8 @@ stores or returns it; readiness checks read and drop it. The functions' service 
 Secret Accessor on that one secret (owner, once; `docs/recipe-setup.md` step 13a):
 
 ```bash
-# MISTRAL_API_KEY and BFL_API_KEY already exist in Secret Manager, with no access granted yet.
+# MISTRAL_API_KEY and BFL_API_KEY already exist in Secret Manager; BFL_API_KEY's grant was made on
+# 2026-11-18, MISTRAL_API_KEY's not yet.
 gcloud secrets add-iam-policy-binding MISTRAL_API_KEY --project bestbefore-f9ee1 \
   --member serviceAccount:recipe-functions@bestbefore-f9ee1.iam.gserviceaccount.com --role roles/secretmanager.secretAccessor
 gcloud secrets add-iam-policy-binding BFL_API_KEY --project bestbefore-f9ee1 \
@@ -1456,9 +1465,11 @@ Done for FLUX ("FLUX by Black Forest Labs" below); the steps as they were follow
 
 ### FLUX by Black Forest Labs
 
-`src/adapters/bfl.ts`, provider id `bfl`, profile `flux-eu`. **Not switchable**: `privacy.approved`
-is `false` until the privacy policy names Black Forest Labs (docs/privacy-policy-changes.md,
-"Pending"); the owner's steps are docs/recipe-setup.md step 13a.
+`src/adapters/bfl.ts`, provider id `bfl`, profile `flux-eu`. **Switchable**: `privacy.approved` is
+`true` (owner's decision 2026-11-18, "What a new provider means for privacy"; the policy wording
+is still pending in docs/privacy-policy-changes.md), and `recipe-functions@` was granted Secret
+Accessor on `BFL_API_KEY` alone on 2026-11-18, so `flux-eu` is ready once deployed. The owner's
+remaining steps (deploy, switch) are docs/recipe-setup.md step 13a.
 
 **From BFL's documentation, read 2026-11-17** (docs.bfl.ml: `llms.txt`,
 `quick_start/pricing.md`, `release-notes.md`, `api_integration/integration_guidelines.md`,
@@ -1503,8 +1514,8 @@ bfl.ai/pricing; bfl.ai/legal/eu-api-service-terms, revised 2026-08-26; bfl.ai/le
   irrevocable licence to inputs and outputs, including "to train and improve its artificial
   intelligence models"; they name no retention period and offer no data processing agreement on
   the page. BFL GmbH (Freiburg, Germany) is the controller for EEA users under its privacy policy.
-  What BFL would receive from us is the fixed template and the brief (no personal data, below), but
-  the processor list must say so ("Privacy" below).
+  What BFL receives from us is the fixed template and the brief (no personal data, below); the
+  owner approved it on that basis on 2026-11-18 ("What a new provider means for privacy").
 
 **The choice**: FLUX 3 Image Klein, the cheapest model with good food photographs (USD 0.009, a
 quarter of Flash-Lite Image's 0.0336), on the EU endpoint. The dearer alternative is FLUX 3 Image
@@ -1549,11 +1560,29 @@ test briefs; 9 Klein and 3 FLUX 3 Image tasks, at most USD 0.225 as BFL quoted t
 Klein's pictures were plausible home-cooking photographs: the overhead frying pans had one long
 handle (2 of 2), a sauté pan one, no people, hands or writing; weaknesses were a flat omelette
 where the brief said folded, spaghetti drawn thick, and garnish placed in tidy patterns.
-**Latency is the open problem**: with a fallback configured each attempt gets 30 s of the dish's
-50 s budget (`IMAGE`), and about half of these Klein pictures took longer, so with `flux-eu` many
-pictures would come from Flash-Lite Image after BFL had already charged for its (abandoned) one,
-costing USD 0.049 instead of 0.009. Measure again (`image_call` `durationMs`, `image_fallback`
-reason `TIMEOUT`) before switching, and change the budgets only as a decision of its own.
+**Times while BFL is the selected model** (`timing` on `bflImage`, read by the core through
+`imageTimingOf`; owner's request 2026-11-18). With the defaults a first attempt with a fallback
+configured gets 30 s of the dish's 50 s, and about half of these Klein pictures took longer: they
+would have come from Flash-Lite Image after BFL had already charged for its abandoned one (USD
+0.049 instead of 0.009). So for `bfl` only:
+
+| | default (`vertex`, `openai`) | `bfl` |
+|---|---|---|
+| each attempt of the selected model | 35 s (30 s when the fallback keeps its 20 s) | 45 s |
+| the fallback after a timed-out first attempt | the rest, 20 s | the rest, 20 s |
+| dish's picture (`budgetMs.dish`) | 50 s | 65 s |
+| step pictures (`budgetMs.steps`, from the same start) | 100 s | 100 s |
+| reservation, `"dish"` / `"steps"` | 60 + 55 = 115 s / 60 + 105 = 165 s | 60 + 68 = 128 s / 165 s |
+
+45 s covers every observed time but the 75.9 s outlier with 12 s to spare; 20 s for Flash-Lite
+Image (about 3 s a picture) is the core's `minAttemptMs`. The bounds: text 40 s + judge 12 s +
+65 s = 117 s inside the 128 s reservation, which stays under the apps' 130 s wait for `"dish"`
+(so 45 s is about the most the first attempt can get without the apps waiting longer); steps
+unchanged (152 s inside 165 s, the 180 s function timeout and the apps' 190 s). The fallback
+attempt keeps the default 35 s cap, whatever its provider. A task abandoned at 45 s is still
+booked at its flat price (BFL finishes and charges it), so a timeout that falls back still costs
+USD 0.049. After switching, watch `image_call` `durationMs` and `image_fallback` with reason
+`TIMEOUT`.
 
 ### Provider balances
 
@@ -2574,7 +2603,8 @@ npx firebase functions:secrets:set SIWA_PRIVATE_KEY < AuthKey_YYYYYYYYYY.p8     
 # at run time while openai is selected; grant the service account Secret Accessor on it alone.
 npx firebase functions:secrets:set OPENAI_API_KEY
 # Any other provider's key works the same way ("Adding a provider", "Secrets"); MISTRAL_API_KEY and
-# BFL_API_KEY already exist, and need only the grant (docs/recipe-setup.md step 13a).
+# BFL_API_KEY already exist; BFL_API_KEY's grant is made (2026-11-18), MISTRAL_API_KEY's still
+# needed (docs/recipe-setup.md step 13a).
 ```
 
 ## One-time setup (owner)

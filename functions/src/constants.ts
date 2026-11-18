@@ -177,6 +177,11 @@ export const JUDGE = {
  * (60 + 55); steps 40 + 12 + 100 = 152 s inside the 165 s reservation (60 + 105) and the 180 s
  * function timeout. The apps wait 130 s (dish) and 190 s (steps).
  *
+ * A picture provider may set longer times for its own attempts while it is the selected model
+ * (`timing` on its descriptor, providers/types.ts; read through providers/registry.ts
+ * imageTimingOf): `abortMs`, `budgetMs` and `reservationExtraMs`, each defaulting to the values
+ * here. Only Black Forest Labs does (adapters/bfl.ts): attempt 45 s, dish 65 s, reservation +68 s.
+ *
  * Delivery (adapters/imageNormalize.ts): a provider's JPEG of at most `passThroughMaxEdge` pixels on
  * its longer side and `passThroughMaxBytes` bytes is delivered as it came (its header and size read
  * without decoding); anything else is decoded and re-encoded to a JPEG of at most `maxEdge` at
@@ -190,6 +195,13 @@ export const IMAGE = {
   budgetMs: { dish: 50_000, steps: 100_000 } as Readonly<Record<ImageLevel, number>>,
   reservationExtraMs: { dish: 55_000, steps: 105_000 } as Readonly<Record<ImageLevel, number>>,
   minAttemptMs: 20_000,
+  /**
+   * The fallback is still asked with up to this much less than `minAttemptMs` left: a first attempt
+   * given exactly the time that keeps `minAttemptMs` for the fallback ends a little after its timer
+   * (the abort travels through the adapter), so a strict check would never ask the fallback after
+   * a timeout.
+   */
+  handoffMs: 2_000,
   maxAttempts: 4,
   retryBaseMs: 2_000,
   maxParallel: 2,

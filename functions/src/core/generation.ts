@@ -26,7 +26,6 @@ import {
   CREDITS_PER_CONTENT_REFUND,
   CREDITS_PER_TIMEOUT_REFUND,
   GENERATION_TTL_MS,
-  IMAGE,
   JUDGE,
   MAX_OUTPUT_TOKENS,
   REVENUE_WINDOW_DAYS,
@@ -40,6 +39,7 @@ import { buildPrompt, inputTokenBound, newCanary } from "../adapters/prompt";
 import { JUDGE_INSTRUCTION } from "../adapters/gemini";
 import { QUALITY_OUTPUT_RULES, SUSPICIOUS_OUTPUT_RULES, checkImageBrief, checkOutput, checkStepBriefs, hasEnoughItems, usableStaples } from "./outputSafety";
 import { briefRefused, logOutOfCredit, makeRecipeImage, makeStepImages, type ImageOutcome } from "./recipeImage";
+import { imageTimingOf } from "../providers/registry";
 import {
   assertOpen,
   costKeyOf,
@@ -386,7 +386,7 @@ async function reserveTx(
       reservedMicroUsd,
       statsDay: day,
       createdAt: Timestamp.fromMillis(now),
-      deadlineAt: Timestamp.fromMillis(now + TIMINGS[req.kind].reservationMs + (req.image ? IMAGE.reservationExtraMs[req.image] : 0)),
+      deadlineAt: Timestamp.fromMillis(now + TIMINGS[req.kind].reservationMs + (req.image ? imageTimingOf(config.image.provider).reservationExtraMs[req.image] : 0)),
       ...(plan.image && "share" in plan.image
         ? {
             imageLevel: req.image!,
@@ -1122,18 +1122,19 @@ export async function generateRecipe(deps: Deps, caller: Caller, data: unknown):
     // No dish picture, no step pictures: without a dish brief none is asked at all. The dish's
     // picture first, within IMAGE.budgetMs.dish; only when it was made, the step pictures, at most
     // IMAGE.maxParallel at once, within IMAGE.budgetMs.steps from the same start (constants.ts IMAGE
-    // has the arithmetic). When the dish's fails, no step picture is asked (NO_DISH, nothing spent).
+    // has the arithmetic; a provider's own `timing` may lengthen both, imageTimingOf). When the dish's fails, no step picture is asked (NO_DISH, nothing spent).
     const withDish = stillPending && outcome.imageBrief !== undefined;
     const stepBriefs = withDish ? (outcome.stepBriefs ?? []) : [];
     const picturesFrom = deps.now();
+    const budgetMs = imageTimingOf(config.image.provider).budgetMs;
     const dish = !stillPending
       ? settledAway
       : outcome.imageBrief !== undefined
-        ? await makeRecipeImage(deps, caller.uid, outcome.imageBrief, config, picturesFrom + IMAGE.budgetMs.dish)
+        ? await makeRecipeImage(deps, caller.uid, outcome.imageBrief, config, picturesFrom + budgetMs.dish)
         : briefRefused(outcome.briefRule ?? "MISSING");
     const noDish: ImageOutcome = { ok: false, failure: "NO_DISH", microUsd: 0, model: null };
     const steps = dish.ok && stepBriefs.length > 0
-      ? await makeStepImages(deps, caller.uid, stepBriefs, config, picturesFrom + IMAGE.budgetMs.steps)
+      ? await makeStepImages(deps, caller.uid, stepBriefs, config, picturesFrom + budgetMs.steps)
       : stepBriefs.map(() => noDish);
     outcome = { ...outcome, picture: { dish, steps: stepBriefs.map((s, i) => ({ step: s.step, outcome: steps[i] })) } };
   }
