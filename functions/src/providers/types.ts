@@ -119,8 +119,9 @@ interface DescriptorBase {
   /** Where it processes the prompt, in plain words (for the console and the privacy decision). */
   processing: string;
   /**
-   * Whether the privacy policy's processor list names this provider (owner's decision, README
-   * "What a new provider means for privacy"). false keeps every profile using it listed but never
+   * The owner's privacy approval of this provider, normally once the privacy policy's processor
+   * list names it (README "What a new provider means for privacy"; bfl was approved before that,
+   * 2026-11-18). false keeps every profile using it listed but never
    * switchable; the text is what the console shows.
    */
   privacy: { approved: boolean; missing: string };
@@ -169,6 +170,23 @@ export interface TextProviderDescriptor extends DescriptorBase {
   create(ctx: ProviderContext): TextProvider;
 }
 
+/**
+ * A picture provider's own times while it is the selected (primary) picture model, each defaulting
+ * to constants.ts IMAGE (providers/registry.ts imageTimingOf); the fallback's attempt keeps
+ * IMAGE.abortMs whichever provider it is at.
+ * - `abortMs`: each attempt of this provider is aborted after this long.
+ * - `budgetMs`: the picture's budget by level, from the start of the pictures.
+ * - `reservationExtraMs`: how much longer a request with pictures is reserved, by level.
+ * providerRegistryProblems checks that the dish's budget keeps IMAGE.minAttemptMs for the fallback
+ * after a timed-out attempt and that each reservation covers its budget; test/recipeImage.test.ts
+ * checks every provider's times against the reservation, the function timeout and the apps' waits.
+ */
+export interface ImageTiming {
+  abortMs: number;
+  budgetMs: Readonly<Record<"dish" | "steps", number>>;
+  reservationExtraMs: Readonly<Record<"dish" | "steps", number>>;
+}
+
 /** The port a picture adapter implements. */
 export interface ImageProvider {
   /** Must honour `signal`. Throws ImageGenerationError. */
@@ -185,6 +203,8 @@ export interface ImageProviderDescriptor extends DescriptorBase {
   usdPerImage: Readonly<Record<string, number>>;
   /** Token rates of the models whose answers report token counts (booked instead of the flat price). */
   tokenPrices?: Readonly<Record<string, ImageTokenPrices>>;
+  /** Longer times while it is the selected model (ImageTiming); absent: constants.ts IMAGE. */
+  timing?: Partial<ImageTiming>;
   create(ctx: ProviderContext): ImageProvider;
 }
 

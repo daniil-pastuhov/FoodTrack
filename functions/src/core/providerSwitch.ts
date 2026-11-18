@@ -547,6 +547,8 @@ export function ownerConsoleOrigins(project: string, emulator: boolean): string[
 
 export interface OwnerEnv extends SwitchEnv {
   auth: Auth;
+  /** The owner's board (README "The board", "Always on"), for the console's link; absent: no link. */
+  boardUrl?: string;
 }
 
 /** Clears Google's name and photo from the Auth user, as the apps' callables do (best effort). */

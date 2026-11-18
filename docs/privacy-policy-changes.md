@@ -36,9 +36,12 @@ don't offer them). Checked against `functions/README.md` "Recipe pictures" and "
   are not in the app's backup file, nor in Android's cloud backup). (If the provider is ever switched, for example to OpenAI,
   the policy must name it before the switch: functions/README.md "What a new provider means for
   privacy".)
-- **Black Forest Labs, only if pictures are ever switched to FLUX** (functions/README.md "FLUX by
-  Black Forest Labs"; not switchable until this is published and the code's approval flag is
-  turned on). Wording to add to the recipe pictures paragraph and the processor list: "Pictures may
+- **Black Forest Labs, if pictures are switched to FLUX** (functions/README.md "FLUX by Black Forest
+  Labs"). **Owner's decision, 2026-11-18: switching does not wait for this wording.** The code's
+  approval flag is on and the `flux-eu` profile can be switched as soon as the functions are
+  deployed. The owner's reasoning: no user data goes to the picture model; the picture is
+  generated for a generated recipe (the fixed template and the dish brief), which is not user
+  data. The wording below is kept, to publish when the policy is next changed. Wording to add to the recipe pictures paragraph and the processor list: "Pictures may
   instead be made by Black Forest Labs (BFL GmbH, Freiburg, Germany), on its servers in the EU. It
   receives the same short English description of the dish and nothing else: no items you typed,
   allergens, taste answers, account or device identifier, or IP address (the request comes from our
@@ -54,6 +57,17 @@ don't offer them). Checked against `functions/README.md` "Recipe pictures" and "
   reports (the reason, your note and the copy of the reported recipe or menu) are kept until they
   expire, up to 90 days, but no longer linked to it. Recipes written on your device
   can't be reported and never leave it.
+
+- **Output judge answers, only if `outputJudgeKeepText` is ever turned on** (functions/README.md
+  "Prompt injection defences" item 5). With the judge on (`shadow` or `enforce`), our server
+  asks Google's model on Vertex AI, a second time, to check the recipe it wrote, and keeps that
+  check's answer for 90 days: codes, a score and a short note, with no account, device or request
+  identifier and nothing you typed, so it needs no policy line. Keeping the checked recipe text
+  with it does: wording to add before turning `outputJudgeKeepText` on: "To improve how recipes
+  are written, we may keep a copy of a recipe or menu our server wrote, without anything that
+  links it to you or your account, for 90 days, then delete it." The checked text is the
+  generated recipe only (it may name foods from your items), never the items, allergens or
+  settings you sent.
 
 ## Store forms that must say the same
 

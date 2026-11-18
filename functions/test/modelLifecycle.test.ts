@@ -8,8 +8,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { AdminRefusal } from "../src/admin/accountRequests";
-import { parseModelsArgs, runModels, type ModelsEnv } from "../src/admin/cli";
-import { DEFAULT_IMAGE_SELECTION } from "../src/constants";
+import { judgeModelOf, parseModelsArgs, runModels, type ModelsEnv } from "../src/admin/cli";
+import { DEFAULT_IMAGE_SELECTION, JUDGE, JUDGE_PRICES } from "../src/constants";
 import { countTokensUrl, openaiModelInfo, vertexModelInfo } from "../src/adapters/modelProbes";
 import { googleText } from "../src/adapters/gemini";
 import { openaiImage, vertexImage } from "../src/adapters/image";
@@ -20,6 +20,7 @@ import {
   MODEL_LIFECYCLE,
   assessModels,
   daysBetween,
+  lifecycleEntry,
   lifecycleProblems,
   logModelLifecycle,
   modelsInUse,
@@ -63,17 +64,24 @@ beforeEach(async () => {
 });
 
 describe("the table", () => {
-  // GEMINI_JUDGE_MODEL is defined in src/index.ts (empty: GEMINI_MODEL); a default model there needs an entry too.
-  const judgeDefault = (() => {
+  // GEMINI_JUDGE_MODEL is defined in src/index.ts with JUDGE.model as its default (set empty: GEMINI_MODEL);
+  // lifecycleProblems requires an entry for JUDGE.model and every JUDGE_PRICES model.
+  test("the judge's default param is JUDGE.model, which the table must have", () => {
     const src = readFileSync(join(__dirname, "../src/index.ts"), "utf8");
-    const m = /defineString\("GEMINI_JUDGE_MODEL",\s*\{\s*default:\s*"([^"]*)"/.exec(src);
-    if (!m) throw new Error("GEMINI_JUDGE_MODEL is not defined in src/index.ts as expected");
-    return m[1];
-  })();
+    expect(src).toMatch(/defineString\("GEMINI_JUDGE_MODEL",\s*\{\s*default:\s*JUDGE\.model,/);
+    const without = MODEL_LIFECYCLE.filter((e) => e.model !== JUDGE.model);
+    expect(lifecycleProblems(without).join("\n")).toContain(`google/${JUDGE.model} (JUDGE.model (GEMINI_JUDGE_MODEL default)) has no lifecycle entry`);
+    for (const m of Object.keys(JUDGE_PRICES)) expect(lifecycleEntry("google", m), m).toBeDefined();
+  });
+
+  test("the admin command reads the judge's model as the functions do", () => {
+    expect(judgeModelOf({}, "gemini-3.8-flash")).toBe(JUDGE.model);
+    expect(judgeModelOf({ GEMINI_JUDGE_MODEL: "gemini-3.1-flash-lite" }, "gemini-3.8-flash")).toBe("gemini-3.1-flash-lite");
+    expect(judgeModelOf({ GEMINI_JUDGE_MODEL: "" }, "gemini-3.8-flash")).toBe("gemini-3.8-flash");
+  });
 
   test("has an entry for every model a profile, a default, a default param or a price table uses", () => {
-    const extra = judgeDefault ? [{ provider: "google", model: judgeDefault, why: "GEMINI_JUDGE_MODEL default" }] : [];
-    expect(lifecycleProblems(MODEL_LIFECYCLE, extra)).toEqual([]);
+    expect(lifecycleProblems(MODEL_LIFECYCLE)).toEqual([]);
   });
 
   test("fails for a model without an entry, and for a malformed entry", () => {
@@ -125,6 +133,10 @@ describe("which models are in use", () => {
     expect(judgeOff.find((u) => u.model === "gemini-3.5-flash-lite")).toEqual({ provider: "google", model: "gemini-3.5-flash-lite", roles: ["judge"], inUse: false });
     const judgeOn = modelsInUse(parseRuntimeConfig({ outputJudge: "shadow" }), { provider: "google", model: "gemini-3.5-flash-lite" });
     expect(judgeOn.find((u) => u.model === "gemini-3.5-flash-lite")?.inUse).toBe(true);
+    // As now configured (GEMINI_JUDGE_MODEL's default): the judge's own entry, a dated GA model.
+    const configured = modelsInUse(parseRuntimeConfig({ outputJudge: "shadow" }), { provider: "google", model: JUDGE.model });
+    expect(configured.find((u) => u.roles.includes("judge"))).toMatchObject({ provider: "google", model: JUDGE.model, inUse: true });
+    expect(lifecycleEntry("google", JUDGE.model)).toMatchObject({ retiresOn: "2027-07-21", earliest: true });
   });
 
   test("config/runtime over the defaults: a hand-set picture setup and pictures off", () => {

@@ -16,7 +16,7 @@ import { IMAGE } from "../constants";
 import { ImageNormalizeError, normalizeImage, type NormalizedImage } from "../adapters/imageNormalize";
 import { imageFallbackOf, imageOutOfCreditTargetOf, imagePriceMicroUsd, uidHash, type RuntimeConfig } from "../model";
 import { ImageGenerationError, type Deps, type ImagePrompt, type ImageTarget, type ImageUsage } from "../ports";
-import { imageTokenPricesOf } from "../providers/registry";
+import { imageTimingOf, imageTokenPricesOf } from "../providers/registry";
 
 /**
  * The fixed parts of every picture prompt; only the checked brief goes between them (README "The
@@ -170,14 +170,15 @@ const realSleep = (ms: number) => new Promise<void>((resolve) => setTimeout(reso
 /**
  * Asks for one picture and re-encodes (or passes through) the answer, finishing by `deadlineAt`
  * (deps.now() time; README "Recipe pictures", IMAGE in constants.ts):
- * 1. the selected model, each attempt aborted after IMAGE.abortMs (less, to leave the fallback
- *    IMAGE.minAttemptMs); a retryable failure (429, 5xx) is asked again after retryDelayMs while
+ * 1. the selected model, each attempt aborted after IMAGE.abortMs, or its provider's own
+ *    `timing.abortMs` (imageTimingOf; less, to leave the fallback IMAGE.minAttemptMs); a retryable failure (429, 5xx) is asked again after retryDelayMs while
  *    fewer than IMAGE.maxAttempts were made and IMAGE.minAttemptMs (twice that with a fallback)
  *    is still left after the pause; one `image_retry` line per retry;
  * 2. when it still failed for a reason about the model or capacity (an INFRA failure, a
  *    timeout, an answer that could not be decoded; CONFIG only when the fallback is at another
  *    provider; never SAFETY) and a fallback is configured (`image.fallbackModel`, at
- *    `image.fallbackProvider` or the same provider) and IMAGE.minAttemptMs is left: one attempt of
+ *    `image.fallbackProvider` or the same provider) and IMAGE.minAttemptMs is left (less up to
+ *    IMAGE.handoffMs, the time a timed-out attempt takes to end): one attempt of
  *    the fallback, and one `image_fallback` line. OUT_OF_CREDIT is never retried: it logs
  *    `provider_out_of_credit` and goes to the fallback, or, when none is named, to the deploy
  *    default provider (model.ts imageOutOfCreditTargetOf), whose price the reservation covers.
@@ -202,6 +203,7 @@ export async function makeRecipeImage(
   const random = deps.random ?? Math.random;
   const picture = step === undefined ? "dish" : "step";
   const started = deps.now();
+  const attemptMs = imageTimingOf(primary.provider).abortMs;
   const keepForFallback = fallback ? IMAGE.minAttemptMs : 0;
   let booked = 0;
   let attempts = 0;
@@ -210,7 +212,7 @@ export async function makeRecipeImage(
   for (let n = 1; ; n++) {
     const left = deadlineAt - deps.now();
     if (left < IMAGE.minAttemptMs) break;
-    last = await attemptOnce(deps, prompt, primary, config, Math.min(IMAGE.abortMs, Math.max(IMAGE.minAttemptMs, left - keepForFallback)));
+    last = await attemptOnce(deps, prompt, primary, config, Math.min(attemptMs, Math.max(IMAGE.minAttemptMs, left - keepForFallback)));
     attempts++;
     booked += last.microUsd;
     madeBy = primary.model;
@@ -236,7 +238,7 @@ export async function makeRecipeImage(
   const mayFallBack = !!last && !last.ok &&
     (last.fallbackOk || last.failure === "OUT_OF_CREDIT" || (last.failure === "CONFIG" && across));
   let usedFallback = false;
-  if (last && !last.ok && mayFallBack && fallback && deadlineAt - deps.now() >= IMAGE.minAttemptMs) {
+  if (last && !last.ok && mayFallBack && fallback && deadlineAt - deps.now() >= IMAGE.minAttemptMs - IMAGE.handoffMs) {
     const reason = last.reason;
     last = await attemptOnce(deps, prompt, fallback, config, Math.min(IMAGE.abortMs, deadlineAt - deps.now()));
     attempts++;

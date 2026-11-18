@@ -26,7 +26,6 @@ import {
   CREDITS_PER_CONTENT_REFUND,
   CREDITS_PER_TIMEOUT_REFUND,
   GENERATION_TTL_MS,
-  IMAGE,
   JUDGE,
   MAX_OUTPUT_TOKENS,
   REVENUE_WINDOW_DAYS,
@@ -40,6 +39,7 @@ import { buildPrompt, inputTokenBound, newCanary } from "../adapters/prompt";
 import { JUDGE_INSTRUCTION } from "../adapters/gemini";
 import { QUALITY_OUTPUT_RULES, SUSPICIOUS_OUTPUT_RULES, checkImageBrief, checkOutput, checkStepBriefs, hasEnoughItems, usableStaples } from "./outputSafety";
 import { briefRefused, logOutOfCredit, makeRecipeImage, makeStepImages, type ImageOutcome } from "./recipeImage";
+import { imageTimingOf } from "../providers/registry";
 import {
   assertOpen,
   costKeyOf,
@@ -58,6 +58,7 @@ import {
   textPricesOf,
   textReservePricesOf,
   textSelectionOf,
+  judgePricesOf,
   uidHash,
   userRef,
   utcDay,
@@ -81,6 +82,11 @@ import {
 } from "../ports";
 import type { Prompt } from "../adapters/prompt";
 import type { TokenPrices } from "../providers/types";
+import { createHash } from "node:crypto";
+import { JUDGE_VERSION, judgeText } from "../adapters/gemini";
+import { DEFAULT_MENU_DAYS } from "../constants";
+import type { JudgeAnswer, JudgeEntry, JudgedOutput, JudgeVerdict } from "../ports";
+import { cleanJudgeNote } from "./judgeLog";
 
 /**
  * A generation's response without its picture, which withImage adds (it is in its own document).
@@ -126,19 +132,20 @@ export interface Plan {
 /**
  * The judge's worst case: its input is the validated answer, a subset of the generator's own
  * visible output (at most maxOutputTokens tokens) re-serialised with a little structure, plus its
- * fixed instruction; its output plus thinking is cut at JUDGE.tokenCeiling. Booked at the
- * generator's prices (conservative when the judge model is cheaper).
+ * fixed instruction; its output plus thinking is cut at JUDGE.tokenCeiling. At the judge model's
+ * own prices (judgePricesOf: JUDGE_PRICES, or the generator's for a model without one).
  */
-export function judgeWorstCaseMicroUsd(config: RuntimeConfig, maxOutputTokens: number): number {
+export function judgeWorstCaseMicroUsd(config: RuntimeConfig, maxOutputTokens: number, judgeModel: string = JUDGE.model): number {
   const inputTokens = Buffer.byteLength(JUDGE_INSTRUCTION, "utf8") + Math.ceil(maxOutputTokens * 1.1) + 200;
-  return microUsd(config.prices, inputTokens, JUDGE.tokenCeiling);
+  return microUsd(judgePricesOf(config, judgeModel), inputTokens, JUDGE.tokenCeiling);
 }
 
-export function planFor(req: GenerateRequest, config: RuntimeConfig): Plan {
+/** `judgeModel`: the deployed judge's model (Deps.judge.model); the default is the param's default. */
+export function planFor(req: GenerateRequest, config: RuntimeConfig, judgeModel: string = JUDGE.model): Plan {
   const costKey = costKeyOf(req);
   const maxOutputTokens = MAX_OUTPUT_TOKENS[costKey];
   const hardTokenCeiling = THINKING_FACTOR * maxOutputTokens;
-  const judge = config.outputJudge === "off" ? 0 : judgeWorstCaseMicroUsd(config, maxOutputTokens);
+  const judge = config.outputJudge === "off" ? 0 : judgeWorstCaseMicroUsd(config, maxOutputTokens, judgeModel);
   const text = costOf(config.costs, costKey);
   let image: Plan["image"];
   if (req.image) {
@@ -208,14 +215,27 @@ const refusalLog = new LogSampler(60_000, 30);
  * (`welcomeUnspent` to `welcomeSpent`). Only charges after the grant can: one before it found
  * nothing unspent. fifoConsumed leaves `welcomeSpent` out, so free recipes never count as bought
  * use, and bought use before the grant is never hidden by them. Writes nothing for an account
- * without free recipes.
+ * without free recipes. Returns how many free recipes the charge took (for `stats/{day}`).
  */
-function chargeFreeFirst(user: UserDoc | undefined, cost: number, userUpdate: Record<string, unknown>): void {
+function chargeFreeFirst(user: UserDoc | undefined, cost: number, userUpdate: Record<string, unknown>): number {
   const unspent = user?.welcomeUnspent ?? 0;
-  if (unspent <= 0) return;
+  if (unspent <= 0) return 0;
   const take = Math.min(unspent, cost);
   userUpdate.welcomeUnspent = FieldValue.increment(-take);
   userUpdate.welcomeSpent = FieldValue.increment(take);
+  return take;
+}
+
+/**
+ * The share of a settle's booked spend that free recipes paid for (`stats/{day}.welcomeUsedMicroUsd`):
+ * pro rata by recipes, the booked spend x free recipes charged / recipes charged. A charge wholly
+ * from free recipes books all of it, a mixed one its share; a refunded failure (nothing charged)
+ * books none here, though its spend stays in `spentMicroUsd` like everyone's. Never money: only
+ * the owner's figure of what free recipes cost.
+ */
+export function welcomeShareMicroUsd(bookedMicroUsd: number, freeCharged: number, charged: number): number {
+  if (!(freeCharged > 0) || !(charged > 0)) return 0;
+  return Math.round((bookedMicroUsd * Math.min(freeCharged, charged)) / charged);
 }
 
 /**
@@ -373,7 +393,7 @@ async function reserveTx(
       reservedMicroUsd,
       statsDay: day,
       createdAt: Timestamp.fromMillis(now),
-      deadlineAt: Timestamp.fromMillis(now + TIMINGS[req.kind].reservationMs + (req.image ? IMAGE.reservationExtraMs[req.image] : 0)),
+      deadlineAt: Timestamp.fromMillis(now + TIMINGS[req.kind].reservationMs + (req.image ? imageTimingOf(config.image.provider).reservationExtraMs[req.image] : 0)),
       ...(plan.image && "share" in plan.image
         ? {
             imageLevel: req.image!,
@@ -529,6 +549,9 @@ export async function settle(
     let rejectionsToday: number | null = null;
     /** Credits of the picture's share given back (a recipe delivered without its picture). */
     let givenBack = 0;
+    /** Recipes this settle charged, and how many of them were free ones (the welcome grant). */
+    let charged = 0;
+    let freeCharged = 0;
 
     if (outcome.ok) {
       // The text was delivered. Without its picture, the picture's share as stored at
@@ -546,7 +569,8 @@ export async function settle(
       const kept = gen.cost - givenBack;
       const deliveredSteps = picture ? picture.steps.filter((s) => s.outcome.ok) : [];
       userUpdate.consumedCredits = FieldValue.increment(kept);
-      chargeFreeFirst(user, kept, userUpdate);
+      charged = kept;
+      freeCharged = chargeFreeFirst(user, kept, userUpdate);
       if (givenBack > 0) {
         userUpdate.balance = FieldValue.increment(givenBack);
         balance += givenBack;
@@ -625,7 +649,8 @@ export async function settle(
         givenBack = Math.max(0, Math.min(gen.cost, (gen.imageCost ?? 0) + (gen.stepImagesCost ?? 0)));
         const kept = gen.cost - givenBack;
         userUpdate.consumedCredits = FieldValue.increment(kept);
-        chargeFreeFirst(user, kept, userUpdate);
+        charged = kept;
+        freeCharged = chargeFreeFirst(user, kept, userUpdate);
         if (givenBack > 0) {
           userUpdate.balance = FieldValue.increment(givenBack);
           balance += givenBack;
@@ -662,6 +687,12 @@ export async function settle(
       [outcome.ok ? "succeeded" : `${outcome.failureClass}Failures`]: FieldValue.increment(1),
     };
     if (refunded) statsUpdate.refundedCredits = FieldValue.increment(gen.cost);
+    // What free recipes (the welcome grant) paid for, for the owner's board: written on every
+    // settle, 0 included, so a day that has the field is a day it was counted (older days lack it
+    // and read as unknown). A closed account's update is not written, so nothing of it counts.
+    const freeHere = closed ? 0 : freeCharged;
+    statsUpdate.welcomeUsedCredits = FieldValue.increment(freeHere);
+    statsUpdate.welcomeUsedMicroUsd = FieldValue.increment(welcomeShareMicroUsd(actual, freeHere, charged));
     if (gen.imageLevel) {
       statsUpdate.imageRequests = FieldValue.increment(1);
       if (picture) {
@@ -849,7 +880,7 @@ export function withCosts(outcome: Outcome, ledger: CallLedger, config: RuntimeC
  * the red-team runner (admin/redteam), which runs exactly this against the live model.
  */
 export async function runGenerator(
-  deps: Pick<Deps, "generator" | "judge" | "logger">,
+  deps: Pick<Deps, "generator" | "judge" | "judgeLog" | "logger">,
   uid: string,
   req: GenerateRequest,
   limits: GenerationLimits,
@@ -860,7 +891,7 @@ export async function runGenerator(
 }
 
 async function runChecked(
-  deps: Pick<Deps, "generator" | "judge" | "logger">,
+  deps: Pick<Deps, "generator" | "judge" | "judgeLog" | "logger">,
   uid: string,
   req: GenerateRequest,
   limits: GenerationLimits,
@@ -884,7 +915,7 @@ async function runChecked(
       if (config.outputJudge === "off") return quality;
       // The judge still sees the answer: one it refuses stays a charged content failure and a
       // prompt rejection, so skipping the pantry cannot turn a hostile answer into a refund.
-      const judged = await runJudge(deps, uid, req, config, check.value, usage, ledger);
+      const judged = await runJudge(deps, uid, req, config, check.value, usage, ledger, { promptHash: promptHashOf(prompt, canary), gateRule: check.rule });
       return judged.ok ? { ...quality, usage: judged.usage } : judged.failureClass === "content" ? judged : { ...quality, usage: judged.usage };
     }
     if (!check.ok) {
@@ -920,7 +951,12 @@ async function runChecked(
     clearTimeout(timer);
   }
   if (config.outputJudge === "off") return { ok: true, ...checked, usage };
-  return runJudge(deps, uid, req, config, checked, usage, ledger);
+  return runJudge(deps, uid, req, config, checked, usage, ledger, { promptHash: promptHashOf(prompt, canary), gateRule: null });
+}
+
+/** The generator's system instruction and schema for this request, its canary masked, hashed (JudgeEntry.promptHash). */
+export function promptHashOf(prompt: { systemInstruction: string; schema: unknown }, canary: string): string {
+  return createHash("sha256").update(prompt.systemInstruction.split(canary).join("CANARY")).update(JSON.stringify(prompt.schema)).digest("hex").slice(0, 12);
 }
 
 /**
@@ -929,31 +965,42 @@ async function runChecked(
  * never delivered unchecked). "shadow": the verdict is only logged and the answer is delivered.
  */
 async function runJudge(
-  deps: Pick<Deps, "judge" | "logger">,
+  deps: Pick<Deps, "judge" | "judgeLog" | "logger">,
   uid: string,
   req: GenerateRequest,
   config: RuntimeConfig,
   checked: CheckedAnswer,
   genUsage: LlmUsage | undefined,
   ledger: CallLedger,
+  about: { promptHash: string; gateRule: string | null },
 ): Promise<Outcome> {
   const enforce = config.outputJudge === "enforce";
-  // The judge always runs on the "google" provider, at config.prices (adapters/gemini.ts).
-  const judgePrices = { inputUsdPerMTok: config.prices.inputUsdPerMTok, outputUsdPerMTok: config.prices.outputUsdPerMTok };
+  // The judge always runs on Gemini on Vertex AI (adapters/gemini.ts), at its own model's prices.
+  const judgePrices = judgePricesOf(config, deps.judge.model);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), JUDGE.abortMs[req.kind]);
+  const started = Date.now();
+  // The judge sees the answer, the language asked for and, when a picture was asked, the brief that would draw it.
+  const judged: JudgedOutput = {
+    language: req.config.language,
+    ...(checked.recipe ? { recipe: checked.recipe } : {}),
+    ...(checked.menu ? { menu: checked.menu } : {}),
+    ...(checked.imageBrief ? { imageBrief: checked.imageBrief } : {}),
+    ...(checked.stepBriefs?.length ? { stepBriefs: checked.stepBriefs.map((s) => s.brief) } : {}),
+  };
+  const keep = (result: { verdict: JudgeVerdict; answer?: JudgeAnswer } | null, usage: LlmUsage | undefined, failure: string | null) =>
+    keepJudgeAnswer(deps, { req, config, judged, ledger, genUsage, about, result, usage, failure, latencyMs: Date.now() - started });
   try {
-    // The judge sees the answer and, when a picture was asked, the brief that would draw it.
-    const judged = {
-      ...(checked.recipe ? { recipe: checked.recipe } : {}),
-      ...(checked.menu ? { menu: checked.menu } : {}),
-      ...(checked.imageBrief ? { imageBrief: checked.imageBrief } : {}),
-      ...(checked.stepBriefs?.length ? { stepBriefs: checked.stepBriefs.map((s) => s.brief) } : {}),
-    };
-    const { verdict, usage } = await deps.judge.judge(judged, controller.signal);
+    const result = await deps.judge.judge(judged, controller.signal);
+    const { verdict, usage, answer } = result;
     ledger.parts.push({ prices: judgePrices, usage });
     const total = addUsage(genUsage, usage);
-    deps.logger.info("prompt_judge_verdict", { uidHash: uidHash(uid), kind: req.kind, verdict, mode: config.outputJudge });
+    // The fixed codes only: the note is model text, and logs never carry model output.
+    deps.logger.info("prompt_judge_verdict", {
+      uidHash: uidHash(uid), kind: req.kind, verdict, mode: config.outputJudge,
+      where: answer?.where ?? null, issues: answer?.issues ?? [], quality: answer?.quality ?? null,
+    });
+    keep(result, usage, null);
     if (verdict !== "ok" && enforce) {
       return { ok: false, failureClass: "content", reason: `judge ${verdict}`, usage: total, rejection: `JUDGE_${verdict.toUpperCase()}` };
     }
@@ -963,10 +1010,66 @@ async function runJudge(
     const usage = addUsage(genUsage, e instanceof GenerationError ? e.usage : undefined);
     const reason = controller.signal.aborted ? "judge timeout" : e instanceof GenerationError ? e.message : "judge error";
     deps.logger.warn("prompt_judge_failed", { uidHash: uidHash(uid), kind: req.kind, reason: reason.slice(0, 60), mode: config.outputJudge });
+    keep(null, e instanceof GenerationError ? e.usage : undefined, reason.slice(0, 60));
     if (!enforce) return { ok: true, ...checked, usage };
     return { ok: false, failureClass: "infra", reason, usage };
   } finally {
     clearTimeout(timer);
+  }
+}
+
+/**
+ * Hands one judge answer to Deps.judgeLog (core/judgeLog.ts), without waiting for it: the write
+ * can only fail or be slow on its own (`judge_log_failed`), never the request.
+ */
+function keepJudgeAnswer(
+  deps: Pick<Deps, "judge" | "judgeLog" | "logger">,
+  x: {
+    req: GenerateRequest;
+    config: RuntimeConfig;
+    judged: JudgedOutput;
+    ledger: CallLedger;
+    genUsage: LlmUsage | undefined;
+    about: { promptHash: string; gateRule: string | null };
+    result: { verdict: JudgeVerdict; answer?: JudgeAnswer } | null;
+    usage: LlmUsage | undefined;
+    failure: string | null;
+    latencyMs: number;
+  },
+): void {
+  if (!deps.judgeLog) return;
+  const fail = (e: unknown) => deps.logger.warn("judge_log_failed", { reason: String((e as Error)?.message ?? e).slice(0, 80) });
+  try {
+    const { req, result, usage } = x;
+    const text = x.ledger.answered ?? textSelectionOf(x.config);
+    const entry: JudgeEntry = {
+      kind: req.kind,
+      ...(req.kind === "menu" ? { days: req.days ?? DEFAULT_MENU_DAYS, courses: req.courses ?? 3 } : {}),
+      ...(req.image ? { image: req.image } : {}),
+      language: req.config.language,
+      textProvider: text.provider,
+      textModel: text.model,
+      textModelVersion: x.genUsage?.model ?? null,
+      judgeModel: deps.judge.model,
+      judgeModelVersion: usage?.model ?? null,
+      judgeVersion: JUDGE_VERSION,
+      promptHash: x.about.promptHash,
+      revision: process.env.K_REVISION ?? null,
+      mode: x.config.outputJudge === "enforce" ? "enforce" : "shadow",
+      gateRule: x.about.gateRule,
+      verdict: result?.verdict ?? null,
+      failure: x.failure,
+      where: result?.answer?.where ?? null,
+      issues: result?.answer?.issues ?? [],
+      quality: result?.answer?.quality ?? null,
+      note: cleanJudgeNote(result?.answer?.note),
+      latencyMs: x.latencyMs,
+      usage: usage ? { inputTokens: usage.inputTokens, outputTokens: usage.outputTokens, thinkingTokens: usage.thinkingTokens, finishReason: usage.finishReason } : null,
+      ...(x.config.outputJudgeKeepText ? { text: judgeText(x.judged) } : {}),
+    };
+    deps.judgeLog.record(entry).catch(fail);
+  } catch (e) {
+    fail(e);
   }
 }
 
@@ -1075,7 +1178,7 @@ export async function generateRecipe(deps: Deps, caller: Caller, data: unknown):
     deps.logger.info("generation_not_enough_items", { uidHash: uidHash(caller.uid), kind: req.kind, courses: req.courses ?? null, days: req.kind === "menu" ? menuDaysOf(req) : null, items: req.ingredients.length });
     fail("failed-precondition", "NOT_ENOUGH_ITEMS", "The ticked items cannot make this request");
   }
-  const plan = planFor(req, config);
+  const plan = planFor(req, config, deps.judge.model);
   const reservation = await reserve(deps, caller.uid, req, config, plan);
   if (!reservation.reserved) {
     const response = await withImage(deps, caller.uid, req.requestId, reservation.generation, reservation.response);
@@ -1098,18 +1201,19 @@ export async function generateRecipe(deps: Deps, caller: Caller, data: unknown):
     // No dish picture, no step pictures: without a dish brief none is asked at all. The dish's
     // picture first, within IMAGE.budgetMs.dish; only when it was made, the step pictures, at most
     // IMAGE.maxParallel at once, within IMAGE.budgetMs.steps from the same start (constants.ts IMAGE
-    // has the arithmetic). When the dish's fails, no step picture is asked (NO_DISH, nothing spent).
+    // has the arithmetic; a provider's own `timing` may lengthen both, imageTimingOf). When the dish's fails, no step picture is asked (NO_DISH, nothing spent).
     const withDish = stillPending && outcome.imageBrief !== undefined;
     const stepBriefs = withDish ? (outcome.stepBriefs ?? []) : [];
     const picturesFrom = deps.now();
+    const budgetMs = imageTimingOf(config.image.provider).budgetMs;
     const dish = !stillPending
       ? settledAway
       : outcome.imageBrief !== undefined
-        ? await makeRecipeImage(deps, caller.uid, outcome.imageBrief, config, picturesFrom + IMAGE.budgetMs.dish)
+        ? await makeRecipeImage(deps, caller.uid, outcome.imageBrief, config, picturesFrom + budgetMs.dish)
         : briefRefused(outcome.briefRule ?? "MISSING");
     const noDish: ImageOutcome = { ok: false, failure: "NO_DISH", microUsd: 0, model: null };
     const steps = dish.ok && stepBriefs.length > 0
-      ? await makeStepImages(deps, caller.uid, stepBriefs, config, picturesFrom + IMAGE.budgetMs.steps)
+      ? await makeStepImages(deps, caller.uid, stepBriefs, config, picturesFrom + budgetMs.steps)
       : stepBriefs.map(() => noDish);
     outcome = { ...outcome, picture: { dish, steps: stepBriefs.map((s, i) => ({ step: s.step, outcome: steps[i] })) } };
   }

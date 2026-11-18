@@ -27,7 +27,8 @@
  * `polling_url` on an API host of the same region over https (BFL_HOSTS; anything else is refused
  * before it is asked); the picture is downloaded only from a delivery host of that region, with
  * redirects refused and at most IMAGE.maxInputBytes read. Every wait honours the abort signal (the
- * core's per-attempt timeout inside the picture's budget). Error messages are fixed texts with at
+ * core's per-attempt timeout inside the picture's budget, `timing` below): the adapter has no time
+ * limit of its own and polls for as long as the signal lets it. Error messages are fixed texts with at
  * most an HTTP status or BFL's status word: never BFL's text, the prompt, a URL or the key.
  */
 import { IMAGE } from "../constants";
@@ -303,15 +304,26 @@ export class BflImageGenerator implements RecipeImageGenerator {
  * - flux-3-image: USD 0.048 (768sq 0.041, 2k 0.10); 0.05 is reserved.
  * BFL's `cost` (credits) is reported to the core as "image tokens" of one micro-USD each (the
  * token rate 1 USD per 1M below), so a picture is booked at exactly what BFL says it charged.
- * Not yet switchable: BFL is not in the privacy policy's processor list.
+ *
+ * Privacy (owner's decision 2026-11-18, README "What a new provider means for privacy"): no user
+ * data goes to the picture model; it receives only the fixed template around the brief of a
+ * generated recipe, which is not user data.
+ *
+ * Times (`timing`, owner's request 2026-11-18): FLUX 3 Image Klein took 21.2-33.2 s end to end for
+ * 8 of 9 pictures in the live check of 2026-11-17 (one 75.9 s), so the defaults' 30 s first
+ * attempt would abandon about half of them, already charged, to the fallback. While BFL is the
+ * selected model each attempt gets up to 45 s, and the dish's picture 65 s: 45 s for FLUX, then the
+ * fallback's 20 s (IMAGE.minAttemptMs; Flash-Lite Image takes about 3 s). The reservation for
+ * "dish" is 60 + 68 = 128 s, covering text 40 s + judge 10 s + 65 s = 115 s with 13 s to spare
+ * and under the apps' 130 s wait; "steps" keeps 100 s / 105 s (40 + 10 + 100 = 150 s inside 165 s,
+ * the 180 s function timeout and the apps' 190 s).
  */
 export const bflImage: ImageProviderDescriptor = {
   kind: "image",
   id: "bfl",
   label: "Black Forest Labs FLUX (EU endpoint)",
   processing: "Black Forest Labs (BFL GmbH, Freiburg, Germany), on its EU endpoint api.eu.bfl.ai (EU clusters only; BFL_REGION)",
-  // Owner's decision needed before this flips: README "What a new provider means for privacy".
-  privacy: { approved: false, missing: "Black Forest Labs is not yet named in the privacy policy's processor list (a code change turns this on)" },
+  privacy: { approved: true, missing: "" },
   secret: {
     id: "bfl",
     param: "BFL_API_KEY_SECRET",
@@ -323,6 +335,7 @@ export const bflImage: ImageProviderDescriptor = {
     "flux-3-image-klein": { input: 0, outputText: 0, outputImage: 1 },
     "flux-3-image": { input: 0, outputText: 0, outputImage: 1 },
   },
+  timing: { abortMs: 45_000, budgetMs: { dish: 65_000, steps: 100_000 }, reservationExtraMs: { dish: 68_000, steps: 105_000 } },
   params: [
     {
       name: "BFL_REGION",

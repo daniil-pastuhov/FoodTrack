@@ -35,6 +35,11 @@ export const STAT_FIELDS = [
   "sandboxCredits",
   "welcomeGrants",
   "welcomeCredits",
+  // Written by every settle since they were added (0 included): free recipes charged that day and
+  // their pro-rata share of the booked spend (generation.ts welcomeShareMicroUsd). A day without
+  // the field is from before, unknown rather than free (BoardDay.welcomeUsedKnown).
+  "welcomeUsedCredits",
+  "welcomeUsedMicroUsd",
   "imageRequests",
   "imagesDelivered",
   "imageFailures",
@@ -114,6 +119,26 @@ export interface BoardDay extends DayStats {
   salesCredits: number;
   sandboxPurchases: number;
   sandboxPurchaseCredits: number;
+  /**
+   * Whether `welcomeUsedCredits` / `welcomeUsedMicroUsd` are known for the day: the fields are
+   * there, or nothing was settled that day (no spend to attribute). False for a day with settled
+   * calls from before the fields existed.
+   */
+  welcomeUsedKnown: boolean;
+}
+
+/** Free recipes (the welcome grant) over the period: granted, charged, and what those cost. */
+export interface FreeRecipes {
+  /** Free recipes granted in the period (`welcomeCredits`). */
+  granted: number;
+  /** Free recipes charged in the period (`welcomeUsedCredits`, the days it is known). */
+  used: number;
+  /** Their pro-rata share of the booked model spend (`welcomeUsedMicroUsd`, the days it is known). */
+  costMicroUsd: number;
+  /** Days of the period with settled calls but no figure (before the fields existed): `used` and the cost leave them out. */
+  unknownDays: number;
+  /** The first day of the period with a figure (null: none). */
+  knownSince: string | null;
 }
 
 export interface Board {
@@ -155,9 +180,16 @@ export interface Board {
     total: Totals;
     /** total.net x netMicroUsdPerCredit: the config's conservative estimate, not a store payout. */
     estimatedNetMicroUsd: number;
+    /**
+     * estimatedNetMicroUsd minus the period's whole model spend (settled and reserved, free
+     * recipes' included): an estimate, revenue by the day a purchase was granted, spend by the day
+     * a call was reserved.
+     */
+    estimatedMarginMicroUsd: number;
     sandbox: { purchases: number; credits: number };
   };
   period: DayStats;
+  free: FreeRecipes;
   /** Period spend / succeeded answers; null without any. */
   avgPerAnswerMicroUsd: number | null;
   /** Period spend / recipes kept (generationUnits - refundedCredits); null without any. */
@@ -276,6 +308,7 @@ export function buildBoard(input: BoardInput): Board {
       salesCredits: 0,
       sandboxPurchases: 0,
       sandboxPurchaseCredits: 0,
+      welcomeUsedKnown: typeof raw?.welcomeUsedCredits === "number" || num(raw?.llmCalls) === 0,
     };
   });
   const byDay = new Map(days.map((d) => [d.day, d]));
@@ -325,6 +358,15 @@ export function buildBoard(input: BoardInput): Board {
   const worstCaseMicroUsd = toDate + Math.max(0, todayRow.ceilingMicroUsd - todayBookedMicroUsd) + remainingDays * config.dailySpendMaxMicroUsd;
 
   const kept = period.generationUnits - period.refundedCredits;
+  const known = days.filter((d) => d.welcomeUsedKnown);
+  const free: FreeRecipes = {
+    granted: period.welcomeCredits,
+    used: known.reduce((sum, d) => sum + d.welcomeUsedCredits, 0),
+    costMicroUsd: known.reduce((sum, d) => sum + d.welcomeUsedMicroUsd, 0),
+    unknownDays: days.length - known.length,
+    knownSince: days.find((d) => typeof input.stats.get(d.day)?.welcomeUsedCredits === "number")?.day ?? null,
+  };
+  const estimatedNetMicroUsd = total.net * config.netMicroUsdPerCredit;
   return {
     project: input.project,
     generatedAtMs: input.generatedAtMs,
@@ -354,10 +396,12 @@ export function buildBoard(input: BoardInput): Board {
       byStore,
       byStoreAndPack,
       total,
-      estimatedNetMicroUsd: total.net * config.netMicroUsdPerCredit,
+      estimatedNetMicroUsd,
+      estimatedMarginMicroUsd: estimatedNetMicroUsd - (period.spentMicroUsd + period.reservedMicroUsd),
       sandbox,
     },
     period,
+    free,
     avgPerAnswerMicroUsd: period.succeeded > 0 ? period.spentMicroUsd / period.succeeded : null,
     avgPerRecipeMicroUsd: kept > 0 ? period.spentMicroUsd / kept : null,
     holders: input.holders,

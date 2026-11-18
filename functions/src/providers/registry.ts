@@ -7,11 +7,13 @@
  * To add a provider: write its adapter file in src/adapters/ exporting a descriptor
  * (providers/types.ts) and add it to TEXT or IMAGE below. Nothing else names it.
  */
+import { IMAGE as IMAGE_TIMES } from "../constants";
 import { bflImage } from "../adapters/bfl";
 import { googleText } from "../adapters/gemini";
 import { openaiImage, vertexImage } from "../adapters/image";
 import type {
   ImageProviderDescriptor,
+  ImageTiming,
   ImageTokenPrices,
   ProviderDescriptor,
   ProviderSecret,
@@ -57,6 +59,19 @@ export function imageTokenPricesOf(provider: string, model: string): ImageTokenP
   return rates && Object.prototype.hasOwnProperty.call(rates, model) ? rates[model] : undefined;
 }
 
+/**
+ * The picture times while `provider` is the selected picture model: its descriptor's `timing`
+ * over constants.ts IMAGE (also for "off" and an unknown id).
+ */
+export function imageTimingOf(provider: string): ImageTiming {
+  const own = imageProviderById(provider)?.timing ?? {};
+  return {
+    abortMs: own.abortMs ?? IMAGE_TIMES.abortMs,
+    budgetMs: { ...IMAGE_TIMES.budgetMs, ...own.budgetMs },
+    reservationExtraMs: { ...IMAGE_TIMES.reservationExtraMs, ...own.reservationExtraMs },
+  };
+}
+
 /** A text model's default price from its adapter's table, if listed. */
 export function textDefaultPrices(provider: string, model: string): TokenPrices | undefined {
   const prices = textProviderById(provider)?.prices;
@@ -91,6 +106,17 @@ export function providerRegistryProblems(): string[] {
     } else {
       for (const [m, usd] of Object.entries(d.usdPerImage)) {
         if (!Number.isFinite(usd) || usd < 0.001 || usd > 2) out.push(`${at}: price of ${m} must be 0.001 to 2 USD`);
+      }
+      if (d.timing) {
+        const t = imageTimingOf(d.id);
+        const min = IMAGE_TIMES.minAttemptMs;
+        if (!(t.abortMs >= min)) out.push(`${at}: timing.abortMs must be at least IMAGE.minAttemptMs`);
+        // A timed-out first attempt still leaves the fallback its attempt.
+        if (!(t.budgetMs.dish >= t.abortMs + min)) out.push(`${at}: timing.budgetMs.dish must leave IMAGE.minAttemptMs after an attempt`);
+        if (!(t.budgetMs.steps > t.budgetMs.dish + min)) out.push(`${at}: timing.budgetMs.steps must exceed the dish's budget by IMAGE.minAttemptMs`);
+        for (const level of ["dish", "steps"] as const) {
+          if (!(t.reservationExtraMs[level] >= t.budgetMs[level])) out.push(`${at}: timing.reservationExtraMs.${level} must cover its budget`);
+        }
       }
     }
   }

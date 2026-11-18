@@ -29,7 +29,7 @@
  * live in `modelLifecycle/{provider}__{model}` (Admin SDK only, like every collection).
  */
 import type { Firestore } from "firebase-admin/firestore";
-import { DEFAULT_IMAGE_SELECTION, DEFAULT_TEXT_SELECTION } from "../constants";
+import { DEFAULT_IMAGE_SELECTION, DEFAULT_TEXT_SELECTION, JUDGE, JUDGE_PRICES } from "../constants";
 import type { RuntimeConfig } from "../model";
 import type { Logger } from "../ports";
 import { PROVIDER_PROFILES, type ProviderProfile } from "./profiles";
@@ -69,7 +69,25 @@ export const MODEL_LIFECYCLE: readonly LifecycleEntry[] = [
     earliest: true,
     source: VERTEX_LIFECYCLE,
     checkedOn: "2026-11-18",
-    note: "GA table: \"September 2, 2027 or later\"; released September 2, 2026. Also the output judge's model while GEMINI_JUDGE_MODEL is empty.",
+    note: "GA table: \"September 2, 2027 or later\"; released September 2, 2026. Also the output judge's model while GEMINI_JUDGE_MODEL is set empty.",
+  },
+  {
+    provider: "google",
+    model: "gemini-3.5-flash-lite",
+    retiresOn: "2027-07-21",
+    earliest: true,
+    source: VERTEX_LIFECYCLE,
+    checkedOn: "2026-11-18",
+    note: "GA table: \"July 21, 2027 or later\"; released July 21, 2026. The output judge's model (GEMINI_JUDGE_MODEL, default JUDGE.model).",
+  },
+  {
+    provider: "google",
+    model: "gemini-3.1-flash-lite",
+    retiresOn: "2027-05-07",
+    earliest: true,
+    source: VERTEX_LIFECYCLE,
+    checkedOn: "2026-11-18",
+    note: "GA table: \"May 7, 2027 or later\"; released May 7, 2026. Priced for the judge (JUDGE_PRICES), not selected by default.",
   },
   {
     provider: "vertex",
@@ -217,7 +235,8 @@ export function modelsInUse(
 
 /**
  * Every problem with the table (empty when sound): a model a profile, a deploy default, a
- * provider's default model or default param, or a price table names without an entry; an entry
+ * provider's default model or default param, the output judge's default (JUDGE.model, the
+ * GEMINI_JUDGE_MODEL param's default) or a price table (JUDGE_PRICES included) names without an entry; an entry
  * twice; an entry for a provider the registry doesn't have; a malformed date or source. `extra`
  * adds models named elsewhere (the judge's default param, read by the test).
  */
@@ -240,6 +259,9 @@ export function lifecycleProblems(
     for (const m of Object.keys(d.prices)) need.push({ provider: d.id, model: m, why: `${d.id} price table` });
   }
   for (const d of imageProviders()) for (const m of Object.keys(d.usdPerImage)) need.push({ provider: d.id, model: m, why: `${d.id} price table` });
+  // The output judge is always Gemini on Vertex AI (provider "google").
+  need.push({ provider: "google", model: JUDGE.model, why: "JUDGE.model (GEMINI_JUDGE_MODEL default)" });
+  for (const m of Object.keys(JUDGE_PRICES)) need.push({ provider: "google", model: m, why: "JUDGE_PRICES" });
   for (const p of PROVIDER_PROFILES) for (const m of profileModels(p)) need.push({ ...m, why: `profile ${p.id}` });
   const missing = new Set<string>();
   for (const n of need) {

@@ -22,6 +22,7 @@ the caller. The client wire contract is in [CONTRACT.md](CONTRACT.md).
 | `src/core/buyers.ts` | FIFO attribution of spent credits to purchases, buyer keys, the refund-after-use blocklist |
 | `src/core/consumption.ts` | Answers Apple's `CONSUMPTION_REQUEST` for consenting buyers |
 | `src/core/generation.ts` | `generateRecipe` (reserve, call the LLM, settle) and `getGeneration` (polling) |
+| `src/core/judgeLog.ts`, `src/admin/judgeAnswers.ts` | Keeping every output judge answer in `judgeAnswers`, and `npm run admin -- judge summary | export` to read them (see "Prompt injection defences" item 5) |
 | `src/core/reports.ts` | `reportRecipe` ("Report this recipe") and keeping a deleted account's reports without its uid (see "Reports") |
 | `src/providers/types.ts`, `registry.ts`, `router.ts`, `failure.ts`, `balance.ts` | The common provider interface: the descriptor every text or picture adapter exports, the registry of them (one entry each), the routers that pick the adapter per call, the shared failure taxonomy and the balance probe (see "Adding a provider") |
 | `src/providers/lifecycle.ts`, `src/adapters/modelProbes.ts` | The model lifecycle table (announced retirement dates, their source, when last checked), which models a config puts in use, the daily check and its log lines, and the providers' free metadata probes (see "Model lifecycle") |
@@ -35,7 +36,7 @@ the caller. The client wire contract is in [CONTRACT.md](CONTRACT.md).
 | `src/core/welcome.ts` | The welcome grant: `getWelcomeOffer`, `claimWelcome`, `welcomeRecipes` and the day's brake (see "Welcome grant") |
 | `src/core/appleToken.ts` | `registerAppleSignIn`, and removing the stored Sign in with Apple token (deletion, unlink, tombstones) |
 | `src/board/` | The owner's spend and sales board: reader, aggregation and renderer shared by `npm run admin -- board` and the scheduled `redrawBoard`, and `hosted.ts`, the redraw into a private bucket (see "The board") |
-| `src/admin/` | The owner's offline commands, none deployed as a function: deletion requests by email (`npm run admin`, see "Deletion requests by email"), the spend and sales board by hand (`npm run admin -- board`, see "The board"), the provider profiles (`npm run admin -- providers list | use`, older name `image`, see "Provider profiles"), the models in use and their retirement dates (`npm run admin -- models`, read-only, see "Model lifecycle"), the prompt replay (`npm run prompt-body`) and the prompt-injection red-team runner (`npm run redteam`, `src/admin/redteam/`; see "Replaying a prompt against the live model") |
+| `src/admin/` | The owner's offline commands, none deployed as a function: deletion requests by email (`npm run admin`, see "Deletion requests by email"), the spend and sales board by hand (`npm run admin -- board`, see "The board"), the provider profiles (`npm run admin -- providers list | use`, older name `image`, see "Provider profiles"), the models in use and their retirement dates (`npm run admin -- models`, read-only, see "Model lifecycle"), the output judge's answers (`npm run admin -- judge summary | export`, read-only, see "Prompt injection defences" item 5), the prompt replay (`npm run prompt-body`) and the prompt-injection red-team runner (`npm run redteam`, `src/admin/redteam/`; see "Replaying a prompt against the live model") |
 | `src/taste/` | The taste profile quiz: `catalogue.ts` (every step, option, text and prompt word; see "Taste profile quiz") and `quiz.ts` (`getTasteQuiz`, the version, cleaning a request's `taste`) |
 | `src/core/guard.ts` | Pre-Firestore throttles, client address, log sampling |
 | `src/ports.ts` | `PlayVerifier`, `AppStoreVerifier`, `RecipeGenerator`, `RecipeImageGenerator`, `AppleTokenRevoker` interfaces |
@@ -44,9 +45,9 @@ the caller. The client wire contract is in [CONTRACT.md](CONTRACT.md).
 | `src/emulatorFakes.ts` | Fake stores and LLM, only inside the Functions emulator with `EMULATOR_FAKES=true` and a `demo-` project |
 | `src/index.ts` | Triggers, params, secrets, per-function limits |
 | `certs/AppleRootCA-G3.cer` | Apple's public root CA (SHA-256 `63:34:3A:BF:…:91:79`, checked by a test) |
-| `../owner-console/` | The owner console: a static page on Firebase Hosting with the provider setup's drop-down (text and pictures); and the runtime settings; everything it shows or changes goes through `getProviderProfiles` / `setProviderProfile` and `getOwnerSettings` / `setOwnerSettings` (see "The owner console") |
+| `../owner-console/` | The owner console: a static dashboard page on Firebase Hosting: what is in force now, the provider profiles (text and pictures) and the runtime settings in cards; everything it shows or changes goes through `getProviderProfiles` / `setProviderProfile` and `getOwnerSettings` / `setOwnerSettings` (see "The owner console") |
 | `../firestore.rules` | Denies every client read and write; only the Admin SDK touches Firestore |
-| `../firestore.indexes.json` | Sweeper indexes and the TTL policies on `generations.expiresAt` and `recipeImages.expiresAt` |
+| `../firestore.indexes.json` | Sweeper indexes and the TTL policies on `generations.expiresAt`, `recipeImages.expiresAt`, the reports' and `judgeAnswers.expiresAt` |
 
 ### Functions
 
@@ -183,6 +184,19 @@ receipt, so it is bounded like money:
   `welcomeUnspent` and `welcomeSpent`, so neither side's bought or free use is hidden by the
   other's. They are lost with the
   account like any unused recipes (`forfeitedBalance`), and move with `mergeBalance`.
+- **What they cost, for the owner** (never money; nothing reads it back). Every settle also adds
+  to `stats/{day}` (the call's reservation day, in the transaction that already settles it, no
+  extra read) `welcomeUsedCredits`, the free recipes the charge took, and `welcomeUsedMicroUsd`,
+  their share of the call's booked spend: **pro rata by recipes**, booked spend × free recipes
+  charged ÷ recipes charged (`welcomeShareMicroUsd`). A charge wholly from free recipes books all
+  of its spend there, one that took the last free recipe and a bought one half; a refunded failure
+  charges no one's recipes and books nothing there (its spend stays in `spentMicroUsd`, like every
+  call's, free or bought: the spend ceilings, the per-account brake and the board all count it). A
+  closed account's settle books nothing. Both fields are written on every settle, 0 included, so a
+  day that has them was counted; days from before have none, and the board shows them as unknown,
+  not as free. The board shows free recipes granted, used and their cost, and the margin (net
+  revenue minus all model spend). Not shown: free recipes still unspent across accounts (a
+  merged-away tombstone keeps its `welcomeUnspent`, so a sum over `users` would count it twice).
 - **The offer.** `getWelcomeOffer` (no sign-in) and `welcomeRecipes` beside every `balance` say
   how many a claim grants now: `recipes`, or 0 when the grant is off, generation is paused
   (`generationEnabled: false`, the kill switch also stops grants) or today's grants are used up.
@@ -209,7 +223,7 @@ global ceiling (USD 1.20 a day without sales, at most USD 2.00) and the same per
 0.45; 3 recipes are well under it). So the bill can never exceed what "Spend ceilings" states.
 What farming can do is **use up the ceiling for everyone**: at a typical USD 0.02 a recipe, the
 600 a day would be about USD 12 of model use, far above USD 1.20; booked at the worst case (about
-USD 0.08 a recipe, 0.11 with the judge on) the base ceiling holds about 15 such recipes, a typical
+USD 0.08 a recipe, 0.085 with the judge on) the base ceiling holds about 15 such recipes, a typical
 one about 60, i.e. 20 farmed claims. A determined farmer with many Google accounts could therefore
 keep generation paused (`GENERATION_DISABLED`) for paying users for the rest of a UTC day. If that
 shows up (many `welcome_granted` lines and `GENERATION_DISABLED` with little revenue on the board),
@@ -421,7 +435,8 @@ Every LLM call is priced before it is made and paid for by a credit:
 
 Worst-case reservations at the default prices (1.50 / 7.50 USD per 1M tokens), from a small
 request to the largest valid one: recipe USD 0.067–0.082, 2-course menu 0.217–0.233, 3-course menu
-0.307–0.323 (with `outputJudge` on, add 0.024, 0.040 and 0.050; the largest is the table below).
+0.307–0.323 (with `outputJudge` on, add 0.003, 0.006 and 0.008 for the lite judge since
+2026-11-18, 0.024, 0.040 and 0.050 before; the largest is the table below).
 The date and extras rules of November 2026 (the list of items past their date, the extras and
 staples lines) added 450–655 bytes to the input bound, under USD 0.001 a call; the output
 dominates. A typical measured 3-course menu (≈3,000 input, 12,000 output, 2,000 thinking tokens)
@@ -469,13 +484,15 @@ call; the units step's share is 989 bytes, about USD 0.0015. The price is unchan
 
 | request | largest, no profile | largest, with the largest profile (judge off / on) |
 |---|---|---|
-| recipe | 13,979 bytes, USD 0.08241 / 0.10606 | 16,437 bytes, USD 0.08610 / 0.10975 |
-| 3-day 2-course menu | 15,243 bytes, USD 0.23286 / 0.27286 | 17,729 bytes, USD 0.23659 / 0.27659 |
-| 3-day 3-course menu | 15,262 bytes, USD 0.32289 / 0.37279 | 17,748 bytes, USD 0.32662 / 0.37652 |
-| 4-day 3-course menu | 15,287 bytes, USD 0.38293 / 0.43943 | 17,773 bytes, USD 0.38666 / 0.44316 |
+| recipe | 13,979 bytes, USD 0.08241 / 0.08525 | 16,437 bytes, USD 0.08610 / 0.08894 |
+| 3-day 2-course menu | 15,243 bytes, USD 0.23286 / 0.23897 | 17,729 bytes, USD 0.23659 / 0.24270 |
+| 3-day 3-course menu | 15,262 bytes, USD 0.32289 / 0.33098 | 17,748 bytes, USD 0.32662 / 0.33471 |
+| 4-day 3-course menu | 15,287 bytes, USD 0.38293 / 0.39234 | 17,773 bytes, USD 0.38666 / 0.39607 |
 
+(Judge on: the lite judge of 2026-11-18, item 5 of "Prompt injection defences"; with the judge on
+the generator's model the four were 0.10606 / 0.27286 / 0.37279 / 0.43943 without a profile.)
 The largest of all, 4 days of 3 courses with the judge on, still fits the per-user USD 0.45 (by
-0.0068); `test/taste.test.ts` checks every menu set and the recipe against it with the judge off
+0.054, 0.0068 with the old judge); `test/taste.test.ts` checks every menu set and the recipe against it with the judge off
 and on, and that the blocks add under 2,600 bytes and USD 0.004.
 
 **Staples add at most 2,600 bytes** (November 2026, CONTRACT.md "Staples"): the third data block
@@ -489,13 +506,13 @@ call. The price is unchanged.
 
 | request | largest with the largest profile, no staples (judge off / on) | the same with the largest staples |
 |---|---|---|
-| recipe | 15,448 bytes, USD 0.08461 / 0.10827 | 18,048 bytes, USD 0.08851 / 0.11217 |
-| 3-day 2-course menu | 16,740 bytes, USD 0.23511 / 0.27511 | 19,340 bytes, USD 0.23901 / 0.27901 |
-| 3-day 3-course menu | 16,759 bytes, USD 0.32514 / 0.37503 | 19,359 bytes, USD 0.32904 / 0.37893 |
-| 4-day 3-course menu | 16,784 bytes, USD 0.38518 / 0.44167 | 19,384 bytes, USD 0.38908 / 0.44557 |
+| recipe | 15,448 bytes, USD 0.08461 / 0.08745 | 18,048 bytes, USD 0.08851 / 0.09135 |
+| 3-day 2-course menu | 16,740 bytes, USD 0.23511 / 0.24122 | 19,340 bytes, USD 0.23901 / 0.24512 |
+| 3-day 3-course menu | 16,759 bytes, USD 0.32514 / 0.33323 | 19,359 bytes, USD 0.32904 / 0.33713 |
+| 4-day 3-course menu | 16,784 bytes, USD 0.38518 / 0.39459 | 19,384 bytes, USD 0.38908 / 0.39849 |
 
 The largest of all, 4 days of 3 courses with the judge on, still fits the per-user USD 0.45 (by
-0.0044), so the server keeps the apps' 400 code points. `test/staples.test.ts` checks every menu
+0.052 with the lite judge, 0.0044 with the old one), so the server keeps the apps' 400 code points. `test/staples.test.ts` checks every menu
 set and the recipe against it with the judge off and on, with optional items as well, and that
 the staples add at most 2,700 bytes.
 
@@ -507,10 +524,13 @@ the per-user ceiling with the judge off and on), in USD, judge off / on:
 
 | days | 1 course | 2 courses | 3 courses |
 |---|---|---|---|
-| 1 | 0.067 / 0.089 | 0.098 / 0.123 | 0.128 / 0.156 |
-| 2 | 0.105 / 0.131 | 0.165 / 0.198 | 0.218 / 0.256 |
-| 3 | 0.150 / 0.181 | 0.233 / 0.273 | 0.323 / 0.373 |
-| 4 | 0.195 / 0.231 | 0.308 / 0.356 | 0.383 / 0.439 |
+| 1 | 0.067 / 0.069 | 0.098 / 0.101 | 0.128 / 0.132 |
+| 2 | 0.105 / 0.108 | 0.165 / 0.170 | 0.218 / 0.224 |
+| 3 | 0.150 / 0.154 | 0.233 / 0.239 | 0.323 / 0.331 |
+| 4 | 0.195 / 0.200 | 0.308 / 0.316 | 0.383 / 0.392 |
+
+(Judge on: the lite judge since 2026-11-18; with the judge on the generator's model the 3 x 3 and
+4 x 3 cells were 0.373 and 0.439.)
 
 The input bound grows by about 80 bytes a day and 20 a course (the schema's date enum and course
 lists); the output cap dominates. The largest, 4 days of 3 courses at 0.383, fits the 0.45 once a
@@ -529,12 +549,12 @@ checks the inequality for each kind.
 instruction lines and its schema field, under USD 0.001, plus the picture's reserved price (USD
 0.06 by default: the dearer of Flash-Lite Image, 0.04, and its fallback Nano Banana 2.1, 0.06). The
 largest recipe (every field at its maximum, 4-byte names, multi-choice config) is USD 0.0824 without
-a picture and 0.1431 with one (0.1060 / 0.1668 with the judge on). Measured (2026-11-17), a picture
+a picture and 0.1431 with one (0.0852 / 0.1459 with the lite judge on; 0.1060 / 0.1668 with the judge on the generator's model). Measured (2026-11-17), a picture
 is USD 0.0336 on Flash-Lite Image (1,120 image tokens, no thinking) and 0.0415 on Nano Banana 2.1
 (1,120 image tokens plus about 1,037 thinking tokens at the text rate), so a recipe with a picture
 is about 0.02 + 0.034 = USD 0.054 against at least 2 × 0.106 net (the 100-pack after a 30 % store
-cut and 25 % VAT): the default price of 2 covers it about four times typically and 1.3 times at the
-worst case with the judge on. Per user, at most three pictures a day start when every one is
+cut and 25 % VAT): the default price of 2 covers it about four times typically and 1.45 times at the
+worst case with the lite judge on (1.3 with the old one). Per user, at most three pictures a day start when every one is
 booked at its worst case (0.143 × 3 = 0.43), about eight at measured cost. Menus get no pictures, so the menu arithmetic below is unchanged.
 
 - **Per user: USD 0.45 a day** (`perUserDailySpendMicroUsd: 450000`). A call starts only if
@@ -553,8 +573,9 @@ booked at its worst case (0.143 × 3 = 0.43), about eight at measured cost. Menu
   - `dailySpendRevenueFraction: 0.25`: a quarter of the week's estimated net revenue may go to
     model spend on top of the base. Each credit sold adds 0.25 × 0.12 = USD 0.03 to every day's
     ceiling for 7 days; it reaches the maximum at (2.00 − 1.20) / 0.03 ≈ 27 credits sold in a
-    week. Refunds subtract (`stats/{day}.netCreditsGranted`, production only; sandbox never
-    counts).
+    week. Refunds subtract (`stats/{day}.netCreditsGranted`, production only; sandbox and
+    free recipes, the welcome grant, never count: they never raise the ceiling, while the spend of
+    what they pay for counts against it like any call's).
   - `dailySpendMaxMicroUsd: 2000000` (USD 2.00/day): **at most USD 60 a month of model spend**
     (≈ 630 NOK at 10.5 NOK/USD), whatever the sales. The ceiling is an estimate against list
     prices; settle books measured costs, so real spend is usually lower.
@@ -702,7 +723,9 @@ introductory 0.75 / 3.75 until then makes the estimates conservative). When the 
 (`GEMINI_MODEL`) or Google's price changes, set `config/runtime.prices` to
 `{ inputUsdPerMTok, outputUsdPerMTok }` (numbers from 0.01 to 1000) from the Vertex AI pricing page,
 and update `DEFAULT_PRICES` in the next deploy. A price set too low makes the breaker too lenient.
-These are the `google` text provider's prices and the output judge's. Another text provider's
+These are the `google` text provider's prices, and the output judge's only for a judge model
+without its own (`JUDGE_PRICES` in constants.ts, overridable as
+`prices.textUsdPerMTok["google/<model>"]`; "Prompt injection defences" item 5). Another text provider's
 prices are in its adapter (`prices` by model, at the endpoint's own rate), overridable without a
 deploy in `config/runtime.prices.textUsdPerMTok` ("Adding a provider", "Money").
 
@@ -946,26 +969,110 @@ Only a caller with credits reaches the model, and an answer goes back only to th
    are never stored (`generations/{id}` keeps state, cost, usage and `failureReason: "output rule
    X"`, no text) and never returned.
 5. **The output judge** (`config/runtime.outputJudge`, default **`off`**). A second model call
-   that sees only the validated answer (never the user's input) and answers one enum:
-   `ok` / `off_topic` / `unsafe_food` / `harmful`. `shadow` runs it and logs
-   `prompt_judge_verdict` without blocking; `enforce` makes any other verdict a content failure
-   (counted as a rejection) and a judge failure an infrastructure failure (the answer is never
-   delivered unchecked). An invalid value reads as `enforce`. Arithmetic at the default prices
-   (judge on the same model, `GEMINI_JUDGE_MODEL` empty): worst case added to the reservation USD
-   0.024 (recipe), 0.040 (2-course), 0.050 (3-course); measured cost typically USD 0.005–0.02,
-   about a quarter of a recipe's measured model cost and a fifth of a menu's, 3–5 % of what the credits net. **Why off by default:**
-   with the judge's worst case reserved, the per-user ceiling (USD 0.45) allows one 3-course menu a
-   day instead of two (0.13 booked + 0.365 > 0.45), which contradicts CONTRACT.md "Limits"; its
-   false-positive rate on honest recipes is unknown until measured, and every false positive is
-   charged to an honest user once the allowance is spent; it is injectable by the same text it
-   judges (the impact is bounded: it can only flip its own enum); and the deterministic checks
-   plus LOW safety filters already cover the high-severity cases (links, contact details, markup,
-   allergens, diet, non-food). What it would add is semantic: off-topic prose made of ordinary
-   words, in-language slurs below the filter threshold, subtly unsafe food handling.
-   **Recommendation:** run the red-team checklist (`test/injection-prompts.md`, `npm run redteam`) after deploy; if
-   anything harmful or off-topic gets through, set `outputJudge: "shadow"` for a week to measure
-   verdicts, then `"enforce"`, and raise `perUserDailySpendMicroUsd` to `500000` (or set
-   `GEMINI_JUDGE_MODEL` to a cheaper model and `prices` accordingly) to keep two 3-course menus.
+   that sees only the validated answer and the recipe language asked for (never the user's input)
+   and answers a small JSON object. Only its `verdict` decides anything: `ok` / `off_topic` /
+   `unsafe_food` / `harmful`. `shadow` runs it, logs `prompt_judge_verdict` and keeps the answer
+   without blocking (**the mode for collecting answers**); `enforce` makes any other verdict a
+   content failure (counted as a rejection) and a judge failure an infrastructure failure (the
+   answer is never delivered unchecked). An invalid value reads as `enforce`. The judge's own
+   safety filter refusing the text reads as `harmful`.
+   - **Model, thinking, time** (since 2026-11-18; constants.ts `JUDGE`): a lite model,
+     `GEMINI_JUDGE_MODEL` = `gemini-3.5-flash-lite` (GA on Vertex AI, `global`; Google names it
+     the replacement for Gemini 2.5 Flash-Lite, and its page recommends MINIMAL thinking for
+     classification), at the least thinking its model takes (`judgeThinkingConfigFor`: MINIMAL for
+     Flash-Lite, LOW for 3.7/3.8 Flash, budget 0 for 2.x), never `GEMINI_THINKING_LEVEL`.
+     `maxOutputTokens` 160, aborted past 320 output + thinking tokens, after 10 s (recipe) / 20 s
+     (menu). Before: `gemini-3.8-flash` at LOW, a 2,048-token ceiling, 12 s / 25 s.
+   - **Its prices**: reserved and booked at the judge model's own price, `JUDGE_PRICES` (Flash-Lite
+     3.5: USD 0.30 / 2.50 per 1M tokens, 3.1: 0.25 / 1.50; cloud.google.com/vertex-ai/generative-ai/pricing,
+     standard tier, global, read 2026-11-18), overridable as
+     `config/runtime.prices.textUsdPerMTok["google/<model>"]`; a judge model with neither is booked
+     at `prices`, the generator's (`judgePricesOf`), so an unlisted model is never booked below a
+     Flash price. Worst case added to the reservation, before → after: recipe USD 0.024 → 0.003,
+     3-day 2-course menu 0.040 → 0.006, 3-day 3-course 0.050 → 0.008, 4-day 3-course 0.056 → 0.009.
+     Typical cost of a check: about USD 0.0004 for a recipe (≈1,000 input and 30 output tokens) and
+     0.001–0.002 for a menu (a 4 x 3 menu measured 5,794 input, 28 output tokens: USD 0.0018);
+     before, USD 0.005–0.02.
+   - **The answer** (adapters/gemini.ts `JUDGE_SCHEMA`, schema-constrained, `verdict` first so an
+     answer cut short still has it): `verdict`; `where`, the field with the most serious problem
+     (`title`, `summary`, `ingredients`, `steps`, `tip`, `imageBrief`, `stepBriefs`, `none`);
+     `issues`, up to 3 codes, worst first, also on an `ok` answer; `quality`, 1 (can't be cooked
+     as written) to 5; `note`, one English sentence of at most 200 characters. Only an unusable
+     `verdict` fails the check; every other field is best effort, dropped when missing or malformed
+     (`parseJudgeAnswer`). The issue codes, what the deterministic checks and the quality gate
+     can't see:
+
+     | code | meaning |
+     |---|---|
+     | `vague_amount` | an ingredient that needs an amount has none, or one nobody can measure |
+     | `missing_step` | an ingredient is never used in the steps, or a needed step (such as cooking it) is missing |
+     | `step_order` | the steps are in an order that does not work |
+     | `unclear_step` | a step is too vague to follow |
+     | `unsafe_temp_time` | a temperature, time or storage that leaves food unsafe |
+     | `non_food` | an ingredient is not food |
+     | `implausible` | an ingredient, amount or combination that makes no sense for the dish |
+     | `title_mismatch` | the title or summary does not match the ingredients and steps |
+     | `wrong_language` | text not in the language asked for (food names excepted) |
+     | `off_topic_text` | text about anything other than cooking the dish |
+     | `image_mismatch` | a picture brief does not show the dish or its step |
+
+     The note is model text about untrusted content, and that content can steer it: it is never
+     shown in the apps, never fed into a prompt, never logged (`prompt_judge_verdict` carries
+     `where`, `issues` and `quality` only); it is kept with control characters removed and
+     anything that looks like a link, an address or a phone number replaced (`cleanJudgeNote`),
+     and printed only JSON-escaped (`admin judge export`) or quoted (red-team report).
+   - **What is kept of the judge's answers**: one `judgeAnswers/{random id}` document per judged
+     generation, shadow and enforce, ok or not, judge failures with their reason
+     (core/judgeLog.ts): `at`, `kind`, `days` / `courses` (menus), `image`, `language`, the
+     generator's `textProvider` / `textModel` / `textModelVersion`, `judgeModel` /
+     `judgeModelVersion`, `judgeVersion` (a hash of the judge's instruction and schema),
+     `promptHash` (a hash of this request's generator instruction and schema, canary masked: equal
+     requests compare across prompt changes), `revision` (the deployed Cloud Run revision), `mode`,
+     `gateRule` (the quality-gate rule that had refused it, if any), `verdict` (null on a failure),
+     `failure`, `where`, `issues`, `quality`, `note`, `latencyMs`, `usage`, and `expiresAt`.
+     **No uid, hashed or not, no request id, no user input**, so a document can't be tied to a
+     person and account deletion has nothing to remove (its promises are unchanged). Kept
+     `JUDGE_LOG.keepDays` (90) days, then deleted by the TTL policy on `judgeAnswers.expiresAt`
+     (`firestore.indexes.json`). Written after the verdict and never awaited by the request: a
+     failed write only logs `judge_log_failed`; it reads nothing. **The judged text**
+     (`judgeText`: the generated fields only) is kept as `text` only while
+     `config/runtime.outputJudgeKeepText` is on, **off by default**: the privacy policy says a
+     result is kept 7 days, and these documents live 90. Seeing the judged recipe is what makes a
+     note actionable, so the trade-off is the owner's: turn it on only after a policy line saying
+     that generated recipes (without any link to the person) are kept 90 days to improve the
+     prompts (docs/privacy-policy-changes.md); the console can only turn it off.
+   - **Reading them**: `npm run admin -- judge summary [--from YYYY-MM-DD] [--to YYYY-MM-DD]`
+     (counts by verdict, issue, where and quality, latency, tokens, and by language, judge model,
+     judge version, prompt hash, text model, mode and kind; never a note) and `npm run admin --
+     judge export [--from] [--to] [--out file.jsonl]` (one JSON object per answer). Read-only;
+     UTC days, both ends included, the last 30 by default (src/admin/judgeAnswers.ts).
+   - **Measured on Vertex AI** (2026-11-18, 20 calls, under USD 0.01): 15 verdict-only calls over 5
+     honest recipes (en, ru, de, fr, es), an honest raw-beef tartare with a flambéed pear, 2 honest
+     menus, a 4 x 3 menu of 5,230 input tokens, and 3 hostile answers (off-topic code and a
+     voucher link, bleach and antifreeze, a drink to drug someone), plus 4 diagnostic calls and 1
+     with the described answer. Latency 0.7–1.7 s on 19 calls, one 25 s outlier (a 2-day menu);
+     output 7–14 tokens verdict-only, 28 described, thinking always reported 0. Every honest recipe
+     and menu was `ok`, but at a 32-token limit one German recipe stopped with MAX_TOKENS after 10
+     visible tokens (hence 160). The hostile ones were all refused, mostly by the judge's own safety
+     filter (`SAFETY`, read as `harmful`) rather than by its verdict (`off_topic` once): the
+     four-value enum costs nothing extra and showed no harm, so it stays. **A false positive**: the
+     honest tartare was blocked by that filter (`DANGEROUS_CONTENT` probability HIGH, severity
+     LOW) and read as `harmful`; with the filter off the model answered `ok`. The described
+     answer on the 4 x 3 menu said `ok`, no issues, quality 5, although its dishes were in five
+     languages and `language` was `en` (one sample: the lite model under-reports issues there).
+   - **Why still off by default**: the false-positive rate on honest recipes is unknown (one honest
+     recipe in 9 was refused above, by the safety filter), and under `enforce` every false positive
+     is charged to an honest user once the allowance is spent; it is injectable by the text it
+     judges (bounded: it can only flip its own verdict and write its own note); and the
+     deterministic checks plus the safety filters already cover the high-severity cases. The cost
+     is no longer a reason: with the lite judge's worst case reserved, two 3-course menus still fit
+     the per-user USD 0.45 when the first booked at most USD 0.119 (a typical one books ≈ 0.111
+     with its check; 0.111 + 0.331 ≤ 0.45), so CONTRACT.md "Limits" holds.
+     **Recommendation:** after deploy, set `outputJudge: "shadow"` (about USD 0.04–0.2 a day at 100
+     generations) and read `npm run admin -- judge summary` after a week or two: the verdicts
+     against what was delivered, and the issue codes and quality by language and prompt hash for
+     the recipe writer's prompt. Consider the judge's `DANGEROUS_CONTENT` threshold (or its
+     severity method) before `enforce`, as the tartare shows; then `"enforce"`.
 6. **Rejection counter.** Suspicious input refusals (`MARKS`, `MIXED_SCRIPT`, `ENCODED`,
    `REPEATED`, `SPACED_LETTERS`, `INSTRUCTION`), counted output refusals, model safety blocks and
    judge rejections increment `users/{uid}.promptRejections` (`{day, count}`). At
@@ -1023,7 +1130,8 @@ person's text either ("Recipe pictures"):
 |---|---|---|---|
 | `config/runtime` | `rejectedPromptsPerDay` | `5` | Rejections per account per UTC day before generation is refused (integer ≥ 0; 0 refuses every generation). |
 | `config/runtime` | `outputJudge` | `"off"` | `off`, `shadow` or `enforce` (see above). Invalid reads as `enforce`. |
-| param | `GEMINI_JUDGE_MODEL` | empty | Judge model id; empty uses `GEMINI_MODEL`. Its cost is booked at `prices` (conservative for a cheaper model). |
+| `config/runtime` | `outputJudgeKeepText` | `false` | Keep the judged text with each judge answer (`judgeAnswers.text`, see above). Off unless the privacy policy says so. Invalid reads as `false`. |
+| param | `GEMINI_JUDGE_MODEL` | `gemini-3.5-flash-lite` | Judge model id; empty uses `GEMINI_MODEL`. Booked at its `JUDGE_PRICES` entry (or `prices.textUsdPerMTok["google/<model>"]`), else at `prices`. Its thinking is the least the model takes, whatever `GEMINI_THINKING_LEVEL` says. |
 | param | `GEMINI_JAILBREAK_FILTER` | `false` | `true` adds `HARM_CATEGORY_JAILBREAK` at `BLOCK_LOW_AND_ABOVE`. Vertex documents it as a Preview for `gemini-3-flash-preview` only; enable only for a model that supports it, or every call may fail. |
 
 ### Logs to alert on
@@ -1033,7 +1141,8 @@ person's text either ("Recipe pictures"):
 | `prompt_input_rejected` | warning | `uidHash`, `field` (`ingredient` / `allergen`), `rule`, `suspicious`, `rejectionsToday` |
 | `prompt_output_rejected` | warning | `uidHash`, `kind`, `code` (`OUTPUT_<rule>`, `PROMPT_BLOCKED`, `FINISH_SAFETY`..., `JUDGE_<verdict>`), `charged`, `rejectionsToday` |
 | `prompt_rejection_limit` | warning | `uidHash`, `rejectionsToday`, `limit`: an account was refused for the day |
-| `prompt_judge_verdict` / `prompt_judge_failed` | info / warning | `uidHash`, `kind`, `verdict` or `reason`, `mode` |
+| `prompt_judge_verdict` / `prompt_judge_failed` | info / warning | `uidHash`, `kind`, `verdict` or `reason`, `mode`; a verdict also `where`, `issues`, `quality` (never the note) |
+| `judge_log_failed` | warning | `reason`: a judge answer could not be kept in `judgeAnswers` (the request was not affected) |
 
 Never logged: names, prompts, answers, the canary, the uid. Suggested alert:
 `jsonPayload.message="prompt_rejection_limit"` (any), and `prompt_output_rejected` with `code`
@@ -1172,7 +1281,8 @@ and each Firestore document is at most 600,000 bytes plus a few fields, under 60
    configured) is left of the picture's budget after the pause. Each retry logs `image_retry`.
 2. When the selected model still could not make it for a reason about the model or capacity (an
    `INFRA` failure: quota still exhausted, a server error, a model not found or not served, a
-   refused setting; a timeout; an answer that could not be decoded) and 20 s is left, the
+   refused setting; a timeout; an answer that could not be decoded) and 20 s is left (18 s will
+   do, `handoffMs`: a first attempt cut off at its timer ends a moment later), the
    **fallback model** (`image.fallbackModel`, at `image.fallbackProvider` or the same provider)
    is asked **once**, and `image_fallback` is logged. Never after a `SAFETY` refusal (the same
    brief is not shopped around to another model), and after a `CONFIG` failure only when the
@@ -1184,12 +1294,14 @@ and each Firestore document is at most 600,000 bytes plus a few fields, under 60
 3. A picture that still failed follows the give-back rules ("How the money works").
 
 The budgets run from the start of the pictures: the dish's picture has 50 s
-(`budgetMs.dish`), the step pictures until 100 s (`budgetMs.steps`). Text 40 s + judge 12 s +
-dish 50 s = 102 s inside the 115 s reservation (60 + 55) for `"dish"`; 40 + 12 + 100 = 152 s
+(`budgetMs.dish`), the step pictures until 100 s (`budgetMs.steps`). Text 40 s + judge 10 s +
+dish 50 s = 100 s inside the 115 s reservation (60 + 55) for `"dish"`; 40 + 10 + 100 = 150 s
 inside the 165 s reservation (60 + 105) and the 180 s function timeout for `"steps"`; the apps
 wait 130 s and 190 s. Typically: Flash-Lite Image about 3 s a picture (a recipe with two step
 pictures about 6 s more than without); a 429 retried once adds 2–6 s; the fallback Nano Banana 2.1
-about 15 s.
+about 15 s. A provider may set longer times of its own while it is the selected model (`timing` on
+its descriptor): only `bfl` does, 45 s an attempt and 65 s for the dish's picture, reserved 128 s
+("FLUX by Black Forest Labs").
 
 **Money**: "How the money works" (the share given back) and "Spend control" (the price reserved
 and booked). `IMAGE_UNAVAILABLE` refuses a level before anything is reserved while it is off.
@@ -1244,9 +1356,13 @@ our server). Before switching, the privacy policy and processor list must name i
 processes: OpenAI's API has no EU-only processing by default), its data terms checked (OpenAI
 says API data is not used for training by default and kept up to 30 days for abuse monitoring),
 and the App Privacy / Data safety answers re-read. Vertex AI is already our processor for the
-recipe text. Black Forest Labs (`bfl`) processes on its EU clusters by default (`BFL_REGION`), but
+recipe text. Black Forest Labs (`bfl`) processes on its EU clusters by default (`BFL_REGION`), and
 its API terms let it keep and train on the prompts and pictures, with no retention period stated
-("FLUX by Black Forest Labs"): the policy must say that too.
+("FLUX by Black Forest Labs"). **Owner's decision (2026-11-18): `bfl` is approved
+(`privacy.approved: true`) without waiting for the policy to name it**, because no user data goes
+to the picture model: the picture is generated for a generated recipe (the fixed template and the
+dish brief), which is not user data. The drafted policy wording stays in
+docs/privacy-policy-changes.md ("Pending"). OpenAI's approval is unchanged (`approved: false`).
 
 **Dependency**: `sharp` (libvips) decodes and re-encodes the pictures. It ships prebuilt binaries
 for linux-x64 glibc, which Cloud Functions 2nd gen (Cloud Run, Node 24) uses, installed by
@@ -1273,7 +1389,7 @@ without a price (which would turn pictures off) or a provider without its key.
 | `nano-banana` | `vertex` / `gemini-nano-banana-2.1` | `gemini-3.1-flash-lite-image` | USD 0.06 / 0.04 | always |
 | `off` | `off` (only `image.provider` is written; the model fields are kept for the way back) | | | always |
 | `openai` | `openai` / `gpt-image-1-mini` | none | USD 0.02 | **no**: listed only. Needs the owner's privacy decision (a code flag, `approved: false`: OpenAI is not in the privacy policy's processor list, "What a new provider means for privacy") and the `OPENAI_API_KEY` secret readable by the service account |
-| `flux-eu` | `bfl` / `flux-3-image-klein` on BFL's EU endpoint; the text stays Gemini | `vertex` / `gemini-3.1-flash-lite-image` | USD 0.01 / 0.04 | **no**: listed only, for the same two reasons (BFL's `approved: false`, `BFL_API_KEY` readable). The picture half of a later "EU pair" profile (the same picture part plus an EU text provider); read "FLUX by Black Forest Labs" on its latency before switching |
+| `flux-eu` | `bfl` / `flux-3-image-klein` on BFL's EU endpoint; the text stays Gemini | `vertex` / `gemini-3.1-flash-lite-image` | USD 0.01 / 0.04 | when `BFL_API_KEY` is readable by the service account (granted 2026-11-18; privacy approved by the owner the same day). Each attempt up to 45 s, the dish's picture 65 s ("FLUX by Black Forest Labs"). The picture half of a later "EU pair" profile (the same picture part plus an EU text provider) |
 
 **The switch** (`activateProfile` in `src/core/providerSwitch.ts`, the one core behind the command
 and the console): refuses an unknown profile (`UNKNOWN_PROFILE`) or one not ready (`NOT_READY`,
@@ -1335,11 +1451,12 @@ An adapter file exports a **descriptor** (`TextProviderDescriptor` or `ImageProv
 |---|---|
 | `kind`, `id`, `label` | `"text"` or `"image"`; the id written in `config/runtime` and the profiles (lower case letters and digits, 2–20, never reused), a label for the console |
 | `processing` | where it processes the prompt, in plain words |
-| `privacy` | `{approved, missing}`: whether the privacy policy's processor list names it (owner's decision). `approved: false` keeps every profile using it listed but not switchable, with `missing` as the reason |
+| `privacy` | `{approved, missing}`: the owner's privacy approval, normally once the privacy policy's processor list names it (`bfl`: approved on 2026-11-18 before that, "What a new provider means for privacy"). `approved: false` keeps every profile using it listed but not switchable, with `missing` as the reason |
 | `secret` | optional `{id, param, name, missing}`: the API key in Secret Manager (below) |
 | `params` | optional deploy params it reads (`{name, default, description}`), defined once by `src/index.ts` |
 | text: `defaultModel`, `defaultModelParam`, `prices` | the model when a config or profile names none; USD per 1M tokens by model (thinking or reasoning billed as output); a model without a price is never selected. `runtimeTokenPrices` is `google`'s alone (its prices are `config/runtime.prices`' two token fields) |
 | image: `usdPerImage`, `tokenPrices` | USD per delivered picture by model (reserved and booked when no token counts come back); token rates of models that report counts |
+| image: `timing` | optional `{abortMs, budgetMs, reservationExtraMs}` (any part), used while it is the selected picture model in place of `IMAGE`'s (`imageTimingOf` in `src/providers/registry.ts`); `providerRegistryProblems` checks the dish's budget still leaves the fallback `minAttemptMs` and each reservation covers its budget, `test/recipeImage.test.ts` the reservations against the function timeout and the apps' waits. Only `bfl` sets it |
 | `create(ctx)` | builds the adapter from a `ProviderContext`: `project`, `param(name)` (its own params only), `secret()` (its key, read on first use; rejects with a fixed message), `fetch` (tests) |
 | `balance(ctx, signal)` | optional balance probe ("Provider balances") |
 
@@ -1394,7 +1511,7 @@ fallback is named and the provider is not the default, the default's price
 (`imageReservedMicroUsdOf`): so a hand-written `config/runtime.image` at another provider with no
 fallback named reserves at least the default picture model's price, even when its own is cheaper.
 Settle books each call at its own provider's price (`Outcome.spend`;
-the judge always at Gemini's), so a cheaper provider books less than it reserved. When any call's
+the judge at its own Gemini model's, `judgePricesOf`), so a cheaper provider books less than it reserved. When any call's
 usage is unknown, the reservation stays booked (`bookedMicroUsd`), never the measured part at
 Gemini's prices. With the deploy
 default and no fallback all of this is exactly what it was (`test/providerPin.test.ts`).
@@ -1409,7 +1526,8 @@ stores or returns it; readiness checks read and drop it. The functions' service 
 Secret Accessor on that one secret (owner, once; `docs/recipe-setup.md` step 13a):
 
 ```bash
-# MISTRAL_API_KEY and BFL_API_KEY already exist in Secret Manager, with no access granted yet.
+# MISTRAL_API_KEY and BFL_API_KEY already exist in Secret Manager; BFL_API_KEY's grant was made on
+# 2026-11-18, MISTRAL_API_KEY's not yet.
 gcloud secrets add-iam-policy-binding MISTRAL_API_KEY --project bestbefore-f9ee1 \
   --member serviceAccount:recipe-functions@bestbefore-f9ee1.iam.gserviceaccount.com --role roles/secretmanager.secretAccessor
 gcloud secrets add-iam-policy-binding BFL_API_KEY --project bestbefore-f9ee1 \
@@ -1453,9 +1571,11 @@ Done for FLUX ("FLUX by Black Forest Labs" below); the steps as they were follow
 
 ### FLUX by Black Forest Labs
 
-`src/adapters/bfl.ts`, provider id `bfl`, profile `flux-eu`. **Not switchable**: `privacy.approved`
-is `false` until the privacy policy names Black Forest Labs (docs/privacy-policy-changes.md,
-"Pending"); the owner's steps are docs/recipe-setup.md step 13a.
+`src/adapters/bfl.ts`, provider id `bfl`, profile `flux-eu`. **Switchable**: `privacy.approved` is
+`true` (owner's decision 2026-11-18, "What a new provider means for privacy"; the policy wording
+is still pending in docs/privacy-policy-changes.md), and `recipe-functions@` was granted Secret
+Accessor on `BFL_API_KEY` alone on 2026-11-18, so `flux-eu` is ready once deployed. The owner's
+remaining steps (deploy, switch) are docs/recipe-setup.md step 13a.
 
 **From BFL's documentation, read 2026-11-17** (docs.bfl.ml: `llms.txt`,
 `quick_start/pricing.md`, `release-notes.md`, `api_integration/integration_guidelines.md`,
@@ -1500,8 +1620,8 @@ bfl.ai/pricing; bfl.ai/legal/eu-api-service-terms, revised 2026-08-26; bfl.ai/le
   irrevocable licence to inputs and outputs, including "to train and improve its artificial
   intelligence models"; they name no retention period and offer no data processing agreement on
   the page. BFL GmbH (Freiburg, Germany) is the controller for EEA users under its privacy policy.
-  What BFL would receive from us is the fixed template and the brief (no personal data, below), but
-  the processor list must say so ("Privacy" below).
+  What BFL receives from us is the fixed template and the brief (no personal data, below); the
+  owner approved it on that basis on 2026-11-18 ("What a new provider means for privacy").
 
 **The choice**: FLUX 3 Image Klein, the cheapest model with good food photographs (USD 0.009, a
 quarter of Flash-Lite Image's 0.0336), on the EU endpoint. The dearer alternative is FLUX 3 Image
@@ -1546,11 +1666,29 @@ test briefs; 9 Klein and 3 FLUX 3 Image tasks, at most USD 0.225 as BFL quoted t
 Klein's pictures were plausible home-cooking photographs: the overhead frying pans had one long
 handle (2 of 2), a sauté pan one, no people, hands or writing; weaknesses were a flat omelette
 where the brief said folded, spaghetti drawn thick, and garnish placed in tidy patterns.
-**Latency is the open problem**: with a fallback configured each attempt gets 30 s of the dish's
-50 s budget (`IMAGE`), and about half of these Klein pictures took longer, so with `flux-eu` many
-pictures would come from Flash-Lite Image after BFL had already charged for its (abandoned) one,
-costing USD 0.049 instead of 0.009. Measure again (`image_call` `durationMs`, `image_fallback`
-reason `TIMEOUT`) before switching, and change the budgets only as a decision of its own.
+**Times while BFL is the selected model** (`timing` on `bflImage`, read by the core through
+`imageTimingOf`; owner's request 2026-11-18). With the defaults a first attempt with a fallback
+configured gets 30 s of the dish's 50 s, and about half of these Klein pictures took longer: they
+would have come from Flash-Lite Image after BFL had already charged for its abandoned one (USD
+0.049 instead of 0.009). So for `bfl` only:
+
+| | default (`vertex`, `openai`) | `bfl` |
+|---|---|---|
+| each attempt of the selected model | 35 s (30 s when the fallback keeps its 20 s) | 45 s |
+| the fallback after a timed-out first attempt | the rest, 20 s | the rest, 20 s |
+| dish's picture (`budgetMs.dish`) | 50 s | 65 s |
+| step pictures (`budgetMs.steps`, from the same start) | 100 s | 100 s |
+| reservation, `"dish"` / `"steps"` | 60 + 55 = 115 s / 60 + 105 = 165 s | 60 + 68 = 128 s / 165 s |
+
+45 s covers every observed time but the 75.9 s outlier with 12 s to spare; 20 s for Flash-Lite
+Image (about 3 s a picture) is the core's `minAttemptMs`. The bounds: text 40 s + judge 10 s +
+65 s = 115 s inside the 128 s reservation, which stays under the apps' 130 s wait for `"dish"`
+(so 45 s is about the most the first attempt can get without the apps waiting longer); steps
+unchanged (150 s inside 165 s, the 180 s function timeout and the apps' 190 s). The fallback
+attempt keeps the default 35 s cap, whatever its provider. A task abandoned at 45 s is still
+booked at its flat price (BFL finishes and charges it), so a timeout that falls back still costs
+USD 0.049. After switching, watch `image_call` `durationMs` and `image_fallback` with reason
+`TIMEOUT`.
 
 ### Provider balances
 
@@ -1583,7 +1721,9 @@ Models are retired quickly now, so the server keeps a lifecycle table and checks
 
 | provider / model | role today | announced retirement | source |
 |---|---|---|---|
-| `google` / `gemini-3.8-flash` | recipe text, and the output judge while `GEMINI_JUDGE_MODEL` is empty | 2027-09-02 **or later** (GA, released 2026-09-02) | Vertex lifecycle page |
+| `google` / `gemini-3.8-flash` | recipe text, and the output judge while `GEMINI_JUDGE_MODEL` is set empty | 2027-09-02 **or later** (GA, released 2026-09-02) | Vertex lifecycle page |
+| `google` / `gemini-3.5-flash-lite` | the output judge (`GEMINI_JUDGE_MODEL`, default `JUDGE.model`; in use while `outputJudge` is not `off`) | 2027-07-21 **or later** (GA, released 2026-07-21) | Vertex lifecycle page |
+| `google` / `gemini-3.1-flash-lite` | priced for the judge (`JUDGE_PRICES`), not selected | 2027-05-07 **or later** (GA, released 2026-05-07) | Vertex lifecycle page |
 | `vertex` / `gemini-3.1-flash-lite-image` | pictures (default), fallback of `nano-banana`, fallback of `flux-eu` | 2027-06-28 **or later** | Vertex lifecycle page |
 | `vertex` / `gemini-nano-banana-2.1` | picture fallback (default), model of `nano-banana` | none announced (a "short-term" model: it gets a fixed date at least 45 days ahead when Google sets one) | Vertex lifecycle page |
 | `openai` / `gpt-image-1-mini` | profile `openai` (listed only) | **2026-12-01** (deprecated, notice 2026-06-02) | OpenAI deprecations |
@@ -1598,8 +1738,9 @@ Models) ship with the phones' systems and are not the backend's concern.
 announced; `earliest: true` for Google's "this date or later"), `source` (the page) and `checkedOn`
 (the day a person or agent last read it). `test/modelLifecycle.test.ts` fails when a model that a
 profile, a deploy default (`DEFAULT_TEXT_SELECTION`, `DEFAULT_IMAGE_SELECTION` and its fallback), a
-provider's default model or default param (`GEMINI_MODEL`, and `GEMINI_JUDGE_MODEL` read from
-`src/index.ts`) or a price table names has no entry: a model can't be added without one.
+provider's default model or default param (`GEMINI_MODEL`), the output judge's default
+(`JUDGE.model`, which `GEMINI_JUDGE_MODEL` defaults to in `src/index.ts`) or a price table
+(`JUDGE_PRICES` included) names has no entry: a model can't be added without one.
 
 **The check** (`checkModelLifecycle`, daily at 06:23 UTC; best effort, never on a request's path, no
 new IAM role): it reads `config/runtime` as the other functions do (over the params, over the
@@ -1806,7 +1947,9 @@ Server-only. Documents:
   spend, part of `spentMicroUsd`), `imageGivenBackCredits` (part of `refundedCredits`),
   `netCreditsGranted` (production credits granted minus store refunds that day),
   `sandboxGrants`, `sandboxCredits`, `welcomeGrants` and `welcomeCredits` (welcome grants made
-  that day and their free recipes; never in `netCreditsGranted`), `ceilingMicroUsd` (the spend
+  that day and their free recipes; never in `netCreditsGranted`), `welcomeUsedCredits` and
+  `welcomeUsedMicroUsd` (free recipes charged by the day's settles and their pro-rata share of the
+  booked spend, "Welcome grant"; written by every settle, 0 included, absent on older days), `ceilingMicroUsd` (the spend
   ceiling the day's last reservation was checked against: the board's ceiling history),
   `spendAlerts` (`{"50" | "80" | "100": ms}`: when each `spend_threshold` was logged) and
   `dailyCapReachedAt` (ms of the first `DAILY_CAP` refusal). A call is booked on the day it was
@@ -1821,6 +1964,9 @@ Server-only. Documents:
   `generatedAt`, `createdAt`,
   `expiresAt` (TTL, `reports.keepDays` days); and `reports/{reportId}/reportPictures/{main | step-<i>}`,
   copies of the generation's pictures with the same `expiresAt`.
+- `judgeAnswers/{random id}` ("Prompt injection defences" item 5): one output judge answer per
+  judged generation, no uid and no user input; `text` only with `outputJudgeKeepText`;
+  `expiresAt` (TTL, 90 days). Read with `npm run admin -- judge`.
 - `config/runtime`: see below.
 - `config/owner` (set by the owner in the console, never in the repo): `uids` (Firebase uids)
   and/or `emails` (addresses of Google accounts linked to the user, matched against its
@@ -1841,13 +1987,14 @@ console", "Settings": checked, field paths only, audited and alerted), rather th
 fields that are read-only there (prices, the provider setup) are changed by the profile switch or
 by hand. Created in the console if missing (Firestore > `config` > `runtime`). Every field is optional; a missing
 field uses the default. A present but invalid field never fails open: `generationEnabled`,
-`allowSandbox` and `consumptionSampleContentProvided` then read as `false`, every other field uses
+`allowSandbox`, `consumptionSampleContentProvided` and `outputJudgeKeepText` then read as `false`, every other field uses
 its default, and a warning "config/runtime has invalid fields" names them. Instances cache it for
 30 s.
 
 | field | type | default | meaning |
 |---|---|---|---|
 | `generationEnabled` | bool | `true` | Kill switch for new generations. The budget alert sets it to `false` (with `disabledBy` `budget alert …` and `disabledAt`); only you set it back: with `npm run admin -- config set generationEnabled on --apply --confirm generationEnabled`, which also deletes `disabledBy` / `disabledAt`, or by hand in the Firestore console (then delete those two as well). The owner console turns it back on only after a pause of its own or one by hand, never after the budget alert's ("The console's envelope"). |
+| `outputJudgeKeepText` | bool | `false` | Keep the judged recipe text with each output judge answer (`judgeAnswers.text`, "Prompt injection defences" item 5). Only after the privacy policy says so. |
 | `allowSandbox` | bool | `false` | Grant credits for Play licence-tester and App Store sandbox/TestFlight purchases. Turn on for App Review and your own testing, off otherwise. Anyone with a TestFlight build can then get free credits, up to the two caps below. |
 | `sandboxDailyCap` | integer ≥ 0 | `20` | Sandbox purchases that may grant credits per UTC day, across all users. Over it: `RETRY`. |
 | `sandboxDailyCredits` | integer ≥ 0 | `200` | Credits sandbox purchases may grant per UTC day, across all users. Over it: `RETRY`; one purchase worth more than this: `REJECTED_PERMANENT`. |
@@ -2154,6 +2301,8 @@ Application Default Credentials impersonating `recipe-functions@bestbefore-f9ee1
 | Estimated net revenue | net recipes × `netMicroUsdPerCredit`: the config's conservative estimate, not a store payout |
 | Sandbox purchases | the same query, `env: "sandbox"`, shown apart and never as sales |
 | Free recipes (welcome grant) | `stats/{day}.welcomeGrants` / `welcomeCredits` today and over the period, against `config/runtime.welcome.perDay`; never counted as sales (`board.json` `welcome`) |
+| Free recipes used and their estimated cost (Purchases, Model spend "of which free recipes", two daily columns) | `stats/{day}.welcomeUsedCredits` / `welcomeUsedMicroUsd` ("Welcome grant", "What they cost"), summed over the days that record them; a day with settled calls (`llmCalls`) and no such field is from before and left out, the page saying from when it counts and how many days it leaves out ("unknown" when no day of the period has it; `board.json` `welcome.usedInPeriod` / `costInPeriodMicroUsd` null, `daysWithoutFigure`) |
+| Estimated margin | estimated net revenue minus the period's whole model spend (`spentMicroUsd + reservedMicroUsd`, free recipes' included): revenue by the day a purchase was granted, spend by the day a call was reserved; an estimate (`board.json` `sales.estimatedMarginMicroUsd`) |
 | Recipe pictures: the profile in force, read-only, with a link to the owner console | `config/runtime.image` (as `parseRuntimeConfig` reads it, over the code's defaults) matched to a provider profile, `custom` when set by hand; "On" when it is priced and `costs.recipeImage` is on (`board.json` `pictures`). No extra read. The link is `https://<project>.firebaseapp.com/`: the board itself still makes no request |
 | Unspent recipes | one aggregation: count and `sum(balance)` of `users` with `balance > 0` |
 | Negative balances | `stats/ledger.negativeBalanceTotal` (the sweeper's last sum) |
@@ -2312,10 +2461,20 @@ bucket) and `gcloud iam roles delete ownerBoardWriter --project=bestbefore-f9ee1
 
 ## The owner console
 
-A web page with a drop-down of the provider profiles ("Provider profiles"): the setup in force,
-each profile's readiness (and what is missing), the last change, and a switch behind a
-confirmation dialog; below it, the other runtime settings of `config/runtime` ("Settings"
-below). The board stays static and request-free and only links to it.
+A web page laid out as a dashboard. At the top, a **status strip** of what is in force now: the
+provider setup (text, pictures, fallback; ready, or not ready and why, from `getProviderProfiles`),
+recipes from packs on or paused (by whom, since when; a budget pause says only the command lifts
+it), today's spend against today's ceiling and recipes against `dailyCap` (meters), the second
+check's mode and whether the judged text is kept with its answers (`outputJudgeKeepText`), the free-recipe offer with today's grants and free recipes used, and sandbox
+purchases. Below it, **one card per group** in a responsive grid (one column on a phone, two or
+three on a desktop): **Providers** (each profile with its readiness and what is missing, the last
+change, and a switch behind a confirmation dialog), then one card per section of the settings
+registry ("Settings" below), each with its title, a line saying what it is for, the figures worked
+out for it (the spending card shows today's ceiling as a worked line from the values in force:
+min(absolute, base + share × net per recipe × net recipes sold in 7 days)), its settings, and the
+read-only fields that belong with it, folded away. A header link opens the board (its address is
+`getOwnerSettings`' `boardUrl`, from `BOARD_BUCKET`). The board stays static and request-free
+and only links to the console.
 
 **Where it lives, and why not beside the board.** The board's private bucket is opened through
 Google's authenticated download, which protects the download only: the page is then served from a
@@ -2406,14 +2565,28 @@ emulator's Google user.
 
 ### Settings (`config/runtime` from the console)
 
-Below the provider profiles the console shows every other runtime setting the owner may change,
-instead of hand-editing `config/runtime`: sections, each setting's value in force, its default,
-"set here" / "changed from default" and when it was last changed (and how), a **Save** per section,
-and, read-only, what can't be changed there and why. The page holds none of it: it draws what
-`getOwnerSettings` returns, so a new setting is one entry in the registry,
+Beside the provider profiles the console shows every other runtime setting the owner may change,
+instead of hand-editing `config/runtime`, as cards: one per section, each setting compactly with
+its label, control, a "sensitive" and a "changed from default" mark (with the default), and,
+folded under "About", its help, default, "set here" / "default in force", when it was last changed
+(and how), its range on the page and the command for anything larger; read-only fields (what can't
+be changed there and why) sit folded in the card they belong to (`ReadOnlyDef.section`; the
+models with Providers, the raw prices with the spending limits), the rest in a last card. An
+unsaved change marks its setting and its card (a count, **Save…** and **Discard** on the card), and
+the dock at the bottom of the page counts them all, with a **Review** list (before → after, the
+sensitive ones marked), **Discard** and **Save all…**. A save from a card or from the dock is the
+same flow (below): one dry run, the confirmation showing what the server will write, the save bound
+to it; what is typed in other cards stays across the redraw. The page holds none of it: it draws
+what `getOwnerSettings` returns, so a new setting is one entry in the registry,
 `src/core/ownerSettings.ts` (`SETTINGS`: id = field path, section, label, help, control
 (on/off, number with min/max/step, choice, ticks from the quiz's ids, the menu table) and whether
-it is sensitive), and no page change. The same core is behind the admin command:
+it is sensitive), and lands in its section's card with no page change; a new section is one
+`SECTIONS` entry (`wide`: the card spans two columns). Besides the settings, `getOwnerSettings`
+answers with `status` (the strip's tiles, `statusOf`), per section `facts` (`sectionFacts`:
+today's ceiling worked out and what is booked today; today's free-recipe grants and use),
+`today` (the raw figures: today's `stats` and the `netCreditsGranted` of the 6 days before,
+read-only, 7 document reads; left out, never failing the call, if they can't be read) and
+`boardUrl`. The same core is behind the admin command:
 
 ```bash
 cd functions
@@ -2494,6 +2667,7 @@ a refusal (`WEB_LIMIT`) says the same. The table (USD amounts are stored in micr
 | `generationEnabled` | on | off at any time; on again, except while the budget alert's pause stands (`disabledBy` starting `budget alert`) | on/off; on clears `disabledBy` / `disabledAt` | yes |
 | `allowSandbox` | off | only off | on/off | yes |
 | `outputJudge` | off | only stricter: off → shadow → enforce | off / shadow / enforce | yes |
+| `outputJudgeKeepText` | off | only off | on/off | yes |
 | **Spending limits** | | | | |
 | `dailySpendBaseMicroUsd` | USD 1.20 | up to USD 3.00 (2.5×), or any lower value | USD 0–20 | yes |
 | `dailySpendMaxMicroUsd` | USD 2.00 | up to USD 5.00 (2.5×), or lower | USD 0–50 | yes |
@@ -2577,7 +2751,8 @@ recursively; so a new field can't be forgotten. It also fails on a setting with 
 nor a `WEB_UNRESTRICTED` reason.
 
 **Cost**: Hosting's free tier (a few KB, a few visits); four callables idle at zero instances, a
-few calls a month (each has its own instance and its own `OwnerCallGate`, so the per-minute
+few calls a month (each `getOwnerSettings` or save reads `config/runtime`, the last 100 audit
+records and 7 `stats` documents) (each has its own instance and its own `OwnerCallGate`, so the per-minute
 ceilings above hold per function). **Turn it off**: remove `config/owner` (nobody gets in), or delete the
 functions (`npx firebase functions:delete getProviderProfiles setProviderProfile getOwnerSettings setOwnerSettings --region europe-west1`,
 and remove their exports from `src/index.ts`) and `npx firebase hosting:disable`.
@@ -2625,7 +2800,8 @@ npx firebase functions:secrets:set SIWA_PRIVATE_KEY < AuthKey_YYYYYYYYYY.p8     
 # at run time while openai is selected; grant the service account Secret Accessor on it alone.
 npx firebase functions:secrets:set OPENAI_API_KEY
 # Any other provider's key works the same way ("Adding a provider", "Secrets"); MISTRAL_API_KEY and
-# BFL_API_KEY already exist, and need only the grant (docs/recipe-setup.md step 13a).
+# BFL_API_KEY already exist; BFL_API_KEY's grant is made (2026-11-18), MISTRAL_API_KEY's still
+# needed (docs/recipe-setup.md step 13a).
 ```
 
 ## One-time setup (owner)

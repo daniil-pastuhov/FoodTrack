@@ -17,6 +17,8 @@ import { boardJson, renderBoardHtml, type HostedOptions } from "./boardHtml";
 import { readBoardInput } from "./boardReader";
 
 export const BOARD_HTML_OBJECT = "board.html";
+/** The board's authenticated browser address (the owner's Google sign-in); the owner console links to it. */
+export const boardBrowserUrl = (bucketName: string) => `https://storage.cloud.google.com/${bucketName}/${BOARD_HTML_OBJECT}`;
 export const BOARD_JSON_OBJECT = "board.json";
 export const HOSTED_BOARD_DAYS = 30;
 export const HOSTED_BOARD: HostedOptions = { everyHours: 1, staleAfterHours: 3 };
@@ -109,7 +111,7 @@ export async function redrawBoard(env: RedrawEnv): Promise<{ reads: number; byte
       ...(env.purchasesCap !== undefined ? { purchasesCap: env.purchasesCap } : {}),
     });
     const board = buildBoard(input);
-    const html = renderBoardHtml(board, { ...HOSTED_BOARD, reloadUrl: `https://storage.cloud.google.com/${bucketName}/${BOARD_HTML_OBJECT}` });
+    const html = renderBoardHtml(board, { ...HOSTED_BOARD, reloadUrl: boardBrowserUrl(bucketName) });
     const json = `${JSON.stringify(boardJson(board), null, 2)}\n`;
     await check();
     const common = { cacheControl: BOARD_CACHE_CONTROL, contentDisposition: "inline" };

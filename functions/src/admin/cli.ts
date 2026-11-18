@@ -7,6 +7,7 @@
  *   npm run admin -- providers list | use <profile> [--apply]  (README "Provider profiles"; `image` is the older name)
  *   npm run admin -- config list | set <id> <value> ... | reset <id> ... [--apply [--confirm <id,id>]]  (README "The owner console")
  *   npm run admin -- models [--probe]  (README "Model lifecycle": read-only)
+ *   npm run admin -- judge summary | export [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--out <file.jsonl>]  (README "Prompt injection defences" item 5: read-only)
  *
  * Against the emulators (project demo-foodtracker, 127.0.0.1:8080 / :9099) unless `--project` names
  * a live project; then with the operator's Application Default Credentials. `delete` is a dry run
@@ -18,7 +19,7 @@ import { parseArgs } from "node:util";
 import { getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
-import { IOS_BUNDLE_ID, KMS_APPLE_TOKEN_KEY, KMS_KEY_RING, KMS_LOCATION } from "../constants";
+import { IOS_BUNDLE_ID, JUDGE, KMS_APPLE_TOKEN_KEY, KMS_KEY_RING, KMS_LOCATION } from "../constants";
 import { loadRuntimeConfig } from "../model";
 import type { AppStoreVerifier, Deps, Logger, OutputJudge, PlayVerifier, RecipeGenerator, RecipeImageGenerator, TextTarget } from "../ports";
 import { AppleSignInRevoker } from "../adapters/appleRevoke";
@@ -46,6 +47,7 @@ import type { ProviderContext, ProviderDescriptor } from "../providers/types";
 import { validImageSelection, type ImageSelection } from "../model";
 import { SwitchRefused, activateProfile, listProfiles, type PlannedWrite, type SetupView, type SwitchEnv } from "../core/providerSwitch";
 import { HttpsError } from "firebase-functions/v2/https";
+import { parseJudgeArgs, runJudgeAnswers } from "./judgeAnswers";
 import { SETTING_CHANGES, applySettings, listSettings, settingById, type Control, type SettingDef } from "../core/ownerSettings";
 
 export const EMULATOR_PROJECT = "demo-foodtracker";
@@ -68,6 +70,8 @@ const USAGE = `usage:
   npm run admin -- config set <id> <value> [<id> <value> ...] [--apply [--confirm <sensitive id,...>]] [--project <id>]
   npm run admin -- config reset <id> [<id> ...] [--apply [--confirm <sensitive id,...>]] [--project <id>]
   npm run admin -- models [--probe] [--project <id>]        (read-only; --probe needs --project)
+  npm run admin -- judge summary [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--project <id>]
+  npm run admin -- judge export  [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--out <file.jsonl>] [--project <id>]
 Without --project: the local emulators (${EMULATOR_PROJECT}). delete, providers use and config set / reset are dry runs without --apply.`;
 
 const OPTIONS = {
@@ -379,7 +383,7 @@ export interface ModelsEnv {
   db: Firestore;
   imageDefaults: ImageSelection;
   textDefaults: TextTarget;
-  /** The output judge's model as the functions read it (GEMINI_JUDGE_MODEL, else GEMINI_MODEL). */
+  /** The output judge's model as the functions read it (judgeModelOf: GEMINI_JUDGE_MODEL, its default JUDGE.model, empty: GEMINI_MODEL). */
   judgeModel: string;
   context(d: ProviderDescriptor): ProviderContext;
   now(): number;
@@ -412,6 +416,15 @@ export async function runModels(args: ModelsArgs, env: ModelsEnv): Promise<Model
   return reports;
 }
 
+/**
+ * The output judge's model as the functions read it (src/index.ts): the GEMINI_JUDGE_MODEL param,
+ * JUDGE.model when the deploy doesn't set it, GEMINI_MODEL when it is set empty.
+ */
+export function judgeModelOf(params: Readonly<Record<string, string>>, geminiModel: string): string {
+  const set = Object.prototype.hasOwnProperty.call(params, "GEMINI_JUDGE_MODEL");
+  return (set ? params.GEMINI_JUDGE_MODEL : JUDGE.model) || geminiModel;
+}
+
 export function buildModelsEnv(project: string): ModelsEnv {
   const base = buildImageEnv(project);
   const live = !project.startsWith("demo-");
@@ -435,7 +448,7 @@ export function buildModelsEnv(project: string): ModelsEnv {
     db: base.db,
     imageDefaults: base.imageDefaults ?? { ...DEFAULT_IMAGE_SELECTION },
     textDefaults: base.textDefaults ?? { provider: DEFAULT_TEXT_SELECTION.provider, model: DEFAULT_TEXT_SELECTION.model },
-    judgeModel: params.GEMINI_JUDGE_MODEL || geminiModel,
+    judgeModel: judgeModelOf(params, geminiModel),
     context: (d) => ({
       project,
       param: (name) => paramOf(d, name),
@@ -669,7 +682,7 @@ export function buildEnv(project: string): AdminEnv {
       sendConsumptionInformation: notUsed("App Store"),
     } as AppStoreVerifier,
     generator: { generate: notUsed("The model") } as RecipeGenerator,
-    judge: { judge: notUsed("The judge") } as OutputJudge,
+    judge: { model: "none", judge: notUsed("The judge") } as OutputJudge,
     imageGenerator: { generate: notUsed("The image model") } as RecipeImageGenerator,
     appleRevoker: live
       ? {
@@ -732,6 +745,13 @@ async function main(): Promise<void> {
       const modelsEnv = buildModelsEnv(args.project);
       console.log(args.project.startsWith("demo-") ? `[emulators, ${args.project}]` : `[LIVE project ${args.project}, read-only]`);
       await runModels(args, modelsEnv);
+      return;
+    }
+    if (argv[0] === "judge") {
+      const args = parseJudgeArgs(argv, Date.now(), EMULATOR_PROJECT);
+      const judgeEnv = buildBoardEnv(args.project);
+      console.log(args.project.startsWith("demo-") ? `[emulators, ${args.project}]` : `[LIVE project ${args.project}, read-only]`);
+      await runJudgeAnswers(args, judgeEnv);
       return;
     }
     if (argv[0] === "board") {

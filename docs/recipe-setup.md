@@ -426,6 +426,14 @@ them with `allowSandbox` only.
   after `config/runtime.reports.keepDays`, 90 days, and on `reportable.expiresAt`, the year-long
   record of each delivered result), then check `gcloud firestore fields ttls list` shows all
   four ACTIVE.
+- [ ] **Output judge answers** (functions/README.md "Prompt injection defences" item 5; 2026-11-18):
+  the deploy that ships the lite judge also adds the TTL policy on `judgeAnswers.expiresAt` (90
+  days) through `firestore.indexes.json`: check `gcloud firestore fields ttls list` shows it
+  ACTIVE before turning `outputJudge` on. To collect answers without blocking anything, set
+  `outputJudge: "shadow"` (console or `npm run admin -- config set outputJudge shadow --apply
+  --confirm outputJudge`), and read them with `npm run admin -- judge summary --project
+  bestbefore-f9ee1`. Leave `outputJudgeKeepText` off unless the privacy policy first says that
+  generated recipes, without any link to the person, are kept 90 days to improve the prompts.
 - [x] (Done 2026-11-17: made in the console, then kept as code in `functions/alerts/policies/`,
   `recipe-reported.json` and `report-day-limit.json`, and applied with `alerts.py`.) **Alert on
   reports** (functions/README.md "Reports", "Alerts"): "Recipe: recipe reported" on
@@ -459,7 +467,7 @@ them with `allowSandbox` only.
 
 ### 13. Owner console: switching the picture provider (functions/README.md "The owner console")
 
-A web page with a drop-down of the provider profiles, on Firebase Hosting
+A dashboard page (what is in force now, the provider profiles and the runtime settings in cards), on Firebase Hosting
 (`https://bestbefore-f9ee1.firebaseapp.com/`). Until these are done the switch works from a shell
 only (`npm run admin -- providers list | use <profile> --apply --project bestbefore-f9ee1`, "Provider
 profiles"), and the board shows the setup in force with a link that leads nowhere yet.
@@ -556,19 +564,27 @@ works as soon as it is merged).
   can only be lowered there), and whether any of the read-only fields (the raw prices) should
   become editable with the command.
 
-### 13a. A new provider's API key (Mistral, Black Forest Labs) **(owner; not done)**
+### 13a. A new provider's API key (Mistral, Black Forest Labs) **(owner; Black Forest Labs' grant done, Mistral's not)**
 
-The keys are in Secret Manager already (`MISTRAL_API_KEY`, `BFL_API_KEY`) with no access granted.
+The keys are in Secret Manager already (`MISTRAL_API_KEY`, `BFL_API_KEY`); access is granted on
+`BFL_API_KEY` only (2026-11-18).
 The functions read a provider's key at run time, only while a provider using it is selected
 (functions/README.md "Adding a provider", "Secrets"); a profile using it shows "not ready" until
 the service account can read it. When the adapter is merged and before switching to it:
 
-- [ ] Grant `recipe-functions@` **Secret Manager Secret Accessor on each secret only**:
-  `gcloud secrets add-iam-policy-binding MISTRAL_API_KEY --member serviceAccount:recipe-functions@bestbefore-f9ee1.iam.gserviceaccount.com --role roles/secretmanager.secretAccessor --project bestbefore-f9ee1`
-  and the same for `BFL_API_KEY`.
-- [ ] The privacy policy's processor list names the provider (and where it processes: Mistral's EU
-  endpoint, Black Forest Labs' region), then the adapter's `privacy.approved` is set to `true` in
-  code. Until both, its profiles are listed but not switchable.
+- [x] **(done 2026-11-18, agent)** Grant `recipe-functions@bestbefore-f9ee1.iam.gserviceaccount.com`
+  **Secret Manager Secret Accessor on `BFL_API_KEY` only** (no role on the project, no other secret):
+  `gcloud secrets add-iam-policy-binding BFL_API_KEY --member serviceAccount:recipe-functions@bestbefore-f9ee1.iam.gserviceaccount.com --role roles/secretmanager.secretAccessor --project bestbefore-f9ee1`.
+- [ ] The same grant on `MISTRAL_API_KEY` only, when the Mistral adapter is merged:
+  `gcloud secrets add-iam-policy-binding MISTRAL_API_KEY --member serviceAccount:recipe-functions@bestbefore-f9ee1.iam.gserviceaccount.com --role roles/secretmanager.secretAccessor --project bestbefore-f9ee1`.
+- [ ] Mistral: the privacy policy's processor list names it (and its EU endpoint), then the
+  adapter's `privacy.approved` is set to `true` in code. Until both, its profiles are listed but
+  not switchable.
+- [x] **(done 2026-11-18, owner's decision)** Black Forest Labs: `privacy.approved: true` in
+  `bflImage` without waiting for the policy text, because no user data goes to the picture model:
+  it gets the fixed template around the brief of a generated recipe, which is not user data
+  (functions/README.md "What a new provider means for privacy"). The drafted policy wording stays
+  in docs/privacy-policy-changes.md, "Pending".
 - [ ] Optional, for a prepaid account: `config/runtime.providerBalanceAlerts`, e.g. `{bfl: 500}`
   (its own unit), so `provider_balance_low` warns before calls fail as out of credit. BFL's unit is
   credits, 1 credit = USD 0.01: 500 warns under USD 5, about 550 FLUX 3 Image Klein pictures. Set
@@ -576,15 +592,19 @@ the service account can read it. When the adapter is merged and before switching
   if that is on. The probe reads the key, so it needs the grant above.
 - [x] **(done 2026-11-18, agent)** Apply the new alert policies (`python3 functions/alerts/alerts.py --project bestbefore-f9ee1 --apply`,
   step 9): out of credit, balance low, pictures failing broadly.
-- [ ] **Black Forest Labs (FLUX pictures, profile `flux-eu`)**: the adapter is in
-  (`functions/src/adapters/bfl.ts`, functions/README.md "FLUX by Black Forest Labs"). Before the
-  approval flag can be turned on: (1) the grant on `BFL_API_KEY` above, nothing else (no role on
-  the project, no other secret); (2) the privacy policy names Black Forest Labs as a processor of
-  the picture prompts, its EU processing, and that its terms let it keep and train on prompts and
-  pictures (docs/privacy-policy-changes.md, "Pending"), merged in all eight languages; (3) only then
-  `privacy.approved: true` in `bflImage` (a code change and a deploy). Also decide on its latency:
-  in the test of 2026-11-17 about half of the pictures took longer than the 30 s an attempt gets,
-  and each of those would be made again by Flash-Lite Image after BFL had charged for it.
+- [x] **(done 2026-11-18, agent)** **Black Forest Labs (FLUX pictures, profile `flux-eu`)**: the
+  adapter is in (`functions/src/adapters/bfl.ts`, functions/README.md "FLUX by Black Forest Labs"),
+  approved (above), its key readable (above), and while it is the selected model each attempt gets
+  up to 45 s and the dish's picture 65 s (the defaults' 30 s first attempt would have abandoned
+  about half of the 2026-11-17 test pictures, already charged, to Flash-Lite Image).
+- [ ] **Deploy the functions** (the approval and the longer times are code):
+  `cd functions && npm ci && npx firebase deploy --only functions,firestore --project bestbefore-f9ee1`.
+- [ ] **Switch the profile to `flux-eu`**, in the owner console (step 13, the profile drop-down) or
+  from a shell: `npm run admin -- providers use flux-eu` (dry run), then
+  `npm run admin -- providers use flux-eu --apply --project bestbefore-f9ee1`. `providers list`
+  should show it ready first. Then watch `image_call` `durationMs` and `image_fallback` with reason
+  `TIMEOUT` (functions/README.md "FLUX by Black Forest Labs"); the way back is
+  `providers use flash-lite`.
 
 ### 13c. Model lifecycle alerts (functions/README.md "Model lifecycle") **(owner, after the next deploy)**
 

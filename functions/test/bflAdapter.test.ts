@@ -2,16 +2,18 @@
  * Black Forest Labs (FLUX) as a picture provider (src/adapters/bfl.ts, README "FLUX by Black Forest
  * Labs"): the submit, poll and download against a fake fetch; every failure mapped to the shared
  * taxonomy; the hosts the key and the picture may travel to; the size cap; the cost booked; the
- * fallback to Google pictures through the core's own rules; the balance probe; and that the
- * registry entry and the profile are sound but not switchable until the privacy approval flips.
+ * fallback to Google pictures through the core's own rules; the balance probe; that the registry
+ * entry and the profile are sound and switchable once the key is readable (privacy approved by
+ * the owner on 2026-11-18); and the longer first attempt while BFL is the selected model.
  */
 import { BFL_SAFETY_TOLERANCE, BflImageGenerator, bflBody, bflImage, bflUrl, BFL_HOSTS } from "../src/adapters/bfl";
 import { makeRecipeImage, imagePromptFor } from "../src/core/recipeImage";
+import { IMAGE } from "../src/constants";
 import { DEFAULT_RUNTIME_CONFIG, parseRuntimeConfig } from "../src/model";
 import { ImageGenerationError, type Deps, type GeneratedImage } from "../src/ports";
 import { checkProviderBalances } from "../src/providers/balance";
 import { PROVIDER_PROFILES, readinessOf, registryProblems } from "../src/providers/profiles";
-import { imageProviderIds, providerRegistryProblems, providerSecrets } from "../src/providers/registry";
+import { imageProviderIds, imageTimingOf, imageProviders, providerRegistryProblems, providerSecrets, registerProviderForTests } from "../src/providers/registry";
 import { ImageRouter } from "../src/providers/router";
 import type { ProviderContext } from "../src/providers/types";
 import { SAMPLE_BRIEF, makeDeps, sampleProviderJpeg } from "./helpers";
@@ -346,7 +348,7 @@ describe("registry, profile and balance", () => {
     expect(parseRuntimeConfig({ image: { provider: "bfl", model: "flux-3-image-klein" } }).image.provider).toBe("bfl");
   });
 
-  test("the flux-eu profile: sound, Google pictures as its fallback, listed but not switchable even with the key", async () => {
+  test("the flux-eu profile: sound, Google pictures as its fallback, switchable exactly when the key is readable", async () => {
     expect(registryProblems()).toEqual([]);
     const p = PROVIDER_PROFILES.find((x) => x.id === "flux-eu")!;
     expect(p.image).toEqual({
@@ -357,10 +359,11 @@ describe("registry, profile and balance", () => {
       usdPerImage: { "bfl/flux-3-image-klein": 0.01, "vertex/gemini-3.1-flash-lite-image": 0.04 },
     });
     expect(p.text).toBeUndefined();
-    const withKey = await readinessOf(p, async (id) => id === "bfl");
-    expect(withKey.ready).toBe(false);
-    expect(withKey.missing).toEqual([expect.stringContaining("privacy policy")]);
-    expect((await readinessOf(p, async () => false)).missing).toHaveLength(2);
+    // Privacy approved (owner's decision 2026-11-18): the readable key is its only requirement.
+    expect(bflImage.privacy).toEqual({ approved: true, missing: "" });
+    expect(p.requires).toEqual([{ kind: "secret", secret: "bfl", missing: bflImage.secret!.missing }]);
+    expect(await readinessOf(p, async (id) => id === "bfl")).toEqual({ ready: true, missing: [] });
+    expect(await readinessOf(p, async () => false)).toEqual({ ready: false, missing: [bflImage.secret!.missing] });
   });
 
   test("the balance probe asks the EU credits endpoint; credits under the threshold are low; a failure is unavailable", async () => {
@@ -399,5 +402,141 @@ describe("registry, profile and balance", () => {
     const us = fetchQueue([{ status: 402, body: {} }]);
     await bflImage.create(contextFor(us.fetch, KEY, "us")).generate(PROMPT, target(), new AbortController().signal).catch(() => undefined);
     expect(us.calls[0].url).toBe("https://api.us.bfl.ai/v1/flux-3-image-klein");
+  });
+});
+
+describe("the time each picture attempt gets", () => {
+  const FLUX = "flux-3-image-klein";
+  /** A provider that never answers: it rejects `lagMs` after the core's abort (an abort lands a little late in production). */
+  function hanging(lagMs = 300) {
+    const aborts: number[] = [];
+    let started = 0;
+    const gen = {
+      calls: 0,
+      async generate(_p: unknown, _t: unknown, signal: AbortSignal): Promise<GeneratedImage> {
+        gen.calls++;
+        started = Date.now();
+        return new Promise((_r, reject) => {
+          signal.addEventListener("abort", () => {
+            aborts.push(Date.now() - started);
+            setTimeout(() => reject(new ImageGenerationError("infra", "timeout", true)), lagMs);
+          });
+        });
+      },
+    };
+    return { gen, aborts };
+  }
+  /** makeRecipeImage on a real-time clock (faked with the timers), within `budgetMs`. */
+  async function timed(config: ReturnType<typeof parseRuntimeConfig>, primary: string, budgetMs: number, advanceMs: number) {
+    const deps = makeDeps();
+    const vertex = deps.imageGenerator;
+    const slow = hanging();
+    (deps as Deps).imageGenerator = new ImageRouter(primary === "vertex"
+      ? { vertex: () => ({
+          generate: (p, t, s) => (t.model === config.image.model ? slow.gen.generate(p, t, s) : vertex.generate(p, t, s)),
+        }) }
+      : { vertex: () => vertex, [primary]: () => slow.gen });
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    try {
+      const d = { ...deps, now: () => Date.now() };
+      const pending = makeRecipeImage(d, "u1", SAMPLE_BRIEF, config, Date.now() + budgetMs);
+      await vi.advanceTimersByTimeAsync(advanceMs);
+      return { out: await pending, aborts: slow.aborts, vertex, deps };
+    } finally {
+      vi.useRealTimers();
+    }
+  }
+
+  test("the defaults are unchanged for Vertex, OpenAI and off; only BFL has times of its own", () => {
+    const defaults = { abortMs: 35_000, budgetMs: { dish: 50_000, steps: 100_000 }, reservationExtraMs: { dish: 55_000, steps: 105_000 } };
+    expect({ abortMs: IMAGE.abortMs, budgetMs: IMAGE.budgetMs, reservationExtraMs: IMAGE.reservationExtraMs }).toEqual(defaults);
+    for (const id of ["vertex", "openai", "off", "unknown"]) expect(imageTimingOf(id)).toEqual(defaults);
+    expect(imageTimingOf("bfl")).toEqual({ abortMs: 45_000, budgetMs: { dish: 65_000, steps: 100_000 }, reservationExtraMs: { dish: 68_000, steps: 105_000 } });
+    expect(imageProviders().filter((d) => d.timing).map((d) => d.id)).toEqual(["bfl"]);
+  });
+
+  test("the registry refuses times that leave the fallback no attempt or a reservation short of its budget", () => {
+    const remove = registerProviderForTests({
+      ...bflImage,
+      id: "slowpoke",
+      secret: undefined,
+      timing: { abortMs: 50_000, budgetMs: { dish: 60_000, steps: 70_000 }, reservationExtraMs: { dish: 55_000, steps: 105_000 } },
+    });
+    try {
+      const problems = providerRegistryProblems().join("\n");
+      expect(problems).toContain("timing.budgetMs.dish must leave IMAGE.minAttemptMs");
+      expect(problems).toContain("timing.budgetMs.steps must exceed");
+      expect(problems).toContain("timing.reservationExtraMs.dish must cover its budget");
+    } finally {
+      remove();
+    }
+    expect(providerRegistryProblems()).toEqual([]);
+  });
+
+  test("Vertex with a fallback (the default): the first attempt is aborted at 30 s, the fallback gets the rest", async () => {
+    const config = parseRuntimeConfig({});
+    const { out, aborts, vertex, deps } = await timed(config, "vertex", IMAGE.budgetMs.dish, IMAGE.budgetMs.dish);
+    expect(aborts).toEqual([30_000]);
+    expect(vertex.targets).toEqual([{ provider: "vertex", model: "gemini-nano-banana-2.1" }]);
+    expect(out).toMatchObject({ ok: true, model: "gemini-nano-banana-2.1" });
+    expect(deps.logs.find((l) => l.message === "image_fallback")?.data).toMatchObject({ reason: "TIMEOUT", outcome: "done" });
+  });
+
+  test("OpenAI without a fallback: one attempt, aborted at 35 s, booked at its price", async () => {
+    const config = parseRuntimeConfig({ image: { provider: "openai", model: "gpt-image-1-mini", fallbackModel: "" } });
+    const { out, aborts } = await timed(config, "openai", IMAGE.budgetMs.dish, IMAGE.budgetMs.dish);
+    expect(aborts).toEqual([35_000]);
+    expect(out).toMatchObject({ ok: false, failure: "TIMEOUT", microUsd: 20_000 });
+  });
+
+  test("BFL selected: the first attempt is aborted only at 45 s, booked (BFL finishes and charges it), then Flash-Lite Image gets the remaining time", async () => {
+    const config = parseRuntimeConfig({ image: { provider: "bfl", model: FLUX, fallbackProvider: "vertex", fallbackModel: FLASH_LITE } });
+    const budget = imageTimingOf("bfl").budgetMs.dish;
+    const { out, aborts, vertex, deps } = await timed(config, "bfl", budget, budget);
+    expect(aborts).toEqual([45_000]);
+    expect(vertex.targets).toEqual([{ provider: "vertex", model: FLASH_LITE }]);
+    // BFL's abandoned task at its flat price plus Flash-Lite Image's picture.
+    expect(out).toMatchObject({ ok: true, model: FLASH_LITE, microUsd: 10_000 + 40_000 });
+    expect(deps.logs.find((l) => l.message === "image_fallback")?.data).toMatchObject({ provider: "bfl", fallbackProvider: "vertex", reason: "TIMEOUT", outcome: "done" });
+    expect(deps.logs.find((l) => l.message === "image_call")?.data).toMatchObject({ provider: "bfl", attempts: 2, fallback: true });
+  });
+
+  test("BFL selected, the fallback also slow: it is aborted at the dish's 65 s, both booked", async () => {
+    const config = parseRuntimeConfig({ image: { provider: "bfl", model: FLUX, fallbackProvider: "vertex", fallbackModel: FLASH_LITE } });
+    const deps = makeDeps();
+    const flux = hanging(0);
+    const flash = hanging(0);
+    (deps as Deps).imageGenerator = new ImageRouter({ vertex: () => flash.gen, bfl: () => flux.gen });
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    try {
+      const start = Date.now();
+      const pending = makeRecipeImage({ ...deps, now: () => Date.now() }, "u1", SAMPLE_BRIEF, config, start + imageTimingOf("bfl").budgetMs.dish);
+      await vi.advanceTimersByTimeAsync(70_000);
+      expect(await pending).toMatchObject({ ok: false, failure: "TIMEOUT", microUsd: 10_000 + 40_000 });
+      expect(flux.aborts).toEqual([45_000]);
+      // The fallback's time is what is left: 65 s - 45 s (to within the clock's millisecond).
+      expect(flash.aborts[0]).toBeGreaterThanOrEqual(19_000);
+      expect(flash.aborts[0]).toBeLessThanOrEqual(20_000);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("the adapter itself polls for as long as the signal lets it (no limit of its own past the old 35 s)", async () => {
+    const replies: Reply[] = [submitted(), ...Array.from({ length: 30 }, () => poll("Pending")), ready(), await picture()];
+    const q = fetchQueue(replies);
+    let slept = 0;
+    const gen = new BflImageGenerator({
+      apiKey: async () => KEY,
+      region: "eu",
+      fetch: q.fetch,
+      sleep: async (ms, signal) => {
+        slept += ms;
+        if (signal.aborted) throw new Error("aborted");
+      },
+    });
+    const out = await gen.generate(PROMPT, target(), new AbortController().signal);
+    expect(slept).toBeGreaterThan(40_000);
+    expect(out.model).toBe(FLUX);
   });
 });
