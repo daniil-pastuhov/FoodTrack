@@ -55,7 +55,13 @@ export type SwitchRefusal =
   | "NOT_READY"
   | "STALE" // the active setup is no longer the one the caller saw
   | "PRICES_INVALID" // config/runtime.prices is invalid: a price can't be added to it
-  | "INVALID_RESULT"; // the document as it would be does not parse to the profile
+  | "INVALID_RESULT" // the document as it would be does not parse to the profile (or to the settings asked)
+  // The settings (core/ownerSettings.ts):
+  | "UNKNOWN_SETTING"
+  | "INVALID_VALUE" // outside the setting's bounds or choices
+  | "STORED_INVALID" // the setting's map in config/runtime is invalid as stored: fixed by hand first
+  | "CONFIRM_SENSITIVE" // a sensitive change without its own confirmation
+  | "WEB_LIMIT"; // outside the console's envelope: only the admin command makes it
 
 export class SwitchRefused extends HttpsError {
   constructor(code: ConstructorParameters<typeof HttpsError>[0], readonly reason: SwitchRefusal, message: string) {
@@ -220,7 +226,7 @@ export async function assertOwner(db: Firestore, caller: OwnerCaller, opts: { wr
   const listed = owners.uids.includes(caller.uid) || googleEmails.some((e) => owners.emails.includes(e));
   if (!listed) throw refuse();
   if (opts.write && opts.nowMs / 1000 - caller.authTime > OWNER_RECENT_SIGN_IN_S) {
-    throw new SwitchRefused("failed-precondition", "RECENT_SIGN_IN", "Sign in again to switch (the sign-in is more than 30 minutes old)");
+    throw new SwitchRefused("failed-precondition", "RECENT_SIGN_IN", "Sign in again (the sign-in is more than 30 minutes old)");
   }
 }
 
@@ -309,7 +315,7 @@ export interface Plan {
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
 /** The fields `parseRuntimeConfig` reports invalid in `data`. */
-function invalidFields(data: Record<string, unknown>, imageDefaults: ImageSelection, textDefaults: TextTarget = DEFAULT_TEXT_SELECTION): string[] {
+export function invalidFields(data: Record<string, unknown>, imageDefaults: ImageSelection, textDefaults: TextTarget = DEFAULT_TEXT_SELECTION): string[] {
   let fields: string[] = [];
   parseRuntimeConfig(data, {
     info: () => undefined,
@@ -544,7 +550,7 @@ export interface OwnerEnv extends SwitchEnv {
 }
 
 /** Clears Google's name and photo from the Auth user, as the apps' callables do (best effort). */
-async function scrubOwnerProfile(env: OwnerEnv, caller: OwnerCaller): Promise<void> {
+export async function scrubOwnerProfile(env: OwnerEnv, caller: OwnerCaller): Promise<void> {
   if (!caller.profileClaims) return;
   try {
     await env.auth.updateUser(caller.uid, { displayName: null, photoURL: null });

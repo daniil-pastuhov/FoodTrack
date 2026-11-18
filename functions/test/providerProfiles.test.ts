@@ -560,9 +560,10 @@ describe("OwnerCallGate", () => {
     expect(await reason(gate.run("setProviderProfile", req("192.0.2.2", { uid: other.uid }, "Bearer garbage"),
       (authorization) => setProviderProfile(env, authorization, {})))).toBe("SIGN_IN");
     const refused = env.logs.filter((l) => l.message === "owner_call_refused").map((l) => l.data);
+    // Past the throttle every refusal is logged, with the caller's uid hash (never the uid).
     expect(refused).toEqual([
-      { function: "getProviderProfiles", reason: "NOT_OWNER", suppressedSinceLast: 0 },
-      { function: "setProviderProfile", reason: "SIGN_IN", suppressedSinceLast: 0 },
+      { function: "getProviderProfiles", reason: "NOT_OWNER", uidHash: uidHash(other.uid) },
+      { function: "setProviderProfile", reason: "SIGN_IN", uidHash: uidHash(other.uid) },
     ]);
     const logged = JSON.stringify(env.logs);
     for (const s of [owner.uid, owner.email, other.uid, other.email]) expect(logged).not.toContain(s);

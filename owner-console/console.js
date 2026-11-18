@@ -1,6 +1,7 @@
 // The owner console (functions/README.md "The owner console"). Static and harmless on its own:
-// every fact it shows and every change it makes goes through the callables getProviderProfiles
-// and setProviderProfile, which accept only the owner's Google sign-in (config/owner). Nothing is
+// every fact it shows and every change it makes goes through the callables getProviderProfiles,
+// setProviderProfile, getOwnerSettings and setOwnerSettings, which accept only the owner's Google
+// sign-in (config/owner). Nothing is
 // kept in the browser: the sign-in lives in memory only (inMemoryPersistence), so each visit
 // signs in afresh, and Google's name and photo are never read. Text goes in with textContent only.
 // The Firebase JS SDK is served from this site (vendor/, pinned; vendor/firebasejs/13.4.0/SOURCE.txt).
@@ -23,16 +24,30 @@ const local = location.hostname === "127.0.0.1" || location.hostname === "localh
 let auth;
 let projectId = "";
 let view = null;
+/** What to do again after a fresh sign-in the server asked for (RECENT_SIGN_IN); run only on a click. */
+let retry = null;
 
 function say(text, error = false) {
   $("message").textContent = text;
   $("message").className = error ? "error" : "";
+  if (!retry) $("reauth").hidden = true;
+}
+
+// The server wants a newer sign-in. Google's sign-in is never opened by itself: the page says so
+// and waits for a click on "Sign in again", which then repeats what was refused.
+function askSignInAgain(text, again) {
+  retry = again;
+  say(text, true);
+  $("reauth").hidden = false;
 }
 
 function show(signedIn) {
   $("signed-out").hidden = signedIn;
   $("account").hidden = !signedIn;
-  if (!signedIn) $("console").hidden = true;
+  if (!signedIn) {
+    $("console").hidden = true;
+    $("settings").hidden = true;
+  }
 }
 
 async function call(name, data) {
@@ -118,8 +133,10 @@ async function load() {
     view = await call("getProviderProfiles");
     say("");
     render();
+    await loadSettings();
   } catch (e) {
     $("console").hidden = true;
+    $("settings").hidden = true;
     if (e.reason === "NOT_OWNER") say("This Google account may not use the owner console.", true);
     else if (e.reason === "SIGN_IN" || e.reason === "UNAUTHENTICATED") say("Sign in with Google.", true);
     else say(`Could not load: ${e.message}`, true);
@@ -166,12 +183,306 @@ async function doSwitch() {
     view = await call("setProviderProfile", body);
   } catch (e) {
     if (e.reason !== "RECENT_SIGN_IN") throw e;
-    say("Sign in again to confirm the switch.");
-    await signIn();
-    view = await call("setProviderProfile", body);
+    askSignInAgain(`Not switched: ${e.message}. Sign in again, then the switch is sent once more.`, () => sendSwitch(body, p));
+    return;
   }
   render();
   say(`Switched to ${p.label}.`);
+}
+
+async function sendSwitch(body, p) {
+  say("Switching…");
+  view = await call("setProviderProfile", body);
+  render();
+  say(`Switched to ${p.label}.`);
+}
+
+// --- Settings (getOwnerSettings / setOwnerSettings) -------------------------------------------
+// Everything below is drawn from what the server returns: sections, labels, help, controls,
+// bounds, values and defaults. A new setting on the server needs no change here.
+
+let settingsView = null;
+let pendingPlan = null;
+/** Per setting id: { get(): value | undefined (unreadable), reset: boolean }. */
+const inputs = new Map();
+let fieldSeq = 0;
+
+function el(tag, props = {}, ...children) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === "class") e.className = v;
+    else if (k === "text") e.textContent = v;
+    else e[k] = v;
+  }
+  for (const c of children) if (c !== null && c !== undefined) e.append(c);
+  return e;
+}
+
+const isUsd = (c) => c.kind === "number" && c.unit === "usd";
+const usdText = (c, n) => `USD ${(n / 1e6).toFixed(c.step < 10000 ? 3 : 2)}`;
+const same = (a, b) => JSON.stringify(sortKeys(a)) === JSON.stringify(sortKeys(b));
+function sortKeys(v) {
+  if (Array.isArray(v)) return v.map(sortKeys);
+  if (v && typeof v === "object") return Object.fromEntries(Object.keys(v).sort().map((k) => [k, sortKeys(v[k])]));
+  return v ?? null;
+}
+
+function fmt(c, v) {
+  if (v === null || v === undefined) return (c && c.emptyMeans) || "none";
+  if (!c) return typeof v === "string" ? v : JSON.stringify(v);
+  switch (c.kind) {
+    case "toggle":
+      return v ? "On" : "Off";
+    case "number":
+      if (isUsd(c)) return usdText(c, v);
+      return v === 0 && c.offAtZero ? `0 (${c.offAtZero})` : String(v);
+    case "select":
+      return c.options.find((o) => o.value === v)?.label ?? String(v);
+    case "multi":
+      return v.length === 0 ? "none" : v.map((x) => c.options.find((o) => o.value === x)?.label ?? x).join("; ");
+    case "table":
+      return c.rows.map((r) => `${r.label}: ${c.cols.map((k) => v[r.value]?.[k.value]).join(" / ")}`).join("; ");
+    default:
+      return JSON.stringify(v);
+  }
+}
+
+function settingById(id) {
+  for (const s of settingsView?.sections ?? []) for (const x of s.settings) if (x.id === id) return x;
+  return null;
+}
+
+/** The input for one setting, and how to read it back (undefined: not a valid entry). */
+function controlFor(s, fid) {
+  const c = s.control;
+  if (c.kind === "toggle") {
+    const box = el("input", { type: "checkbox", id: fid, checked: s.value === true, disabled: Boolean(s.blocked) });
+    return { node: el("p", { class: "toggle" }, box, el("span", { text: " On" })), get: () => box.checked };
+  }
+  if (c.kind === "number") {
+    const k = isUsd(c) ? 1e6 : 1;
+    // The bounds the page may use now (the server's envelope), else the control's own.
+    const min = s.web?.min ?? c.min;
+    const max = s.web?.max ?? c.max;
+    const box = el("input", {
+      type: "number", id: fid, inputMode: c.integer && !isUsd(c) ? "numeric" : "decimal",
+      min: String(min / k), max: String(max / k), step: String(c.step / k),
+      value: s.value === null ? "" : String(s.value / k), disabled: Boolean(s.blocked),
+    });
+    if (c.emptyMeans) box.placeholder = `empty: ${c.emptyMeans}`;
+    return {
+      node: box,
+      get: () => {
+        const t = box.value.trim();
+        if (t === "") return null;
+        const n = Number(t);
+        if (!Number.isFinite(n)) return undefined;
+        return isUsd(c) ? Math.round(n * 1e6) : n;
+      },
+    };
+  }
+  if (c.kind === "select") {
+    const sel = el("select", { id: fid, disabled: Boolean(s.blocked) }, ...c.options.map((o) => el("option", { value: o.value, text: o.label })));
+    sel.value = s.value;
+    return { node: sel, get: () => sel.value };
+  }
+  if (c.kind === "multi") {
+    const boxes = c.options.map((o, i) => {
+      const box = el("input", { type: "checkbox", id: `${fid}-${i}`, value: o.value, checked: (s.value ?? []).includes(o.value), disabled: Boolean(s.blocked) });
+      return { box, row: el("li", {}, box, el("label", { htmlFor: `${fid}-${i}`, class: "inline", text: `${o.label}` })) };
+    });
+    return {
+      node: el("ul", { class: "multi", id: fid }, ...boxes.map((b) => b.row)),
+      get: () => boxes.filter((b) => b.box.checked).map((b) => b.box.value),
+    };
+  }
+  if (c.kind === "table") {
+    const cells = [];
+    const head = el("tr", {}, el("th", { text: "" }), ...c.cols.map((k) => el("th", { scope: "col", text: k.label })));
+    const rows = c.rows.map((r) => el("tr", {}, el("th", { scope: "row", text: r.label }), ...c.cols.map((k) => {
+      const fixed = c.fixed.some((f) => f.row === r.value && f.col === k.value);
+      const b = s.web?.cells?.[r.value]?.[k.value] ?? { min: c.min, max: c.max };
+      const box = el("input", { type: "number", inputMode: "numeric", min: String(b.min), max: String(b.max), step: "1", value: String(s.value?.[r.value]?.[k.value] ?? ""), disabled: fixed || Boolean(s.blocked) });
+      box.setAttribute("aria-label", `${r.label}, ${k.label}${fixed ? " (set above)" : ""}`);
+      cells.push({ r: r.value, k: k.value, box });
+      return el("td", {}, box);
+    })));
+    return {
+      node: el("div", { class: "table-wrap" }, el("table", { id: fid }, el("thead", {}, head), el("tbody", {}, ...rows))),
+      get: () => {
+        const out = {};
+        for (const { r, k, box } of cells) {
+          const n = Number(box.value);
+          if (box.value.trim() === "" || !Number.isInteger(n)) return undefined;
+          (out[r] ??= {})[k] = n;
+        }
+        return out;
+      },
+    };
+  }
+  return { node: el("p", { class: "note", text: "This server sent a kind of setting this page doesn't know; use the admin command." }), get: () => s.value };
+}
+
+function commandText(s) {
+  return s.command + (local ? "" : ` --project ${projectId}`);
+}
+
+function viaText(via) {
+  return via === "web" ? "this console" : "admin command";
+}
+
+function settingNode(s) {
+  const fid = `setting-${++fieldSeq}`;
+  const ctl = controlFor(s, fid);
+  const entry = { get: ctl.get, reset: false };
+  inputs.set(s.id, entry);
+  const meta = [`Default: ${fmt(s.control, s.default)}`];
+  meta.push(s.overridden ? "set here" : "default in force");
+  if (s.changed) meta.push("changed from default");
+  if (s.lastChange) meta.push(`last changed ${new Date(s.lastChange.at).toLocaleString()} (${viaText(s.lastChange.via)})`);
+  const node = el("div", { class: "setting" + (s.changed ? " changed" : "") },
+    el(s.control.kind === "multi" || s.control.kind === "table" ? "p" : "label", { class: "name", text: s.label + (s.sensitive ? " (sensitive)" : ""), ...(s.control.kind === "multi" || s.control.kind === "table" ? {} : { htmlFor: fid }) }),
+    el("p", { class: "note", text: s.help }),
+    ctl.node,
+    el("p", { class: "meta", text: meta.join(" · ") }),
+    s.web ? el("p", { class: "range", text: `On this page: ${s.web.text}.` }) : null,
+    s.web ? el("p", { class: "range" }, el("span", { text: "Larger changes: use the command " }), el("code", { text: commandText(s) })) : null,
+    s.blocked ? el("p", { class: "warn", text: s.blocked }) : null,
+  );
+  if (s.overridden && !s.blocked) {
+    const btn = el("button", { type: "button", class: "small", text: "Reset to default" });
+    btn.addEventListener("click", () => {
+      entry.reset = !entry.reset;
+      btn.textContent = entry.reset ? "Will reset on Save (undo)" : "Reset to default";
+      node.classList.toggle("resetting", entry.reset);
+    });
+    node.append(btn);
+  }
+  return node;
+}
+
+function renderSettings() {
+  const v = settingsView;
+  inputs.clear();
+  const parts = [];
+  if (v.invalid.length) parts.push(el("p", { class: "warn", text: `Invalid as stored, so their safe values are in force: ${v.invalid.join(", ")}. Fix or delete them in the Firestore console.` }));
+  if (v.lastChange) parts.push(el("p", { class: "note", text: `Last settings change: ${new Date(v.lastChange.at).toLocaleString()} (${viaText(v.lastChange.via)}).` }));
+  for (const sec of v.sections) {
+    const save = el("button", { type: "button", class: "primary", text: `Save ${sec.title}…` });
+    save.addEventListener("click", () => saveSection(sec).catch(saveFailed));
+    parts.push(el("section", { class: "card" }, el("h3", { text: sec.title }), el("p", { class: "note", text: sec.help }), ...sec.settings.map(settingNode), save));
+  }
+  if (v.readOnly.length) {
+    const dl = el("dl", { class: "facts" });
+    for (const r of v.readOnly) {
+      dl.append(el("dt", { text: r.label }), el("dd", {}, el("span", { text: fmt(null, r.value) + (same(r.value, r.default) ? "" : `  (default ${fmt(null, r.default)})`) }), el("p", { class: "note", text: r.reason })));
+    }
+    parts.push(el("section", { class: "card" }, el("h3", { text: "Shown here, changed elsewhere" }), dl));
+  }
+  $("settings-sections").replaceChildren(...parts);
+  $("settings").hidden = false;
+}
+
+function sectionChanges(sec) {
+  const changes = [];
+  for (const s of sec.settings) {
+    const entry = inputs.get(s.id);
+    if (!entry || s.blocked) continue;
+    if (entry.reset) {
+      changes.push({ id: s.id, reset: true, expect: s.stored });
+      continue;
+    }
+    const value = entry.get();
+    if (value === undefined) throw Object.assign(new Error(`${s.label}: not a valid entry.`), { reason: "LOCAL" });
+    if (same(value, s.value)) continue;
+    if (value === null) changes.push({ id: s.id, reset: true, expect: s.stored });
+    else changes.push({ id: s.id, value, expect: s.stored });
+  }
+  return changes;
+}
+
+async function saveSection(sec) {
+  const changes = sectionChanges(sec);
+  if (changes.length === 0) {
+    say(`Nothing to save in ${sec.title}.`);
+    return;
+  }
+  say("Checking…");
+  let answer;
+  try {
+    answer = await call("setOwnerSettings", { changes, dryRun: true });
+  } catch (e) {
+    if (e.reason !== "RECENT_SIGN_IN") throw e;
+    askSignInAgain(`Not checked: ${e.message}. Sign in again, then the check runs once more.`, () => saveSection(sec).catch(saveFailed));
+    return;
+  }
+  const plan = answer.plan;
+  if (plan.changes.length === 0) {
+    say(`Nothing to save in ${sec.title}: already so.`);
+    return;
+  }
+  say("");
+  pendingPlan = { changes, plan };
+  const ctlOf = (id) => settingById(id)?.control ?? null;
+  $("settings-confirm-list").replaceChildren(...plan.changes.map((c) => el("li", {
+    class: c.sensitive ? "sensitive" : "",
+    text: `${c.label}: ${fmt(ctlOf(c.id), c.from)} → ${fmt(ctlOf(c.id), c.to)}${c.reset ? " (reset to default)" : ""}${c.sensitive ? " · sensitive" : ""}`,
+  })));
+  $("settings-confirm-side").textContent = plan.sideEffects.length
+    ? `Also changes with it: ${plan.sideEffects.map((s) => `${s.label}: ${fmt(ctlOf(s.id), s.from)} → ${fmt(ctlOf(s.id), s.to)}`).join("; ")}.`
+    : "";
+  const sensitive = plan.sensitive.length > 0;
+  $("settings-confirm-sensitive").hidden = !sensitive;
+  $("settings-confirm-signin").textContent = sensitive
+    ? `A sensitive save needs a sign-in from the last ${settingsView.sensitiveSignInMinutes} minutes; if yours is older, the server says so and you sign in again.`
+    : "";
+  $("settings-typed").value = "";
+  if (sensitive) {
+    $("settings-confirm-sensitive-text").textContent = `${plan.changes.filter((c) => c.sensitive).map((c) => c.label).join(", ")}: sensitive (${plan.changes.filter((c) => c.sensitive).map((c) => settingById(c.id)?.sensitiveWhy).filter(Boolean).join("; ")}).`;
+    $("settings-typed-label").textContent = `Type ${settingsView.confirmWord} to save${plan.changes.length > 1 ? " all of these" : ""}`;
+  }
+  $("settings-confirm-ok").disabled = sensitive;
+  $("settings-confirm").showModal();
+}
+
+async function confirmSave() {
+  const p = pendingPlan;
+  if (!p) return;
+  const sensitive = p.plan.sensitive;
+  $("settings-confirm").close();
+  say("Saving…");
+  // The token binds the save to the check the dialog showed: a different plan now is refused as STALE.
+  const body = { changes: p.changes, confirm: true, token: p.plan.token, sensitive, typed: sensitive.length ? $("settings-typed").value.trim() : "" };
+  await sendSave(body);
+}
+
+async function sendSave(body) {
+  say("Saving…");
+  try {
+    settingsView = await call("setOwnerSettings", body);
+  } catch (e) {
+    if (e.reason !== "RECENT_SIGN_IN") throw e;
+    askSignInAgain(`Not saved: ${e.message}. Sign in again, then the same save is sent once more.`, () => sendSave(body).catch(saveFailed));
+    return;
+  }
+  pendingPlan = null;
+  renderSettings();
+  say("Saved. New requests use it within 30 seconds.");
+}
+
+function saveFailed(e) {
+  say(e.reason === "LOCAL" ? e.message : `Not saved: ${e.message}`, true);
+  if (e.reason === "STALE") loadSettings();
+}
+
+async function loadSettings() {
+  try {
+    settingsView = await call("getOwnerSettings");
+    renderSettings();
+  } catch (e) {
+    $("settings").hidden = true;
+    if (e.reason !== "NOT_OWNER" && e.reason !== "SIGN_IN") say(`Settings could not load: ${e.message}`, true);
+  }
 }
 
 async function start() {
@@ -183,7 +494,21 @@ async function start() {
   await setPersistence(auth, inMemoryPersistence);
   show(false);
   $("sign-in").addEventListener("click", () => signIn().then(load).catch(signInFailed));
-  $("sign-out").addEventListener("click", () => signOut(auth).then(() => { view = null; show(false); say("Signed out."); }));
+  $("reauth-button").addEventListener("click", () => {
+    const again = retry;
+    retry = null;
+    $("reauth").hidden = true;
+    signIn().then(() => again?.()).catch((e) => (e.reason ? say(`Not done: ${e.message}`, true) : signInFailed(e)));
+  });
+  $("sign-out").addEventListener("click", () => signOut(auth).then(() => { view = null; settingsView = null; retry = null; show(false); say("Signed out."); }));
+  $("settings-typed").addEventListener("input", () => {
+    $("settings-confirm-ok").disabled = $("settings-typed").value.trim() !== settingsView?.confirmWord;
+  });
+  $("settings-confirm-cancel").addEventListener("click", () => {
+    pendingPlan = null;
+    $("settings-confirm").close();
+  });
+  $("settings-confirm-ok").addEventListener("click", () => confirmSave().catch(saveFailed));
   $("profile").addEventListener("change", describe);
   $("switch").addEventListener("click", () => {
     const p = selected();

@@ -85,6 +85,7 @@ import {
   type OwnerEnv,
 } from "./core/providerSwitch";
 import { OwnerCallGate } from "./core/ownerCall";
+import { getOwnerSettings as ownerSettingsCore, setOwnerSettings as setOwnerSettingsCore } from "./core/ownerSettings";
 
 // --- Params and secrets (see README "Parameters") ---------------------------------------------
 
@@ -613,9 +614,11 @@ export const redrawBoard = onSchedule(
 
 // --- The owner console (README "Provider profiles", "The owner console") ----------------------
 //
-// Two callables for the owner's web page on Firebase Hosting, never for the apps. A caller must be
+// Four callables for the owner's web page on Firebase Hosting, never for the apps: the provider
+// profiles and the runtime settings (core/ownerSettings.ts). A caller must be
 // a Google sign-in (verified email) listed in config/owner; the ID token is checked again with
-// revocation, a switch needs a sign-in from the last 30 minutes, and every refusal answers the same
+// revocation, a switch or a save needs a sign-in from the last 30 minutes (a sensitive save 5, and
+// only within the console's envelope, core/ownerSettings.ts WebRule), and every refusal answers the same
 // few fixed words. App Check is NOT enforced here: a web App Check provider (reCAPTCHA Enterprise)
 // would prove a browser, not who is in it, and the owner allowlist is the guard; OwnerCallGate
 // (calls without a token refused uncounted, a per-address limit under an instance ceiling, a listed
@@ -669,6 +672,12 @@ export const getProviderProfiles = onCall(ownerCallable, (request) =>
 
 export const setProviderProfile = onCall(ownerCallable, (request) =>
   ownerCall("setProviderProfile", request, (env, authorization) => setProviderProfileCore(env, authorization, request.data)));
+
+export const getOwnerSettings = onCall(ownerCallable, (request) =>
+  ownerCall("getOwnerSettings", request, (env, authorization) => ownerSettingsCore(env, authorization)));
+
+export const setOwnerSettings = onCall(ownerCallable, (request) =>
+  ownerCall("setOwnerSettings", request, (env, authorization) => setOwnerSettingsCore(env, authorization, request.data)));
 
 function decodePubSub(data: string | undefined): unknown {
   if (!data) return null;

@@ -13,11 +13,18 @@
  *   cached OWNER_LIST_CACHE_MS), a Google sign-in whose token email is in `config/owner.emails`,
  *   or a uid the core has already let in on this instance. This picks a bucket only: the core
  *   still decides who is an owner.
- * - Refusals are logged as `owner_call_refused` (the reason only, never the uid or email),
- *   sampled to OWNER_REFUSED_LOGS_PER_MINUTE.
+ * - Refusals are logged as `owner_call_refused`: a fixed reason code (refusalReason) and, past
+ *   the token check, the caller's uidHash; never the uid or email. Those before anything is counted
+ *   or at the throttle (SIGN_IN without a token, RATE_LIMITED) are sampled to
+ *   OWNER_REFUSED_LOGS_PER_MINUTE; every other one (NOT_OWNER, INVALID_REQUEST, WEB_LIMIT, ...) is
+ *   logged, since the throttle already bounds how many there can be. Reasons other than NOT_OWNER,
+ *   SIGN_IN and RATE_LIMITED come from a listed owner's session and are alerted on
+ *   (alerts/policies/owner-refusals.json).
  */
 import type { Firestore } from "firebase-admin/firestore";
+import { HttpsError } from "firebase-functions/v2/https";
 import { fail } from "../contract";
+import { uidHash } from "../model";
 import type { Logger } from "../ports";
 import { LogSampler, WindowLimiter, clientIp, ipKey } from "./guard";
 import { OWNER_DOC, OWNER_LIST_MAX, SwitchRefused, normaliseOwnerEmail, parseOwnerDoc } from "./providerSwitch";
@@ -27,6 +34,19 @@ export const OWNER_OTHERS_PER_MINUTE = 30;
 export const OWNER_LISTED_PER_MINUTE = 30;
 export const OWNER_LIST_CACHE_MS = 60_000;
 export const OWNER_REFUSED_LOGS_PER_MINUTE = 10;
+
+/**
+ * The fixed reason code of a refusal: SwitchRefused's reason, an HttpsError's details.reason when
+ * it is a code, else its code (INVALID_ARGUMENT, ...); null for anything that is not a refusal (an
+ * internal failure, logged as callable_failed instead). Never text from the request.
+ */
+export function refusalReason(e: unknown): string | null {
+  if (e instanceof SwitchRefused) return e.reason;
+  if (!(e instanceof HttpsError)) return null;
+  const r = (e.details as { reason?: unknown } | undefined)?.reason;
+  if (typeof r === "string" && /^[A-Z][A-Z_]{1,39}$/.test(r)) return r;
+  return e.code.toUpperCase().replace(/-/g, "_");
+}
 
 /** The part of a CallableRequest this reads. */
 export interface OwnerCallRequest {
@@ -63,10 +83,16 @@ export class OwnerCallGate {
     return this.list;
   }
 
+  /** Sampled: refusals before anything is counted, or at the throttle. */
   private refused(name: string, reason: string, nowMs: number): void {
     const sample = this.refusedLog.take(nowMs);
     // The reason only: never the caller's uid or email.
     if (sample.log) this.env.logger.warn("owner_call_refused", { function: name, reason, suppressedSinceLast: sample.suppressed });
+  }
+
+  /** Every one: refusals of a call the throttle let through (so bounded by it). */
+  private refusedCounted(name: string, reason: string, uid: string): void {
+    this.env.logger.warn("owner_call_refused", { function: name, reason, uidHash: uidHash(uid) });
   }
 
   async run<T>(name: string, request: OwnerCallRequest, fn: (authorization: string | undefined) => Promise<T>): Promise<T> {
@@ -94,7 +120,8 @@ export class OwnerCallGate {
       this.admitted.add(auth.uid);
       return out;
     } catch (e) {
-      if (e instanceof SwitchRefused) this.refused(name, e.reason, this.env.now());
+      const reason = refusalReason(e);
+      if (reason) this.refusedCounted(name, reason, auth.uid);
       throw e;
     }
   }

@@ -5,6 +5,7 @@
  *   npm run admin -- delete <one of the above> [--apply --confirm <uid>] [--kind <request kind>, with --uid]
  *   npm run admin -- board  [--days 30] [--out <file.html>]   (README "The board": read-only)
  *   npm run admin -- providers list | use <profile> [--apply]  (README "Provider profiles"; `image` is the older name)
+ *   npm run admin -- config list | set <id> <value> ... | reset <id> ... [--apply [--confirm <id,id>]]  (README "The owner console")
  *
  * Against the emulators (project demo-foodtracker, 127.0.0.1:8080 / :9099) unless `--project` names
  * a live project; then with the operator's Application Default Credentials. `delete` is a dry run
@@ -41,6 +42,8 @@ import { DEFAULT_IMAGE_SELECTION, DEFAULT_TEXT_SELECTION } from "../constants";
 import { providerSecrets, textProviderById } from "../providers/registry";
 import { validImageSelection, type ImageSelection } from "../model";
 import { SwitchRefused, activateProfile, listProfiles, type PlannedWrite, type SetupView, type SwitchEnv } from "../core/providerSwitch";
+import { HttpsError } from "firebase-functions/v2/https";
+import { SETTING_CHANGES, applySettings, listSettings, settingById, type Control, type SettingDef } from "../core/ownerSettings";
 
 export const EMULATOR_PROJECT = "demo-foodtracker";
 
@@ -58,7 +61,10 @@ const USAGE = `usage:
   npm run admin -- board  [--days <1-${BOARD_MAX_DAYS}, default 30>] [--out <file.html>] [--project <id>]
   npm run admin -- providers list [--project <id>]        (or: image list)
   npm run admin -- providers use <profile> [--apply] [--project <id>]
-Without --project: the local emulators (${EMULATOR_PROJECT}). delete and providers use are dry runs without --apply.`;
+  npm run admin -- config list [--project <id>]
+  npm run admin -- config set <id> <value> [<id> <value> ...] [--apply [--confirm <sensitive id,...>]] [--project <id>]
+  npm run admin -- config reset <id> [<id> ...] [--apply [--confirm <sensitive id,...>]] [--project <id>]
+Without --project: the local emulators (${EMULATOR_PROJECT}). delete, providers use and config set / reset are dry runs without --apply.`;
 
 const OPTIONS = {
   email: { type: "string" },
@@ -341,6 +347,140 @@ export function buildImageEnv(project: string): ImageEnv {
   };
 }
 
+// --- Runtime settings (README "The owner console", "config/runtime") ---------------------------
+
+const CONFIG_OPTIONS = { project: { type: "string" }, apply: { type: "boolean" }, confirm: { type: "string" } } as const;
+
+export type ConfigArgs =
+  | { command: "list"; project: string }
+  | { command: "set"; pairs: [string, string][]; apply: boolean; confirm: string[]; project: string }
+  | { command: "reset"; ids: string[]; apply: boolean; confirm: string[]; project: string };
+
+export function parseConfigArgs(argv: string[]): ConfigArgs {
+  let parsed;
+  try {
+    parsed = parseArgs({ args: argv, options: CONFIG_OPTIONS, allowPositionals: true, strict: true });
+  } catch (e) {
+    throw new AdminRefusal(`${(e as Error).message}\n${USAGE}`);
+  }
+  const { values, positionals } = parsed;
+  if (positionals[0] !== "config") throw new AdminRefusal(USAGE);
+  const project = values.project ?? EMULATOR_PROJECT;
+  const confirm = values.confirm === undefined ? [] : values.confirm.split(",").map((s) => s.trim()).filter(Boolean);
+  const rest = positionals.slice(2);
+  if (positionals[1] === "list" && rest.length === 0) {
+    if (values.apply || values.confirm !== undefined) throw new AdminRefusal("--apply and --confirm belong to config set and config reset.");
+    return { command: "list", project };
+  }
+  if (values.confirm !== undefined && !values.apply) throw new AdminRefusal("--confirm goes with --apply.");
+  if (positionals[1] === "set" && rest.length >= 2 && rest.length % 2 === 0) {
+    const pairs: [string, string][] = [];
+    for (let i = 0; i < rest.length; i += 2) pairs.push([rest[i], rest[i + 1]]);
+    return { command: "set", pairs, apply: values.apply === true, confirm, project };
+  }
+  if (positionals[1] === "reset" && rest.length >= 1) return { command: "reset", ids: rest, apply: values.apply === true, confirm, project };
+  throw new AdminRefusal(USAGE);
+}
+
+/** A value typed on the command line, as its setting's control takes it (micro-USD for USD amounts). */
+export function cliValue(def: SettingDef, raw: string): unknown {
+  const c = def.control;
+  switch (c.kind) {
+    case "toggle":
+      if (/^(true|on)$/i.test(raw)) return true;
+      if (/^(false|off)$/i.test(raw)) return false;
+      throw new AdminRefusal(`${def.id}: on or off (true or false).`);
+    case "number":
+      if (!/^-?\d+(\.\d+)?$/.test(raw)) throw new AdminRefusal(`${def.id}: a number${c.unit === "usd" ? " in micro-USD (1000000 is USD 1)" : ""}.`);
+      return Number(raw);
+    case "select":
+      return raw;
+    case "multi":
+      return raw === "" ? [] : raw.split(",").map((s) => s.trim());
+    case "table":
+      try {
+        return JSON.parse(raw) as unknown;
+      } catch {
+        throw new AdminRefusal(`${def.id}: a JSON table such as {"1":{"1":1,"2":2,"3":3},...}.`);
+      }
+  }
+}
+
+/** A setting's value as the command prints it. */
+export function showSetting(control: Control, v: unknown): string {
+  if (v === null || v === undefined) return control.kind === "number" && control.emptyMeans ? control.emptyMeans : "none";
+  switch (control.kind) {
+    case "toggle":
+      return v ? "on" : "off";
+    case "number":
+      if (control.unit === "usd") return `USD ${((v as number) / 1_000_000).toFixed(control.step < 10_000 ? 3 : 2)} (${v})`;
+      return v === 0 && control.offAtZero ? `0 (${control.offAtZero})` : String(v);
+    case "multi":
+      return (v as string[]).length ? (v as string[]).join(",") : "none";
+    default:
+      return typeof v === "string" ? v : JSON.stringify(v);
+  }
+}
+
+export async function runConfig(args: ConfigArgs, env: ImageEnv): Promise<void> {
+  const { print } = env;
+  if (args.command === "list") {
+    const view = await listSettings(env);
+    if (view.invalid.length) print(`Invalid as stored (their safe values are in force): ${view.invalid.join(", ")}`);
+    for (const s of view.sections) {
+      print(`## ${s.title}`);
+      for (const x of s.settings) {
+        const marks = [x.overridden ? "set" : "", x.changed ? "changed from default" : "", x.sensitive ? "sensitive" : "", x.blocked ? "BLOCKED" : ""].filter(Boolean);
+        print(`  ${x.id.padEnd(30)} ${showSetting(x.control, x.value)}   (default ${showSetting(x.control, x.default)})${marks.length ? `  [${marks.join(", ")}]` : ""}`);
+        if (x.lastChange) print(`  ${"".padEnd(30)} last changed ${x.lastChange.at} (${x.lastChange.via})`);
+        if (x.web) print(`  ${"".padEnd(30)} on the console: ${x.web.text}; this command: the whole range`);
+      }
+    }
+    print("## Read-only here");
+    for (const r of view.readOnly) print(`  ${r.id.padEnd(30)} ${JSON.stringify(r.value)}   (default ${JSON.stringify(r.default)})`);
+    print("Change with: npm run admin -- config set <id> <value> [<id> <value> ...] | config reset <id> ... (dry runs; --apply writes, and sensitive ones need --confirm <id,id>).");
+    return;
+  }
+  const changes = args.command === "set"
+    ? args.pairs.map(([id, raw]) => {
+        const def = settingById(id);
+        if (!def) throw new AdminRefusal(`No setting ${id}; config list shows them.`);
+        return { id, value: cliValue(def, raw) };
+      })
+    : args.ids.map((id) => {
+        if (!settingById(id)) throw new AdminRefusal(`No setting ${id}; config list shows them.`);
+        return { id, reset: true };
+      });
+  let out;
+  try {
+    out = await applySettings(env, changes, { apply: args.apply, actor: { via: "cli" }, confirmSensitive: args.confirm });
+  } catch (e) {
+    if (e instanceof SwitchRefused) throw new AdminRefusal(`Refused (${e.reason}): ${e.message}`);
+    if (e instanceof HttpsError) throw new AdminRefusal(`Refused: ${e.message}`);
+    throw e;
+  }
+  const plan = out.plan;
+  for (const id of plan.unchanged) print(`${id}: already so, nothing to write`);
+  if (!out.changed) {
+    print("Nothing to write.");
+    return;
+  }
+  for (const c of plan.changes) {
+    const ctl = settingById(c.id)!.control;
+    print(`${c.id}: ${showSetting(ctl, c.from)} -> ${showSetting(ctl, c.to)}${c.reset ? " (reset to default)" : ""}${c.sensitive ? "  [sensitive]" : ""}`);
+  }
+  for (const s of plan.sideEffects) print(`  also ${s.id}: ${showSetting(settingById(s.id)!.control, s.from)} -> ${showSetting(settingById(s.id)!.control, s.to)}`);
+  print(out.applied ? "Done, written to config/runtime:" : "Dry run, nothing changed. --apply would write to config/runtime:");
+  for (const w of plan.writes) print(`  - ${w.path.join(" > ")}${w.delete ? " deleted" : ` = ${JSON.stringify(w.value)}`}`);
+  if (out.applied) {
+    print(`Audit record ${SETTING_CHANGES}/${out.changeId}. New requests use it within 30 s (the instances' config cache).`);
+    return;
+  }
+  const verb = args.command === "set" ? `set ${args.pairs.map(([id, v]) => `${id} ${JSON.stringify(v)}`).join(" ")}` : `reset ${args.ids.join(" ")}`;
+  const project = args.project === EMULATOR_PROJECT ? "" : ` --project ${args.project}`;
+  print(`To write: npm run admin -- config ${verb} --apply${plan.sensitive.length ? ` --confirm ${plan.sensitive.join(",")}` : ""}${project}`);
+}
+
 // --- Wiring -----------------------------------------------------------------------------------
 
 /** One JSON line per log entry, on stderr, so stdout stays the report. */
@@ -470,6 +610,17 @@ async function main(): Promise<void> {
         await runImage(args, imageEnv);
       } finally {
         await imageEnv.flush?.();
+      }
+      return;
+    }
+    if (argv[0] === "config") {
+      const args = parseConfigArgs(argv);
+      const configEnv = buildImageEnv(args.project);
+      console.log(args.project.startsWith("demo-") ? `[emulators, ${args.project}]` : `[LIVE project ${args.project}]`);
+      try {
+        await runConfig(args, configEnv);
+      } finally {
+        await configEnv.flush?.();
       }
       return;
     }

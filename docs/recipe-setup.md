@@ -528,6 +528,34 @@ profiles"), and the board shows the setup in force with a link that leads nowher
   `approved` flag for it is turned on (after the privacy policy names OpenAI) and its key is set
   (step 12, last item).
 
+### 13b. Owner console: the other runtime settings (functions/README.md "The owner console", "Settings")
+
+The console's settings section and `npm run admin -- config`. Nothing new to set up in the
+console; until these are done, `config/runtime` is edited by hand (or with the command, which
+works as soon as it is merged).
+
+- [ ] Deploy the two new callables:
+  `cd functions && npm ci && npx firebase deploy --only functions:getOwnerSettings,functions:setOwnerSettings --project bestbefore-f9ee1`
+  (or the next full `--only functions,firestore` deploy). Firestore needs no new index (the audit
+  collection is ordered by one field).
+- [ ] Deploy the page: `npx firebase deploy --only hosting --project bestbefore-f9ee1`, then the
+  two `curl -sI` checks of step 13 on `https://bestbefore-f9ee1.firebaseapp.com` (the headers are
+  unchanged).
+- [ ] Apply the two new alerts, "Recipe: owner settings changed" and "Recipe: owner console
+  refusals" (`functions/alerts/policies/owner-settings-changed.json`, `owner-refusals.json`):
+  `python3 functions/alerts/alerts.py --project bestbefore-f9ee1` (dry run), then with `--apply`.
+- [ ] **Check**: sign in on the page, see the sections with `config/runtime`'s values and, under
+  each, what the page may change ("On this page: …") and the command for more; save one ordinary
+  change (Taste quiz: hide one option) and undo it, then one sensitive change within the page's
+  range (e.g. Reports > Days a report is kept, 60; it asks for `CHANGE` and a sign-in from the
+  last 5 minutes) and reset it; try one outside it (e.g. Recipes a day, 5000) and see `WEB_LIMIT`
+  and the refusal alert; see the alert emails and the `ownerSettingChanges/` records. On a phone,
+  check a section with the menu table scrolls sideways.
+- [ ] Check the page's envelope fits how you work (functions/README.md "The console's envelope":
+  e.g. the spend ceilings at most 2.5 × their defaults on the page; the live base ceiling of USD 5
+  can only be lowered there), and whether any of the read-only fields (the raw prices) should
+  become editable with the command.
+
 ### 13a. A new provider's API key (Mistral, Black Forest Labs) **(owner; not done)**
 
 The keys are in Secret Manager already (`MISTRAL_API_KEY`, `BFL_API_KEY`) with no access granted.
