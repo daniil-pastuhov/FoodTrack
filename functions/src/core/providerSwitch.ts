@@ -55,7 +55,12 @@ export type SwitchRefusal =
   | "NOT_READY"
   | "STALE" // the active setup is no longer the one the caller saw
   | "PRICES_INVALID" // config/runtime.prices is invalid: a price can't be added to it
-  | "INVALID_RESULT"; // the document as it would be does not parse to the profile
+  | "INVALID_RESULT" // the document as it would be does not parse to the profile (or to the settings asked)
+  // The settings (core/ownerSettings.ts):
+  | "UNKNOWN_SETTING"
+  | "INVALID_VALUE" // outside the setting's bounds or choices
+  | "STORED_INVALID" // the setting's map in config/runtime is invalid as stored: fixed by hand first
+  | "CONFIRM_SENSITIVE"; // a sensitive change without its own confirmation
 
 export class SwitchRefused extends HttpsError {
   constructor(code: ConstructorParameters<typeof HttpsError>[0], readonly reason: SwitchRefusal, message: string) {
@@ -309,7 +314,7 @@ export interface Plan {
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
 /** The fields `parseRuntimeConfig` reports invalid in `data`. */
-function invalidFields(data: Record<string, unknown>, imageDefaults: ImageSelection, textDefaults: TextTarget = DEFAULT_TEXT_SELECTION): string[] {
+export function invalidFields(data: Record<string, unknown>, imageDefaults: ImageSelection, textDefaults: TextTarget = DEFAULT_TEXT_SELECTION): string[] {
   let fields: string[] = [];
   parseRuntimeConfig(data, {
     info: () => undefined,
@@ -544,7 +549,7 @@ export interface OwnerEnv extends SwitchEnv {
 }
 
 /** Clears Google's name and photo from the Auth user, as the apps' callables do (best effort). */
-async function scrubOwnerProfile(env: OwnerEnv, caller: OwnerCaller): Promise<void> {
+export async function scrubOwnerProfile(env: OwnerEnv, caller: OwnerCaller): Promise<void> {
   if (!caller.profileClaims) return;
   try {
     await env.auth.updateUser(caller.uid, { displayName: null, photoURL: null });

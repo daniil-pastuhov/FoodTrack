@@ -1,0 +1,24 @@
+{
+  "displayName": "Recipe: owner settings changed",
+  "documentation": {
+    "content": "A runtime setting in `config/runtime` was changed from the owner console (`owner_settings_changed`: `settings` (ids), `sensitive` (the ids among them that can pause the service, raise a spending ceiling, change what users are charged or given, allow sandbox purchases or weaken a brake; the line is a warning when there is any), `changes` (`id`, `from`, `to` for plain values), `uidHash`, `change`, the `ownerSettingChanges/` id with every before and after). If you did not change it, change it back on the console or with `npm run admin -- config reset <id> --apply` (or `config set`), remove the account from `config/owner`, and read `ownerSettingChanges/` in the Firestore console. See functions/README.md, \"The owner console\". Changes made with the admin command are logged to the `admin` log and not alerted on.",
+    "mimeType": "text/markdown"
+  },
+  "conditions": [
+    {
+      "conditionMatchedLog": {
+        "filter": "resource.type=\"cloud_run_revision\" AND jsonPayload.message=\"owner_settings_changed\""
+      },
+      "displayName": "Recipe: owner settings changed"
+    }
+  ],
+  "combiner": "OR",
+  "enabled": true,
+  "severity": "WARNING",
+  "alertStrategy": {
+    "autoClose": "604800s",
+    "notificationRateLimit": {
+      "period": "300s"
+    }
+  }
+}
