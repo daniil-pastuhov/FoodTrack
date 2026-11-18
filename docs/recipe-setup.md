@@ -464,21 +464,21 @@ A web page with a drop-down of the provider profiles, on Firebase Hosting
 only (`npm run admin -- providers list | use <profile> --apply --project bestbefore-f9ee1`, "Provider
 profiles"), and the board shows the setup in force with a link that leads nowhere yet.
 
-- [ ] **Register a Web app** in the Firebase project (Project settings > General > Your apps > Add
+- [x] **(done 2026-11-18, agent)** **Register a Web app** in the Firebase project (Project settings > General > Your apps > Add
   app > Web; a nickname such as "Owner console"; Hosting can be left unticked). The page reads its
   configuration from Hosting's `/__/firebase/init.json`, which needs one. Its browser API key may be
   restricted to the HTTP referrers `https://bestbefore-f9ee1.firebaseapp.com/*` and
   `https://bestbefore-f9ee1.web.app/*` (Cloud console > APIs & Services > Credentials), keeping
   the Identity Toolkit and Token Service APIs allowed.
-- [ ] **Check** Authentication > Sign-in method > Google is enabled with its Web client (it is, for
+- [x] **(done 2026-11-18, agent)** **Check** Authentication > Sign-in method > Google is enabled with its Web client (it is, for
   Android), and Authentication > Settings > Authorized domains lists `bestbefore-f9ee1.firebaseapp.com`
   (there by default). Nothing to add for the page itself.
-- [ ] **Have an app account with that Google account first**: sign in with it in the app (Recipe
+- [x] **(done 2026-11-18, agent)** **Have an app account with that Google account first**: sign in with it in the app (Recipe
   settings > Account, Android or iOS). The page refuses a Google account that has no Firebase
   user yet: such a sign-in would make one, which would then stop that Google account being linked
   in the app ("credential already in use"), so the page deletes it at once and says the account
   has no account with the app (if it can't, delete it in Authentication > Users).
-- [ ] **Set the allowlist**: Firestore > `config` > add document `owner` with one of these
+- [x] **(done 2026-11-18, agent)**, by `uids` (one uid) **Set the allowlist**: Firestore > `config` > add document `owner` with one of these
   (both may be set; either lets you in):
   - `uids` (array of strings): the account's **User UID** from Authentication > Users (the row
     whose Providers column shows the Google icon). Preferred: it can't be confused with another
@@ -491,18 +491,18 @@ profiles"), and the board shows the setup in force with a link that leads nowher
 
   An empty or misspelt field, or anything not an array of strings, lets nobody in. Type it in the
   console only: never in the repo, a script or a message.
-- [ ] **Check what the default Hosting site serves now**, since deploying Hosting replaces it:
+- [x] **(done 2026-11-18, agent)**: "Site Not Found" on both hosts, no release on `live`. **Check what the default Hosting site serves now**, since deploying Hosting replaces it:
   `npx firebase hosting:sites:list --project bestbefore-f9ee1` and
   `npx firebase hosting:channel:list --project bestbefore-f9ee1` (a release on `live` means
   something is deployed), and open `https://bestbefore-f9ee1.web.app/` and
   `https://bestbefore-f9ee1.firebaseapp.com/` (Firebase's "Site Not Found" page means unused). If
   it serves anything, stop and say so: the page then needs its own site.
-- [ ] Deploy the two callables:
+- [x] **(done 2026-11-18, agent)** (full `--only functions,firestore` deploy) Deploy the two callables:
   `cd functions && npm ci && npx firebase deploy --only functions:getProviderProfiles,functions:setProviderProfile --project bestbefore-f9ee1`
   (the next full deploy, `--only functions,firestore`, also updates `redrawBoard`'s board with the
   "Recipe pictures" tile). Always name what to deploy with `--only`: `firebase.json` has a
   `hosting` block, so a bare `firebase deploy` would deploy Hosting too.
-- [ ] **Try Hosting on a preview channel first**, which leaves the live site alone:
+- [x] **(done 2026-11-18, agent)**, the `curl` checks only (the pop-up on the preview host was not tried) **Try Hosting on a preview channel first**, which leaves the live site alone:
   `npx firebase hosting:channel:deploy owner-check --expires 1d --project bestbefore-f9ee1`, then
   on the URL it prints:
   - `curl -sI <url>/` shows the `Content-Security-Policy` (with `frame-ancestors 'none'`) and
@@ -516,7 +516,7 @@ profiles"), and the board shows the setup in force with a link that leads nowher
 
   Then deploy the live site: `npx firebase deploy --only hosting --project bestbefore-f9ee1`, and
   run the same two `curl -sI` checks on `https://bestbefore-f9ee1.firebaseapp.com`.
-- [ ] Apply the new alert, "Recipe: provider profile switched"
+- [x] **(done 2026-11-18, agent)** Apply the new alert, "Recipe: provider profile switched"
   (`functions/alerts/policies/provider-profile-changed.json`):
   `python3 functions/alerts/alerts.py --project bestbefore-f9ee1` (dry run), then with `--apply`.
 - [ ] **Check**: open the page signed out of everything (a private window) and see only the
@@ -546,7 +546,7 @@ the service account can read it. When the adapter is merged and before switching
   credits, 1 credit = USD 0.01: 500 warns under USD 5, about 550 FLUX 3 Image Klein pictures. Set
   it below what BFL's own auto top-up keeps (its dashboard, API > Credits; minimum trigger USD 5)
   if that is on. The probe reads the key, so it needs the grant above.
-- [ ] Apply the new alert policies (`python3 functions/alerts/alerts.py --project bestbefore-f9ee1 --apply`,
+- [x] **(done 2026-11-18, agent)** Apply the new alert policies (`python3 functions/alerts/alerts.py --project bestbefore-f9ee1 --apply`,
   step 9): out of credit, balance low, pictures failing broadly.
 - [ ] **Black Forest Labs (FLUX pictures, profile `flux-eu`)**: the adapter is in
   (`functions/src/adapters/bfl.ts`, functions/README.md "FLUX by Black Forest Labs"). Before the
