@@ -605,3 +605,30 @@ describe("npm run admin -- config", () => {
     expect((await audits()).map((a) => a.actor)).toEqual([{ via: "cli" }, { via: "cli" }]);
   });
 });
+
+// --- The console page -----------------------------------------------------------------------
+
+describe("the console page", () => {
+  const dir = join(__dirname, "../../owner-console");
+  const html = readFileSync(join(dir, "index.html"), "utf8");
+  const js = readFileSync(join(dir, "console.js"), "utf8");
+
+  test("holds no setting, section, value or bound: it draws what the server sends", () => {
+    for (const s of SETTINGS) {
+      expect(html + js, s.id).not.toContain(s.id);
+      expect(html + js, s.label).not.toContain(s.label);
+      expect(html + js, s.help).not.toContain(s.help);
+    }
+    for (const s of SECTIONS) expect(html + js, s.title).not.toContain(`"${s.title}"`);
+    for (const r of READ_ONLY) expect(html + js, r.id).not.toContain(r.id);
+    expect(html + js).not.toContain(SENSITIVE_CONFIRM_WORD);
+    expect(html + js).not.toContain("@");
+    expect(js).not.toMatch(/innerHTML|outerHTML|insertAdjacentHTML|document\.write|eval\(|new Function|localStorage|sessionStorage|indexedDB|document\.cookie/);
+    expect(html).not.toMatch(/<script(?![^>]*src=)/);
+    expect(html).not.toMatch(/ on[a-z]+=/);
+    expect(html).not.toMatch(/ style=/);
+    expect(js).toContain("inMemoryPersistence");
+    expect(js).toContain('call("getOwnerSettings")');
+    expect(js).toContain('"setOwnerSettings", { changes, dryRun: true }');
+  });
+});

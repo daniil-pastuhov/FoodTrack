@@ -35,6 +35,12 @@
   <button id="switch" type="button" class="primary" disabled>Switch…</button>
 </section>
 
+<section id="settings" hidden aria-labelledby="h-settings">
+  <h2 id="h-settings">Settings</h2>
+  <p class="sub">What the server allows, uses and charges, without hand-editing Firestore. Each section saves on its own, after a check by the server and a confirmation; sensitive ones ask you to type a word. Every change is recorded, logged and emailed to you.</p>
+  <div id="settings-sections"></div>
+</section>
+
 <p id="message" role="status" aria-live="polite"></p>
 <p id="account" hidden><button id="sign-out" type="button">Sign out</button></p>
 
@@ -45,6 +51,22 @@
   <div class="buttons">
     <button id="confirm-cancel" type="button">Cancel</button>
     <button id="confirm-ok" type="button" class="primary">Switch</button>
+  </div>
+</dialog>
+
+<dialog id="settings-confirm" aria-labelledby="settings-confirm-title">
+  <h2 id="settings-confirm-title">Save these changes?</h2>
+  <ul id="settings-confirm-list" class="changes"></ul>
+  <p id="settings-confirm-side" class="note"></p>
+  <div id="settings-confirm-sensitive" hidden>
+    <p id="settings-confirm-sensitive-text" class="warn"></p>
+    <label id="settings-typed-label" for="settings-typed"></label>
+    <input id="settings-typed" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false">
+  </div>
+  <p class="note">New requests use them within 30 seconds. Every change is recorded and logged.</p>
+  <div class="buttons">
+    <button id="settings-confirm-cancel" type="button">Cancel</button>
+    <button id="settings-confirm-ok" type="button" class="primary">Save</button>
   </div>
 </dialog>
 </main>
