@@ -278,8 +278,8 @@ step field: they are sent only on a `"steps"` request.
   request, charged at reservation like any request.
 - The pictures are made in the same call, after the recipe's text passed every check (the
   dish's first, then the step pictures), so a recipe with pictures takes longer: typically a few
-  seconds more, at most ~110 s for `"dish"` and ~160 s for `"steps"` when the picture model is
-  busy and retried (set the callable timeout to at least 130 s / 190 s, and poll `getGeneration` as
+  seconds more, at most ~110 s for `"dish"` (~120 s while pictures come from FLUX, whose attempts
+  get longer) and ~160 s for `"steps"` when the picture model is busy and retried (set the callable timeout to at least 130 s / 190 s, and poll `getGeneration` as
   for any request that is cut off).
 - **What is kept** (the shares are from the table at reservation: dish share = `recipeImage` −
   `recipe`, steps share = `recipeImageSteps` − `recipeImage`):

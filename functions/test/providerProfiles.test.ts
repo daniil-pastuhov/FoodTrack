@@ -267,6 +267,15 @@ describe("activateProfile", () => {
     expect(await audits()).toEqual([]);
   });
 
+  test("flux-eu switches once its key is readable (privacy approved 2026-11-18); OpenAI still doesn't", async () => {
+    await db.doc(RUNTIME_DOC).set(FULL_CONFIG);
+    const env = makeEnv({ secretReadable: async (id) => id === "bfl" || id === "openai" });
+    expect((await listProfiles(env)).profiles.map((p) => [p.id, p.ready])).toEqual([["flash-lite", true], ["nano-banana", true], ["off", true], ["openai", false], ["flux-eu", true]]);
+    expect(await reason(activateProfile(makeEnv(), "flux-eu", { apply: true, actor: { via: "cli" } }))).toBe("NOT_READY");
+    await activateProfile(env, "flux-eu", { apply: true, actor: { via: "cli" } });
+    expect((await runtime())?.image).toMatchObject({ provider: "bfl", model: "flux-3-image-klein", fallbackProvider: "vertex", fallbackModel: "gemini-3.1-flash-lite-image" });
+  });
+
   test("listProfiles: the active setup, readiness and the last change", async () => {
     const env = makeEnv();
     let view = await listProfiles(env);

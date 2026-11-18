@@ -10,6 +10,7 @@ import { DEFAULT_COSTS, IMAGE, TIMINGS, GENERATE_TIMEOUT_SECONDS, JUDGE } from "
 import { emptyUser, generationImageRef, imageMicroUsdOf, parseRuntimeConfig, statsRef, utcDay, validCosts } from "../src/model";
 import { IMAGE_PROMPT_HEAD, IMAGE_PROMPT_TAIL, IMAGE_STEP_PROMPT_HEAD, imagePromptFor, pictureMicroUsd, retryDelayMs } from "../src/core/recipeImage";
 import { checkImageBrief } from "../src/core/outputSafety";
+import { imageProviders, imageTimingOf } from "../src/providers/registry";
 import { buildPrompt } from "../src/adapters/prompt";
 import { normalizeImage, ImageNormalizeError, readJpegInfo } from "../src/adapters/imageNormalize";
 import { ImageRouter, OPENAI_IMAGES_URL, OpenAIImageGenerator, VertexImageGenerator, openAIImageBody, openAISize, vertexImageParams, vertexImageUsage, type ImageModels } from "../src/adapters/image";
@@ -937,19 +938,34 @@ describe("retries, the fallback model, parallel calls and booking", () => {
   };
   const lines = (m: string) => deps.logs.filter((l) => l.message === m).map((l) => l.data!);
 
-  test("the timings fit: every picture budget inside its reservation and the apps' waits", () => {
+  test("the timings fit, for every picture provider: each budget inside its reservation, the function timeout and the apps' waits", () => {
     const before = TIMINGS.recipe.llmAbortMs + JUDGE.abortMs.recipe;
-    for (const level of ["dish", "steps"] as const) {
-      const worst = before + IMAGE.budgetMs[level];
-      const deadline = TIMINGS.recipe.reservationMs + IMAGE.reservationExtraMs[level];
-      expect(worst + 10_000).toBeLessThanOrEqual(deadline);
-      expect(deadline).toBeLessThan(GENERATE_TIMEOUT_SECONDS * 1000);
+    for (const id of imageProviders().map((d) => d.id)) {
+      const t = imageTimingOf(id);
+      for (const level of ["dish", "steps"] as const) {
+        const worst = before + t.budgetMs[level];
+        const deadline = TIMINGS.recipe.reservationMs + t.reservationExtraMs[level];
+        expect(worst + 10_000).toBeLessThanOrEqual(deadline);
+        expect(deadline).toBeLessThan(GENERATE_TIMEOUT_SECONDS * 1000);
+      }
+      // The apps wait 130 s (dish) and 190 s (steps): past every reservation.
+      expect(TIMINGS.recipe.reservationMs + t.reservationExtraMs.dish).toBeLessThan(130_000);
+      expect(TIMINGS.recipe.reservationMs + t.reservationExtraMs.steps).toBeLessThan(190_000);
+      // A first attempt given all it may have still leaves the fallback IMAGE.minAttemptMs of the dish's budget.
+      expect(t.budgetMs.dish - Math.min(t.abortMs, t.budgetMs.dish - IMAGE.minAttemptMs)).toBeGreaterThanOrEqual(IMAGE.minAttemptMs);
+      expect(t.budgetMs.steps).toBeGreaterThan(t.budgetMs.dish + IMAGE.minAttemptMs);
     }
-    expect(TIMINGS.recipe.reservationMs + IMAGE.reservationExtraMs.dish).toBeLessThan(130_000);
-    expect(TIMINGS.recipe.reservationMs + IMAGE.reservationExtraMs.steps).toBeLessThan(190_000);
-    // The dish's budget leaves an attempt of the fallback after a timed-out first attempt.
-    expect(IMAGE.budgetMs.dish - (IMAGE.budgetMs.dish - IMAGE.minAttemptMs)).toBeGreaterThanOrEqual(IMAGE.minAttemptMs);
-    expect(IMAGE.budgetMs.steps).toBeGreaterThan(IMAGE.budgetMs.dish + IMAGE.minAttemptMs);
+  });
+
+  test("with BFL selected the reservation is 128 s for the dish's picture; the default 115 s otherwise", async () => {
+    await seed(5);
+    await setConfig({ image: { provider: "bfl", model: "flux-3-image-klein", fallbackProvider: "vertex", fallbackModel: "gemini-3.1-flash-lite-image" } });
+    const req = request({ image: "dish" });
+    expect(await generateRecipe(deps, caller, req)).toMatchObject({ status: "DONE" });
+    const gen = await genDoc(req.requestId);
+    expect(gen.deadlineAt.toMillis() - gen.createdAt.toMillis()).toBe(128_000);
+    expect(gen.imageProvider).toBe("bfl");
+    expect(60_000 + IMAGE.reservationExtraMs.dish).toBe(115_000);
   });
 
   test("the backoff is jittered and doubles", () => {
