@@ -621,7 +621,10 @@ probe reads the key only once that grant exists, and its marks are in Firestore 
   served", "Recipe: model lifecycle table stale" (`functions/alerts/policies/model-retirement.json`,
   `model-unavailable.json`, `model-lifecycle-stale.json`):
   `python3 functions/alerts/alerts.py --project bestbefore-f9ee1` (dry run), then
-  `python3 functions/alerts/alerts.py --project bestbefore-f9ee1 --apply`.
+  `python3 functions/alerts/alerts.py --project bestbefore-f9ee1 --apply`. (A first `--apply` on
+  2026-11-18 created none of the three: Cloud Monitoring refused `model-lifecycle-stale`'s severity
+  `INFO`, which it doesn't have, and the script then stopped. The policy is `WARNING` now, and an
+  apply goes on past a failure; re-run it.)
 - [x] **(done 2026-11-18, agent, owner's request "openai should use newer model")** `gpt-image-1-mini`
   (profile `openai`, listed only) is shut down by OpenAI on 2026-12-01: the profile now names
   `gpt-image-2.6-flare`, one of the two replacements OpenAI names, with no retirement announced

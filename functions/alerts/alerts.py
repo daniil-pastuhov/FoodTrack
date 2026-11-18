@@ -7,7 +7,8 @@ notification channels). Policies are matched to the live project by displayName,
 
 Dry run by default: validates the files, checks every log filter against the project with a
 read-only `gcloud logging read`, and prints what --apply would create or update. Nothing is
-written without --apply. Re-running after --apply prints "unchanged" for everything.
+written without --apply. Re-running after --apply prints "unchanged" for everything. An --apply
+goes on past an item that fails, then lists every failure and exits 1.
 
 The notification channel is never in the files: pass --channel (its resource name or id), or
 --channel-name (display name; default "Recipe backend alerts (owner)"). Channels are listed by
@@ -31,7 +32,9 @@ import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_CHANNEL_NAME = "Recipe backend alerts (owner)"
-SEVERITIES = {"CRITICAL", "ERROR", "WARNING", "INFO"}
+# Cloud Monitoring's AlertPolicy.Severity: CRITICAL, ERROR, WARNING (WARNING is the lowest; there is
+# no INFO, and SEVERITY_UNSPECIFIED is not accepted here). The API refuses anything else on create.
+SEVERITIES = {"CRITICAL", "ERROR", "WARNING"}
 # Fields of a live policy or metric that the server owns: never compared, never sent.
 SERVER_FIELDS = {"name", "creationRecord", "mutationRecord", "createTime", "updateTime", "metricDescriptor.name",
                  "metricDescriptor.type", "metricDescriptor.displayName", "metricDescriptor.monitoredResourceTypes"}
@@ -84,7 +87,7 @@ def validate(metrics, policies):
         if "notificationChannels" in p:
             problems.append(f"{where}: notificationChannels is set by the script, not the file")
         if p.get("severity") not in SEVERITIES:
-            problems.append(f"{where}: severity must be one of {sorted(SEVERITIES)}")
+            problems.append(f"{where}: severity {p.get('severity')!r} must be one of {sorted(SEVERITIES)}")
         if p.get("combiner") not in ("OR", "AND"):
             problems.append(f"{where}: combiner must be OR or AND")
         if not p.get("documentation", {}).get("content"):
@@ -177,6 +180,50 @@ def resolve_channel(opts, gcloud_base):
     return found[0]
 
 
+def threshold_metrics(policy):
+    """Names of the log-based metrics a policy's threshold conditions read."""
+    out = set()
+    for c in policy.get("conditions", []):
+        m = re.search(r"logging\.googleapis\.com/user/([\w.-]+)", (c.get("conditionThreshold") or {}).get("filter", ""))
+        if m:
+            out.add(m.group(1))
+    return out
+
+
+def apply_plan(todo, gcloud_base, tmp, runner=None):
+    """Creates or updates every planned item; one failure does not stop the others.
+
+    Metrics go first, since a threshold policy needs its metric; a policy whose metric failed is
+    skipped. Returns the failures as (kind, name, file, message), in the order they happened."""
+    runner = runner or run
+    failures, failed_metrics = [], set()
+    for action, kind, name, f, body, live, _ in sorted(todo, key=lambda x: x[1] != "metric"):
+        path = os.path.join(tmp, f)
+        try:
+            if kind == "metric":
+                with open(path, "w", encoding="utf-8") as fh:
+                    json.dump({k: v for k, v in body.items() if k != "name"}, fh)
+                runner(["logging", "metrics", action, name, f"--config-from-file={path}"], gcloud_base)
+            else:
+                missing = sorted(threshold_metrics(body) & failed_metrics)
+                if missing:
+                    raise Fail(f"skipped: its metric {', '.join(missing)} failed above")
+                with open(path, "w", encoding="utf-8") as fh:
+                    json.dump(body, fh)
+                if action == "create":
+                    runner(["beta", "monitoring", "policies", "create", f"--policy-from-file={path}"], gcloud_base)
+                else:
+                    runner(["beta", "monitoring", "policies", "update", live["name"], f"--policy-from-file={path}"], gcloud_base)
+        except Fail as e:
+            if kind == "metric":
+                failed_metrics.add(name)
+            failures.append((kind, name, f, str(e)))
+            print(f"  FAILED to {action} {kind} {name!r} ({f})")
+            continue
+        print(f"  {action}d {kind} {name!r}")
+    return failures
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--project")
@@ -250,21 +297,13 @@ def main():
         return 0
 
     with tempfile.TemporaryDirectory() as tmp:
-        # Metrics first: a threshold policy needs its metric to exist.
-        for action, kind, name, f, body, live, _ in sorted(todo, key=lambda x: x[1] != "metric"):
-            path = os.path.join(tmp, f)
-            if kind == "metric":
-                with open(path, "w", encoding="utf-8") as fh:
-                    json.dump({k: v for k, v in body.items() if k != "name"}, fh)
-                run(["logging", "metrics", action, name, f"--config-from-file={path}"], base)
-            else:
-                with open(path, "w", encoding="utf-8") as fh:
-                    json.dump(body, fh)
-                if action == "create":
-                    run(["beta", "monitoring", "policies", "create", f"--policy-from-file={path}"], base)
-                else:
-                    run(["beta", "monitoring", "policies", "update", live["name"], f"--policy-from-file={path}"], base)
-            print(f"  {action}d {kind} {name!r}")
+        failures = apply_plan(todo, base, tmp)
+    if failures:
+        print(f"Applied {len(todo) - len(failures)} of {len(todo)} change(s); {len(failures)} failed:", file=sys.stderr)
+        for kind, name, f, msg in failures:
+            print(f"  {kind} {name!r} ({f}): {msg}", file=sys.stderr)
+        print("Fix them and re-run: what was applied shows as unchanged.", file=sys.stderr)
+        return 1
     print(f"Applied {len(todo)} change(s).")
     return 0
 

@@ -802,7 +802,12 @@ python3 functions/alerts/alerts.py --check-files                             # o
 ```
 
 It needs `gcloud` with the beta component, and for `--apply` an account with Monitoring Editor
-and Logs Configuration Writer (`--account` picks one other than the active account).
+and Logs Configuration Writer (`--account` picks one other than the active account). An
+`--apply` goes on past a metric or policy that fails (a threshold policy whose metric failed is
+skipped), lists every failure at the end and exits 1; re-run it once they are fixed. A policy's
+`severity` is one of Cloud Monitoring's three, `CRITICAL`, `ERROR` or `WARNING` (the lowest,
+used for reminders such as `model-lifecycle-stale`); there is no `INFO`, and the offline checks
+refuse anything else.
 
 | policy (file) | when you are told | log line |
 |---|---|---|

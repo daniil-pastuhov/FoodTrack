@@ -14,7 +14,7 @@
   ],
   "combiner": "OR",
   "enabled": true,
-  "severity": "INFO",
+  "severity": "WARNING",
   "alertStrategy": {
     "autoClose": "604800s",
     "notificationRateLimit": {
