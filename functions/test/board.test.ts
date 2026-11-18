@@ -86,9 +86,46 @@ describe("aggregation", () => {
     expect(b.period).toMatchObject({ welcomeGrants: 5, welcomeCredits: 15, netCreditsGranted: 0 });
     expect(b.sales.total.credits).toBe(0);
     expect(b.welcome).toEqual({ recipes: 3, perDay: 200 });
-    expect(boardSummary(b).join("\n")).toContain("Free recipes (welcome grant, not sales): 4 grants today (12 recipes) of at most 200; 5 in the period (15 recipes); 3 per sign-in.");
-    expect(boardJson(b).welcome).toEqual({ recipesPerClaim: 3, perDay: 200, grantsToday: 4, recipesToday: 12, grantsInPeriod: 5, recipesInPeriod: 15 });
+    expect(boardSummary(b).join("\n")).toContain("Free recipes (welcome grant, not sales): 4 grants today (12 recipes) of at most 200; 5 in the period (15 recipes); 3 per sign-in; 0 used, estimated model cost $0.00.");
+    expect(boardJson(b).welcome).toEqual({
+      recipesPerClaim: 3, perDay: 200, grantsToday: 4, recipesToday: 12, grantsInPeriod: 5, recipesInPeriod: 15,
+      usedInPeriod: 0, costInPeriodMicroUsd: 0, daysWithoutFigure: 0,
+    });
     expect(renderBoardHtml(b)).toContain("Free recipes (welcome grant)");
+  });
+
+  test("free recipes: used and their cost from the days that record them, older days unknown (not zero); the margin counts all spend", () => {
+    const b = buildBoard(input({
+      statsByDay: {
+        // Before the fields existed: calls settled, no figure.
+        "2026-11-10": { llmCalls: 4, spentMicroUsd: 40_000, welcomeGrants: 2, welcomeCredits: 6 },
+        "2026-11-14": { llmCalls: 3, spentMicroUsd: 30_000, welcomeUsedCredits: 2, welcomeUsedMicroUsd: 18_000 },
+        "2026-11-15": { llmCalls: 1, spentMicroUsd: 9_000, reservedMicroUsd: 1_000, welcomeUsedCredits: 0, welcomeUsedMicroUsd: 0 },
+      },
+      purchases: [row({ credits: 10 })],
+    }));
+    expect(b.free).toEqual({ granted: 6, used: 2, costMicroUsd: 18_000, unknownDays: 1, knownSince: "2026-11-14" });
+    expect(b.days.find((d) => d.day === "2026-11-10")!.welcomeUsedKnown).toBe(false);
+    // A day with no settled call has nothing to attribute: known.
+    expect(b.days.find((d) => d.day === "2026-11-11")!.welcomeUsedKnown).toBe(true);
+    // Free recipes add nothing to revenue: 10 sold x USD 0.12, minus every call's spend.
+    expect(b.sales.estimatedNetMicroUsd).toBe(1_200_000);
+    expect(b.sales.estimatedMarginMicroUsd).toBe(1_200_000 - 80_000);
+    const html = renderBoardHtml(b);
+    expect(html).toContain("Free recipes used");
+    expect(html).toContain("Estimated margin");
+    expect(html).toContain("counted from 2026-11-14 on: 1 day of the period with calls came before they were recorded");
+    expect(boardJson(b).welcome).toMatchObject({ usedInPeriod: 2, costInPeriodMicroUsd: 18_000, daysWithoutFigure: 1 });
+    expect(boardJson(b).sales).toMatchObject({ estimatedMarginMicroUsd: 1_120_000 });
+    expect(boardSummary(b).join("\n")).toContain("2 used, estimated model cost $0.02 (from 2026-11-14; 1 earlier days with calls not recorded).");
+
+    // No day of the period records it yet: unknown, never "0" or "$0.00".
+    const old = buildBoard(input({ statsByDay: { "2026-11-15": { llmCalls: 2, spentMicroUsd: 5_000 } } }));
+    expect(old.free).toMatchObject({ used: 0, knownSince: null, unknownDays: 1 });
+    expect(boardJson(old).welcome).toMatchObject({ usedInPeriod: null, costInPeriodMicroUsd: null });
+    expect(renderBoardHtml(old)).toContain('<div class="st-value">unknown</div><div class="st-label">Free recipes used</div>');
+    expect(renderBoardHtml(old)).toContain('<div class="st-value">unknown</div><div class="st-label">Their estimated model cost</div>');
+    expect(boardSummary(old).join("\n")).toContain("used and cost not recorded yet.");
   });
 
   test("spend per day: settled and reserved apart, the recorded ceiling for past days, marks for days that reached it", () => {

@@ -10,7 +10,7 @@ import { randomUUID } from "node:crypto";
 import { HttpsError } from "firebase-functions/v2/https";
 import { deleteAccount, getBalance, mergeBalance } from "../src/core/account";
 import { registerAppleSignIn } from "../src/core/appleToken";
-import { generateRecipe } from "../src/core/generation";
+import { generateRecipe, welcomeShareMicroUsd } from "../src/core/generation";
 import { handleAppleNotification } from "../src/core/notifications";
 import { applePurchaseId } from "../src/core/purchases";
 import { CallThrottle } from "../src/core/guard";
@@ -22,6 +22,7 @@ import {
   DEFAULT_RUNTIME_CONFIG,
   WELCOME_OFF,
   emptyUser,
+  generationRef,
   paidAllowance,
   parseRuntimeConfig,
   statsRef,
@@ -515,6 +516,65 @@ describe("free recipes are not purchases", () => {
     deps.generator.failWith("content", 2);
     expect((await generateRecipe(deps, google(a), request())).charged).toBe(false);
     expect((await generateRecipe(deps, google(a), request())).charged).toBe(true);
+  });
+
+  describe("the owner's figures: what free recipes cost (stats/{day}, never money)", () => {
+    beforeEach(async () => {
+      await setConfig({ perUserPerMinute: 100 });
+    });
+    const actualOf = async (uid: string, requestId: string) => (await generationRef(db, uid, requestId).get()).data()!.actualMicroUsd!;
+
+    test("pro rata by recipes: the whole spend of a free charge, a share of a mixed one, none of a refund", () => {
+      expect(welcomeShareMicroUsd(9_000, 1, 1)).toBe(9_000);
+      expect(welcomeShareMicroUsd(9_000, 1, 2)).toBe(4_500);
+      expect(welcomeShareMicroUsd(10_001, 1, 3)).toBe(3_334);
+      expect(welcomeShareMicroUsd(9_000, 0, 2)).toBe(0);
+      expect(welcomeShareMicroUsd(9_000, 1, 0)).toBe(0);
+      expect(welcomeShareMicroUsd(9_000, 5, 2)).toBe(9_000);
+    });
+
+    test("charges paid with free recipes book their spend; a refunded failure books none; never revenue", async () => {
+      const a = await account({ "google.com": "g-cost1" });
+      await claimWelcome(deps, google(a));
+      const done = request();
+      expect((await generateRecipe(deps, google(a), done)).status).toBe("DONE");
+      deps.generator.failWith("content");
+      const charged = request();
+      expect(await generateRecipe(deps, google(a), charged)).toMatchObject({ status: "FAILED", charged: true });
+      deps.generator.failWith("infra", 1, { inputTokens: 10, outputTokens: 0, thinkingTokens: 0, model: "m", finishReason: null });
+      const refunded = request();
+      expect(await generateRecipe(deps, google(a), refunded)).toMatchObject({ status: "FAILED", charged: false });
+      const s = await stats();
+      const paid = (await actualOf(a, done.requestId)) + (await actualOf(a, charged.requestId));
+      expect(paid).toBeGreaterThan(0);
+      expect(s).toMatchObject({ welcomeCredits: 3, welcomeUsedCredits: 2, welcomeUsedMicroUsd: paid });
+      expect(s.spentMicroUsd).toBe(paid + (await actualOf(a, refunded.requestId)));
+      expect(s.netCreditsGranted).toBeUndefined();
+    });
+
+    test("a charge that takes free and bought recipes books the free share of its spend", async () => {
+      await setConfig({ perUserPerMinute: 100, costs: { recipe: 2, menu2: 4, menu3: 5 } });
+      const a = await account({ "google.com": "g-cost2" });
+      await claimWelcome(deps, google(a));
+      const token = deps.play.add(playToken());
+      await verifyPurchase(deps, google(a), { store: "play", purchaseToken: token });
+      const first = request();
+      const second = request();
+      expect((await generateRecipe(deps, google(a), first)).status).toBe("DONE");
+      expect((await generateRecipe(deps, google(a), second)).status).toBe("DONE");
+      const s = await stats();
+      expect(s.welcomeUsedCredits).toBe(3);
+      expect(s.welcomeUsedMicroUsd).toBe((await actualOf(a, first.requestId)) + Math.round((await actualOf(a, second.requestId)) / 2));
+      expect(s.netCreditsGranted).toBe(10);
+    });
+
+    test("a buyer without free recipes: the day still records zero (known, not missing)", async () => {
+      const a = await account({ "google.com": "g-cost3" });
+      const token = deps.play.add(playToken());
+      await verifyPurchase(deps, google(a), { store: "play", purchaseToken: token });
+      expect((await generateRecipe(deps, google(a), request())).status).toBe("DONE");
+      expect(await stats()).toMatchObject({ welcomeUsedCredits: 0, welcomeUsedMicroUsd: 0 });
+    });
   });
 
   describe("FIFO: free recipes are spent first by the charges after the grant", () => {
