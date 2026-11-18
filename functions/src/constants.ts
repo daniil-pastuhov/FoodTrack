@@ -196,6 +196,58 @@ export const JUDGE = {
 } as const;
 
 /**
+ * The weekly prompt review (core/promptReview.ts, README "Weekly prompt review"): every Monday the
+ * scheduled function weeklyPromptReview reads the past ISO week's `judgeAnswers`, counts them in
+ * code, and sends the counts, a bounded sample of the answers that were not ok or scored low, and
+ * the generator's and the judge's current instructions (built from code, never stale) to one text
+ * model, which answers with advice: recurring problems, their evidence, a likely cause, and a
+ * before → after wording change, kept apart for the writer's prompt and for the judge. It never
+ * changes a prompt: prompts are code, and the report is advice for the owner.
+ *
+ * `model`: the PROMPT_REVIEW_MODEL param's default, Gemini on Vertex AI (provider "google"), the
+ * text profile's own model: the registry has no stronger tier priced. Booked at the google text
+ * provider's prices (config/runtime.prices over DEFAULT_PRICES).
+ *
+ * The budget, per run: the input is bounded in bytes (every token covers at least one byte), so
+ * at most `maxInputBytes` input tokens; output plus thinking observed above `tokenCeiling` aborts
+ * the call. Worst case at the default prices: 64,000 x 1.50 + 12,000 x 7.50 = 186,000 micro-USD
+ * (USD 0.19). That worst case is reserved against the day's spend ceiling before the call, like a
+ * generation's, and the measured cost settled into `stats/{day}.spentMicroUsd` (and
+ * `promptReviewMicroUsd`). Fewer than `minAnswers` answers in the week: no call, cost 0.
+ *
+ * The sample: answers whose verdict is not ok, that failed, that name an issue, or that scored
+ * `lowQuality` or less, grouped by their worst code and taken round-robin, at most `perGroup` a
+ * group and `maxSamples` in all, each judged text cut to `textChars` and all of them to
+ * `sampleChars` characters of JSON. Reports are kept `keepDays` (TTL on `promptReviews.expiresAt`).
+ */
+export const PROMPT_REVIEW = {
+  collection: "promptReviews",
+  model: "gemini-3.8-flash",
+  thinkingLevel: "LOW",
+  windowDays: 7,
+  minAnswers: 20,
+  /** Answers read at most for one week (pages of 500); more are counted as truncated. */
+  readMax: 5_000,
+  lowQuality: 3,
+  maxSamples: 30,
+  perGroup: 6,
+  textChars: 2_000,
+  noteChars: 200,
+  sampleChars: 32_000,
+  maxInputBytes: 64_000,
+  maxOutputTokens: 6_000,
+  tokenCeiling: 12_000,
+  abortMs: 240_000,
+  /** A run marked running longer ago than this is taken as dead and may be run again. */
+  staleRunMs: 10 * 60_000,
+  keepDays: 365,
+  /** The answer's caps: problems per list, and characters per field. */
+  maxProblems: 5,
+  maxExampleIds: 5,
+  chars: { summary: 800, title: 120, cause: 600, before: 800, after: 1_200 },
+} as const;
+
+/**
  * A recipe's picture (README "Recipe pictures"): made after the text passed every check, within
  * the same reservation, so a recipe with pictures reserves `reservationExtraMs[level]` more.
  *

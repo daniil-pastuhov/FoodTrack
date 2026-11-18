@@ -1,0 +1,24 @@
+{
+  "displayName": "Recipe: weekly prompt review failed",
+  "documentation": {
+    "content": "The Monday `weeklyPromptReview` (functions/README.md, \"Weekly prompt review\") did not produce its report (`prompt_review_failed`: `week`, `trigger` (`schedule` / `cli`), `reason` (`MALFORMED_ANSWER`, `BLOCKED`, `TOKEN_CEILING`, `TIMEOUT`, `MODEL_ERROR`, `MODEL_REFUSED`, `READ_FAILED`, `RESERVE_FAILED`, `CLAIM_FAILED`, `CONFIG_UNAVAILABLE`, `WRITE_FAILED`, `SETTLE_FAILED`, `BAD_WEEK`, `ERROR`), `answers`, `costMicroUsd`). Nothing user-facing is affected and no prompt was changed: the review is advice only. The failed report is in `promptReviews/{week}` with its counts and cost. Look at the reason, then run it again with `npm run admin -- judge review --run --week <week>` (a dry run) and `--apply`. A week skipped at the spend ceiling or while paused is `prompt_review_skipped`, not this alert.",
+    "mimeType": "text/markdown"
+  },
+  "conditions": [
+    {
+      "conditionMatchedLog": {
+        "filter": "resource.type=\"cloud_run_revision\" AND jsonPayload.message=\"prompt_review_failed\""
+      },
+      "displayName": "Recipe: weekly prompt review failed"
+    }
+  ],
+  "combiner": "OR",
+  "enabled": true,
+  "severity": "WARNING",
+  "alertStrategy": {
+    "autoClose": "604800s",
+    "notificationRateLimit": {
+      "period": "21600s"
+    }
+  }
+}

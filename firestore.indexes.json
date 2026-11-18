@@ -101,6 +101,22 @@
       "collectionGroup": "judgeAnswers",
       "fieldPath": "note",
       "indexes": []
+    },
+    {
+      "collectionGroup": "promptReviews",
+      "fieldPath": "expiresAt",
+      "ttl": true,
+      "indexes": []
+    },
+    {
+      "collectionGroup": "promptReviews",
+      "fieldPath": "report",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "promptReviews",
+      "fieldPath": "aggregates",
+      "indexes": []
     }
   ]
 }

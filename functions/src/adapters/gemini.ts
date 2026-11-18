@@ -35,7 +35,7 @@ import {
 } from "@google/genai";
 import { createHash } from "node:crypto";
 import type { GenerateRequest, Recipe } from "../contract";
-import { DEFAULT_PRICES, JUDGE } from "../constants";
+import { DEFAULT_PRICES, JUDGE, PROMPT_REVIEW } from "../constants";
 import {
   GenerationError,
   type GenerationLimits,
@@ -50,7 +50,9 @@ import {
   type JudgeWhere,
   type LlmUsage,
   type OutputJudge,
+  type PromptReviewer,
   type RecipeGenerator,
+  type ReviewPrompt,
   type TextTarget,
 } from "../ports";
 import { httpFailureKind } from "../providers/failure";
@@ -479,5 +481,85 @@ export class GeminiOutputJudge implements OutputJudge {
     const parsed = parseJudgeAnswer(text);
     if (parsed) return { ...parsed, usage: usage() };
     throw new GenerationError("infra", "judge answer unusable", usage());
+  }
+}
+
+// --- The weekly prompt review --------------------------------------------------------------------
+
+export type ReviewerOptions = Pick<GeminiOptions, "project" | "location" | "model" | "jailbreakFilter">;
+
+/**
+ * The weekly prompt review's call (core/promptReview.ts): the same Vertex AI stream as the
+ * generator, schema-constrained JSON, temperature 0.2, PROMPT_REVIEW.thinkingLevel, the same
+ * safety settings, aborted once output plus thinking passes the caller's token ceiling. It returns
+ * the answer's text unparsed; the core reads it as untrusted model output.
+ */
+export class GeminiPromptReviewer implements PromptReviewer {
+  private readonly models: StreamingModels;
+
+  constructor(private readonly options: ReviewerOptions, models?: StreamingModels) {
+    this.models = models
+      ?? new GoogleGenAI({ vertexai: true, project: options.project, location: options.location }).models;
+  }
+
+  get model(): string {
+    return this.options.model;
+  }
+
+  async review(prompt: ReviewPrompt, signal: AbortSignal, limits: { maxOutputTokens: number; tokenCeiling: number }): Promise<{ text: string; usage?: LlmUsage }> {
+    const local = new AbortController();
+    let meta: GenerateContentResponseUsageMetadata | undefined;
+    let model = this.options.model;
+    let finish: string | null = null;
+    let blockReason: string | undefined;
+    let text = "";
+    let started = false;
+    const usage = (): LlmUsage | undefined => usageOf(meta, model, finish);
+    try {
+      const stream = await this.models.generateContentStream({
+        model: this.options.model,
+        contents: [{ role: "user", parts: [{ text: prompt.userText }] }],
+        config: {
+          systemInstruction: prompt.systemInstruction,
+          responseMimeType: "application/json",
+          responseJsonSchema: prompt.schema,
+          maxOutputTokens: limits.maxOutputTokens,
+          temperature: 0.2,
+          candidateCount: 1,
+          thinkingConfig: thinkingConfigFor(this.options.model, PROMPT_REVIEW.thinkingLevel),
+          safetySettings: safetySettingsFor(this.options.jailbreakFilter),
+          abortSignal: AbortSignal.any([signal, local.signal]),
+        },
+      });
+      for await (const chunk of stream) {
+        started = true;
+        if (chunk.usageMetadata) meta = chunk.usageMetadata;
+        if (chunk.modelVersion) model = chunk.modelVersion;
+        if (chunk.promptFeedback?.blockReason) blockReason = String(chunk.promptFeedback.blockReason);
+        const candidate = chunk.candidates?.[0];
+        if (candidate?.finishReason) finish = String(candidate.finishReason);
+        for (const part of candidate?.content?.parts ?? []) {
+          if (typeof part.text === "string" && !part.thought) text += part.text;
+        }
+        const spent = (meta?.candidatesTokenCount ?? 0) + (meta?.thoughtsTokenCount ?? 0);
+        if ((spent > limits.tokenCeiling || text.length > MAX_CHARS_PER_TOKEN * limits.tokenCeiling) && !candidate?.finishReason) {
+          local.abort();
+          // Billed for at least the ceiling: no usage, so the worst case stays booked.
+          throw new GenerationError("infra", "review token ceiling exceeded");
+        }
+      }
+    } catch (e) {
+      if (e instanceof GenerationError) throw e;
+      if (signal.aborted) throw new GenerationError("infra", "review timeout");
+      const reported = started
+        ? undefined
+        : { inputTokens: meta?.promptTokenCount ?? 0, outputTokens: 0, thinkingTokens: 0, model, finishReason: finish };
+      throw new GenerationError("infra", e instanceof ApiError ? `review Vertex AI ${Number(e.status) || "error"}` : "review call failed", reported);
+    }
+    if (signal.aborted) throw new GenerationError("infra", "review timeout");
+    if (blockReason) throw new GenerationError("content", `review prompt blocked: ${blockReason.slice(0, 40)}`, usage());
+    if (finish && CONTENT_FINISH.has(finish)) throw new GenerationError("content", `review finish ${finish}`, usage());
+    if (!text) throw new GenerationError("content", "review answer empty", usage());
+    return { text, usage: usage() };
   }
 }
