@@ -76,7 +76,7 @@ import {
   handlePlayNotification,
   pollVoidedPurchases,
 } from "./core/notifications";
-import { redrawBoard as redrawBoardCore } from "./board/hosted";
+import { boardBrowserUrl, redrawBoard as redrawBoardCore } from "./board/hosted";
 import { CloudStorageBoardBucket } from "./adapters/boardBucket";
 import {
   getProviderProfiles as providerProfilesCore,
@@ -647,6 +647,8 @@ function ownerEnv(): OwnerEnv {
     textDefaults: textDefaults(),
     // Readiness only: the key is read (as the adapter would) and dropped, never returned.
     secretReadable,
+    // The hosted board's authenticated address (redrawBoard's bucket), for the console's link.
+    boardUrl: boardBrowserUrl(boardBucket.value() || `${projectId()}-owner-board`),
   };
   return ownerEnvCache;
 }

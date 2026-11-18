@@ -5,6 +5,12 @@
 // kept in the browser: the sign-in lives in memory only (inMemoryPersistence), so each visit
 // signs in afresh, and Google's name and photo are never read. Text goes in with textContent only.
 // The Firebase JS SDK is served from this site (vendor/, pinned; vendor/firebasejs/13.4.0/SOURCE.txt).
+//
+// The page is a dashboard: a status strip of what is in force now, then one card per group of
+// settings, all drawn from what the server sends (its groups, settings, figures and status), so a
+// new setting lands in its card without a change here. Unsaved changes show on their card and in
+// the dock at the bottom; every save, from a card or from the dock, is the same check (dry run),
+// confirmation and save bound to that check.
 import { initializeApp } from "/vendor/firebasejs/13.4.0/firebase-app.js";
 import {
   GoogleAuthProvider,
@@ -31,6 +37,7 @@ function say(text, error = false) {
   $("message").textContent = text;
   $("message").className = error ? "error" : "";
   if (!retry) $("reauth").hidden = true;
+  dock();
 }
 
 // The server wants a newer sign-in. Google's sign-in is never opened by itself: the page says so
@@ -39,6 +46,7 @@ function askSignInAgain(text, again) {
   retry = again;
   say(text, true);
   $("reauth").hidden = false;
+  dock();
 }
 
 function show(signedIn) {
@@ -47,7 +55,11 @@ function show(signedIn) {
   if (!signedIn) {
     $("console").hidden = true;
     $("settings").hidden = true;
+    $("status-strip").hidden = true;
+    $("board-link").hidden = true;
+    clearCards();
   }
+  dock();
 }
 
 async function call(name, data) {
@@ -77,6 +89,39 @@ async function call(name, data) {
   return body.result;
 }
 
+// --- Small DOM helpers ----------------------------------------------------------------------
+
+function el(tag, props = {}, ...children) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === "class") e.className = v;
+    else if (k === "text") e.textContent = v;
+    else if (k.startsWith("aria-") || k.startsWith("data-")) e.setAttribute(k, v);
+    else e[k] = v;
+  }
+  for (const c of children) if (c !== null && c !== undefined && c !== false) e.append(c);
+  return e;
+}
+
+/** A status dot: the tone in words for screen readers too. */
+function dot(tone) {
+  return el("span", { class: `dot ${tone}`, "aria-hidden": "true" });
+}
+
+/** A tile of the status strip (the board's look): label, value, a meter, a line. */
+function tile({ label, value, tone = "neutral", note = "", meter = null, wide = false }) {
+  const m = meter && meter.max > 0
+    ? el("meter", { min: 0, max: meter.max, value: Math.min(meter.value, meter.max), low: meter.max * 0.8, high: meter.max * 0.999, optimum: 0, "aria-label": label })
+    : null;
+  return el("div", { class: `tile ${tone}${wide ? " wide" : ""}` },
+    el("div", { class: "t-label", text: label }),
+    el("div", { class: "t-value" }, tone !== "neutral" ? dot(tone) : null, el("span", { text: value })),
+    m,
+    note ? el("p", { class: "t-note", text: note }) : null);
+}
+
+// --- Providers (getProviderProfiles / setProviderProfile) -------------------------------------
+
 function models(p) {
   if (p.provider === "off") return "none (pictures off)";
   const fb = p.fallbackModel ? `${p.fallbackProvider ? `${p.fallbackProvider} / ` : ""}${p.fallbackModel}` : "none";
@@ -98,33 +143,55 @@ function render() {
   $("active-on").textContent = a.picturesOn ? "Yes" : "No";
   const c = view.lastChange;
   $("last-change").textContent = c ? `${new Date(c.at).toLocaleString()} (${c.via === "web" ? "this console" : "admin command"}): ${c.from} → ${c.to}` : "None recorded";
-  const select = $("profile");
-  const keep = select.value;
-  select.replaceChildren(...view.profiles.map((p) => {
-    const o = document.createElement("option");
-    o.value = p.id;
-    o.textContent = p.label + (p.id === a.profile ? " (in force)" : p.ready ? "" : " (not ready)");
-    return o;
+  const keep = selected()?.id;
+  const pick = view.profiles.some((p) => p.id === keep) ? keep : (view.profiles.find((p) => p.id === a.profile)?.id ?? view.profiles[0]?.id ?? "");
+  $("profile").replaceChildren(...view.profiles.map((p, i) => {
+    const id = `profile-${i}`;
+    const radio = el("input", { type: "radio", name: "profile", id, value: p.id, checked: p.id === pick });
+    radio.addEventListener("change", describe);
+    const inForce = p.id === a.profile;
+    const state = inForce ? ["good", "In force"] : p.ready ? ["good", "Ready"] : ["crit", "Not ready"];
+    return el("li", { class: "profile" + (p.id === pick ? " checked" : "") },
+      radio,
+      el("div", {},
+        el("label", { htmlFor: id, text: p.label }),
+        el("p", { class: "p-state" }, dot(state[0]), el("span", { text: state[1] + (p.ready || inForce ? "" : ` · ${p.missing.length} missing`) })),
+        !p.ready && p.missing.length ? el("ul", { class: "p-missing" }, ...p.missing.map((m) => el("li", { text: m }))) : null));
   }));
-  select.value = view.profiles.some((p) => p.id === keep) ? keep : (view.profiles.find((p) => p.id === a.profile)?.id ?? view.profiles[0]?.id ?? "");
   describe();
   $("console").hidden = false;
+  renderStatus();
 }
 
 function selected() {
-  return view?.profiles.find((p) => p.id === $("profile").value);
+  const r = document.querySelector('#profile input[name="profile"]:checked');
+  return r ? view?.profiles.find((p) => p.id === r.value) : undefined;
 }
 
 function describe() {
   const p = selected();
+  for (const li of $("profile").children) li.classList.toggle("checked", li.querySelector("input")?.checked === true);
   const text = p ? textModels(p) : "";
   $("profile-summary").textContent = p ? `${p.summary} Text: ${text || "unchanged"}. Pictures: ${models(p)}.` : "";
-  $("profile-missing").replaceChildren(...(p?.missing ?? []).map((m) => {
-    const li = document.createElement("li");
-    li.textContent = m;
-    return li;
-  }));
+  $("profile-missing").replaceChildren(...(p?.missing ?? []).map((m) => el("li", { text: m })));
   $("switch").disabled = !p || !p.ready || p.id === view.active.profile;
+}
+
+/** The status strip: the provider setup from the profiles, then what the settings say is in force. */
+function renderStatus() {
+  const tiles = [];
+  if (view) {
+    const a = view.active;
+    const p = view.profiles.find((x) => x.id === a.profile);
+    const text = textModels(a);
+    const setup = `${text ? `Text ${text}. ` : ""}Pictures ${models(a)}${a.picturesOn ? "" : " (not offered to the apps)"}.`;
+    if (!p) tiles.push({ label: "Provider setup", wide: true, value: a.label, tone: "warn", note: `${setup} Set by hand, not a profile: readiness unknown.` });
+    else if (p.ready) tiles.push({ label: "Provider setup", wide: true, value: a.label, tone: "good", note: `Ready. ${setup}` });
+    else tiles.push({ label: "Provider setup", wide: true, value: a.label, tone: "crit", note: `Not ready: ${p.missing.join("; ")}. ${setup}` });
+  }
+  for (const s of settingsView?.status ?? []) tiles.push(s);
+  $("status").replaceChildren(...tiles.map(tile));
+  $("status-strip").hidden = tiles.length === 0;
 }
 
 async function load() {
@@ -137,6 +204,8 @@ async function load() {
   } catch (e) {
     $("console").hidden = true;
     $("settings").hidden = true;
+    $("status-strip").hidden = true;
+    clearCards();
     if (e.reason === "NOT_OWNER") say("This Google account may not use the owner console.", true);
     else if (e.reason === "SIGN_IN" || e.reason === "UNAUTHENTICATED") say("Sign in with Google.", true);
     else say(`Could not load: ${e.message}`, true);
@@ -198,25 +267,16 @@ async function sendSwitch(body, p) {
 }
 
 // --- Settings (getOwnerSettings / setOwnerSettings) -------------------------------------------
-// Everything below is drawn from what the server returns: sections, labels, help, controls,
-// bounds, values and defaults. A new setting on the server needs no change here.
+// Everything below is drawn from what the server returns: groups, labels, help, controls,
+// bounds, values, defaults, figures and status. A new setting on the server needs no change here.
 
 let settingsView = null;
 let pendingPlan = null;
-/** Per setting id: { get(): value | undefined (unreadable), reset: boolean }. */
+/** Per setting id: the control's reader, its card, and whether a reset is asked. */
 const inputs = new Map();
+/** Per group id: its card's parts. */
+const cards = new Map();
 let fieldSeq = 0;
-
-function el(tag, props = {}, ...children) {
-  const e = document.createElement(tag);
-  for (const [k, v] of Object.entries(props)) {
-    if (k === "class") e.className = v;
-    else if (k === "text") e.textContent = v;
-    else e[k] = v;
-  }
-  for (const c of children) if (c !== null && c !== undefined) e.append(c);
-  return e;
-}
 
 const isUsd = (c) => c.kind === "number" && c.unit === "usd";
 const usdText = (c, n) => `USD ${(n / 1e6).toFixed(c.step < 10000 ? 3 : 2)}`;
@@ -247,17 +307,33 @@ function fmt(c, v) {
   }
 }
 
+/** A short form for the dock's review (a long list or table is summarised). */
+function short(c, v) {
+  const t = fmt(c, v);
+  return t.length > 90 ? `${t.slice(0, 87)}…` : t;
+}
+
 function settingById(id) {
   for (const s of settingsView?.sections ?? []) for (const x of s.settings) if (x.id === id) return x;
   return null;
 }
 
-/** The input for one setting, and how to read it back (undefined: not a valid entry). */
+/**
+ * The input for one setting: its node, how to read it back (undefined: not a valid entry), and
+ * how to keep and restore what was typed (state / restore) across a redraw after another save.
+ */
 function controlFor(s, fid) {
   const c = s.control;
   if (c.kind === "toggle") {
     const box = el("input", { type: "checkbox", id: fid, checked: s.value === true, disabled: Boolean(s.blocked) });
-    return { node: el("p", { class: "toggle" }, box, el("span", { text: " On" })), get: () => box.checked };
+    const word = el("span", { text: s.value === true ? "On" : "Off" });
+    box.addEventListener("change", () => { word.textContent = box.checked ? "On" : "Off"; });
+    return {
+      node: el("span", { class: "switch" }, box, word),
+      get: () => box.checked,
+      state: () => box.checked,
+      restore: (v) => { box.checked = v; word.textContent = v ? "On" : "Off"; },
+    };
   }
   if (c.kind === "number") {
     const k = isUsd(c) ? 1e6 : 1;
@@ -270,8 +346,9 @@ function controlFor(s, fid) {
       value: s.value === null ? "" : String(s.value / k), disabled: Boolean(s.blocked),
     });
     if (c.emptyMeans) box.placeholder = `empty: ${c.emptyMeans}`;
+    const unit = isUsd(c) ? el("span", { class: "unit", text: "USD", "aria-hidden": "true" }) : null;
     return {
-      node: box,
+      node: unit ? el("span", { class: "s-num" }, unit, box) : box,
       get: () => {
         const t = box.value.trim();
         if (t === "") return null;
@@ -279,21 +356,25 @@ function controlFor(s, fid) {
         if (!Number.isFinite(n)) return undefined;
         return isUsd(c) ? Math.round(n * 1e6) : n;
       },
+      state: () => box.value,
+      restore: (v) => { box.value = v; },
     };
   }
   if (c.kind === "select") {
     const sel = el("select", { id: fid, disabled: Boolean(s.blocked) }, ...c.options.map((o) => el("option", { value: o.value, text: o.label })));
     sel.value = s.value;
-    return { node: sel, get: () => sel.value };
+    return { node: sel, get: () => sel.value, state: () => sel.value, restore: (v) => { sel.value = v; } };
   }
   if (c.kind === "multi") {
     const boxes = c.options.map((o, i) => {
       const box = el("input", { type: "checkbox", id: `${fid}-${i}`, value: o.value, checked: (s.value ?? []).includes(o.value), disabled: Boolean(s.blocked) });
-      return { box, row: el("li", {}, box, el("label", { htmlFor: `${fid}-${i}`, class: "inline", text: `${o.label}` })) };
+      return { box, row: el("li", {}, box, el("label", { htmlFor: `${fid}-${i}`, text: o.label })) };
     });
     return {
-      node: el("ul", { class: "multi", id: fid }, ...boxes.map((b) => b.row)),
+      node: el("ul", { class: "multi", id: fid, "aria-labelledby": `${fid}-name` }, ...boxes.map((b) => b.row)),
       get: () => boxes.filter((b) => b.box.checked).map((b) => b.box.value),
+      state: () => boxes.map((b) => b.box.checked),
+      restore: (v) => boxes.forEach((b, i) => { b.box.checked = v[i]; }),
     };
   }
   if (c.kind === "table") {
@@ -308,7 +389,7 @@ function controlFor(s, fid) {
       return el("td", {}, box);
     })));
     return {
-      node: el("div", { class: "table-wrap" }, el("table", { id: fid }, el("thead", {}, head), el("tbody", {}, ...rows))),
+      node: el("div", { class: "table-wrap" }, el("table", { id: fid, "aria-labelledby": `${fid}-name` }, el("thead", {}, head), el("tbody", {}, ...rows))),
       get: () => {
         const out = {};
         for (const { r, k, box } of cells) {
@@ -318,9 +399,11 @@ function controlFor(s, fid) {
         }
         return out;
       },
+      state: () => cells.map((x) => x.box.value),
+      restore: (v) => cells.forEach((x, i) => { x.box.value = v[i]; }),
     };
   }
-  return { node: el("p", { class: "note", text: "This server sent a kind of setting this page doesn't know; use the admin command." }), get: () => s.value };
+  return { node: el("p", { class: "note", text: "This server sent a kind of setting this page doesn't know; use the admin command." }), get: () => s.value, state: () => null, restore: () => {} };
 }
 
 function commandText(s) {
@@ -331,80 +414,225 @@ function viaText(via) {
   return via === "web" ? "this console" : "admin command";
 }
 
-function settingNode(s) {
+/** What one setting would change to now: {change} (none when unchanged), or {invalid}. */
+function pendingOf(s) {
+  const entry = inputs.get(s.id);
+  if (!entry || s.blocked) return {};
+  if (entry.reset) return { change: { id: s.id, reset: true, expect: s.stored }, to: s.default };
+  const value = entry.get();
+  if (value === undefined) return { invalid: true };
+  if (same(value, s.value)) return {};
+  if (value === null) return { change: { id: s.id, reset: true, expect: s.stored }, to: s.default };
+  return { change: { id: s.id, value, expect: s.stored }, to: value };
+}
+
+function settingNode(s, sec) {
   const fid = `setting-${++fieldSeq}`;
   const ctl = controlFor(s, fid);
-  const entry = { get: ctl.get, reset: false };
+  const block = s.control.kind === "multi" || s.control.kind === "table";
+  const meta = el("p", { class: "s-meta" });
+  const node = el("div", { class: "setting" + (block ? " block" : "") + (s.changed ? " changed" : "") });
+  const entry = { get: ctl.get, state: ctl.state, restore: ctl.restore, reset: false, sec: sec.id, node, meta, setting: s };
   inputs.set(s.id, entry);
-  const meta = [`Default: ${fmt(s.control, s.default)}`];
-  meta.push(s.overridden ? "set here" : "default in force");
-  if (s.changed) meta.push("changed from default");
-  if (s.lastChange) meta.push(`last changed ${new Date(s.lastChange.at).toLocaleString()} (${viaText(s.lastChange.via)})`);
-  const node = el("div", { class: "setting" + (s.changed ? " changed" : "") },
-    el(s.control.kind === "multi" || s.control.kind === "table" ? "p" : "label", { class: "name", text: s.label + (s.sensitive ? " (sensitive)" : ""), ...(s.control.kind === "multi" || s.control.kind === "table" ? {} : { htmlFor: fid }) }),
-    el("p", { class: "note", text: s.help }),
-    ctl.node,
-    el("p", { class: "meta", text: meta.join(" · ") }),
-    s.web ? el("p", { class: "range", text: `On this page: ${s.web.text}.` }) : null,
-    s.web ? el("p", { class: "range" }, el("span", { text: "Larger changes: use the command " }), el("code", { text: commandText(s) })) : null,
-    s.blocked ? el("p", { class: "warn", text: s.blocked }) : null,
-  );
+  const chips = el("span", { class: "s-chips" },
+    s.sensitive ? el("span", { class: "chip sens", text: "sensitive" }) : null,
+    s.changed ? el("span", { class: "chip changed", text: "changed from default" }) : null);
+  const name = block
+    ? el("p", { class: "s-name", id: `${fid}-name` }, el("span", { text: s.label }), chips)
+    : el("label", { class: "s-name", htmlFor: fid, id: `${fid}-name` }, el("span", { text: s.label }), chips);
+  const facts = [
+    el("p", { text: s.help }),
+    el("p", { text: `Default: ${fmt(s.control, s.default)} · ${s.overridden ? "set here" : "default in force"}${s.lastChange ? ` · last changed ${new Date(s.lastChange.at).toLocaleString()} (${viaText(s.lastChange.via)})` : ""}` }),
+    s.web ? el("p", { text: `On this page: ${s.web.text}.` }) : null,
+    s.web ? el("p", {}, el("span", { text: "Larger changes: use the command " }), el("code", { text: commandText(s) })) : null,
+  ];
+  const more = el("details", { class: "s-more" }, el("summary", { text: "About" }), ...facts);
+  node.append(...[
+    el("div", { class: "s-head" }, name),
+    el("div", { class: "s-ctl" }, ctl.node),
+    meta,
+    more,
+    s.blocked ? el("p", { class: "s-warn", text: s.blocked }) : null,
+  ].filter(Boolean));
   if (s.overridden && !s.blocked) {
     const btn = el("button", { type: "button", class: "small", text: "Reset to default" });
     btn.addEventListener("click", () => {
       entry.reset = !entry.reset;
       btn.textContent = entry.reset ? "Will reset on Save (undo)" : "Reset to default";
       node.classList.toggle("resetting", entry.reset);
+      refreshPending();
     });
-    node.append(btn);
+    entry.resetButton = btn;
+    node.append(el("div", { class: "s-actions" }, btn));
   }
+  node.addEventListener("input", refreshPending);
+  node.addEventListener("change", refreshPending);
   return node;
 }
 
-function renderSettings() {
-  const v = settingsView;
-  inputs.clear();
-  const parts = [];
-  if (v.invalid.length) parts.push(el("p", { class: "warn", text: `Invalid as stored, so their safe values are in force: ${v.invalid.join(", ")}. Fix or delete them in the Firestore console.` }));
-  if (v.lastChange) parts.push(el("p", { class: "note", text: `Last settings change: ${new Date(v.lastChange.at).toLocaleString()} (${viaText(v.lastChange.via)}).` }));
-  for (const sec of v.sections) {
-    const save = el("button", { type: "button", class: "primary", text: `Save ${sec.title}…` });
-    save.addEventListener("click", () => saveSection(sec).catch(saveFailed));
-    parts.push(el("section", { class: "card" }, el("h3", { text: sec.title }), el("p", { class: "note", text: sec.help }), ...sec.settings.map(settingNode), save));
+/** The read-only fields that belong in one card, folded away. */
+function readOnlyNode(rows) {
+  if (!rows.length) return null;
+  const dl = el("dl", { class: "facts" });
+  for (const r of rows) {
+    dl.append(el("dt", { text: r.label }), el("dd", {},
+      el("span", { text: fmt(null, r.value) + (same(r.value, r.default) ? "" : `  (default ${fmt(null, r.default)})`) }),
+      el("p", { class: "note", text: r.reason })));
   }
-  if (v.readOnly.length) {
-    const dl = el("dl", { class: "facts" });
-    for (const r of v.readOnly) {
-      dl.append(el("dt", { text: r.label }), el("dd", {}, el("span", { text: fmt(null, r.value) + (same(r.value, r.default) ? "" : `  (default ${fmt(null, r.default)})`) }), el("p", { class: "note", text: r.reason })));
-    }
-    parts.push(el("section", { class: "card" }, el("h3", { text: "Shown here, changed elsewhere" }), dl));
-  }
-  $("settings-sections").replaceChildren(...parts);
-  $("settings").hidden = false;
+  return el("details", { class: "ro" }, el("summary", { text: `Shown here, changed elsewhere (${rows.length})` }), dl);
 }
 
-function sectionChanges(sec) {
-  const changes = [];
-  for (const s of sec.settings) {
-    const entry = inputs.get(s.id);
-    if (!entry || s.blocked) continue;
-    if (entry.reset) {
-      changes.push({ id: s.id, reset: true, expect: s.stored });
-      continue;
+function figuresNode(facts) {
+  if (!facts?.length) return null;
+  return el("div", { class: "figures" }, ...facts.map((f) => el("div", { class: "figure" + (f.note.length > 120 ? " formula" : "") },
+    el("div", { class: "f-label", text: f.label }),
+    el("div", { class: "f-value", text: f.value }),
+    f.note ? el("p", { class: "f-note", text: f.note }) : null)));
+}
+
+function clearCards() {
+  for (const c of cards.values()) c.node.remove();
+  cards.clear();
+  inputs.clear();
+  $("providers-readonly").replaceChildren();
+  refreshPending();
+}
+
+function cardNode(sec, readOnly) {
+  const badge = el("span", { class: "badge", hidden: true });
+  const save = el("button", { type: "button", class: "primary", text: "Save…", disabled: true });
+  save.setAttribute("aria-label", `Save ${sec.title}`);
+  const discard = el("button", { type: "button", text: "Discard", hidden: true });
+  const hid = `h-sec-${sec.id}`;
+  const node = el("section", { class: "card" + (sec.wide ? " wide" : ""), "aria-labelledby": hid },
+    el("header", { class: "card-head" },
+      el("div", {}, el("h2", { id: hid, text: sec.title }), el("p", { class: "help", text: sec.help })),
+      badge),
+    figuresNode(sec.facts),
+    ...sec.settings.map((s) => settingNode(s, sec)),
+    readOnlyNode(readOnly),
+    el("div", { class: "card-foot" }, discard, save));
+  save.addEventListener("click", () => saveScope({ title: sec.title, sections: [sec] }).catch(saveFailed));
+  discard.addEventListener("click", () => {
+    const fresh = cardNode(sec, readOnly);
+    node.replaceWith(fresh.node);
+    cards.set(sec.id, fresh);
+    refreshPending();
+  });
+  return { node, badge, save, discard, sec };
+}
+
+function renderSettings(carry = new Map()) {
+  const v = settingsView;
+  for (const c of cards.values()) c.node.remove();
+  cards.clear();
+  inputs.clear();
+  $("settings-invalid").hidden = v.invalid.length === 0;
+  $("settings-invalid").textContent = v.invalid.length ? `Invalid as stored, so their safe values are in force: ${v.invalid.join(", ")}. Fix or delete them in the Firestore console.` : "";
+  $("settings-last").textContent = v.lastChange ? `Last settings change: ${new Date(v.lastChange.at).toLocaleString()} (${viaText(v.lastChange.via)}).` : "";
+  const known = new Set(v.sections.map((s) => s.id));
+  const roOf = (id) => v.readOnly.filter((r) => (r.section ?? "other") === id);
+  const grid = $("cards");
+  for (const sec of v.sections) {
+    const card = cardNode(sec, roOf(sec.id));
+    cards.set(sec.id, card);
+    grid.append(card.node);
+  }
+  // Read-only fields of no group on this page (or from an older server, which sends none) in a last card.
+  const rest = v.readOnly.filter((r) => r.section !== "providers" && !known.has(r.section));
+  if (rest.length) {
+    const node = el("section", { class: "card", "aria-labelledby": "h-sec-other" },
+      el("header", { class: "card-head" }, el("div", {}, el("h2", { id: "h-sec-other", text: "Other, changed elsewhere" }),
+        el("p", { class: "help", text: "Shown here with the value in force; changed by hand or by a code change, not on this page." }))),
+      readOnlyNode(rest));
+    cards.set("other", { node, badge: null, save: null, discard: null, sec: null });
+    grid.append(node);
+  }
+  $("providers-readonly").replaceChildren(...[readOnlyNode(roOf("providers"))].filter(Boolean));
+  // What was typed in other cards before a save, unless the server's value moved meanwhile.
+  for (const [id, kept] of carry) {
+    const entry = inputs.get(id);
+    if (!entry || !same(entry.setting.stored, kept.stored) || entry.setting.blocked) continue;
+    entry.restore(kept.state);
+    if (kept.reset && entry.resetButton) entry.resetButton.click();
+  }
+  const link = $("board-link");
+  link.hidden = !v.boardUrl;
+  if (v.boardUrl) link.href = v.boardUrl;
+  $("settings").hidden = false;
+  renderStatus();
+  refreshPending();
+}
+
+/** Recounts the unsaved changes: per card (badge, buttons, border), per setting, and in the dock. */
+function refreshPending() {
+  let total = 0;
+  let invalid = 0;
+  const review = [];
+  for (const card of cards.values()) {
+    if (!card.sec) continue;
+    let n = 0;
+    for (const s of card.sec.settings) {
+      const entry = inputs.get(s.id);
+      if (!entry) continue;
+      const p = pendingOf(s);
+      const dirty = Boolean(p.change || p.invalid);
+      entry.node.classList.toggle("dirty", dirty);
+      entry.meta.textContent = p.invalid
+        ? "Not a valid entry yet."
+        : p.change
+          ? `Unsaved: ${fmt(s.control, s.value)} → ${fmt(s.control, p.to)}${p.change.reset ? " (reset to default)" : ""}`
+          : s.changed ? `Default: ${fmt(s.control, s.default)}` : "";
+      if (dirty) {
+        n++;
+        review.push(p.invalid
+          ? { text: `${card.sec.title} › ${s.label}: not a valid entry`, sensitive: false }
+          : { text: `${card.sec.title} › ${s.label}: ${short(s.control, s.value)} → ${short(s.control, p.to)}${p.change.reset ? " (reset)" : ""}`, sensitive: s.sensitive });
+      }
+      if (p.invalid) invalid++;
     }
-    const value = entry.get();
-    if (value === undefined) throw Object.assign(new Error(`${s.label}: not a valid entry.`), { reason: "LOCAL" });
-    if (same(value, s.value)) continue;
-    if (value === null) changes.push({ id: s.id, reset: true, expect: s.stored });
-    else changes.push({ id: s.id, value, expect: s.stored });
+    total += n;
+    card.badge.hidden = n === 0;
+    card.badge.textContent = `${n} unsaved`;
+    card.save.disabled = n === 0;
+    card.discard.hidden = n === 0;
+    card.node.classList.toggle("dirty", n > 0);
+  }
+  $("pending").hidden = total === 0;
+  $("pending").textContent = total === 0 ? "" : `${total} unsaved ${total === 1 ? "change" : "changes"}${invalid ? ` (${invalid} not valid yet)` : ""}`;
+  $("pending-actions").hidden = total === 0;
+  $("pending-list").replaceChildren(...review.map((r) => el("li", { class: r.sensitive ? "sensitive" : "", text: r.text + (r.sensitive ? " · sensitive" : "") })));
+  if (total === 0) setReview(false);
+  dock();
+}
+
+function setReview(open) {
+  $("pending-review").hidden = !open;
+  $("review-all").setAttribute("aria-expanded", String(open));
+  $("review-all").textContent = open ? "Hide review" : "Review";
+}
+
+/** The dock shows while there is something to say or to save. */
+function dock() {
+  $("dock").hidden = !$("message").textContent && $("reauth").hidden && $("pending").hidden;
+}
+
+function scopeChanges(scope) {
+  const changes = [];
+  for (const sec of scope.sections) {
+    for (const s of sec.settings) {
+      const p = pendingOf(s);
+      if (p.invalid) throw Object.assign(new Error(`${s.label}: not a valid entry.`), { reason: "LOCAL" });
+      if (p.change) changes.push(p.change);
+    }
   }
   return changes;
 }
 
-async function saveSection(sec) {
-  const changes = sectionChanges(sec);
+async function saveScope(scope) {
+  const changes = scopeChanges(scope);
   if (changes.length === 0) {
-    say(`Nothing to save in ${sec.title}.`);
+    say(`Nothing to save in ${scope.title}.`);
     return;
   }
   say("Checking…");
@@ -413,12 +641,12 @@ async function saveSection(sec) {
     answer = await call("setOwnerSettings", { changes, dryRun: true });
   } catch (e) {
     if (e.reason !== "RECENT_SIGN_IN") throw e;
-    askSignInAgain(`Not checked: ${e.message}. Sign in again, then the check runs once more.`, () => saveSection(sec).catch(saveFailed));
+    askSignInAgain(`Not checked: ${e.message}. Sign in again, then the check runs once more.`, () => saveScope(scope).catch(saveFailed));
     return;
   }
   const plan = answer.plan;
   if (plan.changes.length === 0) {
-    say(`Nothing to save in ${sec.title}: already so.`);
+    say(`Nothing to save in ${scope.title}: already so.`);
     return;
   }
   say("");
@@ -458,6 +686,13 @@ async function confirmSave() {
 
 async function sendSave(body) {
   say("Saving…");
+  // What is typed elsewhere stays: everything not in this save is carried over the redraw.
+  const saved = new Set(body.changes.map((c) => c.id));
+  const carry = new Map();
+  for (const [id, entry] of inputs) {
+    if (saved.has(id) || !entry.node.classList.contains("dirty")) continue;
+    carry.set(id, { stored: entry.setting.stored, state: entry.state(), reset: entry.reset });
+  }
   try {
     settingsView = await call("setOwnerSettings", body);
   } catch (e) {
@@ -466,7 +701,7 @@ async function sendSave(body) {
     return;
   }
   pendingPlan = null;
-  renderSettings();
+  renderSettings(carry);
   say("Saved. New requests use it within 30 seconds.");
 }
 
@@ -498,6 +733,7 @@ async function start() {
     const again = retry;
     retry = null;
     $("reauth").hidden = true;
+    dock();
     signIn().then(() => again?.()).catch((e) => (e.reason ? say(`Not done: ${e.message}`, true) : signInFailed(e)));
   });
   $("sign-out").addEventListener("click", () => signOut(auth).then(() => { view = null; settingsView = null; retry = null; show(false); say("Signed out."); }));
@@ -509,7 +745,13 @@ async function start() {
     $("settings-confirm").close();
   });
   $("settings-confirm-ok").addEventListener("click", () => confirmSave().catch(saveFailed));
-  $("profile").addEventListener("change", describe);
+  $("review-all").addEventListener("click", () => setReview($("pending-review").hidden));
+  $("discard-all").addEventListener("click", () => {
+    renderSettings();
+    say("Unsaved changes discarded.");
+  });
+  // Every group with changes, in one check, one confirmation and one save.
+  $("save-all").addEventListener("click", () => saveScope({ title: "any group", sections: settingsView?.sections ?? [] }).catch(saveFailed));
   $("switch").addEventListener("click", () => {
     const p = selected();
     const text = textModels(p);
@@ -523,6 +765,10 @@ async function start() {
       say(e.reason === "STALE" ? "The setup was changed meanwhile; reloaded, check and try again." : `Not switched: ${e.message}`, true);
       if (e.reason === "STALE") load();
     });
+  });
+  // Leaving with unsaved changes asks first (the browser's own question).
+  addEventListener("beforeunload", (e) => {
+    if (!$("pending").hidden) e.preventDefault();
   });
 }
 

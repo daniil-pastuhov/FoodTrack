@@ -13,7 +13,8 @@ import { HttpsError } from "firebase-functions/v2/https";
 import { AdminRefusal } from "../src/admin/accountRequests";
 import { cliValue, parseConfigArgs, runConfig, type ImageEnv } from "../src/admin/cli";
 import { COST_MAX, DEFAULT_COSTS, DEFAULT_MENU_SETS, DEFAULT_IMAGE_SELECTION, DEFAULT_TEXT_SELECTION } from "../src/constants";
-import { DEFAULT_RUNTIME_CONFIG, loadRuntimeConfig, parseRuntimeConfig, uidHash, validCosts } from "../src/model";
+import { Timestamp } from "firebase-admin/firestore";
+import { DEFAULT_RUNTIME_CONFIG, dailySpendCeiling, loadRuntimeConfig, parseRuntimeConfig, statsRef, uidHash, utcDay, validCosts } from "../src/model";
 import { OwnerCallGate, refusalReason, type OwnerCallRequest } from "../src/core/ownerCall";
 import type { Logger } from "../src/ports";
 import { OWNER_DOC, PROFILE_CHANGES, RUNTIME_DOC, SwitchRefused, activateProfile, type OwnerEnv } from "../src/core/providerSwitch";
@@ -44,6 +45,7 @@ import {
   settingsRegistryProblems,
   settingsViewOf,
   tasteChoices,
+  todayFiguresOf,
   type SettingDef,
 } from "../src/core/ownerSettings";
 import { auth, db, resetEmulators } from "./helpers";
@@ -257,6 +259,50 @@ describe("the registry", () => {
     expect(v("providerBalanceAlerts.bfl").value).toBeNull();
     expect(view.readOnly.find((r) => r.id === "prices.inputUsdPerMTok")).toMatchObject({ value: 1.5, default: 1.5 });
     expect(view.confirmWord).toBe(SENSITIVE_CONFIRM_WORD);
+  });
+
+  test("the console's groups: every section, wide cards, read-only fields placed in a card, no figures without today's", () => {
+    const view = settingsViewOf({}, D);
+    expect(view.sections.map((s) => s.id)).toEqual(SECTIONS.map((s) => s.id));
+    expect(view.sections.filter((s) => s.wide).map((s) => s.id)).toEqual(["costs", "taste"]);
+    const cards = new Set<string>([...SECTIONS.map((s) => s.id), "providers", "other"]);
+    for (const r of view.readOnly) expect(cards.has(r.section), r.id).toBe(true);
+    expect(view.readOnly.filter((r) => r.section === "providers").map((r) => r.id)).toEqual(READ_ONLY.filter((r) => /^(image|text)\./.test(r.id)).map((r) => r.id));
+    expect(view.today).toBeNull();
+    expect(view.boardUrl).toBeNull();
+    expect(view.status.map((s) => s.label)).toEqual(["Recipes from packs", "Second check of every answer", "Free recipes for signing in", "Sandbox purchases"]);
+    expect(view.sections.find((s) => s.id === "spending")!.facts).toEqual([expect.objectContaining({ label: "Today's ceiling", value: "unknown" })]);
+  });
+
+  test("today's figures: the ceiling worked out from the values in force, the status strip, the free recipes", () => {
+    const cfg = parseRuntimeConfig({});
+    const today = todayFiguresOf(cfg, "2026-11-18", [
+      { spentMicroUsd: 300_000, reservedMicroUsd: 100_000, netCreditsGranted: 30, generationUnits: 12, welcomeGrants: 2, welcomeCredits: 6, welcomeUsedCredits: 4, welcomeUsedMicroUsd: 40_000 },
+      { netCreditsGranted: 10, spentMicroUsd: 999_999 },
+      undefined,
+    ]);
+    expect(today).toEqual({
+      day: "2026-11-18", spentMicroUsd: 300_000, reservedMicroUsd: 100_000, ceilingMicroUsd: dailySpendCeiling(cfg, 40), netCredits7d: 40,
+      generationUnits: 12, ceilingReached: false, dailyCapReached: false, welcomeGrants: 2, welcomeCredits: 6, welcomeUsedCredits: 4, welcomeUsedMicroUsd: 40_000,
+    });
+    const view = settingsViewOf({}, D, undefined, null, { today, boardUrl: "https://storage.cloud.google.com/b/board.html" });
+    expect(view.boardUrl).toBe("https://storage.cloud.google.com/b/board.html");
+    const spending = view.sections.find((s) => s.id === "spending")!.facts;
+    expect(spending[0]).toMatchObject({ label: "Today's ceiling", value: "USD 2.00" });
+    expect(spending[0].note).toContain("min(USD 2.00 absolute, USD 1.20 + 0.25 × USD 0.120 × 40 net recipes sold in 7 days = USD 2.40) = USD 2.00");
+    expect(spending[0].note).toContain("free recipes and test purchases add nothing");
+    expect(spending[1]).toMatchObject({ label: "Booked today", value: "USD 0.40" });
+    expect(view.sections.find((s) => s.id === "welcome")!.facts[0].note).toContain("4 free recipes used today, estimated model cost USD 0.040");
+    expect(view.status.map((s) => s.label)).toEqual(["Recipes from packs", "Spend today", "Recipes used today", "Second check of every answer", "Free recipes for signing in", "Sandbox purchases"]);
+    expect(view.status[1]).toMatchObject({ value: "USD 0.40 of USD 2.00", tone: "neutral", meter: { value: 400_000, max: 2_000_000 } });
+    expect(view.status[2]).toMatchObject({ value: "12 of 1,000", meter: { value: 12, max: 1000 } });
+
+    const paused = settingsViewOf({ generationEnabled: false, disabledBy: "budget alert B: 10 of 10", disabledAt: Timestamp.fromMillis(Date.parse("2026-11-18T09:30:00Z")) }, D, undefined, null, { today });
+    expect(paused.status[0]).toEqual({ label: "Recipes from packs", value: "Paused", tone: "crit", note: "Paused by budget alert B: 10 of 10 since 2026-11-18 09:30 UTC. Only the admin command turns it back on." });
+    const reached = todayFiguresOf(cfg, "2026-11-18", [{ spentMicroUsd: 2_000_000, spendAlerts: { "100": 1 } }]);
+    expect(settingsViewOf({ allowSandbox: true, outputJudge: "enforce" }, D, undefined, null, { today: reached }).status.map((s) => [s.value, s.tone])).toEqual([
+      ["On, ceiling reached", "warn"], ["USD 2.00 of USD 1.20", "crit"], ["0 of 1,000", "neutral"], ["Enforce", "good"], ["3 per sign-in", "neutral"], ["Grant recipes", "warn"],
+    ]);
   });
 });
 
@@ -522,6 +568,17 @@ describe("applySettings", () => {
     expect(v("costs.recipe")).toMatchObject({ value: 1, default: 1, overridden: true, changed: false });
     expect(view.lastChange).toMatchObject({ via: "cli", settings: ["reports.keepDays"] });
     expect(view.readOnly.find((r) => r.id === "prices.inputUsdPerMTok")).toMatchObject({ value: 2, default: 1.5 });
+  });
+
+  test("listSettings reads today's figures from the last 7 days of stats, read-only, and passes the board's address", async () => {
+    const now = Date.now();
+    await statsRef(db, utcDay(now)).set({ spentMicroUsd: 100_000, netCreditsGranted: 5, welcomeUsedCredits: 2 });
+    await statsRef(db, utcDay(now - 6 * 86_400_000)).set({ netCreditsGranted: 7 });
+    await statsRef(db, utcDay(now - 7 * 86_400_000)).set({ netCreditsGranted: 1000 });
+    const view = await listSettings({ ...makeEnv(), boardUrl: "https://storage.cloud.google.com/x/board.html" });
+    expect(view.today).toMatchObject({ day: utcDay(now), spentMicroUsd: 100_000, netCredits7d: 12, welcomeUsedCredits: 2 });
+    expect(view.boardUrl).toBe("https://storage.cloud.google.com/x/board.html");
+    expect((await statsRef(db, utcDay(now)).get()).data()).toEqual({ spentMicroUsd: 100_000, netCreditsGranted: 5, welcomeUsedCredits: 2 });
   });
 });
 
@@ -1079,5 +1136,32 @@ describe("the console page", () => {
     expect(js).toContain("inMemoryPersistence");
     expect(js).toContain('call("getOwnerSettings")');
     expect(js).toContain('"setOwnerSettings", { changes, dryRun: true }');
+  });
+
+  test("is a dashboard drawn from the view: status strip, a card per group with its figures and read-only fields, the board's link", () => {
+    // Groups, figures, status and the board come from getOwnerSettings, never from the page.
+    for (const k of ["v.sections", "sec.facts", "sec.wide", "settingsView?.status", "r.section", "v.boardUrl"]) expect(js, k).toContain(k);
+    for (const s of SECTIONS) expect(html + js, s.id).not.toMatch(new RegExp(`["'\`]${s.id}["'\`]`));
+    // The board's address is the server's, not the page's.
+    expect(html + js).not.toContain("storage.cloud.google.com");
+    expect(html).toContain('id="board-link"');
+    expect(html).toMatch(/<a id="board-link"[^>]*rel="noopener noreferrer"/);
+    // One save path: the dry run, the confirmation bound to its token, the typed word, the fresh sign-in.
+    expect(js).toContain("token: p.plan.token");
+    expect(js).toContain('e.reason !== "RECENT_SIGN_IN"');
+    expect((js.match(/call\("setOwnerSettings"/g) ?? []).length).toBe(2);
+    expect(js).toContain("$(\"settings-confirm-ok\").disabled = sensitive");
+    // Unsaved changes: per card and in the dock, with a review.
+    for (const id of ["dock", "pending", "pending-list", "save-all", "discard-all", "review-all"]) expect(html, id).toContain(`id="${id}"`);
+    // Labels bound to their controls; no inline style or script; light and dark.
+    expect(js).toContain("htmlFor: fid");
+    expect(html).not.toMatch(/<style|style=/);
+    expect(readFileSync(join(dir, "console.css"), "utf8")).toContain("prefers-color-scheme:dark");
+  });
+
+  test("every group has a title and a line of help, and ids are unique", () => {
+    expect(new Set(SECTIONS.map((s) => s.id)).size).toBe(SECTIONS.length);
+    for (const s of SECTIONS) expect(s.title && s.help, s.id).toBeTruthy();
+    for (const r of READ_ONLY) expect([...SECTIONS.map((s) => s.id), "providers", "other"], r.id).toContain(r.section);
   });
 });

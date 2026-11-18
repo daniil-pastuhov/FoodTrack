@@ -10,40 +10,86 @@
 <script type="module" src="/console.js"></script>
 </head>
 <body>
+<header class="top">
+  <div class="brand">
+    <h1>Owner console</h1>
+    <p class="sub">Recipe backend. Only the owner's Google account gets past the sign-in; this page holds no data of its own.</p>
+  </div>
+  <nav class="top-actions" aria-label="Account">
+    <a id="board-link" class="button" hidden target="_blank" rel="noopener noreferrer">Open the board</a>
+    <span id="account" hidden><button id="sign-out" type="button">Sign out</button></span>
+  </nav>
+</header>
 <main>
-<h1>Owner console</h1>
-<p class="sub">Recipe backend. Only the owner's Google account gets past the sign-in; this page holds no data of its own.</p>
 <noscript><p class="alert">This page needs JavaScript.</p></noscript>
 
-<section id="signed-out" hidden>
+<section id="signed-out" class="card signin" hidden aria-labelledby="h-signin">
+  <h2 id="h-signin">Sign in</h2>
+  <p class="help">With the owner's Google account. Nothing is kept in this browser: each visit signs in afresh.</p>
   <button id="sign-in" type="button" class="primary">Sign in with Google</button>
 </section>
 
-<section id="console" hidden aria-labelledby="h-providers">
-  <h2 id="h-providers">Recipe providers (text and pictures)</h2>
-  <dl class="facts">
-    <dt>In force</dt><dd id="active"></dd>
-    <dt>Recipe text</dt><dd id="active-text"></dd>
-    <dt>Pictures</dt><dd id="active-models"></dd>
-    <dt>Pictures for the apps</dt><dd id="active-on"></dd>
-    <dt>Last change</dt><dd id="last-change"></dd>
-  </dl>
-  <label for="profile">Switch to</label>
-  <select id="profile"></select>
-  <p id="profile-summary" class="note"></p>
-  <ul id="profile-missing" class="missing"></ul>
-  <button id="switch" type="button" class="primary" disabled>Switch…</button>
+<section id="status-strip" hidden aria-labelledby="h-status">
+  <h2 id="h-status" class="strip-title">In force now</h2>
+  <div id="status" class="tiles"></div>
+  <p id="settings-invalid" class="alert" hidden></p>
+  <p id="settings-last" class="note"></p>
 </section>
 
 <section id="settings" hidden aria-labelledby="h-settings">
-  <h2 id="h-settings">Settings</h2>
-  <p class="sub">What the server allows, uses and charges, without hand-editing Firestore. Each section saves on its own, after a check by the server and a confirmation; sensitive ones ask you to type a word. This page makes only small, safe changes (each setting says how far); anything larger is made with the admin command, which needs your own cloud credentials. Every change is recorded, logged and emailed to you.</p>
-  <div id="settings-sections"></div>
+  <details class="about">
+    <summary id="h-settings">How changes are made here</summary>
+    <p class="note">What the server allows, uses and charges, without hand-editing Firestore. Each group saves on its own (or all of them at once from the bar at the bottom), after a check by the server and a confirmation; sensitive ones ask you to type a word. This page makes only small, safe changes (each setting says how far); anything larger is made with the admin command, which needs your own cloud credentials. Every change is recorded, logged and emailed to you.</p>
+  </details>
 </section>
 
-<p id="message" role="status" aria-live="polite"></p>
-<p id="reauth" hidden><button id="reauth-button" type="button" class="primary">Sign in again</button></p>
-<p id="account" hidden><button id="sign-out" type="button">Sign out</button></p>
+<div id="cards" class="grid">
+  <section id="console" class="card wide" hidden aria-labelledby="h-providers">
+    <header class="card-head">
+      <div>
+        <h2 id="h-providers">Providers</h2>
+        <p class="help">Who writes the recipe text and draws the pictures: the profile in force, each profile's readiness, and the switch.</p>
+      </div>
+    </header>
+    <dl class="facts">
+      <dt>In force</dt><dd id="active"></dd>
+      <dt>Recipe text</dt><dd id="active-text"></dd>
+      <dt>Pictures</dt><dd id="active-models"></dd>
+      <dt>Pictures for the apps</dt><dd id="active-on"></dd>
+      <dt>Last change</dt><dd id="last-change"></dd>
+    </dl>
+    <fieldset class="profiles">
+      <legend>Switch to</legend>
+      <ul id="profile" class="profile-list"></ul>
+    </fieldset>
+    <p id="profile-summary" class="note"></p>
+    <ul id="profile-missing" class="missing"></ul>
+    <div class="card-foot"><button id="switch" type="button" class="primary" disabled>Switch…</button></div>
+    <div id="providers-readonly"></div>
+  </section>
+</div>
+
+<div id="dock" class="dock" hidden>
+  <div class="dock-inner">
+    <div class="dock-text">
+      <p id="pending" class="pending" hidden></p>
+      <p id="message" role="status" aria-live="polite"></p>
+    </div>
+    <div class="dock-actions">
+      <span id="reauth" hidden><button id="reauth-button" type="button" class="primary">Sign in again</button></span>
+      <span id="pending-actions" hidden>
+        <button id="review-all" type="button" aria-expanded="false" aria-controls="pending-review">Review</button>
+        <button id="discard-all" type="button">Discard</button>
+        <button id="save-all" type="button" class="primary">Save all…</button>
+      </span>
+    </div>
+  </div>
+  <div id="pending-review" class="pending-review" hidden>
+    <h2 class="review-title">Unsaved changes</h2>
+    <ul id="pending-list" class="changes"></ul>
+    <p class="note">The server checks them and the confirmation shows exactly what it will write.</p>
+  </div>
+</div>
 
 <dialog id="confirm" aria-labelledby="confirm-title">
   <h2 id="confirm-title">Switch the recipe providers?</h2>

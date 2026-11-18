@@ -459,7 +459,7 @@ them with `allowSandbox` only.
 
 ### 13. Owner console: switching the picture provider (functions/README.md "The owner console")
 
-A web page with a drop-down of the provider profiles, on Firebase Hosting
+A dashboard page (what is in force now, the provider profiles and the runtime settings in cards), on Firebase Hosting
 (`https://bestbefore-f9ee1.firebaseapp.com/`). Until these are done the switch works from a shell
 only (`npm run admin -- providers list | use <profile> --apply --project bestbefore-f9ee1`, "Provider
 profiles"), and the board shows the setup in force with a link that leads nowhere yet.

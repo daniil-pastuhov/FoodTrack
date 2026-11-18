@@ -43,7 +43,7 @@ the caller. The client wire contract is in [CONTRACT.md](CONTRACT.md).
 | `src/emulatorFakes.ts` | Fake stores and LLM, only inside the Functions emulator with `EMULATOR_FAKES=true` and a `demo-` project |
 | `src/index.ts` | Triggers, params, secrets, per-function limits |
 | `certs/AppleRootCA-G3.cer` | Apple's public root CA (SHA-256 `63:34:3A:BF:…:91:79`, checked by a test) |
-| `../owner-console/` | The owner console: a static page on Firebase Hosting with the provider setup's drop-down (text and pictures); and the runtime settings; everything it shows or changes goes through `getProviderProfiles` / `setProviderProfile` and `getOwnerSettings` / `setOwnerSettings` (see "The owner console") |
+| `../owner-console/` | The owner console: a static dashboard page on Firebase Hosting: what is in force now, the provider profiles (text and pictures) and the runtime settings in cards; everything it shows or changes goes through `getProviderProfiles` / `setProviderProfile` and `getOwnerSettings` / `setOwnerSettings` (see "The owner console") |
 | `../firestore.rules` | Denies every client read and write; only the Admin SDK touches Firestore |
 | `../firestore.indexes.json` | Sweeper indexes and the TTL policies on `generations.expiresAt` and `recipeImages.expiresAt` |
 
@@ -2236,10 +2236,20 @@ bucket) and `gcloud iam roles delete ownerBoardWriter --project=bestbefore-f9ee1
 
 ## The owner console
 
-A web page with a drop-down of the provider profiles ("Provider profiles"): the setup in force,
-each profile's readiness (and what is missing), the last change, and a switch behind a
-confirmation dialog; below it, the other runtime settings of `config/runtime` ("Settings"
-below). The board stays static and request-free and only links to it.
+A web page laid out as a dashboard. At the top, a **status strip** of what is in force now: the
+provider setup (text, pictures, fallback; ready, or not ready and why, from `getProviderProfiles`),
+recipes from packs on or paused (by whom, since when; a budget pause says only the command lifts
+it), today's spend against today's ceiling and recipes against `dailyCap` (meters), the second
+check's mode, the free-recipe offer with today's grants and free recipes used, and sandbox
+purchases. Below it, **one card per group** in a responsive grid (one column on a phone, two or
+three on a desktop): **Providers** (each profile with its readiness and what is missing, the last
+change, and a switch behind a confirmation dialog), then one card per section of the settings
+registry ("Settings" below), each with its title, a line saying what it is for, the figures worked
+out for it (the spending card shows today's ceiling as a worked line from the values in force:
+min(absolute, base + share × net per recipe × net recipes sold in 7 days)), its settings, and the
+read-only fields that belong with it, folded away. A header link opens the board (its address is
+`getOwnerSettings`' `boardUrl`, from `BOARD_BUCKET`). The board stays static and request-free
+and only links to the console.
 
 **Where it lives, and why not beside the board.** The board's private bucket is opened through
 Google's authenticated download, which protects the download only: the page is then served from a
@@ -2330,14 +2340,28 @@ emulator's Google user.
 
 ### Settings (`config/runtime` from the console)
 
-Below the provider profiles the console shows every other runtime setting the owner may change,
-instead of hand-editing `config/runtime`: sections, each setting's value in force, its default,
-"set here" / "changed from default" and when it was last changed (and how), a **Save** per section,
-and, read-only, what can't be changed there and why. The page holds none of it: it draws what
-`getOwnerSettings` returns, so a new setting is one entry in the registry,
+Beside the provider profiles the console shows every other runtime setting the owner may change,
+instead of hand-editing `config/runtime`, as cards: one per section, each setting compactly with
+its label, control, a "sensitive" and a "changed from default" mark (with the default), and,
+folded under "About", its help, default, "set here" / "default in force", when it was last changed
+(and how), its range on the page and the command for anything larger; read-only fields (what can't
+be changed there and why) sit folded in the card they belong to (`ReadOnlyDef.section`; the
+models with Providers, the raw prices with the spending limits), the rest in a last card. An
+unsaved change marks its setting and its card (a count, **Save…** and **Discard** on the card), and
+the dock at the bottom of the page counts them all, with a **Review** list (before → after, the
+sensitive ones marked), **Discard** and **Save all…**. A save from a card or from the dock is the
+same flow (below): one dry run, the confirmation showing what the server will write, the save bound
+to it; what is typed in other cards stays across the redraw. The page holds none of it: it draws
+what `getOwnerSettings` returns, so a new setting is one entry in the registry,
 `src/core/ownerSettings.ts` (`SETTINGS`: id = field path, section, label, help, control
 (on/off, number with min/max/step, choice, ticks from the quiz's ids, the menu table) and whether
-it is sensitive), and no page change. The same core is behind the admin command:
+it is sensitive), and lands in its section's card with no page change; a new section is one
+`SECTIONS` entry (`wide`: the card spans two columns). Besides the settings, `getOwnerSettings`
+answers with `status` (the strip's tiles, `statusOf`), per section `facts` (`sectionFacts`:
+today's ceiling worked out and what is booked today; today's free-recipe grants and use),
+`today` (the raw figures: today's `stats` and the `netCreditsGranted` of the 6 days before,
+read-only, 7 document reads; left out, never failing the call, if they can't be read) and
+`boardUrl`. The same core is behind the admin command:
 
 ```bash
 cd functions
@@ -2501,7 +2525,8 @@ recursively; so a new field can't be forgotten. It also fails on a setting with 
 nor a `WEB_UNRESTRICTED` reason.
 
 **Cost**: Hosting's free tier (a few KB, a few visits); four callables idle at zero instances, a
-few calls a month (each has its own instance and its own `OwnerCallGate`, so the per-minute
+few calls a month (each `getOwnerSettings` or save reads `config/runtime`, the last 100 audit
+records and 7 `stats` documents) (each has its own instance and its own `OwnerCallGate`, so the per-minute
 ceilings above hold per function). **Turn it off**: remove `config/owner` (nobody gets in), or delete the
 functions (`npx firebase functions:delete getProviderProfiles setProviderProfile getOwnerSettings setOwnerSettings --region europe-west1`,
 and remove their exports from `src/index.ts`) and `npx firebase hosting:disable`.
