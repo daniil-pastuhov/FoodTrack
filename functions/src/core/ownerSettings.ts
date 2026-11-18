@@ -248,7 +248,7 @@ export const SETTINGS: readonly SettingDef[] = [
   },
   {
     id: "netMicroUsdPerCredit", web: LOWER_ONLY, section: "spending", label: "Net revenue per recipe sold (estimate)",
-    help: "What one production recipe nets after store fees and VAT, conservatively; the revenue part of the ceiling is worked out with it.",
+    help: "What one recipe bought in a store nets after store fees and VAT, conservatively; the revenue part of the ceiling is worked out with it (net recipes sold in the last 7 days × this × the share above). Only store-bought production recipes count: free recipes (the welcome grant) and test purchases add nothing to it, while the model spend of what free recipes pay for counts in the spend like everyone's.",
     control: usd(1, 0.001), sensitive: SPEND, path: ["netMicroUsdPerCredit"], read: top("netMicroUsdPerCredit"),
   },
   {

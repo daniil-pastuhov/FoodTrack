@@ -281,6 +281,8 @@ function dailyTable(days: BoardDay[]): string {
     ["Picture recipes", (d) => int(d.imageRequests)],
     ["Reports", (d) => int(d.reports)],
     ["Recipes refunded", (d) => int(d.refundedCredits)],
+    ["Free recipes used", (d) => (d.welcomeUsedKnown ? int(d.welcomeUsedCredits) : "–")],
+    ["Free recipes' cost (est.)", (d) => (d.welcomeUsedKnown ? usd(d.welcomeUsedMicroUsd, 3) : "–")],
     ["Worst-case calls", (d) => int(d.unknownUsageCalls)],
     ["Tokens in", (d) => compact(d.inputTokens)],
     ["Tokens out", (d) => compact(d.outputTokens)],
@@ -572,6 +574,12 @@ export function renderBoardHtml(b: Board, hosted?: HostedOptions): string {
 
   const periodSpend = b.period.spentMicroUsd + b.period.reservedMicroUsd;
   const usage = firebaseUsageUrl(b.project);
+  const f = b.free;
+  /** False for a period with no figure at all ("unknown", not zero). */
+  const freeKnown = f.knownSince !== null || f.unknownDays === 0;
+  const freeCaveat = f.unknownDays > 0
+    ? ` Free recipes used and their cost are counted from ${f.knownSince ? esc(f.knownSince) : "the next settled call"} on: ${esc(int(f.unknownDays))} ${f.unknownDays === 1 ? "day" : "days"} of the period with calls came before they were recorded, so they are left out (not zero).`
+    : "";
   const s = b.sales;
   const p = b.period;
 
@@ -599,6 +607,7 @@ settling replaces it by the measured cost. Free recipes are not sales and do not
 ${stat(`${b.month.label} to date`, esc(usd(b.month.toDateMicroUsd)))}
 ${stat(`At most by month end, if every remaining day (${b.month.remainingDays}) reached the ${usd(b.dailySpendMaxMicroUsd)} maximum`, esc(usd(b.month.worstCaseMicroUsd)))}
 ${stat("This period", esc(usd(periodSpend)))}
+${stat("Of which free recipes (welcome grant), estimated", freeKnown ? esc(usd(f.costMicroUsd)) : "unknown")}
 </div>
 <p class="note">These amounts are the server's own estimate, from the token counts of each call and the price table
 (${esc(usd(b.prices.inputUsdPerMTok * 1e6))} in / ${esc(usd(b.prices.outputUsdPerMTok * 1e6))} out per 1M tokens), booked on the day each call was reserved.
@@ -616,6 +625,12 @@ ${stat("Recipes granted", esc(int(s.total.credits)))}
 ${stat("Refunded since", esc(int(s.total.refunded)))}
 ${stat("Net recipes", esc(int(s.total.net)))}
 ${stat(`Estimated net revenue (config's conservative ${usd(b.netMicroUsdPerCredit)} a recipe; not the store payout)`, esc(usd(s.estimatedNetMicroUsd)))}
+${stat("Estimated margin: net revenue minus all model spend in the period (free recipes' included)", esc(usd(s.estimatedMarginMicroUsd)))}
+</div>
+<div class="stats">
+${stat("Free recipes granted (welcome grant, not sales)", esc(int(f.granted)))}
+${stat("Free recipes used", freeKnown ? esc(int(f.used)) : "unknown")}
+${stat("Their estimated model cost", freeKnown ? esc(usd(f.costMicroUsd)) : "unknown")}
 </div>
 <div class="pair">
 <div class="scroll">${totalsTable("By pack", packsShown.map((k) => [PACK_SHORT[k], s.byPack[k]] as [string, Totals]))}</div>
@@ -628,7 +643,11 @@ ${stat(`Estimated net revenue (config's conservative ${usd(b.netMicroUsdPerCredi
 </div>
 <p class="note">Production purchases granted in the period, by the day they were granted. "Refunded since" counts store refunds of
 those purchases up to now, whenever they came. Sandbox purchases are never counted as sales:
-${esc(int(s.sandbox.purchases))} in the period, worth ${esc(int(s.sandbox.credits))} recipes.</p>
+${esc(int(s.sandbox.purchases))} in the period, worth ${esc(int(s.sandbox.credits))} recipes.
+Free recipes are never sales either: they add nothing to the net revenue or the spend ceiling, while the model spend of what they pay
+for is in the spend like everyone's. Their cost is each charge's share of its call's estimated spend (pro rata when a charge took
+free and bought recipes); a refunded failure costs no one's recipes, so it stays in the total only. The margin is an estimate:
+revenue from the config's conservative figure by the day a purchase was granted, spend by the day a call was reserved.${freeCaveat}</p>
 </section>
 
 <section aria-labelledby="h-gen"><h2 id="h-gen">Generations</h2>
@@ -678,7 +697,11 @@ export function boardSummary(b: Board): string[] {
       `iOS (App Store) ${int(s.byStore.appstore.purchases)} packs, ${int(s.byStore.appstore.credits)} recipes; ` +
       `Android (Google Play) ${int(s.byStore.play.purchases)} packs, ${int(s.byStore.play.credits)} recipes. Sandbox: ${int(s.sandbox.purchases)} purchases, ${int(s.sandbox.credits)} recipes.`,
     `Free recipes (welcome grant, not sales): ${int(t.welcomeGrants)} grants today (${int(t.welcomeCredits)} recipes) of at most ${int(b.welcome.perDay)}; ` +
-      `${int(p.welcomeGrants)} in the period (${int(p.welcomeCredits)} recipes); ${b.welcome.recipes > 0 ? `${int(b.welcome.recipes)} per sign-in` : "off"}.`,
+      `${int(p.welcomeGrants)} in the period (${int(p.welcomeCredits)} recipes); ${b.welcome.recipes > 0 ? `${int(b.welcome.recipes)} per sign-in` : "off"}; ` +
+      (b.free.knownSince !== null || b.free.unknownDays === 0
+        ? `${int(b.free.used)} used, estimated model cost ${usd(b.free.costMicroUsd)}${b.free.unknownDays > 0 ? ` (from ${b.free.knownSince}; ${b.free.unknownDays} earlier days with calls not recorded)` : ""}.`
+        : "used and cost not recorded yet.") +
+      ` Estimated margin (net revenue minus all model spend): ${usd(s.estimatedMarginMicroUsd)}.`,
     `Generations: ${int(p.succeeded)} written, ${int(p.contentFailures)} content failures, ${int(p.infraFailures)} infrastructure failures, ` +
       `${int(p.qualityFailures)} quality refusals; ${int(p.refundedCredits)} recipes refunded; ${int(p.unknownUsageCalls)} calls at worst case.`,
     `Picture setup: ${b.pictures.profile} (${b.pictures.provider === "off" ? "off" : `${b.pictures.provider}/${b.pictures.model}, fallback ${b.pictures.fallbackModel || "none"}`}); ` +
@@ -732,6 +755,10 @@ export function boardJson(b: Board): Record<string, unknown> {
       recipesToday: t.welcomeCredits,
       grantsInPeriod: p.welcomeGrants,
       recipesInPeriod: p.welcomeCredits,
+      // null: not recorded for any day of the period yet (unknown, not zero).
+      usedInPeriod: b.free.knownSince !== null || b.free.unknownDays === 0 ? b.free.used : null,
+      costInPeriodMicroUsd: b.free.knownSince !== null || b.free.unknownDays === 0 ? b.free.costMicroUsd : null,
+      daysWithoutFigure: b.free.unknownDays,
     },
     unspentRecipes: { recipes: b.holders.recipes, accounts: b.holders.accounts },
     negativeBalanceTotal: b.ledger.negativeBalanceTotal,
@@ -755,6 +782,7 @@ export function boardJson(b: Board): Record<string, unknown> {
     sales: {
       ...totals(s.total),
       estimatedNetRevenueMicroUsd: s.estimatedNetMicroUsd,
+      estimatedMarginMicroUsd: s.estimatedMarginMicroUsd,
       byStore: { appstore: totals(s.byStore.appstore), play: totals(s.byStore.play) },
       byStoreAndPack: {
         appstore: Object.fromEntries(PACKS.map((k) => [k, totals(s.byStoreAndPack.appstore[k])])),

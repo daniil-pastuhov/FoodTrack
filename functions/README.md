@@ -181,6 +181,19 @@ receipt, so it is bounded like money:
   `welcomeUnspent` and `welcomeSpent`, so neither side's bought or free use is hidden by the
   other's. They are lost with the
   account like any unused recipes (`forfeitedBalance`), and move with `mergeBalance`.
+- **What they cost, for the owner** (never money; nothing reads it back). Every settle also adds
+  to `stats/{day}` (the call's reservation day, in the transaction that already settles it, no
+  extra read) `welcomeUsedCredits`, the free recipes the charge took, and `welcomeUsedMicroUsd`,
+  their share of the call's booked spend: **pro rata by recipes**, booked spend × free recipes
+  charged ÷ recipes charged (`welcomeShareMicroUsd`). A charge wholly from free recipes books all
+  of its spend there, one that took the last free recipe and a bought one half; a refunded failure
+  charges no one's recipes and books nothing there (its spend stays in `spentMicroUsd`, like every
+  call's, free or bought: the spend ceilings, the per-account brake and the board all count it). A
+  closed account's settle books nothing. Both fields are written on every settle, 0 included, so a
+  day that has them was counted; days from before have none, and the board shows them as unknown,
+  not as free. The board shows free recipes granted, used and their cost, and the margin (net
+  revenue minus all model spend). Not shown: free recipes still unspent across accounts (a
+  merged-away tombstone keeps its `welcomeUnspent`, so a sum over `users` would count it twice).
 - **The offer.** `getWelcomeOffer` (no sign-in) and `welcomeRecipes` beside every `balance` say
   how many a claim grants now: `recipes`, or 0 when the grant is off, generation is paused
   (`generationEnabled: false`, the kill switch also stops grants) or today's grants are used up.
@@ -551,8 +564,9 @@ booked at its worst case (0.143 × 3 = 0.43), about eight at measured cost. Menu
   - `dailySpendRevenueFraction: 0.25`: a quarter of the week's estimated net revenue may go to
     model spend on top of the base. Each credit sold adds 0.25 × 0.12 = USD 0.03 to every day's
     ceiling for 7 days; it reaches the maximum at (2.00 − 1.20) / 0.03 ≈ 27 credits sold in a
-    week. Refunds subtract (`stats/{day}.netCreditsGranted`, production only; sandbox never
-    counts).
+    week. Refunds subtract (`stats/{day}.netCreditsGranted`, production only; sandbox and
+    free recipes, the welcome grant, never count: they never raise the ceiling, while the spend of
+    what they pay for counts against it like any call's).
   - `dailySpendMaxMicroUsd: 2000000` (USD 2.00/day): **at most USD 60 a month of model spend**
     (≈ 630 NOK at 10.5 NOK/USD), whatever the sales. The ceiling is an estimate against list
     prices; settle books measured costs, so real spend is usually lower.
@@ -1716,7 +1730,9 @@ Server-only. Documents:
   spend, part of `spentMicroUsd`), `imageGivenBackCredits` (part of `refundedCredits`),
   `netCreditsGranted` (production credits granted minus store refunds that day),
   `sandboxGrants`, `sandboxCredits`, `welcomeGrants` and `welcomeCredits` (welcome grants made
-  that day and their free recipes; never in `netCreditsGranted`), `ceilingMicroUsd` (the spend
+  that day and their free recipes; never in `netCreditsGranted`), `welcomeUsedCredits` and
+  `welcomeUsedMicroUsd` (free recipes charged by the day's settles and their pro-rata share of the
+  booked spend, "Welcome grant"; written by every settle, 0 included, absent on older days), `ceilingMicroUsd` (the spend
   ceiling the day's last reservation was checked against: the board's ceiling history),
   `spendAlerts` (`{"50" | "80" | "100": ms}`: when each `spend_threshold` was logged) and
   `dailyCapReachedAt` (ms of the first `DAILY_CAP` refusal). A call is booked on the day it was
@@ -2060,6 +2076,8 @@ Application Default Credentials impersonating `recipe-functions@bestbefore-f9ee1
 | Estimated net revenue | net recipes × `netMicroUsdPerCredit`: the config's conservative estimate, not a store payout |
 | Sandbox purchases | the same query, `env: "sandbox"`, shown apart and never as sales |
 | Free recipes (welcome grant) | `stats/{day}.welcomeGrants` / `welcomeCredits` today and over the period, against `config/runtime.welcome.perDay`; never counted as sales (`board.json` `welcome`) |
+| Free recipes used and their estimated cost (Purchases, Model spend "of which free recipes", two daily columns) | `stats/{day}.welcomeUsedCredits` / `welcomeUsedMicroUsd` ("Welcome grant", "What they cost"), summed over the days that record them; a day with settled calls (`llmCalls`) and no such field is from before and left out, the page saying from when it counts and how many days it leaves out ("unknown" when no day of the period has it; `board.json` `welcome.usedInPeriod` / `costInPeriodMicroUsd` null, `daysWithoutFigure`) |
+| Estimated margin | estimated net revenue minus the period's whole model spend (`spentMicroUsd + reservedMicroUsd`, free recipes' included): revenue by the day a purchase was granted, spend by the day a call was reserved; an estimate (`board.json` `sales.estimatedMarginMicroUsd`) |
 | Recipe pictures: the profile in force, read-only, with a link to the owner console | `config/runtime.image` (as `parseRuntimeConfig` reads it, over the code's defaults) matched to a provider profile, `custom` when set by hand; "On" when it is priced and `costs.recipeImage` is on (`board.json` `pictures`). No extra read. The link is `https://<project>.firebaseapp.com/`: the board itself still makes no request |
 | Unspent recipes | one aggregation: count and `sum(balance)` of `users` with `balance > 0` |
 | Negative balances | `stats/ledger.negativeBalanceTotal` (the sweeper's last sum) |

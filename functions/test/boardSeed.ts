@@ -138,6 +138,9 @@ export async function seedBoardData(db: Firestore, nowMs: number, days = 30): Pr
       ...(i > 0 ? { ceilingMicroUsd: i > 20 ? 1_200_000 : 1_200_000 + Math.min(800_000, (days - i) * 30_000) } : {}),
       ...(i === 4 ? { spendAlerts: { "50": today - i * DAY + 9 * 3_600_000, "80": today - i * DAY + 13 * 3_600_000, "100": today - i * DAY + 18 * 3_600_000 } } : {}),
       ...(i < 10 ? { welcomeGrants: i === 4 ? 200 : 5 + Math.floor(rnd() * 40), welcomeCredits: 3 * (i === 4 ? 200 : 20) } : {}),
+      // Free recipes charged and their share of the spend, recorded for the last week only (older
+      // days are from before the fields existed). No rnd(): the rest of the seed stays as it was.
+      ...(i < 7 ? { welcomeUsedCredits: Math.min(recipes, 8 + i), welcomeUsedMicroUsd: Math.round((spent * Math.min(recipes, 8 + i)) / Math.max(1, recipes + menus * 4)) } : {}),
     });
     if (i < days) statsDays++;
   }
