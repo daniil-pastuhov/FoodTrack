@@ -22,7 +22,7 @@
 import { createHash } from "node:crypto";
 import { FieldPath, FieldValue, Timestamp, type Firestore } from "firebase-admin/firestore";
 import { HttpsError } from "firebase-functions/v2/https";
-import { COST_MAX, DEFAULT_COSTS, JUDGE_LOG, REVENUE_WINDOW_DAYS, DEFAULT_IMAGE_SELECTION, DEFAULT_MENU_DAYS, DEFAULT_MENU_SETS, DEFAULT_TEXT_SELECTION, MAX_STEP_IMAGES_LIMIT, MENU_COURSES, MENU_DAYS, type Costs } from "../constants";
+import { COST_MAX, DEFAULT_COSTS, DEFAULT_PRICES, JUDGE_LOG, PROMPT_REVIEW, REVENUE_WINDOW_DAYS, DEFAULT_IMAGE_SELECTION, DEFAULT_MENU_DAYS, DEFAULT_MENU_SETS, DEFAULT_TEXT_SELECTION, MAX_STEP_IMAGES_LIMIT, MENU_COURSES, MENU_DAYS, type Costs } from "../constants";
 import {
   DEFAULT_RUNTIME_CONFIG,
   OUTPUT_JUDGE_MODES,
@@ -40,6 +40,10 @@ import {
 import type { TextTarget } from "../ports";
 import { allProviders } from "../providers/registry";
 import { TASTE_CATALOGUE, type TasteCatalogue } from "../taste/catalogue";
+import { latestPromptReviews, reviewWorstCaseMicroUsd, type PromptReviewView } from "./promptReview";
+
+/** The weekly review's worst case at the default prices (PROMPT_REVIEW's caps). */
+const PROMPT_REVIEW_WORST_MICRO_USD = reviewWorstCaseMicroUsd(DEFAULT_PRICES, PROMPT_REVIEW.maxInputBytes);
 import {
   RUNTIME_DOC,
   SwitchRefused,
@@ -70,14 +74,15 @@ export const WEB_PRICE_STEP = 1;
 
 // --- The registry ---------------------------------------------------------------------------
 
-export type SectionId = "onoff" | "spending" | "perAccount" | "sandbox" | "costs" | "welcome" | "pictures" | "taste" | "reports" | "balances";
+export type SectionId = "onoff" | "spending" | "perAccount" | "sandbox" | "costs" | "welcome" | "pictures" | "taste" | "reports" | "balances" | "promptReview";
 
 /**
  * The console's groups, in this order: each is a card on the page (title, one line of help, its
  * settings, the read-only fields that belong with it, and any figures listSettings works out for
  * it, sectionFacts). `wide`: the card spans two columns of the page's grid (a table, a long list).
+ * `reviews`: the card also shows the weekly prompt review's latest reports (SettingsView, `reviews`).
  */
-export const SECTIONS: readonly { id: SectionId; title: string; help: string; wide?: boolean }[] = [
+export const SECTIONS: readonly { id: SectionId; title: string; help: string; wide?: boolean; reviews?: true }[] = [
   { id: "onoff", title: "On/off", help: "Switches that start or stop parts of the service at once." },
   { id: "spending", title: "Spending limits", help: "Estimated model spend per UTC day, across everyone. At a ceiling new recipes from packs are refused (nothing is charged)." },
   { id: "perAccount", title: "Limits per account", help: "Brakes on what one account can do; each refusal says no recipes were taken." },
@@ -88,6 +93,7 @@ export const SECTIONS: readonly { id: SectionId; title: string; help: string; wi
   { id: "taste", title: "Taste quiz", help: "Steps and options left out of the quiz and dropped from requests, without a deploy.", wide: true },
   { id: "reports", title: "Reports", help: "\"Report this recipe\": how many, and how long they are kept." },
   { id: "balances", title: "Provider balances", help: "The hourly balance check logs provider_balance_low (alerted on) under these thresholds. Empty: not checked." },
+  { id: "promptReview", title: "Weekly prompt review", help: "Every Monday a model reads last week's second-check answers and advises on the prompts. Advice only: it never changes a prompt.", wide: true, reviews: true },
 ];
 
 export interface Option {
@@ -354,6 +360,12 @@ export const SETTINGS: readonly SettingDef[] = [
   { id: "reports.keepDays", web: { kind: "range", min: 30, safe: "higher" }, section: "reports", label: "Days a report is kept", help: "Deleted by Firestore's TTL after this.", control: count(1, 400, "days"), sensitive: REPORTS, path: ["reports", "keepDays"], read: (c) => c.reports.keepDays },
   // Provider balances
   ...balanceSettings(),
+  // Weekly prompt review (core/promptReview.ts)
+  {
+    id: "promptReviewEnabled", section: "promptReview", label: "Run the weekly prompt review",
+    help: `Mondays at 03:41 UTC, on the week before: one call to ${PROMPT_REVIEW.model} with the week's counts, a sample of the answers that were not ok and the current prompts. At most USD ${(PROMPT_REVIEW_WORST_MICRO_USD / USD).toFixed(2)} a run at today's prices, booked against the day's spend ceiling; nothing with fewer than ${PROMPT_REVIEW.minAnswers} answers in the week. Off: nothing is read or spent.`,
+    control: { kind: "toggle" }, path: ["promptReviewEnabled"], read: top("promptReviewEnabled"),
+  },
 ];
 
 /** Fields shown but not editable here, with why. */
@@ -398,6 +410,7 @@ export const EXCLUDED: Readonly<Record<string, string>> = {
 export const WEB_UNRESTRICTED: Readonly<Record<string, string>> = {
   "image.maxStepImages": "0 to 4 step pictures: each is priced into the recipe with step pictures and booked against the spend ceilings, which the console can't raise past its envelope.",
   "tasteQuiz.hidden": "Hiding quiz steps or options only leaves soft preferences out of the quiz and the prompt; it charges, gives or spends nothing.",
+  promptReviewEnabled: "The weekly review spends at most its small worst case once a week, booked against the day's spend ceiling, and changes no prompt: on or off is harmless either way.",
 };
 
 /** Maps keyed by an id, edited as one setting per known key ("<field>.<key>"); other keys are kept as stored. */
@@ -597,7 +610,21 @@ export interface TodayFigures {
 
 export interface SettingsView {
   /** The console's groups (SECTIONS); `facts`: figures worked out for the group (sectionFacts). */
-  sections: { id: string; title: string; help: string; wide: boolean; facts: Fact[]; settings: SettingView[] }[];
+  sections: {
+    id: string;
+    title: string;
+    help: string;
+    wide: boolean;
+    facts: Fact[];
+    settings: SettingView[];
+    /**
+     * Only on the card that shows them (SECTIONS `reviews`): the weekly prompt review
+     * (core/promptReview.ts), the latest report, then the latest one with advice when the latest
+     * has none; empty when there is none yet; null when they could not be read. Model text: the
+     * page shows it as text, never as HTML.
+     */
+    reviews?: PromptReviewView[] | null;
+  }[];
   /** `section`: the card it belongs in (a section id, "providers" or "other"). */
   readOnly: { id: string; section: string; label: string; value: unknown; default: unknown; reason: string }[];
   /** What is in force right now, for the page's status strip (statusOf). */
@@ -805,7 +832,7 @@ export function settingsViewOf(
   d: SettingDefaults,
   last = new Map<string, { at: string; via: string }>(),
   lastChange: SettingsView["lastChange"] = null,
-  extra: { today?: TodayFigures | null; boardUrl?: string | null } = {},
+  extra: { today?: TodayFigures | null; boardUrl?: string | null; promptReviews?: PromptReviewView[] | null } = {},
 ): SettingsView {
   const cfg = parse(data, d);
   const empty = parse({}, d);
@@ -819,6 +846,7 @@ export function settingsViewOf(
       wide: s.wide === true,
       facts: sectionFacts(s.id, cfg, today),
       settings: SETTINGS.filter((x) => x.section === s.id).map((x) => settingView(x, data, cfg, d, invalid, last)),
+      ...(s.reviews ? { reviews: extra.promptReviews ?? null } : {}),
     })).filter((s) => s.settings.length > 0),
     readOnly: READ_ONLY.map((r) => ({ id: r.id, section: r.section, label: r.label, value: r.read(cfg) ?? null, default: r.read(empty) ?? null, reason: r.reason })),
     status: statusOf(data, cfg, today),
@@ -856,15 +884,16 @@ export async function listSettings(env: Pick<SwitchEnv, "db" | "now" | "imageDef
   const nowMs = env.now();
   const day = utcDay(nowMs);
   const statDays = Array.from({ length: REVENUE_WINDOW_DAYS }, (_, i) => utcDay(nowMs - i * 86_400_000));
-  const [snap, last, stats] = await Promise.all([
+  const [snap, last, stats, promptReviews] = await Promise.all([
     env.db.doc(RUNTIME_DOC).get(),
     lastChanges(env.db),
     env.db.getAll(...statDays.map((x) => statsRef(env.db, x))).then((s) => s.map((x) => x.data() as Data | undefined), () => null),
+    latestPromptReviews(env.db).catch(() => null),
   ]);
   const data = (snap.data() ?? {}) as Data;
   const d = settingDefaultsOf(env);
   const today = stats ? todayFiguresOf(parse(data, d), day, stats) : null;
-  return settingsViewOf(data, d, last.per, last.latest, { today, boardUrl: env.boardUrl ?? null });
+  return settingsViewOf(data, d, last.per, last.latest, { today, boardUrl: env.boardUrl ?? null, promptReviews });
 }
 
 // --- Planning -------------------------------------------------------------------------------

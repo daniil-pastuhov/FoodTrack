@@ -15,8 +15,11 @@ import { writeFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 import { Timestamp, type Firestore } from "firebase-admin/firestore";
 import { JUDGE_LOG } from "../constants";
-import { JUDGE_ISSUES, JUDGE_WHERE } from "../ports";
+import { JUDGE_SUMMARY_GROUPS as GROUPS, summariseJudgeAnswers, type JudgeRow, type JudgeSummary } from "../core/judgeLog";
 import { AdminRefusal } from "./accountRequests";
+
+// The summary is the weekly prompt review's too (core/promptReview.ts), so it lives in core/judgeLog.ts.
+export { summariseJudgeAnswers, type JudgeRow, type JudgeSummary };
 
 export const JUDGE_USAGE = `usage:
   npm run admin -- judge summary [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--project <id>]
@@ -61,9 +64,6 @@ export function parseJudgeArgs(argv: string[], nowMs: number, defaultProject: st
   return { command, project: values.project ?? defaultProject, fromMs, toMs, ...(values.out !== undefined ? { out: values.out } : {}) };
 }
 
-/** One stored answer as read back: the document's fields, `at` as an ISO time, without `expiresAt`. */
-export type JudgeRow = Record<string, unknown> & { at: string };
-
 /** The answers written in [fromMs, toMs), oldest first; one range query on `at`, in pages. */
 export async function readJudgeAnswers(db: Firestore, fromMs: number, toMs: number, max = JUDGE_READ_MAX): Promise<{ rows: JudgeRow[]; truncated: boolean }> {
   const rows: JudgeRow[] = [];
@@ -84,83 +84,6 @@ export async function readJudgeAnswers(db: Firestore, fromMs: number, toMs: numb
     if (snap.size < 500) return { rows, truncated: false };
     q = q.startAfter(snap.docs[snap.docs.length - 1]);
   }
-}
-
-export interface JudgeSummary {
-  total: number;
-  verdicts: Record<string, number>;
-  issues: Record<string, number>;
-  where: Record<string, number>;
-  quality: Record<string, number>;
-  latencyMs: { p50: number; p95: number; max: number } | null;
-  tokens: { input: number; output: number; thinking: number } | null;
-  by: Record<string, Record<string, { total: number; notOk: number; failed: number; qualityAvg: number | null; issues: number }>>;
-}
-
-const GROUPS = ["language", "judgeModel", "judgeVersion", "promptHash", "textModel", "mode", "kind"] as const;
-
-const bump = (m: Record<string, number>, k: string, n = 1) => {
-  m[k] = (m[k] ?? 0) + n;
-};
-
-function pct(sorted: number[], p: number): number {
-  return sorted[Math.min(sorted.length - 1, Math.max(0, Math.ceil(p * sorted.length) - 1))];
-}
-
-export function summariseJudgeAnswers(rows: readonly JudgeRow[]): JudgeSummary {
-  const verdicts: Record<string, number> = {};
-  const issues: Record<string, number> = Object.fromEntries(JUDGE_ISSUES.map((i) => [i, 0]));
-  const where: Record<string, number> = {};
-  const quality: Record<string, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, none: 0 };
-  const latencies: number[] = [];
-  const tokens = { input: 0, output: 0, thinking: 0 };
-  let withTokens = 0;
-  const groups: Record<string, Record<string, { total: number; notOk: number; failed: number; qSum: number; qN: number; issues: number }>> = {};
-  for (const r of rows) {
-    const verdict = typeof r.verdict === "string" ? r.verdict : "failed";
-    bump(verdicts, verdict);
-    const is = Array.isArray(r.issues) ? r.issues.filter((i): i is string => typeof i === "string") : [];
-    for (const i of is) bump(issues, i);
-    if (typeof r.where === "string" && (JUDGE_WHERE as readonly string[]).includes(r.where)) bump(where, r.where);
-    const q = typeof r.quality === "number" && Number.isInteger(r.quality) && r.quality >= 1 && r.quality <= 5 ? r.quality : null;
-    bump(quality, q === null ? "none" : String(q));
-    if (typeof r.latencyMs === "number") latencies.push(r.latencyMs);
-    const u = r.usage as { inputTokens?: number; outputTokens?: number; thinkingTokens?: number } | null | undefined;
-    if (u) {
-      withTokens++;
-      tokens.input += u.inputTokens ?? 0;
-      tokens.output += u.outputTokens ?? 0;
-      tokens.thinking += u.thinkingTokens ?? 0;
-    }
-    for (const g of GROUPS) {
-      const key = r[g] === undefined || r[g] === null ? "-" : String(r[g]);
-      const m = (groups[g] ??= {});
-      const e = (m[key] ??= { total: 0, notOk: 0, failed: 0, qSum: 0, qN: 0, issues: 0 });
-      e.total++;
-      if (verdict === "failed") e.failed++;
-      else if (verdict !== "ok") e.notOk++;
-      if (q !== null) {
-        e.qSum += q;
-        e.qN++;
-      }
-      e.issues += is.length;
-    }
-  }
-  latencies.sort((a, b) => a - b);
-  const by: JudgeSummary["by"] = {};
-  for (const [g, m] of Object.entries(groups)) {
-    by[g] = Object.fromEntries(Object.entries(m).map(([k, e]) => [k, { total: e.total, notOk: e.notOk, failed: e.failed, qualityAvg: e.qN ? Math.round((e.qSum / e.qN) * 100) / 100 : null, issues: e.issues }]));
-  }
-  return {
-    total: rows.length,
-    verdicts,
-    issues,
-    where,
-    quality,
-    latencyMs: latencies.length ? { p50: pct(latencies, 0.5), p95: pct(latencies, 0.95), max: latencies[latencies.length - 1] } : null,
-    tokens: withTokens ? { input: Math.round(tokens.input / withTokens), output: Math.round(tokens.output / withTokens), thinking: Math.round(tokens.thinking / withTokens) } : null,
-    by,
-  };
 }
 
 const share = (n: number, total: number) => (total ? `${n} (${((100 * n) / total).toFixed(1)}%)` : String(n));

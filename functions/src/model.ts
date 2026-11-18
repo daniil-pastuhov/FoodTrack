@@ -382,6 +382,11 @@ export interface RuntimeConfig {
    */
   outputJudgeKeepText: boolean;
   /**
+   * The weekly prompt review (core/promptReview.ts): on by default. Off, the Monday run reads and
+   * spends nothing. Invalid reads as `false` (nothing spent).
+   */
+  promptReviewEnabled: boolean;
+  /**
    * The table in force. Its `recipeImage` is left out when pictures cannot be made:
    * `recipeImage: 0`, the provider "off", or no price for the selected provider and model.
    */
@@ -482,6 +487,7 @@ export const DEFAULT_RUNTIME_CONFIG: Readonly<RuntimeConfig> = {
   rejectedPromptsPerDay: 5,
   outputJudge: "off",
   outputJudgeKeepText: false,
+  promptReviewEnabled: true,
   costs: DEFAULT_COSTS,
   prices: { ...DEFAULT_PRICES, imageUsdPerImage: defaultImagePrices() },
   image: { ...DEFAULT_IMAGE_SELECTION },
@@ -867,7 +873,7 @@ export function parseRuntimeConfig(
     },
   };
   const bad: string[] = [];
-  for (const key of ["generationEnabled", "allowSandbox", "consumptionSampleContentProvided", "outputJudgeKeepText"] as const) {
+  for (const key of ["generationEnabled", "allowSandbox", "consumptionSampleContentProvided", "outputJudgeKeepText", "promptReviewEnabled"] as const) {
     if (data[key] === undefined) continue;
     if (typeof data[key] === "boolean") {
       out[key] = data[key] as boolean;

@@ -23,6 +23,7 @@ the caller. The client wire contract is in [CONTRACT.md](CONTRACT.md).
 | `src/core/consumption.ts` | Answers Apple's `CONSUMPTION_REQUEST` for consenting buyers |
 | `src/core/generation.ts` | `generateRecipe` (reserve, call the LLM, settle) and `getGeneration` (polling) |
 | `src/core/judgeLog.ts`, `src/admin/judgeAnswers.ts` | Keeping every output judge answer in `judgeAnswers`, and `npm run admin -- judge summary | export` to read them (see "Prompt injection defences" item 5) |
+| `src/core/promptReview.ts`, `src/admin/promptReviewCli.ts` | The weekly prompt review: a week of judge answers counted, sampled and sent with the current prompts to one model for advice, stored in `promptReviews`; `npm run admin -- judge review` (see "Weekly prompt review") |
 | `src/core/reports.ts` | `reportRecipe` ("Report this recipe") and keeping a deleted account's reports without its uid (see "Reports") |
 | `src/providers/types.ts`, `registry.ts`, `router.ts`, `failure.ts`, `balance.ts` | The common provider interface: the descriptor every text or picture adapter exports, the registry of them (one entry each), the routers that pick the adapter per call, the shared failure taxonomy and the balance probe (see "Adding a provider") |
 | `src/providers/lifecycle.ts`, `src/adapters/modelProbes.ts` | The model lifecycle table (announced retirement dates, their source, when last checked), which models a config puts in use, the daily check and its log lines, and the providers' free metadata probes (see "Model lifecycle") |
@@ -63,6 +64,7 @@ the caller. The client wire contract is in [CONTRACT.md](CONTRACT.md).
 | `pollPlayVoidedPurchases` | daily 04:00 UTC | Voided Purchases API, last 3 days, for RTDNs that never arrived |
 | `checkProviderBalances` | hourly at :41 UTC | Asks the balance of every prepaid provider that has a probe and a threshold in `config/runtime.providerBalanceAlerts`, and logs `provider_balance_low` under it; with no threshold (the default) it reads only `config/runtime` (see "Provider balances") |
 | `checkModelLifecycle` | daily 06:23 UTC | For every model in use (text, its fallback, the output judge, pictures, their fallback, the deploy defaults) and every model of a listed profile: the announced retirement date against 90 / 30 / 7 days, the age of the table's last check, and each provider's free metadata probe; logs `model_retirement_near`, `model_unavailable`, `model_lifecycle_changed`, `model_lifecycle_stale` (see "Model lifecycle") |
+| `weeklyPromptReview` | Mondays 03:41 UTC | Counts the past ISO week's output judge answers, samples those that were not ok or scored low, and asks one model (`PROMPT_REVIEW_MODEL`) for advice on the writer's and the judge's prompts; stores it in `promptReviews/{week}`. Never changes a prompt (see "Weekly prompt review") |
 | `redrawBoard` | hourly at :17 UTC | Redraws the owner's board (30 days) into the private bucket `BOARD_BUCKET` as `board.html` and `board.json`; read-only on Firestore, and writes nothing unless the bucket is private (see "The board", "Always on") |
 | `playNotifications` | Pub/Sub topic `PLAY_RTDN_TOPIC` | Play voided-purchase RTDNs (full and quantity-based partial refunds) |
 | `appStoreNotifications` | HTTPS (public) | App Store Server Notifications v2: `REFUND`, `REVOKE`, `REFUND_REVERSED`, `CONSUMPTION_REQUEST`; signature verified |
@@ -604,6 +606,7 @@ concurrency 1 below 1 vCPU), 1 instance:
 | `getProviderProfiles`, `setProviderProfile`, `getOwnerSettings`, `setOwnerSettings` | 1 each | 30 for all callers but a listed owner together, at most 5 of them per client address; a listed owner 30 apart; calls without a token refused uncounted ("The owner console") | 30 s |
 | `playNotifications`, `budgetKillSwitch`, `sweepReservations`, `pollPlayVoidedPurchases` | 1 | n/a (Pub/Sub or scheduler; not callable from the internet) | |
 | `checkModelLifecycle` | 1 (no retry: the next day checks again) | n/a (scheduler); one free probe per model, 10 s each | 120 s |
+| `weeklyPromptReview` | 1 (no retry: idempotent per week, run again by hand) | n/a (scheduler); one model call, at most USD 0.19, reserved against the day's spend ceiling | 300 s |
 | `redrawBoard` | 1 (no retry: the next hour redraws anyway) | n/a (scheduler); at most 2,000 purchases read a run (`BOARD_PURCHASES_CAP`) | 120 s |
 
 Before any Firestore access, every callable is throttled per instance in memory: 30 calls a minute
@@ -769,11 +772,13 @@ Create log-based alerts in Cloud Logging on `jsonPayload.message` (all are struc
 | `provider_out_of_credit` | error | **Alerted on** (`provider-out-of-credit`): a text or picture provider said its prepaid balance or spending limit is exhausted ("Adding a provider"): `provider`, `model`, `surface` (`text` / `image`). Never the provider's message. The request went to the fallback or the default provider; anything not made was given back. |
 | `text_fallback` | info | **Worth watching**: the recipe text's provider failed before writing anything and the fallback was asked once: `uidHash`, `provider`, `model`, `fallbackProvider`, `fallbackModel`, `reason` (`OUT_OF_CREDIT`, `CAPACITY`, `CONFIG`). The `llm_call` line then has `provider` (who answered) and `textFallback: true`. |
 | `provider_balance_low` / `provider_balance_unavailable` | error / warning | The hourly balance probe ("Provider balances"): `provider`, `amount`, `unit`, `threshold`; or `provider`, `reason` (`TIMEOUT`, `FAILED`). The first is **alerted on** (`provider-balance-low`). |
-| `model_retirement_near` | info / warning / error | **Alerted on** (`model-retirement`): the daily `checkModelLifecycle` ("Model lifecycle") found a model within 90 / 30 / 7 days of its announced retirement or past it: `provider`, `model`, `role` (the first) and `roles` (`text`, `text_fallback`, `judge`, `image`, `image_fallback`, `text_default`, `image_default`, `profile:<id>`), `inUse`, `retiresOn`, `daysLeft`, `band` (90, 30, 7, 0 for past), `from` (`table` / `api`), `earliest` (a "this date or later" date). In use: info at 90, warning at 30, error at 7 and past; only listed: info, then warning at 7. Once per band (marks in `modelLifecycle/`), and every day once past while in use. |
+| `model_retirement_near` | info / warning / error | **Alerted on** (`model-retirement`): the daily `checkModelLifecycle` ("Model lifecycle") found a model within 90 / 30 / 7 days of its announced retirement or past it: `provider`, `model`, `role` (the first) and `roles` (`text`, `text_fallback`, `judge`, `prompt_review`, `image`, `image_fallback`, `text_default`, `image_default`, `profile:<id>`), `inUse`, `retiresOn`, `daysLeft`, `band` (90, 30, 7, 0 for past), `from` (`table` / `api`), `earliest` (a "this date or later" date). In use: info at 90, warning at 30, error at 7 and past; only listed: info, then warning at 7. Once per band (marks in `modelLifecycle/`), and every day once past while in use. |
 | `model_unavailable` | error / warning | **Alerted on** (`model-unavailable`): a provider's free metadata probe says the id is not found or not served where the server calls it (Vertex AI: 404 from `countTokens` in the configured location; OpenAI: 404 from `GET /v1/models/{model}`): `provider`, `model`, `role`, `roles`, `inUse` (error when in use). Every daily run while it lasts. |
 | `model_lifecycle_changed` | warning | **Alerted on** (`model-retirement`): a provider's API reported a retirement date earlier than the table's, or one the table lacks: `provider`, `model`, `roles`, `inUse`, `tableRetiresOn`, `apiRetiresOn`. Once per reported date; the bands go by the earlier date meanwhile. Update the table. |
 | `model_lifecycle_stale` | warning | **Alerted on** (`model-lifecycle-stale`): a model in use whose lifecycle entry was last checked more than 60 days ago (`reason` `OLD_CHECK`), or which has none (`NO_ENTRY`: set by hand in `config/runtime`): `provider`, `model`, `roles`, `checkedOn`, `checkedDaysAgo`, `staleDays`. Weekly while it lasts. The reminder of the review in "Model lifecycle". |
 | `model_probe_failed` / `model_lifecycle_checked` / `model_lifecycle_marks_unavailable` | info / info / warning | Informational: a probe failed for another reason than "not found" (`reason` `TIMEOUT` / `FAILED`; never the provider's text; never an alarm); the run's summary (`models`, `inUse`, `soonestDaysLeft`, `stale`, `unavailable`, `probeFailed`); the marks could not be read or written (`reason`; then lines may repeat). |
+| `prompt_review_failed` | error | **Alerted on** (`prompt-review-failed`): the weekly prompt review produced no report ("Weekly prompt review"): `week`, `trigger` (`schedule` / `cli`), `reason` (`MALFORMED_ANSWER`, `BLOCKED`, `TOKEN_CEILING`, `TIMEOUT`, `MODEL_ERROR`, `MODEL_REFUSED`, `READ_FAILED`, `RESERVE_FAILED`, `CLAIM_FAILED`, `CONFIG_UNAVAILABLE`, `WRITE_FAILED`, `SETTLE_FAILED`, `BAD_WEEK`, `ERROR`), `answers`, `costMicroUsd`. Never model text. Nothing user-facing is affected. |
+| `prompt_review_done` / `prompt_review_skipped` | info / info or warning | Informational: a report was stored (`week`, `answers`, `sampled`, `promptProblems`, `judgeProblems`, `dropped`, token counts, `costMicroUsd`); or no call was made (`reason` `OFF`, `ALREADY_DONE`, `RUNNING`, `NOT_ENOUGH_DATA`, and at warning `SPEND_CEILING` / `PAUSED` with `worstMicroUsd`). |
 | `provider_balance_unprobed` | warning | A `providerBalanceAlerts` threshold nothing can probe ("Provider balances"): `provider`, `reason` (`UNKNOWN_PROVIDER`, `NO_PROBE`); once per such threshold per hourly run. Remove the threshold or fix its id. |
 | `owner_settings_changed` | info / warning | **Alerted on** (console changes): runtime settings were changed ("The owner console", "Settings"): `via` (`web` / `cli`), `uidHash` for the console, `settings` (ids), `sensitive` (the sensitive ids among them; the line is a warning when there is any), `changes` (`id`, `from`, `to`, for plain values; lists and tables are in the audit record), `change` (the `ownerSettingChanges/` id). Never an email or uid. |
 | `owner_call_refused` | warning | A call to the owner console's callables was refused: `function`, `reason` (a fixed code: `SIGN_IN`, `RATE_LIMITED`, `NOT_OWNER`, `RECENT_SIGN_IN`, `NOT_READY`, `STALE`, `UNKNOWN_PROFILE`, `PRICES_INVALID`, `INVALID_RESULT`, `INVALID_REQUEST`, for the settings `UNKNOWN_SETTING`, `INVALID_VALUE`, `STORED_INVALID`, `CONFIRM_SENSITIVE`, `WEB_LIMIT`, else the error's code such as `INVALID_ARGUMENT`; never text from the request). Refusals before anything is counted or at the throttle (`SIGN_IN` without a token, `RATE_LIMITED`) are sampled, 10 a minute per instance, with `suppressedSinceLast`; every other one is logged (the throttle bounds them) with the caller's `uidHash`. Never the uid or email. Many `NOT_OWNER` mean someone is trying the page; any other reason but `SIGN_IN` / `RATE_LIMITED` is **alerted on** (`owner-refusals`). |
@@ -788,7 +793,7 @@ Create log-based alerts in Cloud Logging on `jsonPayload.message` (all are struc
 The owner is emailed by Cloud Monitoring alert policies on the log lines above, through the
 existing email channel "Recipe backend alerts (owner)". They are code in `functions/alerts/`: two
 log-based metrics (`metrics/recipe_generation_refused.json`, `metrics/recipe_image_failed.json`)
-and twenty policies (`policies/*.json`, no channel in them). `alerts.py` applies them: dry run by default (local checks, every log filter
+and twenty-one policies (`policies/*.json`, no channel in them). `alerts.py` applies them: dry run by default (local checks, every log filter
 checked against the project with a read-only `gcloud logging read`, then the plan), `--apply` to
 create or update (matched by display name, so re-running is safe and prints "unchanged"). The
 channel is chosen by `--channel <id>` or `--channel-name` (default the one above); the script never
@@ -826,6 +831,7 @@ refuse anything else.
 | Recipe: provider balance low (`provider-balance-low`) | a prepaid provider's balance is under its `providerBalanceAlerts` threshold (at most one email per 6 hours) | `provider_balance_low` |
 | Recipe: model retirement near (`model-retirement`) | a model in use or in a listed profile is within 90 / 30 / 7 days of its announced retirement, or past it (once per band; daily once past while in use), or a provider's API reports an earlier retirement than the table (at most one email an hour) | `model_retirement_near`, `model_lifecycle_changed` |
 | Recipe: model not served (`model-unavailable`) | a provider's metadata probe says a model id is not found or not served there (at most one email per 6 hours; the check is daily) | `model_unavailable` |
+| Recipe: weekly prompt review failed (`prompt-review-failed`) | the Monday review (or one run by hand) produced no report: a malformed or blocked answer, the token ceiling, a model or Firestore error (at most one email per 6 hours) | `prompt_review_failed` |
 | Recipe: model lifecycle table stale (`model-lifecycle-stale`) | the lifecycle entry of a model in use is older than 60 days, or missing (weekly while it lasts) | `model_lifecycle_stale` |
 | Recipe: owner board (`owner-board`, existing) | the hourly redraw failed or the bucket check refused to write | `board_redraw_failed`, `board_bucket_public` |
 | Recipe: backend errors, refunds, blocked buyers, stuck purchases, prompt safety (existing) | as in the two "Logs to alert on" tables | see those tables |
@@ -1022,7 +1028,8 @@ Only a caller with credits reaches the model, and an answer goes back only to th
      | `image_mismatch` | a picture brief does not show the dish or its step |
 
      The note is model text about untrusted content, and that content can steer it: it is never
-     shown in the apps, never fed into a prompt, never logged (`prompt_judge_verdict` carries
+     shown in the apps, never fed into a recipe prompt (only, as delimited untrusted data, into the
+     owner's weekly prompt review: "Weekly prompt review"), never logged (`prompt_judge_verdict` carries
      `where`, `issues` and `quality` only); it is kept with control characters removed and
      anything that looks like a link, an address or a phone number replaced (`cleanJudgeNote`),
      and printed only JSON-escaped (`admin judge export`) or quoted (red-team report).
@@ -1728,7 +1735,7 @@ Models are retired quickly now, so the server keeps a lifecycle table and checks
 
 | provider / model | role today | announced retirement | source |
 |---|---|---|---|
-| `google` / `gemini-3.8-flash` | recipe text, and the output judge while `GEMINI_JUDGE_MODEL` is set empty | 2027-09-02 **or later** (GA, released 2026-09-02) | Vertex lifecycle page |
+| `google` / `gemini-3.8-flash` | recipe text, the weekly prompt review (`PROMPT_REVIEW_MODEL`), and the output judge while `GEMINI_JUDGE_MODEL` is set empty | 2027-09-02 **or later** (GA, released 2026-09-02) | Vertex lifecycle page |
 | `google` / `gemini-3.5-flash-lite` | the output judge (`GEMINI_JUDGE_MODEL`, default `JUDGE.model`; in use while `outputJudge` is not `off`) | 2027-07-21 **or later** (GA, released 2026-07-21) | Vertex lifecycle page |
 | `google` / `gemini-3.1-flash-lite` | priced for the judge (`JUDGE_PRICES`), not selected | 2027-05-07 **or later** (GA, released 2026-05-07) | Vertex lifecycle page |
 | `vertex` / `gemini-3.1-flash-lite-image` | pictures (default), fallback of `nano-banana`, fallback of `flux-eu` | 2027-06-28 **or later** | Vertex lifecycle page |
@@ -1746,13 +1753,15 @@ announced; `earliest: true` for Google's "this date or later"), `source` (the pa
 (the day a person or agent last read it). `test/modelLifecycle.test.ts` fails when a model that a
 profile, a deploy default (`DEFAULT_TEXT_SELECTION`, `DEFAULT_IMAGE_SELECTION` and its fallback), a
 provider's default model or default param (`GEMINI_MODEL`), the output judge's default
-(`JUDGE.model`, which `GEMINI_JUDGE_MODEL` defaults to in `src/index.ts`) or a price table
+(`JUDGE.model`, which `GEMINI_JUDGE_MODEL` defaults to in `src/index.ts`), the weekly prompt review's
+(`PROMPT_REVIEW.model`, `PROMPT_REVIEW_MODEL`'s default) or a price table
 (`JUDGE_PRICES` included) names has no entry: a model can't be added without one.
 
 **The check** (`checkModelLifecycle`, daily at 06:23 UTC; best effort, never on a request's path, no
 new IAM role): it reads `config/runtime` as the other functions do (over the params, over the
 defaults) and takes every model it selects or names as a fallback: the text and its fallback, the
 output judge (`GEMINI_JUDGE_MODEL`, else `GEMINI_MODEL`; in use while `outputJudge` is not `off`),
+the weekly prompt review (`PROMPT_REVIEW_MODEL`, else `GEMINI_MODEL`; in use while `promptReviewEnabled` is on),
 the pictures and their fallback, and the deploy defaults that out-of-credit failures go to; then,
 less urgently (`inUse: false`), every model of a listed profile. For each:
 
@@ -1793,6 +1802,105 @@ the code doesn't pretend to. The routine instead: **every month, and whenever
 note newer models worth trying, and deploy. A replacement is then tried like any model change:
 priced, a profile, the red-team run and a few real recipes before switching (docs/recipe-setup.md
 "A model is being retired"). The stale warning at 60 days is that review's reminder.
+
+## Weekly prompt review
+
+The output judge's answers (`judgeAnswers`, "Prompt injection defences" item 5) are collected to
+improve the prompts. Once a week a model reads them and writes advice for the owner
+(`src/core/promptReview.ts`, the scheduled function `weeklyPromptReview`, Mondays at 03:41 UTC).
+
+**It never changes a prompt by itself.** Prompts are code (`src/adapters/prompt.ts`, and the judge's
+`JUDGE_INSTRUCTION` in `src/adapters/gemini.ts`); the report is advice. A proposal is applied, if at
+all, by a person: a code change, the red-team run ("The red-team run"), a few real recipes, a deploy.
+
+**One run** reviews the ISO week before the one it runs in (UTC, Monday to Sunday), once
+(`promptReviews/{YYYY-Www}`; a week already `done` or `not_enough_data` is left alone, a `failed` or
+`skipped` one may be run again):
+
+1. **Counts in code** (no model): every answer of the week (one range query on `at`, without the
+   judged text; at most 5,000 read): verdicts, issues, `where`, quality (and its average, and how
+   many scored 3 or less), the judge's own safety blocks (`harmful` with no issue, place, quality
+   or note: Vertex's filter refused the text, which says nothing about the recipe), judge failures by
+   reason, quality-gate rules, issues by kind and by language, and by language, kind, text model,
+   judge model and version, mode and prompt hash; and the week before's figures when its report exists.
+2. **Too few answers** (under `PROMPT_REVIEW.minAnswers`, 20): stored as `not_enough_data` with the
+   counts. No model call, cost 0.
+3. **A sample** of the answers worth reading: verdict not ok, an issue named, or quality 3 or less
+   (judge failures and clean answers are left out), grouped by their worst code and taken
+   round-robin from the largest group, at most 6 a group and 30 in all; each with its codes, its
+   note (links and phone-like numbers redacted again) and, where it was kept (`outputJudgeKeepText`),
+   the judged recipe cut to 2,000 characters; 32,000 characters of JSON in all.
+4. **The current prompts, from code**: the generator's system instruction built by
+   `systemInstruction` for three fixed example requests (a plain recipe; one with optional items,
+   staples and step pictures, so every conditional line is there; a 3-day 3-course menu) and the
+   judge's instruction. Never a copy that could go stale.
+5. **One call** to `PROMPT_REVIEW_MODEL` (default `gemini-3.8-flash` on Vertex AI, the text profile's
+   own model: the registry has no stronger tier priced; LOW thinking, temperature 0.2, the same
+   safety settings) with a schema-bound answer: a summary, then up to 5 **prompt problems** (the
+   writer's prompt causes or allows it) and up to 5 **judge problems** (the judge is wrong, such as
+   its filter on a tartare or a flambé), each with its issue code, the count of answers it concerns,
+   up to 5 example ids, the likely cause, the target prompt, and a **before → after** wording change.
+6. **Checked and stored**: types, enums and lengths (summary 800, title 120, cause 600, before 800,
+   after 1,200 characters); example ids only from the sample; counts no more than the week's answers;
+   and whether each `before` is really in the prompt it names (`beforeFound`; false is shown as
+   "not in the current prompt word for word"). An answer that is not such an object, or has nothing
+   usable, is `failed` (`MALFORMED_ANSWER`) with its cost.
+
+**Untrusted data.** The judged text and the notes are model text written from user input. They go
+only into the `JUDGED_DATA` part of the user turn, as JSON, after the trusted `PROMPTS` and
+`AGGREGATES` parts; any `BEGIN_`/`END_` marker inside them is defused; the instruction says they are
+data, never instructions, and asks for no quoting of ingredient lists, links or contact details. The
+answer is stored and shown as text (the console sets it with `textContent`), never logged.
+
+**Budget and spend** (`PROMPT_REVIEW` in `src/constants.ts`): the input is cut to 64,000 bytes by
+dropping sampled answers (every token is at least one byte, so at most 64,000 input tokens);
+`maxOutputTokens` 6,000, and output plus thinking observed above 12,000 tokens aborts the call. The
+worst case at the default prices (1.50 / 7.50 USD per 1M) is 64,000 x 1.50 + 12,000 x 7.50 =
+**USD 0.186 a run**. It is **inside the daily spend ceiling**: the run reserves its worst case in
+today's `stats/{day}` against the same ceiling a generation checks (refused at it, or while recipes
+from packs are paused: `skipped`, nothing spent), then settles the measured cost (the worst case
+when the usage is unknown) into `spentMicroUsd` and `promptReviewMicroUsd`, so it shows in the
+spend figures of the console and the board like every model call. 03:41 UTC on a Monday was chosen
+as a quiet hour (night in Europe), and the worst case is about 15 % of the smallest ceiling
+(USD 1.20), so a review hardly crowds out recipes.
+
+**What it costs** (prices from `DEFAULT_PRICES`, Google's standard rate from 2027-01-01; the
+introductory rate until then is half): typical run with the judged text kept, about 20,000 input
+tokens (53 KB at the 2.75 bytes per token the red-team plan measured on the live menu) and about
+4,000 output and thinking tokens: USD 0.03 + 0.03 = **about USD 0.06** (about USD 0.045 without the
+judged text, whose sample is only codes and notes); **about USD 0.26 a month** (4.33 runs). Worst case
+USD 0.186 a run, **USD 0.81 a month**. Nothing with fewer than 20 answers. Firestore: one read per
+answer of the week, plus about 40 (the sampled texts, the week before, the stats, the claim), and
+three writes: at 1,000 answers a week about 4,500 reads a month, under USD 0.01. Cloud Scheduler:
+this is the project's sixth scheduled job, and only three a billing account are free, so it adds
+**USD 0.10 a month**. Instance time: under a minute a week.
+
+**Turn it off**: the card "Weekly prompt review" on the owner console, or
+`npm run admin -- config set promptReviewEnabled off --apply`. Off, the run reads nothing else and
+writes nothing (`prompt_review_skipped`, `OFF`); the lifecycle check stops counting its model as in use.
+
+**Reading and running it**:
+
+```bash
+cd functions
+npm run admin -- judge review                                   # the latest stored report (emulators)
+npm run admin -- judge review --week 2026-W46 --project bestbefore-f9ee1      # one week's, live, read-only
+npm run admin -- judge review --run --project bestbefore-f9ee1                 # dry run: counts, sample, worst case; calls and writes nothing
+VERTEX_TOKEN=$(gcloud auth print-access-token) \
+  npm run admin -- judge review --run --apply --project bestbefore-f9ee1      # run it now (last complete week, or --week)
+```
+
+`--apply` live calls Vertex AI with the operator's bearer token (like the red-team runner; the
+account needs Vertex AI User and Datastore User), books its spend like the scheduled run, and logs
+to stderr (not alerted on). Against the emulators a fixed answer stands in for the model. The
+console's card shows the latest report (and the latest with advice when the latest has none): week,
+answers analysed, cost, the problems with their before → after; the command prints the same, with
+every field.
+
+**Kept** 365 days (TTL on `promptReviews.expiresAt`, `firestore.indexes.json`): a report is small
+(tens of KB), holds no uid and nothing about a person, and a year of them shows whether prompt
+changes helped. The example ids it names point at `judgeAnswers` documents, which expire after 90
+days.
 
 ## Reports
 
@@ -1949,6 +2057,7 @@ Server-only. Documents:
   (worst cases of calls in flight), `spentMicroUsd` (estimated, measured where known), `llmCalls`,
   `inputTokens`, `outputTokens`, `thinkingTokens`, `succeeded`, `contentFailures`,
   `infraFailures`, `qualityFailures`, `refundedCredits`, `unknownUsageCalls` (booked at the worst case),
+  `promptReviewMicroUsd` (the weekly prompt review's booked spend, part of `spentMicroUsd`),
   `reports` and `reportReasons` (`{offensive | unsafe | picture | other: n}`),
   `imageRequests`, `imagesDelivered`, `imageFailures` (pictures, not requests), `imageMicroUsd` (the pictures' booked
   spend, part of `spentMicroUsd`), `imageGivenBackCredits` (part of `refundedCredits`),
@@ -1974,6 +2083,13 @@ Server-only. Documents:
 - `judgeAnswers/{random id}` ("Prompt injection defences" item 5): one output judge answer per
   judged generation, no uid and no user input; `text` only with `outputJudgeKeepText`;
   `expiresAt` (TTL, 90 days). Read with `npm run admin -- judge`.
+- `promptReviews/{YYYY-Www}` ("Weekly prompt review"): one report per ISO week reviewed: `week`, `from`, `to`,
+  `trigger`, `status` (`running`, `done`, `not_enough_data`, `skipped`, `failed`) + `reason`, `startedAt`,
+  `finishedAt`, `answers`, `truncated`, `aggregates` (the week's counts), `previous` (the week before's), `sample`
+  (`count`, `ids`: judgeAnswers ids, `withText`, `groups`), `prompts` (hashes of the prompts reviewed, `judgeVersion`,
+  `reviewVersion`), `inputBytes`, `reservedMicroUsd`, `model`, `modelVersion`, `usage`, `costMicroUsd`, `costKnown`,
+  `report` (`summary`, `promptProblems`, `judgeProblems`, `dropped`), `expiresAt` (TTL, 365 days). No uid, nothing
+  about a person; the advice is model text.
 - `config/runtime`: see below.
 - `config/owner` (set by the owner in the console, never in the repo): `uids` (Firebase uids)
   and/or `emails` (addresses of Google accounts linked to the user, matched against its
@@ -1994,7 +2110,7 @@ console", "Settings": checked, field paths only, audited and alerted), rather th
 fields that are read-only there (prices, the provider setup) are changed by the profile switch or
 by hand. Created in the console if missing (Firestore > `config` > `runtime`). Every field is optional; a missing
 field uses the default. A present but invalid field never fails open: `generationEnabled`,
-`allowSandbox`, `consumptionSampleContentProvided` and `outputJudgeKeepText` then read as `false`, every other field uses
+`allowSandbox`, `consumptionSampleContentProvided`, `outputJudgeKeepText` and `promptReviewEnabled` then read as `false`, every other field uses
 its default, and a warning "config/runtime has invalid fields" names them. Instances cache it for
 30 s.
 
@@ -2002,6 +2118,7 @@ its default, and a warning "config/runtime has invalid fields" names them. Insta
 |---|---|---|---|
 | `generationEnabled` | bool | `true` | Kill switch for new generations. The budget alert sets it to `false` (with `disabledBy` `budget alert …` and `disabledAt`); only you set it back: with `npm run admin -- config set generationEnabled on --apply --confirm generationEnabled`, which also deletes `disabledBy` / `disabledAt`, or by hand in the Firestore console (then delete those two as well). The owner console turns it back on only after a pause of its own or one by hand, never after the budget alert's ("The console's envelope"). |
 | `outputJudgeKeepText` | bool | `false` | Keep the judged recipe text with each output judge answer (`judgeAnswers.text`, "Prompt injection defences" item 5). Only after the privacy policy says so. |
+| `promptReviewEnabled` | bool | `true` | Run the weekly prompt review ("Weekly prompt review"). Off: the Monday run reads and spends nothing. Invalid reads as `false`. |
 | `allowSandbox` | bool | `false` | Grant credits for Play licence-tester and App Store sandbox/TestFlight purchases. Turn on for App Review and your own testing, off otherwise. Anyone with a TestFlight build can then get free credits, up to the two caps below. |
 | `sandboxDailyCap` | integer ≥ 0 | `20` | Sandbox purchases that may grant credits per UTC day, across all users. Over it: `RETRY`. |
 | `sandboxDailyCredits` | integer ≥ 0 | `200` | Credits sandbox purchases may grant per UTC day, across all users. Over it: `RETRY`; one purchase worth more than this: `REJECTED_PERMANENT`. |
@@ -2479,7 +2596,10 @@ change, and a switch behind a confirmation dialog), then one card per section of
 registry ("Settings" below), each with its title, a line saying what it is for, the figures worked
 out for it (the spending card shows today's ceiling as a worked line from the values in force:
 min(absolute, base + share × net per recipe × net recipes sold in 7 days)), its settings, and the
-read-only fields that belong with it, folded away. A header link opens the board (its address is
+read-only fields that belong with it, folded away. The last card, **Weekly prompt review**, also
+shows the latest report ("Weekly prompt review"): week, answers analysed, the cost of the run, the
+summary, and each prompt or judge problem with its before → after, all model text set as text; the
+section's `reviews` in `getOwnerSettings` (four reads of `promptReviews`). A header link opens the board (its address is
 `getOwnerSettings`' `boardUrl`, from `BOARD_BUCKET`). The board stays static and request-free
 and only links to the console.
 
@@ -2778,6 +2898,7 @@ every param, an adapter's included, has a line there; `test/deployParams.test.ts
 | `GEMINI_MODEL` | `gemini-3.8-flash` | Vertex AI model id. Any Flash-tier Gemini; `gemini-2.x` models get thinking budget 0 (`config/runtime.text.model` overrides it) |
 | `GEMINI_THINKING_LEVEL` | `LOW` | Thinking level for Gemini 3+ (`MINIMAL` where the model supports it; 3.8 Flash does not) |
 | `VERTEX_LOCATION` | `global` | Vertex AI location. The default is `global` by the owner's decision; set a region only if the model is not offered in `global` |
+| `PROMPT_REVIEW_MODEL` | `gemini-3.8-flash` | Vertex AI model id of the weekly prompt review (`PROMPT_REVIEW.model`; empty: `GEMINI_MODEL`), booked at the `google` text prices; watched by the model lifecycle check (role `prompt_review`) while `promptReviewEnabled` is on ("Weekly prompt review") |
 | `IMAGE_PROVIDER` | `vertex` | Default provider of recipe pictures: `vertex`, `openai`, `bfl` or `off` (`config/runtime.image.provider` overrides it at run time) |
 | `IMAGE_MODEL` | `gemini-3.1-flash-lite-image` | Default picture model id at that provider (`config/runtime.image.model` overrides it); needs a price ("Recipe pictures") |
 | `IMAGE_FALLBACK_MODEL` | `gemini-nano-banana-2.1` | Default fallback model at the same provider, asked once when the model fails for capacity; empty for none (`config/runtime.image.fallbackModel` overrides it) |

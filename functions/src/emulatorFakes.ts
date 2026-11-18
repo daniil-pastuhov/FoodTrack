@@ -11,7 +11,8 @@
  * - LLM: returns a canned recipe or menu, in the model's answer shape (pantry ids), which then goes
  *   through the real output checks. An ingredient named "fail infra" or "fail content" makes the
  *   call fail with that class, to exercise refunds. A request with a taste profile gets a tip that
- *   says so, so a client can see the profile reached the server. The judge always answers ok.
+ *   says so, so a client can see the profile reached the server. The judge always answers ok, and
+ *   the weekly prompt review's model with a fixed summary and no problems.
  * - Recipe pictures: a recipe asked with `image: "dish"` gets a fixed brief (`"steps"` also one
  *   step brief), and the image fake
  *   answers with one small fixed JPEG (96 x 96), which goes through the real re-encoding; an
@@ -21,7 +22,7 @@
  */
 import { randomBytes } from "node:crypto";
 import { coursesFor, menuDates, menuDaysOf, type GenerateRequest } from "./contract";
-import { JUDGE } from "./constants";
+import { JUDGE, PROMPT_REVIEW } from "./constants";
 import {
   type AppleTokenRevoker,
   GenerationError,
@@ -36,8 +37,10 @@ import {
   type ImagePrompt,
   type ImageTarget,
   type JudgeResult,
+  type LlmUsage,
   type OutputJudge,
   type PlayPurchase,
+  type PromptReviewer,
   type PlayVerifier,
   type RecipeGenerator,
   type RecipeImageGenerator,
@@ -184,6 +187,20 @@ export class EmulatorJudge implements OutputJudge {
       verdict: "ok",
       answer: { where: "none", issues: [], quality: 5, note: "Emulator: no judge ran." },
       usage: { inputTokens: 500, outputTokens: 40, thinkingTokens: 0, model: "emulator-fake", finishReason: "STOP" },
+    };
+  }
+}
+
+/**
+ * The weekly prompt review's model under the emulators (and the admin command against them): one
+ * fixed answer, a summary and no problems, so a run is stored as done without any call.
+ */
+export class EmulatorPromptReviewer implements PromptReviewer {
+  readonly model = PROMPT_REVIEW.model;
+  async review(): Promise<{ text: string; usage: LlmUsage }> {
+    return {
+      text: JSON.stringify({ summary: "Emulator: no model ran; the counts above are real.", promptProblems: [], judgeProblems: [] }),
+      usage: { inputTokens: 12_000, outputTokens: 60, thinkingTokens: 0, model: "emulator-fake", finishReason: "STOP" },
     };
   }
 }

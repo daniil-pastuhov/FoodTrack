@@ -28,11 +28,13 @@ import {
   KMS_APPLE_TOKEN_KEY,
   KMS_KEY_RING,
   KMS_LOCATION,
+  PROMPT_REVIEW,
   REGION,
 } from "./constants";
 import { RuntimeConfigCache, loadRuntimeConfig, validImageSelection, type ImageSelection, type RuntimeConfig } from "./model";
 import type { Caller, Deps, TextTarget } from "./ports";
-import { GeminiOutputJudge } from "./adapters/gemini";
+import { GeminiOutputJudge, GeminiPromptReviewer } from "./adapters/gemini";
+import { runPromptReview } from "./core/promptReview";
 import { FirestoreJudgeLog } from "./core/judgeLog";
 import { SecretReader } from "./adapters/secretManager";
 import { allProviders, imageProviderIds, imageProviders, providerSecrets, textProviderById, textProviders } from "./providers/registry";
@@ -51,6 +53,7 @@ import {
   EmulatorImageGenerator,
   EmulatorJudge,
   EmulatorPlay,
+  EmulatorPromptReviewer,
   emulatorFakesEnabled,
 } from "./emulatorFakes";
 import { registerAppleSignIn as registerAppleCore } from "./core/appleToken";
@@ -123,6 +126,10 @@ function providerParam(name: string): string {
 const textProvider = defineString("TEXT_PROVIDER", {
   default: "google",
   description: `Default provider of the recipe text: one of ${textProviders().map((d) => d.id).join(", ")} (config/runtime.text.provider overrides it).`,
+});
+const promptReviewModel = defineString("PROMPT_REVIEW_MODEL", {
+  default: PROMPT_REVIEW.model,
+  description: "Vertex AI model id of the weekly prompt review (core/promptReview.ts); empty means GEMINI_MODEL. Booked at the google text provider's prices.",
 });
 const judgeModel = defineString("GEMINI_JUDGE_MODEL", {
   default: JUDGE.model,
@@ -610,8 +617,34 @@ export const checkModelLifecycle = onSchedule(
     const config = await loadRuntimeConfig(getFirestore(), logger, imageDefaults(), textDefaults());
     // The output judge is always Gemini on Vertex AI (deps above).
     const judge = { provider: "google", model: judgeModel.value() || providerParam("GEMINI_MODEL") };
-    const reports = await assessModels({ models: modelsInUse(config, judge), context: providerContext, now: () => Date.now(), probe: true });
+    const review = { provider: "google", model: promptReviewModel.value() || providerParam("GEMINI_MODEL") };
+    const reports = await assessModels({ models: modelsInUse(config, judge, undefined, review), context: providerContext, now: () => Date.now(), probe: true });
     await logModelLifecycle(reports, { db: getFirestore(), logger, now: () => Date.now() });
+  },
+);
+
+// The weekly prompt review (README "Weekly prompt review"): Mondays at 03:41 UTC, a quiet hour, on
+// the ISO week before. Advice only: it never changes a prompt. Idempotent per week
+// (promptReviews/{YYYY-Www}); off with config/runtime.promptReviewEnabled. One model call at most,
+// its worst case reserved against the day's spend ceiling. No retry: a failure is logged
+// (prompt_review_failed, alerted on) and `npm run admin -- judge review --run --apply` runs it again.
+export const weeklyPromptReview = onSchedule(
+  { schedule: "41 3 * * 1", timeZone: "Etc/UTC", timeoutSeconds: 300, retryCount: 0, maxInstances: 1, concurrency: 1 },
+  async () => {
+    const db = getFirestore();
+    // Always Gemini on Vertex AI, like the judge (the emulators: a fixed answer, no call).
+    const reviewer = emulatorFakesEnabled()
+      ? new EmulatorPromptReviewer()
+      : new GeminiPromptReviewer({
+          project: projectId(),
+          location: providerParam("VERTEX_LOCATION"),
+          model: promptReviewModel.value() || providerParam("GEMINI_MODEL"),
+          jailbreakFilter: providerParam("GEMINI_JAILBREAK_FILTER") === "true",
+        });
+    await runPromptReview(
+      { db, reviewer, logger, now: () => Date.now(), config: () => loadRuntimeConfig(db, logger, imageDefaults(), textDefaults()) },
+      { trigger: "schedule" },
+    );
   },
 );
 

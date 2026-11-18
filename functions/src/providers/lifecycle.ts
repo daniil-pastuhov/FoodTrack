@@ -12,7 +12,7 @@
  * - **The check** (`assessModels` + `logModelLifecycle`, run daily by the scheduled function
  *   checkModelLifecycle; read-only by `npm run admin -- models`): for every model selected or
  *   configured as a fallback in `config/runtime` (over the params, over the defaults: text, its
- *   fallback, the output judge, pictures, their fallback, the deploy defaults that out-of-credit
+ *   fallback, the output judge, the weekly prompt review, pictures, their fallback, the deploy defaults that out-of-credit
  *   failures go to) and, less urgently, every model of a listed profile:
  *   `model_retirement_near` inside 90 / 30 / 7 days of the retirement date or past it (once per
  *   band, rising severity; every run once past while in use), `model_lifecycle_stale` when the
@@ -29,7 +29,7 @@
  * live in `modelLifecycle/{provider}__{model}` (Admin SDK only, like every collection).
  */
 import type { Firestore } from "firebase-admin/firestore";
-import { DEFAULT_IMAGE_SELECTION, DEFAULT_TEXT_SELECTION, JUDGE, JUDGE_PRICES } from "../constants";
+import { DEFAULT_IMAGE_SELECTION, DEFAULT_TEXT_SELECTION, JUDGE, JUDGE_PRICES, PROMPT_REVIEW } from "../constants";
 import type { RuntimeConfig } from "../model";
 import type { Logger } from "../ports";
 import { PROVIDER_PROFILES, type ProviderProfile } from "./profiles";
@@ -69,7 +69,7 @@ export const MODEL_LIFECYCLE: readonly LifecycleEntry[] = [
     earliest: true,
     source: VERTEX_LIFECYCLE,
     checkedOn: "2026-11-18",
-    note: "GA table: \"September 2, 2027 or later\"; released September 2, 2026. Also the output judge's model while GEMINI_JUDGE_MODEL is set empty.",
+    note: "GA table: \"September 2, 2027 or later\"; released September 2, 2026. Also the weekly prompt review's model (PROMPT_REVIEW_MODEL, default PROMPT_REVIEW.model), and the output judge's while GEMINI_JUDGE_MODEL is set empty.",
   },
   {
     provider: "google",
@@ -170,7 +170,7 @@ export function retirementBand(daysLeft: number): 0 | 7 | 30 | 90 | null {
 
 // --- Which models are in use ---------------------------------------------------------------------
 
-export type ModelRole = "text" | "text_fallback" | "judge" | "image" | "image_fallback" | "text_default" | "image_default" | `profile:${string}`;
+export type ModelRole = "text" | "text_fallback" | "judge" | "prompt_review" | "image" | "image_fallback" | "text_default" | "image_default" | `profile:${string}`;
 
 export interface ModelUse {
   provider: string;
@@ -197,12 +197,15 @@ function profileModels(p: ProviderProfile): { provider: string; model: string }[
 /**
  * The models a parsed `config/runtime` puts in use, then those only in a listed profile. `judge`
  * is the output judge's model (GEMINI_JUDGE_MODEL, else GEMINI_MODEL; always the google provider),
- * in use while `outputJudge` is not "off".
+ * in use while `outputJudge` is not "off". `review` is the weekly prompt review's model
+ * (PROMPT_REVIEW_MODEL, always the google provider; core/promptReview.ts), in use while
+ * `promptReviewEnabled` is on.
  */
 export function modelsInUse(
-  config: Pick<RuntimeConfig, "text" | "image" | "providerDefaults" | "outputJudge">,
+  config: Pick<RuntimeConfig, "text" | "image" | "providerDefaults" | "outputJudge"> & Partial<Pick<RuntimeConfig, "promptReviewEnabled">>,
   judge: { provider: string; model: string } | null,
   profiles: readonly ProviderProfile[] = PROVIDER_PROFILES,
+  review: { provider: string; model: string } | null = null,
 ): ModelUse[] {
   const out: ModelUse[] = [];
   const add = (provider: string, model: string, role: ModelRole, inUse: boolean) => {
@@ -219,6 +222,7 @@ export function modelsInUse(
   add(t.provider, t.model, "text", true);
   if (t.fallbackModel) add(t.fallbackProvider || t.provider, t.fallbackModel, "text_fallback", true);
   if (judge) add(judge.provider, judge.model, "judge", config.outputJudge !== "off");
+  if (review) add(review.provider, review.model, "prompt_review", config.promptReviewEnabled !== false);
   const i = config.image;
   if (i.provider !== "off") {
     add(i.provider, i.model, "image", true);
@@ -261,6 +265,8 @@ export function lifecycleProblems(
   for (const d of imageProviders()) for (const m of Object.keys(d.usdPerImage)) need.push({ provider: d.id, model: m, why: `${d.id} price table` });
   // The output judge is always Gemini on Vertex AI (provider "google").
   need.push({ provider: "google", model: JUDGE.model, why: "JUDGE.model (GEMINI_JUDGE_MODEL default)" });
+  // So is the weekly prompt review (core/promptReview.ts).
+  need.push({ provider: "google", model: PROMPT_REVIEW.model, why: "PROMPT_REVIEW.model (PROMPT_REVIEW_MODEL default)" });
   for (const m of Object.keys(JUDGE_PRICES)) need.push({ provider: "google", model: m, why: "JUDGE_PRICES" });
   for (const p of PROVIDER_PROFILES) for (const m of profileModels(p)) need.push({ ...m, why: `profile ${p.id}` });
   const missing = new Set<string>();

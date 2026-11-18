@@ -353,6 +353,26 @@ export interface OutputJudge {
   judge(output: JudgedOutput, signal: AbortSignal): Promise<JudgeResult>;
 }
 
+// --- The weekly prompt review (core/promptReview.ts) ---------------------------------------------
+
+/** One call of the weekly prompt review: a fixed instruction, the data as one user turn, a JSON schema. */
+export interface ReviewPrompt {
+  systemInstruction: string;
+  userText: string;
+  schema: Record<string, unknown>;
+}
+
+export interface PromptReviewer {
+  /** The Vertex AI model id it calls (PROMPT_REVIEW_MODEL): booked at the google text provider's prices. */
+  readonly model: string;
+  /**
+   * The model's JSON text, unparsed (core/promptReview.ts reads and checks it). Throws
+   * GenerationError: "content" when a safety filter refused the prompt or the answer, or the
+   * answer was cut at its token limit; "infra" for anything else (`usage` absent when unknown).
+   */
+  review(prompt: ReviewPrompt, signal: AbortSignal, limits: { maxOutputTokens: number; tokenCeiling: number }): Promise<{ text: string; usage?: LlmUsage }>;
+}
+
 // --- Recipe pictures ---------------------------------------------------------------------------
 
 /**

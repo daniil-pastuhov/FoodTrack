@@ -562,6 +562,89 @@ function changeItem({ where, label, from, to, note = "", sensitive = false, inva
         note ? el("span", { class: "c-note", text: ` ${note}` }) : null));
 }
 
+// --- The weekly prompt review (a section's `reviews` from getOwnerSettings; core/promptReview.ts) --
+// Everything here is model text or figures from the server: set as text, never as HTML.
+
+const REVIEW_STATUS = {
+  done: "Done",
+  not_enough_data: "Not enough data",
+  skipped: "Skipped",
+  failed: "Failed",
+  running: "Running",
+};
+const REVIEW_TARGET = { recipe: "Recipe prompt", menu: "Menu prompt", judge: "Judge prompt" };
+const reviewUsd = (micro) => `USD ${(micro / 1e6).toFixed(micro > 0 && micro < 10000 ? 4 : 3)}`;
+
+function reviewProblem(p) {
+  const textBlock = (label, text, cls) => el("div", { class: `r-text ${cls}` },
+    el("span", { class: "r-k", text: label }),
+    el("pre", { class: "r-pre", text: text || "(empty)" }));
+  return el("li", { class: "r-problem" },
+    el("div", { class: "r-head" },
+      el("span", { class: "r-name", text: p.title }),
+      el("span", { class: "r-count", text: `${p.count} ${p.count === 1 ? "answer" : "answers"}` })),
+    el("div", { class: "s-chips" },
+      el("span", { class: "chip", text: p.issue.replaceAll("_", " ") }),
+      el("span", { class: "chip", text: REVIEW_TARGET[p.target] ?? p.target }),
+      el("span", { class: "chip", text: `${p.confidence} confidence` })),
+    p.cause ? el("p", { class: "r-cause", text: p.cause }) : null,
+    el("div", { class: "r-diff" }, textBlock("Before", p.before, "r-before"), textBlock("After", p.after, "r-after")),
+    p.beforeFound ? null : el("p", { class: "r-warn", text: "This “before” is not in the current prompt word for word: check it before applying." }),
+    p.exampleIds.length ? el("p", { class: "r-meta mono", text: `Examples: ${p.exampleIds.join(", ")}` }) : null);
+}
+
+function reviewList(title, help, list) {
+  return el("div", { class: "r-group" },
+    el("h3", { class: "r-title" }, el("span", { text: title }), el("span", { class: "badge r-n", text: String(list.length) })),
+    el("p", { class: "help", text: help }),
+    list.length ? el("ol", { class: "r-problems" }, ...list.map(reviewProblem)) : el("p", { class: "note", text: "None this week." }));
+}
+
+function reviewFigures(r) {
+  const figure = (label, value, note = "") => el("div", { class: "figure" },
+    el("div", { class: "f-label", text: label }), el("div", { class: "f-value", text: value }), note ? el("p", { class: "f-note", text: note }) : null);
+  const tokens = r.usage ? `${r.usage.inputTokens.toLocaleString()} in, ${(r.usage.outputTokens + r.usage.thinkingTokens).toLocaleString()} out` : "";
+  return el("div", { class: "figures" },
+    figure("Week", r.week, r.finishedAt ? `Run ${new Date(r.finishedAt).toLocaleString()}` : ""),
+    figure("Answers analysed", r.answers === null ? "–" : r.answers.toLocaleString(), r.sampled !== null ? `${r.sampled} sampled for the model` : ""),
+    figure("Cost of the run", reviewUsd(r.costMicroUsd), tokens ? `${r.model ?? ""} · ${tokens} tokens` : (r.model ?? "")),
+    figure("Status", REVIEW_STATUS[r.status] ?? r.status, r.status !== "done" && r.reason ? r.reason.replaceAll("_", " ").toLowerCase() : ""));
+}
+
+function reviewReport(r) {
+  return el("div", { class: "r-report" },
+    reviewFigures(r),
+    r.summary ? el("p", { class: "r-summary", text: r.summary }) : null,
+    reviewList("Prompt problems", "The recipe writer's prompt causes or allows these.", r.promptProblems),
+    reviewList("Judge problems", "The second check is wrong here (e.g. its safety filter on ordinary cooking).", r.judgeProblems));
+}
+
+function reviewNode(reviews) {
+  const box = el("div", { class: "review" });
+  if (reviews === null || reviews === undefined) {
+    box.append(el("p", { class: "note", text: "The latest report could not be read." }));
+    return box;
+  }
+  if (!reviews.length) {
+    box.append(el("p", { class: "note", text: "No report yet: the first runs on a Monday at 03:41 UTC." }));
+    return box;
+  }
+  const [latest, earlier] = reviews;
+  if (latest.status === "done") {
+    box.append(reviewReport(latest));
+  } else {
+    const why = latest.status === "not_enough_data"
+      ? `only ${latest.answers ?? 0} answers, so no model was asked and nothing was spent`
+      : latest.status === "skipped" ? `${(latest.reason ?? "").replaceAll("_", " ").toLowerCase()}, nothing was spent`
+        : latest.status === "failed" ? `${(latest.reason ?? "").replaceAll("_", " ").toLowerCase()}; ${reviewUsd(latest.costMicroUsd)} spent` : "in progress";
+    box.append(el("p", { class: "r-latest" }, dot(latest.status === "failed" ? "warn" : "neutral"),
+      el("span", { text: `${latest.week}: ${REVIEW_STATUS[latest.status] ?? latest.status} (${why}).` })));
+    if (earlier) box.append(el("p", { class: "eyebrow r-earlier", text: `Latest report, ${earlier.week}` }), reviewReport(earlier));
+  }
+  box.append(el("p", { class: "note r-foot", text: "Advice only: nothing was changed. Prompts are code; a change goes through review, the red-team run and a deploy. Full text: npm run admin -- judge review." }));
+  return box;
+}
+
 function clearCards() {
   for (const c of cards.values()) c.node.remove();
   cards.clear();
@@ -581,6 +664,7 @@ function cardNode(sec, readOnly) {
       el("div", { class: "card-title" }, el("h2", { id: hid, text: sec.title }), el("p", { class: "help", text: sec.help })),
       badge),
     figuresNode(sec.facts),
+    "reviews" in sec ? reviewNode(sec.reviews) : null,
     el("div", { class: "rows" }, ...sec.settings.map((s) => settingNode(s, sec))),
     readOnlyNode(readOnly),
     el("div", { class: "card-foot" }, discard, save));

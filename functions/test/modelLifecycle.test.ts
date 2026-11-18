@@ -338,7 +338,7 @@ describe("npm run admin -- models (read-only)", () => {
     expect(text).toContain("In use:");
     expect(text).toContain("vertex/gemini-nano-banana-2.1  [image, profile:flash-lite, profile:nano-banana]");
     expect(text).toContain("vertex/gemini-3.1-flash-lite-image  [image_fallback, image_default,");
-    expect(text).toContain("google/gemini-3.8-flash  [text, judge, text_default]");
+    expect(text).toContain("google/gemini-3.8-flash  [text, judge, prompt_review, text_default]");
     expect(text).toContain("retires 2027-09-02 or later (288 days left); checked 2026-11-18 (0 days ago)");
     expect(text).toContain("Only in listed profiles:");
     expect(text).toContain("openai/gpt-image-2.6-flare  [profile:openai]");

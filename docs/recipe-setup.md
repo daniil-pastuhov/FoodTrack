@@ -634,6 +634,32 @@ probe reads the key only once that grant exists, and its marks are in Firestore 
   "Model lifecycle": re-read each entry's source page, update `retiresOn` / `checkedOn` in
   `functions/src/providers/lifecycle.ts`, deploy.
 
+
+### 13d. Weekly prompt review (functions/README.md "Weekly prompt review") **(owner, after the next deploy)**
+
+The scheduled `weeklyPromptReview` (Mondays 03:41 UTC) reads the past week's output judge answers
+and stores advice on the prompts in `promptReviews/{week}`, shown on the owner console's card
+"Weekly prompt review" and by `npm run admin -- judge review`. **Advice only: it never changes a
+prompt.** On by default (`config/runtime.promptReviewEnabled`); it does nothing useful until
+`outputJudge` is `shadow` or `enforce` (fewer than 20 answers in a week: no model call, cost 0).
+No new role, API or vendor: Vertex AI (Vertex AI User, as the judge) and Firestore.
+
+- [ ] Deploy the functions and `firestore` (`functions/.env.bestbefore-f9ee1` already has
+  `PROMPT_REVIEW_MODEL=gemini-3.8-flash`): the deploy creates the Cloud Scheduler job
+  `firebase-schedule-weeklyPromptReview-europe-west1` (the project's sixth: USD 0.10 a month beyond
+  the three free per billing account) and the TTL policy on `promptReviews.expiresAt` (365 days);
+  check `gcloud firestore fields ttls list` shows it ACTIVE.
+- [ ] Apply the new alert policy "Recipe: weekly prompt review failed"
+  (`functions/alerts/policies/prompt-review-failed.json`, severity WARNING):
+  `python3 functions/alerts/alerts.py --project bestbefore-f9ee1` (dry run), then `--apply`.
+- [ ] Optional, to see one now: `npm run admin -- judge review --run --project bestbefore-f9ee1` (dry
+  run: the counts and the worst case), then with `--apply` and
+  `VERTEX_TOKEN=$(gcloud auth print-access-token)`; or
+  `gcloud scheduler jobs run firebase-schedule-weeklyPromptReview-europe-west1 --project=bestbefore-f9ee1 --location=europe-west1`.
+- Decide: whether to keep the judged text (`outputJudgeKeepText`, off; the privacy policy first):
+  without it the review sees the judge's codes and notes only, which is cheaper and less specific.
+  Each report costs about USD 0.06 (at most USD 0.19), booked against the day's spend ceiling.
+
 ### A model is being retired (runbook)
 
 When "Recipe: model retirement near" or "Recipe: model not served" names a model in use (`npm run

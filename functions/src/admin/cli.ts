@@ -8,6 +8,7 @@
  *   npm run admin -- config list | set <id> <value> ... | reset <id> ... [--apply [--confirm <id,id>]]  (README "The owner console")
  *   npm run admin -- models [--probe]  (README "Model lifecycle": read-only)
  *   npm run admin -- judge summary | export [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--out <file.jsonl>]  (README "Prompt injection defences" item 5: read-only)
+ *   npm run admin -- judge review [--week YYYY-Www] [--run [--apply]]  (README "Weekly prompt review": the stored report; --run is a dry run unless --apply)
  *
  * Against the emulators (project demo-foodtracker, 127.0.0.1:8080 / :9099) unless `--project` names
  * a live project; then with the operator's Application Default Credentials. `delete` is a dry run
@@ -48,6 +49,11 @@ import { validImageSelection, type ImageSelection } from "../model";
 import { SwitchRefused, activateProfile, listProfiles, type PlannedWrite, type SetupView, type SwitchEnv } from "../core/providerSwitch";
 import { HttpsError } from "firebase-functions/v2/https";
 import { parseJudgeArgs, runJudgeAnswers } from "./judgeAnswers";
+import { parseReviewArgs, runReviewCommand, type ReviewCommandEnv } from "./promptReviewCli";
+import { GeminiPromptReviewer } from "../adapters/gemini";
+import { RestStreamingModels } from "./vertexRest";
+import { EmulatorPromptReviewer } from "../emulatorFakes";
+import { PROMPT_REVIEW } from "../constants";
 import { SETTING_CHANGES, applySettings, listSettings, settingById, type Control, type SettingDef } from "../core/ownerSettings";
 
 export const EMULATOR_PROJECT = "demo-foodtracker";
@@ -72,7 +78,8 @@ const USAGE = `usage:
   npm run admin -- models [--probe] [--project <id>]        (read-only; --probe needs --project)
   npm run admin -- judge summary [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--project <id>]
   npm run admin -- judge export  [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--out <file.jsonl>] [--project <id>]
-Without --project: the local emulators (${EMULATOR_PROJECT}). delete, providers use and config set / reset are dry runs without --apply.`;
+  npm run admin -- judge review  [--week YYYY-Www] [--run [--apply]] [--project <id>]   (--apply live: VERTEX_TOKEN)
+Without --project: the local emulators (${EMULATOR_PROJECT}). delete, providers use, config set / reset and judge review --run are dry runs without --apply.`;
 
 const OPTIONS = {
   email: { type: "string" },
@@ -385,6 +392,8 @@ export interface ModelsEnv {
   textDefaults: TextTarget;
   /** The output judge's model as the functions read it (judgeModelOf: GEMINI_JUDGE_MODEL, its default JUDGE.model, empty: GEMINI_MODEL). */
   judgeModel: string;
+  /** The weekly prompt review's model (reviewModelOf); absent: PROMPT_REVIEW.model. */
+  reviewModel?: string;
   context(d: ProviderDescriptor): ProviderContext;
   now(): number;
   print(line: string): void;
@@ -393,7 +402,7 @@ export interface ModelsEnv {
 /** Prints the models in use and listed, their roles and dates, and (with --probe) what the providers say. Writes and logs nothing. */
 export async function runModels(args: ModelsArgs, env: ModelsEnv): Promise<ModelReport[]> {
   const config = await loadRuntimeConfig(env.db, undefined, env.imageDefaults, env.textDefaults);
-  const models = modelsInUse(config, { provider: "google", model: env.judgeModel });
+  const models = modelsInUse(config, { provider: "google", model: env.judgeModel }, undefined, { provider: "google", model: env.reviewModel ?? PROMPT_REVIEW.model });
   const reports = await assessModels({ models, context: env.context, now: env.now, probe: args.probe });
   const today = new Date(env.now()).toISOString().slice(0, 10);
   env.print(`Models as of ${today} (config/runtime over the deploy params over the defaults; output judge ${config.outputJudge}).`);
@@ -449,6 +458,7 @@ export function buildModelsEnv(project: string): ModelsEnv {
     imageDefaults: base.imageDefaults ?? { ...DEFAULT_IMAGE_SELECTION },
     textDefaults: base.textDefaults ?? { provider: DEFAULT_TEXT_SELECTION.provider, model: DEFAULT_TEXT_SELECTION.model },
     judgeModel: judgeModelOf(params, geminiModel),
+    reviewModel: reviewModelOf(params, geminiModel),
     context: (d) => ({
       project,
       param: (name) => paramOf(d, name),
@@ -653,6 +663,41 @@ function adminApp(project: string) {
   return { live, app: getApps()[0] ?? initializeApp({ projectId: project }) };
 }
 
+/**
+ * The prompt review command's env: Firestore as the board's; the model only for --run --apply,
+ * live through Vertex AI REST with the operator's bearer token (VERTEX_TOKEN, never stored or
+ * printed), on the emulators the fixed stand-in. Model and location as the functions read them.
+ */
+export function buildReviewEnv(project: string): ReviewCommandEnv {
+  const { live, app } = adminApp(project);
+  const db = getFirestore(app);
+  const params = live ? deployParams(project) : {};
+  const model = reviewModelOf(params, params.GEMINI_MODEL || DEFAULT_TEXT_SELECTION.model);
+  return {
+    db,
+    now: () => Date.now(),
+    print: (l) => console.log(l),
+    logger: stderrLogger,
+    config: () => loadRuntimeConfig(db, stderrLogger),
+    reviewerModel: model,
+    reviewer: () => {
+      if (!live) return new EmulatorPromptReviewer();
+      if (!process.env.VERTEX_TOKEN) throw new AdminRefusal("--apply on a live project calls Vertex AI: set VERTEX_TOKEN, e.g. VERTEX_TOKEN=$(gcloud auth print-access-token).");
+      const location = params.VERTEX_LOCATION || "global";
+      return new GeminiPromptReviewer(
+        { project, location, model, jailbreakFilter: params.GEMINI_JAILBREAK_FILTER === "true" },
+        new RestStreamingModels({ project, location, token: () => process.env.VERTEX_TOKEN ?? "" }),
+      );
+    },
+  };
+}
+
+/** The weekly prompt review's model as the functions read it: PROMPT_REVIEW_MODEL, its default PROMPT_REVIEW.model, empty: GEMINI_MODEL. */
+export function reviewModelOf(params: Readonly<Record<string, string>>, geminiModel: string): string {
+  const set = Object.prototype.hasOwnProperty.call(params, "PROMPT_REVIEW_MODEL");
+  return (set ? params.PROMPT_REVIEW_MODEL : PROMPT_REVIEW.model) || geminiModel;
+}
+
 export function buildBoardEnv(project: string): BoardEnv {
   const { app } = adminApp(project);
   return { db: getFirestore(app), now: () => Date.now(), print: (l) => console.log(l), logger: stderrLogger };
@@ -745,6 +790,13 @@ async function main(): Promise<void> {
       const modelsEnv = buildModelsEnv(args.project);
       console.log(args.project.startsWith("demo-") ? `[emulators, ${args.project}]` : `[LIVE project ${args.project}, read-only]`);
       await runModels(args, modelsEnv);
+      return;
+    }
+    if (argv[0] === "judge" && argv[1] === "review") {
+      const args = parseReviewArgs(argv, EMULATOR_PROJECT);
+      const reviewEnv = buildReviewEnv(args.project);
+      console.log(args.project.startsWith("demo-") ? `[emulators, ${args.project}]` : `[LIVE project ${args.project}${args.apply ? "" : ", read-only"}]`);
+      await runReviewCommand(args, reviewEnv);
       return;
     }
     if (argv[0] === "judge") {
