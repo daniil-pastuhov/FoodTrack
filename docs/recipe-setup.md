@@ -528,6 +528,30 @@ profiles"), and the board shows the setup in force with a link that leads nowher
   `approved` flag for it is turned on (after the privacy policy names OpenAI) and its key is set
   (step 12, last item).
 
+### 13b. Owner console: the other runtime settings (functions/README.md "The owner console", "Settings")
+
+The console's settings section and `npm run admin -- config`. Nothing new to set up in the
+console; until these are done, `config/runtime` is edited by hand (or with the command, which
+works as soon as it is merged).
+
+- [ ] Deploy the two new callables:
+  `cd functions && npm ci && npx firebase deploy --only functions:getOwnerSettings,functions:setOwnerSettings --project bestbefore-f9ee1`
+  (or the next full `--only functions,firestore` deploy). Firestore needs no new index (the audit
+  collection is ordered by one field).
+- [ ] Deploy the page: `npx firebase deploy --only hosting --project bestbefore-f9ee1`, then the
+  two `curl -sI` checks of step 13 on `https://bestbefore-f9ee1.firebaseapp.com` (the headers are
+  unchanged).
+- [ ] Apply the new alert, "Recipe: owner settings changed"
+  (`functions/alerts/policies/owner-settings-changed.json`):
+  `python3 functions/alerts/alerts.py --project bestbefore-f9ee1` (dry run), then with `--apply`.
+- [ ] **Check**: sign in on the page, see the sections with `config/runtime`'s values; save one
+  ordinary change (e.g. Reports > Days a report is kept) and reset it, then one sensitive change
+  (it asks for `CHANGE`) and reset it; see the alert emails and the `ownerSettingChanges/`
+  records. On a phone, check a section with the menu table scrolls sideways.
+- [ ] Decide the editor's bounds where the parser has none (functions/README.md "Settings",
+  table: e.g. the absolute spend ceiling at most USD 50 a day, a recipe at most 100), and whether
+  any of the read-only fields (the raw prices) should become editable.
+
 ### 13a. A new provider's API key (Mistral, Black Forest Labs) **(owner; not done)**
 
 The keys are in Secret Manager already (`MISTRAL_API_KEY`, `BFL_API_KEY`) with no access granted.

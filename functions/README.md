@@ -25,6 +25,7 @@ the caller. The client wire contract is in [CONTRACT.md](CONTRACT.md).
 | `src/core/reports.ts` | `reportRecipe` ("Report this recipe") and keeping a deleted account's reports without its uid (see "Reports") |
 | `src/providers/types.ts`, `registry.ts`, `router.ts`, `failure.ts`, `balance.ts` | The common provider interface: the descriptor every text or picture adapter exports, the registry of them (one entry each), the routers that pick the adapter per call, the shared failure taxonomy and the balance probe (see "Adding a provider") |
 | `src/providers/profiles.ts`, `src/core/providerSwitch.ts` | The named provider setups (profiles: text and pictures) and the one core that switches between them, for `npm run admin -- providers` and the owner console (see "Provider profiles", "The owner console") |
+| `src/core/ownerSettings.ts` | The registry of runtime settings the owner may change and the one core that changes them, for `npm run admin -- config` and the owner console (see "The owner console", "Settings") |
 | `src/core/recipeImage.ts` | A recipe's picture: the fixed prompt template around the checked brief, the call under its time limit, the `image_call` line (see "Recipe pictures") |
 | `src/adapters/image.ts`, `bfl.ts`, `imageNormalize.ts`, `secretManager.ts` | The picture adapters (Vertex AI, OpenAI; Black Forest Labs in `bfl.ts`) and their descriptors, the re-encoding of every picture to the delivered JPEG (sharp), and the run-time read of a provider's API key |
 | `src/core/sweeper.ts` | Stale reservations, Play consume retries, owed consumption answers, negative-balance watch |
@@ -42,7 +43,7 @@ the caller. The client wire contract is in [CONTRACT.md](CONTRACT.md).
 | `src/emulatorFakes.ts` | Fake stores and LLM, only inside the Functions emulator with `EMULATOR_FAKES=true` and a `demo-` project |
 | `src/index.ts` | Triggers, params, secrets, per-function limits |
 | `certs/AppleRootCA-G3.cer` | Apple's public root CA (SHA-256 `63:34:3A:BF:…:91:79`, checked by a test) |
-| `../owner-console/` | The owner console: a static page on Firebase Hosting with the provider setup's drop-down (text and pictures); everything it shows or changes goes through `getProviderProfiles` / `setProviderProfile` (see "The owner console") |
+| `../owner-console/` | The owner console: a static page on Firebase Hosting with the provider setup's drop-down (text and pictures); and the runtime settings; everything it shows or changes goes through `getProviderProfiles` / `setProviderProfile` and `getOwnerSettings` / `setOwnerSettings` (see "The owner console") |
 | `../firestore.rules` | Denies every client read and write; only the Admin SDK touches Firestore |
 | `../firestore.indexes.json` | Sweeper indexes and the TTL policies on `generations.expiresAt` and `recipeImages.expiresAt` |
 
@@ -55,6 +56,7 @@ the caller. The client wire contract is in [CONTRACT.md](CONTRACT.md).
 | `reportRecipe` | callable, App Check enforced and limited-use token consumed | "Report this recipe" on a result from a pack (CONTRACT.md, "Reports") |
 | `getWelcomeOffer` | callable, App Check enforced, token not consumed, **no sign-in** | See CONTRACT.md and "Welcome grant" |
 | `getProviderProfiles`, `setProviderProfile` | callable, **no App Check**, a Google sign-in listed in `config/owner` | The owner console only, never the apps: the provider profiles and the switch (see "The owner console") |
+| `getOwnerSettings`, `setOwnerSettings` | callable, **no App Check**, a Google sign-in listed in `config/owner` | The owner console only, never the apps: the runtime settings of `config/runtime` (see "The owner console", "Settings") |
 | `sweepReservations` | every 5 min | Refunds reservations still pending 60 s after their deadline; retries Play consumes and owed consumption answers; watches negative balances |
 | `pollPlayVoidedPurchases` | daily 04:00 UTC | Voided Purchases API, last 3 days, for RTDNs that never arrived |
 | `checkProviderBalances` | hourly at :41 UTC | Asks the balance of every prepaid provider that has a probe and a threshold in `config/runtime.providerBalanceAlerts`, and logs `provider_balance_low` under it; with no threshold (the default) it reads only `config/runtime` (see "Provider balances") |
@@ -576,7 +578,7 @@ concurrency 1 below 1 vCPU), 1 instance:
 | `claimWelcome` | 1 | 10 | 30 s |
 | `getWelcomeOffer` | 1 | 120 (per client address and instance only: no sign-in, so no uid) | 10 s |
 | `appStoreNotifications` | 1 | n/a (no Firestore before Apple's signature checks out) | 30 s |
-| `getProviderProfiles`, `setProviderProfile` | 1 each | 30 for all callers but a listed owner together, at most 5 of them per client address; a listed owner 30 apart; calls without a token refused uncounted ("The owner console") | 30 s |
+| `getProviderProfiles`, `setProviderProfile`, `getOwnerSettings`, `setOwnerSettings` | 1 each | 30 for all callers but a listed owner together, at most 5 of them per client address; a listed owner 30 apart; calls without a token refused uncounted ("The owner console") | 30 s |
 | `playNotifications`, `budgetKillSwitch`, `sweepReservations`, `pollPlayVoidedPurchases` | 1 | n/a (Pub/Sub or scheduler; not callable from the internet) | |
 | `redrawBoard` | 1 (no retry: the next hour redraws anyway) | n/a (scheduler); at most 2,000 purchases read a run (`BOARD_PURCHASES_CAP`) | 120 s |
 
@@ -742,7 +744,8 @@ Create log-based alerts in Cloud Logging on `jsonPayload.message` (all are struc
 | `text_fallback` | info | **Worth watching**: the recipe text's provider failed before writing anything and the fallback was asked once: `uidHash`, `provider`, `model`, `fallbackProvider`, `fallbackModel`, `reason` (`OUT_OF_CREDIT`, `CAPACITY`, `CONFIG`). The `llm_call` line then has `provider` (who answered) and `textFallback: true`. |
 | `provider_balance_low` / `provider_balance_unavailable` | error / warning | The hourly balance probe ("Provider balances"): `provider`, `amount`, `unit`, `threshold`; or `provider`, `reason` (`TIMEOUT`, `FAILED`). The first is **alerted on** (`provider-balance-low`). |
 | `provider_balance_unprobed` | warning | A `providerBalanceAlerts` threshold nothing can probe ("Provider balances"): `provider`, `reason` (`UNKNOWN_PROVIDER`, `NO_PROBE`); once per such threshold per hourly run. Remove the threshold or fix its id. |
-| `owner_call_refused` | warning | A call to the owner console's callables was refused: `function`, `reason` (`SIGN_IN`, `RATE_LIMITED`, `NOT_OWNER`, `RECENT_SIGN_IN`, `NOT_READY`, `STALE`, `UNKNOWN_PROFILE`, `PRICES_INVALID`, `INVALID_RESULT`), `suppressedSinceLast`; sampled, 10 a minute per instance. Never who. Many `NOT_OWNER` mean someone is trying the page. |
+| `owner_settings_changed` | info / warning | **Alerted on** (console changes): runtime settings were changed ("The owner console", "Settings"): `via` (`web` / `cli`), `uidHash` for the console, `settings` (ids), `sensitive` (the sensitive ids among them; the line is a warning when there is any), `changes` (`id`, `from`, `to`, for plain values; lists and tables are in the audit record), `change` (the `ownerSettingChanges/` id). Never an email or uid. |
+| `owner_call_refused` | warning | A call to the owner console's callables was refused: `function`, `reason` (`SIGN_IN`, `RATE_LIMITED`, `NOT_OWNER`, `RECENT_SIGN_IN`, `NOT_READY`, `STALE`, `UNKNOWN_PROFILE`, `PRICES_INVALID`, `INVALID_RESULT`, and for the settings `UNKNOWN_SETTING`, `INVALID_VALUE`, `STORED_INVALID`, `CONFIRM_SENSITIVE`), `suppressedSinceLast`; sampled, 10 a minute per instance. Never who. Many `NOT_OWNER` mean someone is trying the page. |
 | `image_fallback` | info | **Worth watching**: the selected model could not make a picture and the fallback model was asked once: `uidHash`, `provider`, `model`, `fallbackProvider` (only when it is another provider), `fallbackModel`, `picture`, `reason` (`QUOTA`, `SERVER`, `NOT_FOUND`, `REFUSED_REQUEST`, `TIMEOUT`, `DECODE`, `INFRA`, `CONFIG`, `OUT_OF_CREDIT`), `outcome` (`done` or the failure code). Frequent fallbacks mean the primary is failing, and each such picture costs more (Nano Banana 2.1 about USD 0.0415 against 0.0336) and takes about 15 s. Never the prompt or the brief. |
 | `recipe_reported` | warning | Someone used "Report this recipe" ("Reports"): `report` (a hash of the report id; the document is `reports/<reportId>`), `reason`, `kind` (null without a snapshot), `snapshot` (whether the generation was still kept), `hasNote`, `pictures`, `imageLevel`, `platform`, `appVersion`, `language`, `uidHash`. Never the note or the recipe. **Alert on any** (or on more than a few an hour), then read the report in the console. |
 | `report_day_limit` | error | The first report of the UTC day refused at `reports.perDay` (`day`, `perDay`, `reports`); once a day (`stats/{day}.reportCapReachedAt`). Alert on it: someone may be flooding reports, or the cap is too low. |
@@ -754,7 +757,7 @@ Create log-based alerts in Cloud Logging on `jsonPayload.message` (all are struc
 The owner is emailed by Cloud Monitoring alert policies on the log lines above, through the
 existing email channel "Recipe backend alerts (owner)". They are code in `functions/alerts/`: two
 log-based metrics (`metrics/recipe_generation_refused.json`, `metrics/recipe_image_failed.json`)
-and fifteen policies (`policies/*.json`, no channel in them). `alerts.py` applies them: dry run by default (local checks, every log filter
+and sixteen policies (`policies/*.json`, no channel in them). `alerts.py` applies them: dry run by default (local checks, every log filter
 checked against the project with a read-only `gcloud logging read`, then the plan), `--apply` to
 create or update (matched by display name, so re-running is safe and prints "unchanged"). The
 channel is chosen by `--channel <id>` or `--channel-name` (default the one above); the script never
@@ -780,6 +783,7 @@ and Logs Configuration Writer (`--account` picks one other than the active accou
 | Recipe: recipe reported (`recipe-reported`) | every report made with "Report this recipe" (at most one email per 5 minutes) | `recipe_reported` |
 | Recipe: report day limit reached (`report-day-limit`) | the first report of the UTC day refused at `reports.perDay` | `report_day_limit` |
 | Recipe: provider profile switched (`provider-profile-changed`) | every switch made on the owner console (at most one email per 5 minutes); not the admin command's | `provider_profile_changed` |
+| Recipe: owner settings changed (`owner-settings-changed`) | every settings save made on the owner console, sensitive or not (at most one email per 5 minutes); not the admin command's | `owner_settings_changed` |
 | Recipe: recipe pictures failing broadly (`image-failures`) | more than 3 `CONFIG` or more than 10 `INFRA` pictures not delivered in an hour, after their retries and fallback (metric threshold) | `image_call` through the metric `recipe_image_failed` |
 | Recipe: provider out of credit (`provider-out-of-credit`) | a text or picture provider's prepaid balance or spending limit ran out (at most one email an hour) | `provider_out_of_credit` |
 | Recipe: provider balance low (`provider-balance-low`) | a prepaid provider's balance is under its `providerBalanceAlerts` threshold (at most one email per 6 hours) | `provider_balance_low` |
@@ -1737,7 +1741,10 @@ Server-only. Documents:
 
 ### `config/runtime`
 
-Create it in the console (Firestore > `config` > `runtime`). Every field is optional; a missing
+Change it from the owner console's settings or `npm run admin -- config set | reset` ("The owner
+console", "Settings": checked, field paths only, audited and alerted), rather than by hand; the
+fields that are read-only there (prices, the provider setup) are changed by the profile switch or
+by hand. Created in the console if missing (Firestore > `config` > `runtime`). Every field is optional; a missing
 field uses the default. A present but invalid field never fails open: `generationEnabled`,
 `allowSandbox` and `consumptionSampleContentProvided` then read as `false`, every other field uses
 its default, and a warning "config/runtime has invalid fields" names them. Instances cache it for
@@ -2212,7 +2219,8 @@ bucket) and `gcloud iam roles delete ownerBoardWriter --project=bestbefore-f9ee1
 
 A web page with a drop-down of the provider profiles ("Provider profiles"): the setup in force,
 each profile's readiness (and what is missing), the last change, and a switch behind a
-confirmation dialog. The board stays static and request-free and only links to it.
+confirmation dialog; below it, the other runtime settings of `config/runtime` ("Settings"
+below). The board stays static and request-free and only links to it.
 
 **Where it lives, and why not beside the board.** The board's private bucket is opened through
 Google's authenticated download, which protects the download only: the page is then served from a
@@ -2223,7 +2231,7 @@ on **Firebase Hosting**, the project's default site, `https://bestbefore-f9ee1.f
 (`firebase.json` `hosting`, files in `owner-console/`). That host is an authorized domain by default
 and is also the project's `authDomain`, so the Google sign-in runs on the page's own origin (none
 of the third-party-storage trouble of the `web.app` host, which also works). The page holds no
-data, no profile, no model id and no address; it loads its Firebase configuration from Hosting's
+data, no profile, no model id, no setting and no address; it loads its Firebase configuration from Hosting's
 `/__/firebase/init.json` and the Firebase JS SDK (13.4.0, pinned) from its own site,
 `owner-console/vendor/firebasejs/13.4.0/` (copied from `www.gstatic.com`, the source URLs and
 SHA-256 in `SOURCE.txt` there, checked by `test/providerProfiles.test.ts`; no build step), and
@@ -2235,8 +2243,9 @@ console's own files only (`firebase.json` `hosting.headers[0].regex`: `/`, `inde
 `frame-ancestors 'none'` on `/__/auth/iframe` or the COOP on `/__/auth/handler` would break the
 sign-in, and the handler is also the apps' Sign in with Apple return URL.
 
-**Who gets in.** Everything it shows and does goes through two callables, `getProviderProfiles`
-and `setProviderProfile` `{profile, expect, confirm: true}` (`src/core/providerSwitch.ts`), which:
+**Who gets in.** Everything it shows and does goes through four callables, `getProviderProfiles`
+and `setProviderProfile` `{profile, expect, confirm: true}` (`src/core/providerSwitch.ts`), and
+`getOwnerSettings` and `setOwnerSettings` (`src/core/ownerSettings.ts`, "Settings" below), which:
 
 - need a Firebase ID token, checked again with **revocation** (`verifyIdToken(token, true)`: a
   disabled user or revoked tokens are refused), of a **Google** sign-in with a **verified email**;
@@ -2296,9 +2305,123 @@ with it. The page then uses the emulators, the emulator serves `/__/firebase/ini
 demo project, and `config/owner` goes in the emulator's Firestore (emulator UI) with the uid of the
 emulator's Google user.
 
-**Cost**: Hosting's free tier (a few KB, a few visits); two callables idle at zero instances, a
-few calls a month. **Turn it off**: remove `config/owner` (nobody gets in), or delete the two
-functions (`npx firebase functions:delete getProviderProfiles setProviderProfile --region europe-west1`,
+### Settings (`config/runtime` from the console)
+
+Below the provider profiles the console shows every other runtime setting the owner may change,
+instead of hand-editing `config/runtime`: sections, each setting's value in force, its default,
+"set here" / "changed from default" and when it was last changed (and how), a **Save** per section,
+and, read-only, what can't be changed there and why. The page holds none of it: it draws what
+`getOwnerSettings` returns, so a new setting is one entry in the registry,
+`src/core/ownerSettings.ts` (`SETTINGS`: id = field path, section, label, help, control
+(on/off, number with min/max/step, choice, ticks from the quiz's ids, the menu table) and whether
+it is sensitive), and no page change. The same core is behind the admin command:
+
+```bash
+cd functions
+npm run admin -- config list                                    # emulators; add --project bestbefore-f9ee1 for live
+npm run admin -- config set reports.keepDays 30                  # dry run: before -> after, side effects, the exact writes
+npm run admin -- config set dailyCap 500 --apply --confirm dailyCap --project bestbefore-f9ee1
+npm run admin -- config reset welcome.recipes --apply --confirm welcome.recipes
+```
+
+Values are typed in the stored unit (micro-USD for USD amounts: `1200000` is USD 1.20; lists
+comma-separated; the menu table as JSON). Several `<id> <value>` pairs go in one transaction.
+
+**A save** (`setOwnerSettings`, `applySettings`): the page first asks the server to check the
+section's changes (`{changes, dryRun: true}`, nothing written), shows what the server answered
+(before → after per setting, and anything else that moves with them, such as menu cells derived from
+a recipe's price), then saves with `{changes, confirm: true}`. In one transaction the server reads
+`config/runtime`, refuses an unknown setting (`UNKNOWN_SETTING`), a value outside its bounds
+(`INVALID_VALUE`), a setting whose stored value is not the one the page showed (`STALE`, each
+change carries it as `expect`), and a setting inside a map that is invalid as stored, whose safe
+value is in force (`STORED_INVALID`: fix or delete that map in the Firestore console first, so
+nothing is quietly rewritten into it); builds the document as it would be and refuses everything
+(`INVALID_RESULT`) unless `parseRuntimeConfig` reads it with no newly invalid field and every
+setting asked in force exactly as asked; then writes with **field paths only** (every other field
+untouched). **Reset to default** deletes the override, except for `costs.recipe` / `menu2` /
+`menu3`, which the parser requires in a costs map and which are set to their defaults; a map
+left empty goes too. The **costs map** is written complete or not at all: with none stored, a costs
+change writes `recipe`, `menu2` and `menu3` (defaults) beside it, because a partial map is
+refused as a whole by the parser; `costs.menuSets` is stored without the 3-day 2- and 3-course
+cells, which are `menu2` / `menu3`. The same transaction adds an audit record,
+`ownerSettingChanges/{auto id}`: `at`, `actor` (`{via: "web", uid}` or `{via: "cli"}`),
+`sensitive` and `sensitiveSettings`, `changes` (id, label, value in force and as stored, before and
+after, reset or not), `sideEffects` and the `writes`; then `owner_settings_changed` is logged
+(`warning` when sensitive, else `info`; `uidHash` for the console), alerted on for console
+changes (`owner-settings-changed`). A save that changes nothing writes and records nothing. The
+instances' 30 s config cache is the only delay. The gate is exactly the profile switch's (the
+allowlist, a sign-in from the last 30 minutes for any save or check, `OwnerCallGate`).
+
+**Sensitive** settings are those that can pause the service, raise or lower a spending ceiling,
+change what users are charged or given, allow sandbox purchases, or loosen a safety brake. A save
+with any needs them confirmed: the page asks for the word `CHANGE` typed, and the server refuses
+(`CONFIRM_SENSITIVE`) a save unless `typed` is that word and `sensitive` lists exactly the
+sensitive ids being changed (the command: `--confirm <id,id>` with `--apply`). The audit record and
+the log line name them. The editor's bounds are tighter than the parser's where the parser has
+none (USD amounts, rate limits); a value already stored outside them is shown and kept until
+changed.
+
+| setting | bounds here | default | sensitive |
+|---|---|---|---|
+| **On/off** | | | |
+| `generationEnabled` | on/off | true | yes |
+| `allowSandbox` | on/off | false | yes |
+| `outputJudge` | off / shadow / enforce | off | yes |
+| **Spending limits** | | | |
+| `dailySpendBaseMicroUsd` | USD 0–20 | USD 1.20 | yes |
+| `dailySpendMaxMicroUsd` | USD 0–50 | USD 2.00 | yes |
+| `dailySpendRevenueFraction` | 0–1 | 0.25 | yes |
+| `netMicroUsdPerCredit` | USD 0–1 | USD 0.12 | yes |
+| `perUserDailySpendMicroUsd` | USD 0–5 | USD 0.45 | yes |
+| `dailyCap` | 0–100,000 | 1000 | yes |
+| `budgetKillFraction` | 0.05–2 | 1 | yes |
+| **Limits per account** | | | |
+| `perUserPerMinute` | 0–60 | 3 | yes |
+| `perUserPerDay` | 0–1,000 | 40 | yes |
+| `verifyPerMinute` | 0–100 | 10 | yes |
+| `infraRefundsPerDay` | 0–100 | 3 | yes |
+| `rejectedPromptsPerDay` | 0–100 | 5 | yes |
+| `refundAbuseThreshold` | 1–100 | 2 | yes |
+| **Test purchases** | | | |
+| `sandboxDailyCap` | 0–1,000 | 20 | yes |
+| `sandboxDailyCredits` | 0–10,000 | 200 | yes |
+| **What things cost users** | | | |
+| `costs.recipe` | 1–100 | 1 | yes |
+| `costs.menu2` | 1–100 | 4 | yes |
+| `costs.menu3` | 1–100 | 5 | yes |
+| `costs.recipeImage` | 0–100 | 2 | yes |
+| `costs.recipeImageSteps` | 0–100 | 3 | yes |
+| `costs.menuSets` | table, cells 1–100 | days + courses − 1 | yes |
+| **Free recipes for signing in** | | | |
+| `welcome.recipes` | 0–20 | 3 | yes |
+| `welcome.perDay` | 0–10,000 | 200 | yes |
+| **Pictures** | | | |
+| `image.maxStepImages` | 0–4 | 2 | yes |
+| **Taste quiz** | | | |
+| `tasteQuiz.hidden` | quiz step and option ids | none | no |
+| **Reports** | | | |
+| `reports.perUserPerDay` | 0–1,000 | 10 | no |
+| `reports.perDay` | 0–100,000 | 500 | no |
+| `reports.keepDays` | 1–400 | 90 | no |
+| **Provider balances** | | | |
+| `providerBalanceAlerts.bfl` | 0–1,000,000,000 | none | no |
+
+**Read-only there** (shown with the value in force and the default): `prices.inputUsdPerMTok`,
+`prices.outputUsdPerMTok`, `prices.imageUsdPerImage`, `prices.textUsdPerMTok` (raw model prices:
+every reservation, ceiling and brake is worked out from them, and one set below the provider's
+real price lets real spend pass every ceiling unnoticed; changed by hand after checking the price
+page, "Price table"), `image.provider` / `model` / `fallbackModel` / `fallbackProvider` and
+`text.*` (set by the profile switch, which checks key, privacy approval and price first), and
+`consumptionSampleContentProvided` (a statement to Apple about the pack sheet, changed with the
+app, not as a setting). **Excluded**: `providerDefaults` (not stored: the deploy parameters).
+`providerBalanceAlerts` is edited per provider that has a balance probe; thresholds for other ids
+are kept as stored. `test/ownerSettings.test.ts` reads `parseRuntimeConfig`'s source and fails on
+any field that is none of these, so a new field can't be forgotten.
+
+**Cost**: Hosting's free tier (a few KB, a few visits); four callables idle at zero instances, a
+few calls a month (each has its own instance and its own `OwnerCallGate`, so the per-minute
+ceilings above hold per function). **Turn it off**: remove `config/owner` (nobody gets in), or delete the
+functions (`npx firebase functions:delete getProviderProfiles setProviderProfile getOwnerSettings setOwnerSettings --region europe-west1`,
 and remove their exports from `src/index.ts`) and `npx firebase hosting:disable`.
 
 ## Parameters and secrets
