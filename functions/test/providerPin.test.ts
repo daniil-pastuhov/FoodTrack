@@ -15,6 +15,9 @@
  * model with its own prices, a 320-token ceiling and a described answer (README "Prompt injection
  * defences" item 5), so `judgeSent`, `judgeWorstCase` and every `reservedWithJudge` were
  * recomputed; the judge pinned here still runs on gemini-3.8-flash at LOW, that model's least.
+ * On 2026-11-18 the openai profile moved from gpt-image-1-mini (shut down 2026-12-01) to
+ * gpt-image-2.6-flare and gpt-image-1-mini lost its price, so its `cost` row is [0, 0], as for any
+ * unpriced model; its request bodies are pinned unchanged.
  */
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";

@@ -107,7 +107,7 @@ describe("costs", () => {
   test("no price for the selected provider and model, or the provider off: no recipeImage", () => {
     expect(parseRuntimeConfig({ image: { model: "unpriced-model" } }).costs).not.toHaveProperty("recipeImage");
     expect(parseRuntimeConfig({ image: { provider: "off" } }).costs).not.toHaveProperty("recipeImage");
-    expect(parseRuntimeConfig({}, undefined, { provider: "openai", model: "gpt-image-1-mini", fallbackModel: "", maxStepImages: 2 }).costs.recipeImage).toBe(2);
+    expect(parseRuntimeConfig({}, undefined, { provider: "openai", model: "gpt-image-2.6-flare", fallbackModel: "", maxStepImages: 2 }).costs.recipeImage).toBe(2);
     expect(parseRuntimeConfig({}, undefined, { provider: "openai", model: "gpt-image-2", fallbackModel: "", maxStepImages: 2 }).costs).not.toHaveProperty("recipeImage");
   });
 
@@ -492,8 +492,8 @@ describe("spend ceilings", () => {
     expect(planFor(r, alone).reservedMicroUsd - planFor(plain, alone).reservedMicroUsd).toBe(extra - RESERVED + PRICE);
     // OpenAI: the default fallback has no openai price, so it is dropped. With no fallback named, an
     // OpenAI out of credit goes to the deploy default (Vertex Flash-Lite Image, USD 0.04, dearer
-    // than OpenAI's 0.02), so that is reserved (README "Adding a provider", out of credit).
-    const openai = parseRuntimeConfig({ image: { provider: "openai", model: "gpt-image-1-mini" } });
+    // than OpenAI's 0.035), so that is reserved (README "Adding a provider", out of credit).
+    const openai = parseRuntimeConfig({ image: { provider: "openai", model: "gpt-image-2.6-flare" } });
     expect(openai.image.fallbackModel).toBe("");
     expect(planFor(r, openai).reservedMicroUsd - planFor(plain, openai).reservedMicroUsd).toBe(extra - RESERVED + PRICE);
     expect(planFor(plain, config)).not.toHaveProperty("image");
@@ -528,11 +528,11 @@ describe("spend ceilings", () => {
 describe("switching provider and model at run time", () => {
   test("config/runtime.image picks the adapter and model per call, without a deploy", async () => {
     await seed(10);
-    await setConfig({ image: { provider: "openai", model: "gpt-image-1-mini" } });
+    await setConfig({ image: { provider: "openai", model: "gpt-image-2.6-flare" } });
     const res = await generateRecipe(deps, caller, request({ image: "dish" }));
     expect(res).toMatchObject({ status: "DONE", balance: 8 });
-    expect(deps.imageGenerator.targets).toEqual([{ provider: "openai", model: "gpt-image-1-mini" }]);
-    expect((await stats(deps)).imageMicroUsd).toBe(20_000);
+    expect(deps.imageGenerator.targets).toEqual([{ provider: "openai", model: "gpt-image-2.6-flare" }]);
+    expect((await stats(deps)).imageMicroUsd).toBe(35_000);
   });
 });
 
@@ -669,7 +669,7 @@ describe("the Vertex adapter", () => {
 
 describe("the OpenAI adapter", () => {
   const prompt = imagePromptFor(SAMPLE_BRIEF);
-  const target = { provider: "openai", model: "gpt-image-1-mini" };
+  const target = { provider: "openai", model: "gpt-image-2.6-flare" };
   const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 
   test("posts the documented body with the key as a bearer token, and reads data[0].b64_json", async () => {
@@ -682,14 +682,14 @@ describe("the OpenAI adapter", () => {
       });
     }) as unknown as typeof fetch;
     const out = await new OpenAIImageGenerator({ apiKey: async () => "sk-test", fetch: fetchMock }).generate(prompt, target, new AbortController().signal);
-    expect(out).toMatchObject({ mimeType: "image/jpeg", model: "gpt-image-1-mini" });
+    expect(out).toMatchObject({ mimeType: "image/jpeg", model: "gpt-image-2.6-flare" });
     expect(out.usage).toEqual({ inputTokens: 90, outputTextTokens: 0, outputImageTokens: 1300 });
     expect(out.bytes.equals(EMULATOR_IMAGE_JPEG)).toBe(true);
     expect(calls[0].url).toBe(OPENAI_IMAGES_URL);
     expect((calls[0].init.headers as Record<string, string>).authorization).toBe("Bearer sk-test");
     const body = JSON.parse(String(calls[0].init.body));
-    expect(body).toEqual(openAIImageBody(prompt, "gpt-image-1-mini", "medium"));
-    expect(body).toEqual({ model: "gpt-image-1-mini", prompt: prompt.text, n: 1, size: "1536x1024", quality: "medium", output_format: "jpeg", output_compression: 85, moderation: "auto" });
+    expect(body).toEqual(openAIImageBody(prompt, "gpt-image-2.6-flare", "medium"));
+    expect(body).toEqual({ model: "gpt-image-2.6-flare", prompt: prompt.text, n: 1, size: "1024x768", quality: "medium", output_format: "jpeg", output_compression: 85, moderation: "auto" });
     // Nothing that identifies the person.
     expect(body).not.toHaveProperty("user");
     expect(body).not.toHaveProperty("safety_identifier");
@@ -718,6 +718,8 @@ describe("the OpenAI adapter", () => {
     expect(openAISize("gpt-image-1", "4:3")).toBe("1536x1024");
     expect(openAISize("gpt-image-2", "4:3")).toBe("1024x768");
     expect(openAISize("gpt-image-2.5-flare", "4:3")).toBe("1024x768");
+    expect(openAISize("gpt-image-2.6-flare", "4:3")).toBe("1024x768");
+    expect(openAISize("gpt-image-2.6-sunburst", "4:3")).toBe("1024x768");
   });
 
   test("no key: a config failure, nothing sent", async () => {

@@ -108,11 +108,11 @@ export const MODEL_LIFECYCLE: readonly LifecycleEntry[] = [
   },
   {
     provider: "openai",
-    model: "gpt-image-1-mini",
-    retiresOn: "2026-12-01",
+    model: "gpt-image-2.6-flare",
+    retiresOn: null,
     source: OPENAI_DEPRECATIONS,
     checkedOn: "2026-11-18",
-    note: "Deprecated (notice June 2, 2026), shutdown December 1, 2026; listed only (profile openai), never switched on. Replace or remove the profile.",
+    note: "Not on the deprecations page: no shutdown announced. Named there (with gpt-image-2.6-sunburst) as the replacement of gpt-image-1-mini, shut down December 1, 2026, which it replaced in profile openai (listed only, not tried live).",
   },
   {
     provider: "bfl",

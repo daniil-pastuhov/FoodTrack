@@ -54,26 +54,26 @@ beforeEach(async () => {
 });
 
 describe("a hand-written picture setup at another provider with no fallback", () => {
-  // The deploy default is vertex / gemini-3.1-flash-lite-image (USD 0.04); openai's gpt-image-1-mini is USD 0.02.
-  const openai = parseRuntimeConfig({ image: { provider: "openai", model: "gpt-image-1-mini", fallbackModel: "" } });
+  // The deploy default is vertex / gemini-3.1-flash-lite-image (USD 0.04); openai's gpt-image-2.6-flare is USD 0.035.
+  const openai = parseRuntimeConfig({ image: { provider: "openai", model: "gpt-image-2.6-flare", fallbackModel: "" } });
 
   test("falls back to the default provider on out of credit, and reserves its price too", () => {
-    expect(openai.image).toMatchObject({ provider: "openai", model: "gpt-image-1-mini", fallbackModel: "" });
+    expect(openai.image).toMatchObject({ provider: "openai", model: "gpt-image-2.6-flare", fallbackModel: "" });
     expect(imageOutOfCreditTargetOf(openai)).toEqual({ provider: "vertex", model: "gemini-3.1-flash-lite-image" });
     expect(imageReservedMicroUsdOf(openai)).toBe(40_000);
     expect(planFor(validateGenerateRequest(request({ image: "dish" }), NOW), openai).image).toMatchObject({ reservedMicroUsd: 40_000 });
   });
 
   test("a named fallback replaces the default; the same provider as the default, or pictures off by default, add nothing", () => {
-    const named = parseRuntimeConfig({ image: { provider: "openai", model: "gpt-image-1-mini", fallbackProvider: "vertex", fallbackModel: "gemini-nano-banana-2.1" } });
+    const named = parseRuntimeConfig({ image: { provider: "openai", model: "gpt-image-2.6-flare", fallbackProvider: "vertex", fallbackModel: "gemini-nano-banana-2.1" } });
     expect(imageOutOfCreditTargetOf(named)).toEqual({ provider: "vertex", model: "gemini-nano-banana-2.1" });
     expect(imageReservedMicroUsdOf(named)).toBe(60_000);
     const sameProvider = parseRuntimeConfig({ image: { provider: "vertex", model: "gemini-nano-banana-2.1", fallbackModel: "" } });
     expect(imageOutOfCreditTargetOf(sameProvider)).toBeNull();
     expect(imageReservedMicroUsdOf(sameProvider)).toBe(60_000);
-    const offByDefault = parseRuntimeConfig({ image: { provider: "openai", model: "gpt-image-1-mini", fallbackModel: "" } }, undefined, { provider: "off", model: "x", fallbackModel: "", maxStepImages: 2 });
+    const offByDefault = parseRuntimeConfig({ image: { provider: "openai", model: "gpt-image-2.6-flare", fallbackModel: "" } }, undefined, { provider: "off", model: "x", fallbackModel: "", maxStepImages: 2 });
     expect(imageOutOfCreditTargetOf(offByDefault)).toBeNull();
-    expect(imageReservedMicroUsdOf(offByDefault)).toBe(20_000);
+    expect(imageReservedMicroUsdOf(offByDefault)).toBe(35_000);
   });
 });
 
