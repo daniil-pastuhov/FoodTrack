@@ -534,14 +534,14 @@ The console's settings section and `npm run admin -- config`. Nothing new to set
 console; until these are done, `config/runtime` is edited by hand (or with the command, which
 works as soon as it is merged).
 
-- [ ] Deploy the two new callables:
+- [x] **(done 2026-11-18, agent)** (full `--only functions,firestore` deploy) Deploy the two new callables:
   `cd functions && npm ci && npx firebase deploy --only functions:getOwnerSettings,functions:setOwnerSettings --project bestbefore-f9ee1`
   (or the next full `--only functions,firestore` deploy). Firestore needs no new index (the audit
   collection is ordered by one field).
-- [ ] Deploy the page: `npx firebase deploy --only hosting --project bestbefore-f9ee1`, then the
+- [x] **(done 2026-11-18, agent)**, after the `owner-check` preview channel, with the `curl` checks on both hosts **Deploy the page**: `npx firebase deploy --only hosting --project bestbefore-f9ee1`, then the
   two `curl -sI` checks of step 13 on `https://bestbefore-f9ee1.firebaseapp.com` (the headers are
   unchanged).
-- [ ] Apply the two new alerts, "Recipe: owner settings changed" and "Recipe: owner console
+- [x] **(done 2026-11-18, agent)** Apply the two new alerts, "Recipe: owner settings changed" and "Recipe: owner console
   refusals" (`functions/alerts/policies/owner-settings-changed.json`, `owner-refusals.json`):
   `python3 functions/alerts/alerts.py --project bestbefore-f9ee1` (dry run), then with `--apply`.
 - [ ] **Check**: sign in on the page, see the sections with `config/runtime`'s values and, under
