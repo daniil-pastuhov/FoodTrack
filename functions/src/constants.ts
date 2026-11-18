@@ -248,6 +248,21 @@ export const PROMPT_REVIEW = {
 } as const;
 
 /**
+ * The weekly app report (core/weeklyReport.ts, README "Weekly app report"): made by the Monday job
+ * beside the prompt review, no model call. `weeklyReports/{YYYY-Www}`, kept (no TTL: a few KB of
+ * totals a week, nothing about a person). Read caps: judge answers counted for the second check's
+ * spend, purchases refunded in the week; `labelChars`: each field of the email's log line at most;
+ * `historyWeeks`: the console's last weeks.
+ */
+export const WEEKLY_REPORT = {
+  collection: "weeklyReports",
+  judgeReadMax: 5_000,
+  refundReadMax: 500,
+  labelChars: 300,
+  historyWeeks: 6,
+} as const;
+
+/**
  * A recipe's picture (README "Recipe pictures"): made after the text passed every check, within
  * the same reservation, so a recipe with pictures reserves `reservationExtraMs[level]` more.
  *

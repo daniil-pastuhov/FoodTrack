@@ -645,6 +645,40 @@ function reviewNode(reviews) {
   return box;
 }
 
+// --- The weekly app report (a section's `weekly` from getOwnerSettings; core/weeklyReport.ts) -----
+// Preformatted figures from the server: set as text, never as HTML.
+
+function weeklyNode(weekly) {
+  const box = el("div", { class: "weekly" });
+  if (weekly === null || weekly === undefined) {
+    box.append(el("p", { class: "note", text: "The weekly report could not be read." }));
+    return box;
+  }
+  const { latest, history } = weekly;
+  if (!latest) {
+    box.append(el("p", { class: "note", text: "No report yet: the first is made on a Monday at 03:41 UTC, for the week before." }));
+    return box;
+  }
+  const made = latest.generatedAt ? ` · made ${new Date(latest.generatedAt).toLocaleString()}` : "";
+  box.append(el("p", { class: "eyebrow w-week", text: `${latest.week} · ${latest.span} (UTC)${latest.previousWeek ? ` · changes against ${latest.previousWeek}` : " · the first report"}${made}` }));
+  box.append(el("div", { class: "figures w-figures" }, ...latest.rows.map((r) => el("div", { class: "figure" },
+    el("div", { class: "f-label", text: r.label }),
+    el("div", { class: "f-value w-value" }, el("span", { text: r.value }), r.change ? el("span", { class: "w-change", text: r.change }) : null),
+    r.note ? el("p", { class: "f-note", text: r.note }) : null))));
+  for (const c of latest.caveats) box.append(el("p", { class: "r-warn w-caveat", text: c }));
+  if (history.length > 1) {
+    const head = ["Week", "Net revenue", "Model spend", "Margin", "Purchases", "Requests", "Free used"];
+    const cell = (t) => el("td", { text: t });
+    box.append(el("p", { class: "eyebrow w-earlier", text: "Last weeks" }),
+      el("div", { class: "table-wrap w-history" }, el("table", {},
+        el("thead", {}, el("tr", {}, ...head.map((h) => el("th", { scope: "col", text: h })))),
+        el("tbody", {}, ...history.map((h) => el("tr", {},
+          el("th", { scope: "row", text: h.week }), cell(h.revenue), cell(h.spend), cell(h.margin), cell(h.purchases), cell(h.requests), cell(h.freeUsed)))))));
+  }
+  box.append(el("p", { class: "note r-foot", text: "Estimates: revenue is the net per recipe set under Spending limits, not a store payout; spend is the server's token estimate, not the Cloud bill. Emailed by the alert policy “Recipe: weekly app report”. Full text: npm run admin -- report weekly." }));
+  return box;
+}
+
 function clearCards() {
   for (const c of cards.values()) c.node.remove();
   cards.clear();
@@ -665,6 +699,7 @@ function cardNode(sec, readOnly) {
       badge),
     figuresNode(sec.facts),
     "reviews" in sec ? reviewNode(sec.reviews) : null,
+    "weekly" in sec ? weeklyNode(sec.weekly) : null,
     el("div", { class: "rows" }, ...sec.settings.map((s) => settingNode(s, sec))),
     readOnlyNode(readOnly),
     el("div", { class: "card-foot" }, discard, save));

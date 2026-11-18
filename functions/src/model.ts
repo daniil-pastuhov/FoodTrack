@@ -387,6 +387,11 @@ export interface RuntimeConfig {
    */
   promptReviewEnabled: boolean;
   /**
+   * The weekly app report (core/weeklyReport.ts): on by default. Off, the Monday run reads and
+   * writes nothing for it and no report email is sent. Invalid reads as `false`.
+   */
+  weeklyReportEnabled: boolean;
+  /**
    * The table in force. Its `recipeImage` is left out when pictures cannot be made:
    * `recipeImage: 0`, the provider "off", or no price for the selected provider and model.
    */
@@ -488,6 +493,7 @@ export const DEFAULT_RUNTIME_CONFIG: Readonly<RuntimeConfig> = {
   outputJudge: "off",
   outputJudgeKeepText: false,
   promptReviewEnabled: true,
+  weeklyReportEnabled: true,
   costs: DEFAULT_COSTS,
   prices: { ...DEFAULT_PRICES, imageUsdPerImage: defaultImagePrices() },
   image: { ...DEFAULT_IMAGE_SELECTION },
@@ -873,7 +879,7 @@ export function parseRuntimeConfig(
     },
   };
   const bad: string[] = [];
-  for (const key of ["generationEnabled", "allowSandbox", "consumptionSampleContentProvided", "outputJudgeKeepText", "promptReviewEnabled"] as const) {
+  for (const key of ["generationEnabled", "allowSandbox", "consumptionSampleContentProvided", "outputJudgeKeepText", "promptReviewEnabled", "weeklyReportEnabled"] as const) {
     if (data[key] === undefined) continue;
     if (typeof data[key] === "boolean") {
       out[key] = data[key] as boolean;

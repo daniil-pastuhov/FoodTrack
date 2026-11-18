@@ -194,7 +194,7 @@ describe("the registry", () => {
     generationEnabled: false, allowSandbox: true, consumptionSampleContentProvided: false,
     dailyCap: 10, sandboxDailyCap: 1, sandboxDailyCredits: 2, perUserPerMinute: 1, perUserPerDay: 2, verifyPerMinute: 1, infraRefundsPerDay: 1,
     dailySpendBaseMicroUsd: 1, dailySpendMaxMicroUsd: 2, dailySpendRevenueFraction: 0.5, netMicroUsdPerCredit: 1, perUserDailySpendMicroUsd: 1,
-    refundAbuseThreshold: 3, budgetKillFraction: 0.5, rejectedPromptsPerDay: 1, outputJudge: "enforce", outputJudgeKeepText: true, promptReviewEnabled: false,
+    refundAbuseThreshold: 3, budgetKillFraction: 0.5, rejectedPromptsPerDay: 1, outputJudge: "enforce", outputJudgeKeepText: true, promptReviewEnabled: false, weeklyReportEnabled: false,
     costs: { recipe: 2, menu2: 5, menu3: 7, recipeImage: 5, recipeImageSteps: 6, menuSets: { "4": { "3": 9 } } },
     prices: { inputUsdPerMTok: 2, outputUsdPerMTok: 8, imageUsdPerImage: { "vertex/gemini-3.1-flash-image": 0.08 }, textUsdPerMTok: { "mistral/mistral-medium-latest": { inputUsdPerMTok: 1, outputUsdPerMTok: 3 } } },
     image: { provider: "vertex", model: "gemini-3.1-flash-lite-image", fallbackModel: "gemini-nano-banana-2.1", maxStepImages: 1 },
@@ -223,7 +223,7 @@ describe("the registry", () => {
 
   test("every setting has a web rule or says why it needs none", () => {
     for (const s of SETTINGS) expect(Boolean(s.web) !== (s.id in WEB_UNRESTRICTED), s.id).toBe(true);
-    expect(Object.keys(WEB_UNRESTRICTED).sort()).toEqual(["image.maxStepImages", "promptReviewEnabled", "tasteQuiz.hidden"]);
+    expect(Object.keys(WEB_UNRESTRICTED).sort()).toEqual(["image.maxStepImages", "promptReviewEnabled", "tasteQuiz.hidden", "weeklyReportEnabled"]);
     const bad: SettingDef[] = [{ ...def("dailyCap"), web: { kind: "offOnly" } }, { ...def("costs.recipe"), web: undefined }];
     expect(settingsRegistryProblems(bad).join("\n")).toMatch(/does not fit its control[\s\S]*no web rule/);
   });
@@ -238,7 +238,8 @@ describe("the registry", () => {
       expect(sensitive, id).toContain(id);
     }
     // The weekly prompt review: at most its small worst case a week, inside the spend ceiling, and no prompt change.
-    expect(SETTINGS.filter((s) => !s.sensitive).map((s) => s.id)).toEqual(["tasteQuiz.hidden", "promptReviewEnabled"]);
+    // The weekly report: reads only, no model call, changes nothing.
+    expect(SETTINGS.filter((s) => !s.sensitive).map((s) => s.id)).toEqual(["tasteQuiz.hidden", "promptReviewEnabled", "weeklyReportEnabled"]);
     // Raw prices and the provider setup are not editable here at all.
     for (const id of ["prices.inputUsdPerMTok", "prices.imageUsdPerImage", "image.provider", "text.model"]) {
       expect(settingById(id)).toBeUndefined();
@@ -265,7 +266,7 @@ describe("the registry", () => {
   test("the console's groups: every section, wide cards, read-only fields placed in a card, no figures without today's", () => {
     const view = settingsViewOf({}, D);
     expect(view.sections.map((s) => s.id)).toEqual(SECTIONS.map((s) => s.id));
-    expect(view.sections.filter((s) => s.wide).map((s) => s.id)).toEqual(["costs", "taste", "promptReview"]);
+    expect(view.sections.filter((s) => s.wide).map((s) => s.id)).toEqual(["costs", "taste", "promptReview", "weeklyReport"]);
     const cards = new Set<string>([...SECTIONS.map((s) => s.id), "providers", "other"]);
     for (const r of view.readOnly) expect(cards.has(r.section), r.id).toBe(true);
     expect(view.readOnly.filter((r) => r.section === "providers").map((r) => r.id)).toEqual(READ_ONLY.filter((r) => /^(image|text)\./.test(r.id)).map((r) => r.id));
@@ -933,8 +934,8 @@ describe("refusals of the owner callables", () => {
     expect(filter).toBe('resource.type="cloud_run_revision" AND jsonPayload.message="owner_call_refused" AND NOT jsonPayload.reason=("NOT_OWNER" OR "SIGN_IN" OR "RATE_LIMITED")');
     const readme = readFileSync(join(__dirname, "../README.md"), "utf8");
     const count = readdirSync(join(__dirname, "../alerts/policies")).filter((f) => f.endsWith(".json")).length;
-    expect(count).toBe(21);
-    expect(readme).toContain("and twenty-one policies (");
+    expect(count).toBe(22);
+    expect(readme).toContain("and twenty-two policies (");
     expect(readme).toContain("(`owner-refusals`)");
   });
 });

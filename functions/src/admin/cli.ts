@@ -9,6 +9,7 @@
  *   npm run admin -- models [--probe]  (README "Model lifecycle": read-only)
  *   npm run admin -- judge summary | export [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--out <file.jsonl>]  (README "Prompt injection defences" item 5: read-only)
  *   npm run admin -- judge review [--week YYYY-Www] [--run [--apply]]  (README "Weekly prompt review": the stored report; --run is a dry run unless --apply)
+ *   npm run admin -- report weekly [--week YYYY-Www] [--run [--apply]]  (README "Weekly app report": the stored report; --run is a dry run unless --apply)
  *
  * Against the emulators (project demo-foodtracker, 127.0.0.1:8080 / :9099) unless `--project` names
  * a live project; then with the operator's Application Default Credentials. `delete` is a dry run
@@ -50,6 +51,7 @@ import { SwitchRefused, activateProfile, listProfiles, type PlannedWrite, type S
 import { HttpsError } from "firebase-functions/v2/https";
 import { parseJudgeArgs, runJudgeAnswers } from "./judgeAnswers";
 import { parseReviewArgs, runReviewCommand, type ReviewCommandEnv } from "./promptReviewCli";
+import { parseWeeklyArgs, runWeeklyCommand, type WeeklyCommandEnv } from "./weeklyReportCli";
 import { GeminiPromptReviewer } from "../adapters/gemini";
 import { RestStreamingModels } from "./vertexRest";
 import { EmulatorPromptReviewer } from "../emulatorFakes";
@@ -79,7 +81,8 @@ const USAGE = `usage:
   npm run admin -- judge summary [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--project <id>]
   npm run admin -- judge export  [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--out <file.jsonl>] [--project <id>]
   npm run admin -- judge review  [--week YYYY-Www] [--run [--apply]] [--project <id>]   (--apply live: VERTEX_TOKEN)
-Without --project: the local emulators (${EMULATOR_PROJECT}). delete, providers use, config set / reset and judge review --run are dry runs without --apply.`;
+  npm run admin -- report weekly [--week YYYY-Www] [--run [--apply]] [--project <id>]   (no model call; no email)
+Without --project: the local emulators (${EMULATOR_PROJECT}). delete, providers use, config set / reset, judge review --run and report weekly --run are dry runs without --apply.`;
 
 const OPTIONS = {
   email: { type: "string" },
@@ -698,6 +701,13 @@ export function reviewModelOf(params: Readonly<Record<string, string>>, geminiMo
   return (set ? params.PROMPT_REVIEW_MODEL : PROMPT_REVIEW.model) || geminiModel;
 }
 
+/** The weekly report's command: Firestore only, logging to stderr (so never the report email). */
+export function buildWeeklyEnv(project: string): WeeklyCommandEnv {
+  const { app } = adminApp(project);
+  const db = getFirestore(app);
+  return { db, now: () => Date.now(), print: (l) => console.log(l), logger: stderrLogger, config: () => loadRuntimeConfig(db, stderrLogger) };
+}
+
 export function buildBoardEnv(project: string): BoardEnv {
   const { app } = adminApp(project);
   return { db: getFirestore(app), now: () => Date.now(), print: (l) => console.log(l), logger: stderrLogger };
@@ -797,6 +807,13 @@ async function main(): Promise<void> {
       const reviewEnv = buildReviewEnv(args.project);
       console.log(args.project.startsWith("demo-") ? `[emulators, ${args.project}]` : `[LIVE project ${args.project}${args.apply ? "" : ", read-only"}]`);
       await runReviewCommand(args, reviewEnv);
+      return;
+    }
+    if (argv[0] === "report") {
+      const args = parseWeeklyArgs(argv, EMULATOR_PROJECT);
+      const weeklyEnv = buildWeeklyEnv(args.project);
+      console.log(args.project.startsWith("demo-") ? `[emulators, ${args.project}]` : `[LIVE project ${args.project}${args.apply ? "" : ", read-only"}]`);
+      await runWeeklyCommand(args, weeklyEnv);
       return;
     }
     if (argv[0] === "judge") {

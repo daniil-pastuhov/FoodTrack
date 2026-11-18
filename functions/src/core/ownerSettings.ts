@@ -41,6 +41,7 @@ import type { TextTarget } from "../ports";
 import { allProviders } from "../providers/registry";
 import { TASTE_CATALOGUE, type TasteCatalogue } from "../taste/catalogue";
 import { latestPromptReviews, reviewWorstCaseMicroUsd, type PromptReviewView } from "./promptReview";
+import { latestWeeklyReports, type WeeklyHistoryRow, type WeeklyReportView } from "./weeklyReport";
 
 /** The weekly review's worst case at the default prices (PROMPT_REVIEW's caps). */
 const PROMPT_REVIEW_WORST_MICRO_USD = reviewWorstCaseMicroUsd(DEFAULT_PRICES, PROMPT_REVIEW.maxInputBytes);
@@ -74,15 +75,16 @@ export const WEB_PRICE_STEP = 1;
 
 // --- The registry ---------------------------------------------------------------------------
 
-export type SectionId = "onoff" | "spending" | "perAccount" | "sandbox" | "costs" | "welcome" | "pictures" | "taste" | "reports" | "balances" | "promptReview";
+export type SectionId = "onoff" | "spending" | "perAccount" | "sandbox" | "costs" | "welcome" | "pictures" | "taste" | "reports" | "balances" | "promptReview" | "weeklyReport";
 
 /**
  * The console's groups, in this order: each is a card on the page (title, one line of help, its
  * settings, the read-only fields that belong with it, and any figures listSettings works out for
  * it, sectionFacts). `wide`: the card spans two columns of the page's grid (a table, a long list).
  * `reviews`: the card also shows the weekly prompt review's latest reports (SettingsView, `reviews`).
+ * `weekly`: the card also shows the weekly app report (SettingsView, `weekly`).
  */
-export const SECTIONS: readonly { id: SectionId; title: string; help: string; wide?: boolean; reviews?: true }[] = [
+export const SECTIONS: readonly { id: SectionId; title: string; help: string; wide?: boolean; reviews?: true; weekly?: true }[] = [
   { id: "onoff", title: "On/off", help: "Switches that start or stop parts of the service at once." },
   { id: "spending", title: "Spending limits", help: "Estimated model spend per UTC day, across everyone. At a ceiling new recipes from packs are refused (nothing is charged)." },
   { id: "perAccount", title: "Limits per account", help: "Brakes on what one account can do; each refusal says no recipes were taken." },
@@ -94,6 +96,7 @@ export const SECTIONS: readonly { id: SectionId; title: string; help: string; wi
   { id: "reports", title: "Reports", help: "\"Report this recipe\": how many, and how long they are kept." },
   { id: "balances", title: "Provider balances", help: "The hourly balance check logs provider_balance_low (alerted on) under these thresholds. Empty: not checked." },
   { id: "promptReview", title: "Weekly prompt review", help: "Every Monday a model reads last week's second-check answers and advises on the prompts. Advice only: it never changes a prompt.", wide: true, reviews: true },
+  { id: "weeklyReport", title: "Weekly report", help: "Every Monday, last week's money and use in figures: no model, only what the server already counts. Emailed to the alert channel and kept here.", wide: true, weekly: true },
 ];
 
 export interface Option {
@@ -366,6 +369,12 @@ export const SETTINGS: readonly SettingDef[] = [
     help: `Mondays at 03:41 UTC, on the week before: one call to ${PROMPT_REVIEW.model} with the week's counts, a sample of the answers that were not ok and the current prompts. At most USD ${(PROMPT_REVIEW_WORST_MICRO_USD / USD).toFixed(2)} a run at today's prices, booked against the day's spend ceiling; nothing with fewer than ${PROMPT_REVIEW.minAnswers} answers in the week. Off: nothing is read or spent.`,
     control: { kind: "toggle" }, path: ["promptReviewEnabled"], read: top("promptReviewEnabled"),
   },
+  // Weekly app report (core/weeklyReport.ts)
+  {
+    id: "weeklyReportEnabled", section: "weeklyReport", label: "Make and email the weekly report",
+    help: "Mondays at 03:41 UTC with the prompt review, on the week before: purchases, estimated revenue and margin, model spend, recipes, free recipes, refunds and problems, with the changes against the week before. Arithmetic over stored figures, a few hundred Firestore reads, no model call. Off: nothing is read, stored or emailed. To keep the report but stop the email, disable the alert policy \"Recipe: weekly app report\" instead.",
+    control: { kind: "toggle" }, path: ["weeklyReportEnabled"], read: top("weeklyReportEnabled"),
+  },
 ];
 
 /** Fields shown but not editable here, with why. */
@@ -411,6 +420,7 @@ export const WEB_UNRESTRICTED: Readonly<Record<string, string>> = {
   "image.maxStepImages": "0 to 4 step pictures: each is priced into the recipe with step pictures and booked against the spend ceilings, which the console can't raise past its envelope.",
   "tasteQuiz.hidden": "Hiding quiz steps or options only leaves soft preferences out of the quiz and the prompt; it charges, gives or spends nothing.",
   promptReviewEnabled: "The weekly review spends at most its small worst case once a week, booked against the day's spend ceiling, and changes no prompt: on or off is harmless either way.",
+  weeklyReportEnabled: "The weekly report only reads figures the server already keeps, a few hundred reads a week, and changes nothing: on or off is harmless either way.",
 };
 
 /** Maps keyed by an id, edited as one setting per known key ("<field>.<key>"); other keys are kept as stored. */
@@ -624,6 +634,12 @@ export interface SettingsView {
      * page shows it as text, never as HTML.
      */
     reviews?: PromptReviewView[] | null;
+    /**
+     * Only on the card that shows it (SECTIONS `weekly`): the latest weekly app report
+     * (core/weeklyReport.ts) with its changes against the week before, and the last few weeks;
+     * null when they could not be read. Preformatted text, shown as text.
+     */
+    weekly?: { latest: WeeklyReportView | null; history: WeeklyHistoryRow[] } | null;
   }[];
   /** `section`: the card it belongs in (a section id, "providers" or "other"). */
   readOnly: { id: string; section: string; label: string; value: unknown; default: unknown; reason: string }[];
@@ -832,7 +848,7 @@ export function settingsViewOf(
   d: SettingDefaults,
   last = new Map<string, { at: string; via: string }>(),
   lastChange: SettingsView["lastChange"] = null,
-  extra: { today?: TodayFigures | null; boardUrl?: string | null; promptReviews?: PromptReviewView[] | null } = {},
+  extra: { today?: TodayFigures | null; boardUrl?: string | null; promptReviews?: PromptReviewView[] | null; weeklyReports?: { latest: WeeklyReportView | null; history: WeeklyHistoryRow[] } | null } = {},
 ): SettingsView {
   const cfg = parse(data, d);
   const empty = parse({}, d);
@@ -847,6 +863,7 @@ export function settingsViewOf(
       facts: sectionFacts(s.id, cfg, today),
       settings: SETTINGS.filter((x) => x.section === s.id).map((x) => settingView(x, data, cfg, d, invalid, last)),
       ...(s.reviews ? { reviews: extra.promptReviews ?? null } : {}),
+      ...(s.weekly ? { weekly: extra.weeklyReports ?? null } : {}),
     })).filter((s) => s.settings.length > 0),
     readOnly: READ_ONLY.map((r) => ({ id: r.id, section: r.section, label: r.label, value: r.read(cfg) ?? null, default: r.read(empty) ?? null, reason: r.reason })),
     status: statusOf(data, cfg, today),
@@ -884,16 +901,17 @@ export async function listSettings(env: Pick<SwitchEnv, "db" | "now" | "imageDef
   const nowMs = env.now();
   const day = utcDay(nowMs);
   const statDays = Array.from({ length: REVENUE_WINDOW_DAYS }, (_, i) => utcDay(nowMs - i * 86_400_000));
-  const [snap, last, stats, promptReviews] = await Promise.all([
+  const [snap, last, stats, promptReviews, weeklyReports] = await Promise.all([
     env.db.doc(RUNTIME_DOC).get(),
     lastChanges(env.db),
     env.db.getAll(...statDays.map((x) => statsRef(env.db, x))).then((s) => s.map((x) => x.data() as Data | undefined), () => null),
     latestPromptReviews(env.db).catch(() => null),
+    latestWeeklyReports(env.db).catch(() => null),
   ]);
   const data = (snap.data() ?? {}) as Data;
   const d = settingDefaultsOf(env);
   const today = stats ? todayFiguresOf(parse(data, d), day, stats) : null;
-  return settingsViewOf(data, d, last.per, last.latest, { today, boardUrl: env.boardUrl ?? null, promptReviews });
+  return settingsViewOf(data, d, last.per, last.latest, { today, boardUrl: env.boardUrl ?? null, promptReviews, weeklyReports });
 }
 
 // --- Planning -------------------------------------------------------------------------------

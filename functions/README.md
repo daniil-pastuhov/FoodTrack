@@ -24,6 +24,7 @@ the caller. The client wire contract is in [CONTRACT.md](CONTRACT.md).
 | `src/core/generation.ts` | `generateRecipe` (reserve, call the LLM, settle) and `getGeneration` (polling) |
 | `src/core/judgeLog.ts`, `src/admin/judgeAnswers.ts` | Keeping every output judge answer in `judgeAnswers`, and `npm run admin -- judge summary | export` to read them (see "Prompt injection defences" item 5) |
 | `src/core/promptReview.ts`, `src/admin/promptReviewCli.ts` | The weekly prompt review: a week of judge answers counted, sampled and sent with the current prompts to one model for advice, stored in `promptReviews`; `npm run admin -- judge review` (see "Weekly prompt review") |
+| `src/core/weeklyReport.ts`, `src/admin/weeklyReportCli.ts` | The weekly app report: last week's sales, spend, recipes, free recipes, refunds and problems from the board's own arithmetic, stored in `weeklyReports` and emailed through a log-based alert; `npm run admin -- report weekly` (see "Weekly app report") |
 | `src/core/reports.ts` | `reportRecipe` ("Report this recipe") and keeping a deleted account's reports without its uid (see "Reports") |
 | `src/providers/types.ts`, `registry.ts`, `router.ts`, `failure.ts`, `balance.ts` | The common provider interface: the descriptor every text or picture adapter exports, the registry of them (one entry each), the routers that pick the adapter per call, the shared failure taxonomy and the balance probe (see "Adding a provider") |
 | `src/providers/lifecycle.ts`, `src/adapters/modelProbes.ts` | The model lifecycle table (announced retirement dates, their source, when last checked), which models a config puts in use, the daily check and its log lines, and the providers' free metadata probes (see "Model lifecycle") |
@@ -64,7 +65,7 @@ the caller. The client wire contract is in [CONTRACT.md](CONTRACT.md).
 | `pollPlayVoidedPurchases` | daily 04:00 UTC | Voided Purchases API, last 3 days, for RTDNs that never arrived |
 | `checkProviderBalances` | hourly at :41 UTC | Asks the balance of every prepaid provider that has a probe and a threshold in `config/runtime.providerBalanceAlerts`, and logs `provider_balance_low` under it; with no threshold (the default) it reads only `config/runtime` (see "Provider balances") |
 | `checkModelLifecycle` | daily 06:23 UTC | For every model in use (text, its fallback, the output judge, pictures, their fallback, the deploy defaults) and every model of a listed profile: the announced retirement date against 90 / 30 / 7 days, the age of the table's last check, and each provider's free metadata probe; logs `model_retirement_near`, `model_unavailable`, `model_lifecycle_changed`, `model_lifecycle_stale` (see "Model lifecycle") |
-| `weeklyPromptReview` | Mondays 03:41 UTC | Counts the past ISO week's output judge answers, samples those that were not ok or scored low, and asks one model (`PROMPT_REVIEW_MODEL`) for advice on the writer's and the judge's prompts; stores it in `promptReviews/{week}`. Never changes a prompt (see "Weekly prompt review") |
+| `weeklyPromptReview` | Mondays 03:41 UTC | Counts the past ISO week's output judge answers, samples those that were not ok or scored low, and asks one model (`PROMPT_REVIEW_MODEL`) for advice on the writer's and the judge's prompts; stores it in `promptReviews/{week}`. Never changes a prompt (see "Weekly prompt review"). Beside it, independent of it, the weekly app report (`weeklyReports/{week}`, no model call; see "Weekly app report") |
 | `redrawBoard` | hourly at :17 UTC | Redraws the owner's board (30 days) into the private bucket `BOARD_BUCKET` as `board.html` and `board.json`; read-only on Firestore, and writes nothing unless the bucket is private (see "The board", "Always on") |
 | `playNotifications` | Pub/Sub topic `PLAY_RTDN_TOPIC` | Play voided-purchase RTDNs (full and quantity-based partial refunds) |
 | `appStoreNotifications` | HTTPS (public) | App Store Server Notifications v2: `REFUND`, `REVOKE`, `REFUND_REVERSED`, `CONSUMPTION_REQUEST`; signature verified |
@@ -778,6 +779,8 @@ Create log-based alerts in Cloud Logging on `jsonPayload.message` (all are struc
 | `model_lifecycle_stale` | warning | **Alerted on** (`model-lifecycle-stale`): a model in use whose lifecycle entry was last checked more than 60 days ago (`reason` `OLD_CHECK`), or which has none (`NO_ENTRY`: set by hand in `config/runtime`): `provider`, `model`, `roles`, `checkedOn`, `checkedDaysAgo`, `staleDays`. Weekly while it lasts. The reminder of the review in "Model lifecycle". |
 | `model_probe_failed` / `model_lifecycle_checked` / `model_lifecycle_marks_unavailable` | info / info / warning | Informational: a probe failed for another reason than "not found" (`reason` `TIMEOUT` / `FAILED`; never the provider's text; never an alarm); the run's summary (`models`, `inUse`, `soonestDaysLeft`, `stale`, `unavailable`, `probeFailed`); the marks could not be read or written (`reason`; then lines may repeat). |
 | `prompt_review_failed` | error | **Alerted on** (`prompt-review-failed`): the weekly prompt review produced no report ("Weekly prompt review"): `week`, `trigger` (`schedule` / `cli`), `reason` (`MALFORMED_ANSWER`, `BLOCKED`, `TOKEN_CEILING`, `TIMEOUT`, `MODEL_ERROR`, `MODEL_REFUSED`, `READ_FAILED`, `RESERVE_FAILED`, `CLAIM_FAILED`, `CONFIG_UNAVAILABLE`, `WRITE_FAILED`, `SETTLE_FAILED`, `BAD_WEEK`, `ERROR`), `answers`, `costMicroUsd`. Never model text. Nothing user-facing is affected. |
+| `weekly_report_ready` / `weekly_report_failed` | info / error | **Alerted on** (`weekly-report`), **a report, not a problem**: the weekly app report was stored, or could not be made ("Weekly app report"): `week`, `trigger`, and the email's fields `period`, `revenue`, `purchases`, `spend`, `margin`, `recipes`, `free`, `refunds`, `problems` (on a failure: the `reason` (`CONFIG_UNAVAILABLE`, `BAD_WEEK`, `READ_FAILED`, `WRITE_FAILED`, `ERROR`) and how to run it again), `console`. Totals only, nothing about a person. |
+| `weekly_report_skipped` | info | Informational: no report made (`reason` `OFF`, `ALREADY_DONE`). |
 | `prompt_review_done` / `prompt_review_skipped` | info / info or warning | Informational: a report was stored (`week`, `answers`, `sampled`, `promptProblems`, `judgeProblems`, `dropped`, token counts, `costMicroUsd`); or no call was made (`reason` `OFF`, `ALREADY_DONE`, `RUNNING`, `NOT_ENOUGH_DATA`, and at warning `SPEND_CEILING` / `PAUSED` with `worstMicroUsd`). |
 | `provider_balance_unprobed` | warning | A `providerBalanceAlerts` threshold nothing can probe ("Provider balances"): `provider`, `reason` (`UNKNOWN_PROVIDER`, `NO_PROBE`); once per such threshold per hourly run. Remove the threshold or fix its id. |
 | `owner_settings_changed` | info / warning | **Alerted on** (console changes): runtime settings were changed ("The owner console", "Settings"): `via` (`web` / `cli`), `uidHash` for the console, `settings` (ids), `sensitive` (the sensitive ids among them; the line is a warning when there is any), `changes` (`id`, `from`, `to`, for plain values; lists and tables are in the audit record), `change` (the `ownerSettingChanges/` id). Never an email or uid. |
@@ -793,7 +796,7 @@ Create log-based alerts in Cloud Logging on `jsonPayload.message` (all are struc
 The owner is emailed by Cloud Monitoring alert policies on the log lines above, through the
 existing email channel "Recipe backend alerts (owner)". They are code in `functions/alerts/`: two
 log-based metrics (`metrics/recipe_generation_refused.json`, `metrics/recipe_image_failed.json`)
-and twenty-one policies (`policies/*.json`, no channel in them). `alerts.py` applies them: dry run by default (local checks, every log filter
+and twenty-two policies (`policies/*.json`, no channel in them). `alerts.py` applies them: dry run by default (local checks, every log filter
 checked against the project with a read-only `gcloud logging read`, then the plan), `--apply` to
 create or update (matched by display name, so re-running is safe and prints "unchanged"). The
 channel is chosen by `--channel <id>` or `--channel-name` (default the one above); the script never
@@ -832,6 +835,7 @@ refuse anything else.
 | Recipe: model retirement near (`model-retirement`) | a model in use or in a listed profile is within 90 / 30 / 7 days of its announced retirement, or past it (once per band; daily once past while in use), or a provider's API reports an earlier retirement than the table (at most one email an hour) | `model_retirement_near`, `model_lifecycle_changed` |
 | Recipe: model not served (`model-unavailable`) | a provider's metadata probe says a model id is not found or not served there (at most one email per 6 hours; the check is daily) | `model_unavailable` |
 | Recipe: weekly prompt review failed (`prompt-review-failed`) | the Monday review (or one run by hand) produced no report: a malformed or blocked answer, the token ceiling, a model or Firestore error (at most one email per 6 hours) | `prompt_review_failed` |
+| Recipe: weekly app report (`weekly-report`) | **a report, not a problem**: every Monday, last week's figures in the email itself ("Weekly app report"); also when the report could not be made, saying why | `weekly_report_ready`, `weekly_report_failed` (their fields pulled into the email by label extractors) |
 | Recipe: model lifecycle table stale (`model-lifecycle-stale`) | the lifecycle entry of a model in use is older than 60 days, or missing (weekly while it lasts) | `model_lifecycle_stale` |
 | Recipe: owner board (`owner-board`, existing) | the hourly redraw failed or the bucket check refused to write | `board_redraw_failed`, `board_bucket_public` |
 | Recipe: backend errors, refunds, blocked buyers, stuck purchases, prompt safety (existing) | as in the two "Logs to alert on" tables | see those tables |
@@ -1902,6 +1906,145 @@ every field.
 changes helped. The example ids it names point at `judgeAnswers` documents, which expire after 90
 days.
 
+## Weekly app report
+
+Once a week the owner gets the app's figures by email: what was sold, what the models cost, what
+was written, what free recipes cost, what was refunded and what went wrong, each against the week
+before (`src/core/weeklyReport.ts`). **No model call**: arithmetic over what the server already
+stores, so it costs Firestore reads and nothing else.
+
+**When**: made by the scheduled function `weeklyPromptReview` (Mondays 03:41 UTC), for the ISO week
+before (UTC, Monday to Sunday), beside the prompt review. It has no scheduler job of its own (the
+project pays per job). The two run side by side and neither depends on the other (`runWeeklyJobs`):
+the report is made with the review off, with too few judge answers for it, or with the review
+failing; a report that fails or throws never stops the review. One report per week
+(`weeklyReports/{YYYY-Www}`, created once: a second run, or one racing it, leaves it alone and
+sends no second email).
+
+**What it holds** (`figures`; the owner board's own code, `buildBoard` over `readBoardInput` with
+the week as its period, so the same rules and caveats as "The board"):
+
+| figure | from |
+|---|---|
+| Purchases, per pack and per store, and the recipes they granted | production `purchases` granted in the week (sandbox counted apart, never revenue) |
+| Estimated net revenue | those recipes net of refunds so far × `netMicroUsdPerCredit` (the config's conservative net per recipe after store fees and VAT; **not a store payout**) |
+| Refunded by the stores | production purchases whose refund the store reported in the week (`refundEventAt`, the store's time), whenever bought; a reversed refund is not one |
+| Model spend, split text / pictures / second check / prompt review | the week's `stats/{day}` (`spentMicroUsd` + `reservedMicroUsd`, `imageMicroUsd`, `promptReviewMicroUsd`); the second check (output judge) is estimated from its answers' tokens in `judgeAnswers` at today's judge prices (its spend is booked inside the text calls'); text is the rest. **The server's estimate from token counts, not the Cloud bill** |
+| Spend per recipe kept, estimated margin | the board's: settled spend / recipes charged and not given back; net revenue minus all model spend |
+| Requests, recipes and menus, written, failed (content / infrastructure / quality gate), recipes given back | `stats/{day}` (`generations`, the new `menuGenerations`, `succeeded`, `*Failures`, `refundedCredits`) |
+| Recipes charged, of them bought and free | `generationUnits` − `refundedCredits`; free from `welcomeUsedCredits` |
+| Free recipes granted (and to how many sign-ins), used, and their model cost | `welcomeCredits`, `welcomeGrants`, `welcomeUsedCredits`, `welcomeUsedMicroUsd` |
+| Pictures delivered and not | `imageRequests`, `imagesDelivered`, `imageFailures` |
+| Recipe reports and their reasons | `reports`, `reportReasons` |
+| Days the spend ceiling or the daily cap was reached, days over 80 % of the ceiling | `spendAlerts`, `dailyCapReachedAt` |
+| Unspent recipes in balances | the board's aggregation over `users`, **at the time of the run**, not the week's |
+
+Each figure's change against the week before comes from that week's stored report, or, when it
+has none (the first report), from the same figures worked out for it then (`previous.source`).
+Read caps: the board's 2,000 purchases a run, 500 refunded purchases, 5,000 judge answers; a figure
+cut by one says so on the console and in the email's "Problems".
+
+**What it cannot say**, and why: *gross revenue* (the stores' prices differ by country and
+currency, and the server keeps no price paid; only the config's net per recipe); *store payouts,
+fees and taxes* (not stored); *new buyers* (counting first purchases would need each buyer's history,
+which means reading per person; the report reads nothing about a person); *recipes and menus apart
+before this change* (`menuGenerations` is written from this deploy on; earlier days are shown as
+not split); *the second check's exact cost* (its spend is booked together with the text call's;
+the estimate uses today's judge prices); *the Cloud bill* (Cloud Billing is not read; the budget's
+emails stay the backstop). Nothing about a person: no uid, purchase id, token or order id is read
+into or kept in a report.
+
+**Sending it** without a new vendor or secret: the run writes one log line, `weekly_report_ready`,
+whose fields are short preformatted strings (`WEEKLY_REPORT_LABELS`: `period`, `revenue`,
+`purchases`, `spend`, `margin`, `recipes`, `free`, `refunds`, `problems`, `console`; each at
+most 300 characters, cut with "…"). The log-based alert policy "Recipe: weekly app report"
+(`alerts/policies/weekly-report.json`, applied by `alerts.py` like the others, to the existing email
+channel) extracts them with ten label extractors (`EXTRACT(jsonPayload.<field>)`) and its
+documentation template puts them in the email with `${log.extracted_label.<field>}`; its subject is
+"Recipe: weekly app report ${log.extracted_label.period}". A report that could not be made writes
+`weekly_report_failed` with the same fields, "Problems" saying why and how to run it again, so the
+same policy tells the owner. It is an alert policy only because that is how the backend emails the
+owner: **a report, not a problem**, severity `WARNING` (the lowest Cloud Monitoring has), and its
+text says so. Each week's values differ, so each week opens its own alert; it closes itself after 30
+minutes (`autoClose` 1800 s, the minimum).
+
+What was checked in Google's documentation (Cloud Monitoring "Using Markdown and variables in
+documentation templates", "Configure log-based alerting policies", the AlertPolicy REST reference,
+"Cloud Monitoring quotas and limits"): `${log.extracted_label.KEY}` is resolved for log-based
+policies in the email (and Chat, Slack, Pub/Sub, webhooks, PagerDuty); subjects take variables and are
+cut to 255 bytes after expansion; the documentation's content is at most 8,192 characters and 10,240
+bytes; at most 3 links; a log-based policy has one condition, needs `notificationRateLimit`, and
+sends at most 20 notifications a day; `autoClose` is at least 1,800 s; the timestamp must never be
+extracted. **Not found** in the documentation: a maximum number of label extractors per log-based
+policy (the code keeps to ten, the log-based metrics' label limit, and `alerts.py` refuses more),
+a maximum length of an extracted value (the code keeps each under 300 characters), and whether the
+email renders the Markdown (the text reads the same either way: one "- " line per figure). An unset
+variable shows as `null`; every field is always written.
+
+`alerts.py --check-files` (run by `npm test`) checks the template: every variable names one of the
+policy's extractors, at most ten extractors, each `EXTRACT` / `REGEXP_EXTRACT` of a `jsonPayload`
+field and never the timestamp, and the documentation's size limits; `test/weeklyReport.test.ts`
+checks that the log line carries exactly those fields and fills the template the way Cloud Monitoring
+does.
+
+The email for a sample week (`test/weeklyReport.test.ts` fills it the same way):
+
+```text
+Subject: Recipe: weekly app report 2026-W46 (9–15 Nov 2026, UTC)
+
+The weekly app report, not a problem: nothing needs doing. 2026-W46 (9–15 Nov 2026, UTC).
+
+- Estimated net revenue: USD 139.20 (+75.60) from 1,160 recipes sold net of refunds, at USD 0.120 a recipe (not a store payout)
+- Purchases: 32 (+7): 16 × 10, 12 × 50, 4 × 100 · App Store 14, Google Play 18
+- Model spend: USD 15.08 (+1.28): text 6.75, pictures 7.97, second check 0.30, prompt review 0.06 · USD 0.025 a recipe (−0.002)
+- Estimated margin: USD 124.12 (+74.32): net revenue minus all model spend
+- Recipes: 426 requests (+58): 361 recipes, 65 menus · 611 recipes charged, 568 of them bought · 10 given back
+- Free recipes: 60 granted (+6) to 20 sign-ins · 43 used (+4), model cost USD 1.06
+- Refunds: 0 purchases (−2) refunded by the stores, 0 recipes
+- Problems: spend passed 80 % of the ceiling Thu 12 Nov · 2 recipe reports (±0): 2 unsafe · 17 failed answers (−3) (7 content, 10 infrastructure, 0 quality gate) · 2 pictures not delivered
+
+Changes against the week before are in brackets. ... The full report and the last weeks:
+https://<project>.firebaseapp.com/ (card "Weekly report"), or npm run admin -- report weekly --project <id>.
+```
+
+**Where else**: the owner console's card "Weekly report" shows the latest report, every figure with
+its change and a note, the caveats, and the last six weeks in a table (up to six document reads per
+page load); `npm run admin -- report weekly` prints it.
+
+**What it costs**: no model call. Firestore, per run: `config/runtime`, the `stats` documents the
+board's reader takes for a 7-day period (the week, the month to its Sunday and the revenue window
+before: about 40), the week's purchases (one read each, at least one), one aggregation over `users`,
+the refunded purchases of the week, one read per judge answer of the week (for the second check's
+spend), the week before's report and the week's own; the first report reads the week before's
+figures again (about as many). At 400 recipes a week, about 500 reads and one write: well under
+USD 0.001 a week. No Cloud Scheduler job (it rides on `weeklyPromptReview`), no new API, role,
+secret or vendor; the alert policy and its notifications are free.
+
+**Turning it off or muting it**: to stop the email but keep the report, disable the policy "Recipe:
+weekly app report" in Cloud Monitoring (Alerting > Policies; or set `"enabled": false` in
+`alerts/policies/weekly-report.json` and apply it, which also keeps `alerts.py` from turning it back
+on), or snooze it for a while. To stop the report itself: the toggle "Make and email the weekly
+report" on the console's card, or `npm run admin -- config set weeklyReportEnabled off --apply`; off,
+the Monday run reads, stores and logs nothing for it (`weekly_report_skipped`, `OFF`), and the prompt
+review runs as before.
+
+**Reading and running it**:
+
+```bash
+cd functions
+npm run admin -- report weekly                                        # the latest stored report (emulators)
+npm run admin -- report weekly --week 2026-W46 --project bestbefore-f9ee1   # one week's, live, read-only
+npm run admin -- report weekly --run --project bestbefore-f9ee1             # dry run: works it out, prints it and the email's fields; writes nothing
+npm run admin -- report weekly --run --apply --project bestbefore-f9ee1     # store it now (last complete week, or --week)
+```
+
+The command logs to stderr, never to Cloud Logging, so **it sends no email**: only the scheduled
+run's line is alerted on. A week already stored is left alone. To re-make a report, delete its
+`weeklyReports` document first (it is a summary, not a record anything else depends on).
+
+**Kept** with no TTL: a report is a few KB of totals with nothing about a person, and a year of
+them is what shows the trend.
+
 ## Reports
 
 "Report this recipe" (`reportRecipe`, CONTRACT.md `reportRecipe`): a person flags a recipe or menu
@@ -2057,7 +2200,8 @@ Server-only. Documents:
   (worst cases of calls in flight), `spentMicroUsd` (estimated, measured where known), `llmCalls`,
   `inputTokens`, `outputTokens`, `thinkingTokens`, `succeeded`, `contentFailures`,
   `infraFailures`, `qualityFailures`, `refundedCredits`, `unknownUsageCalls` (booked at the worst case),
-  `promptReviewMicroUsd` (the weekly prompt review's booked spend, part of `spentMicroUsd`),
+  `menuGenerations` (of `generations`, the menus; written by every reservation, 0 included, absent on
+  older days), `promptReviewMicroUsd` (the weekly prompt review's booked spend, part of `spentMicroUsd`),
   `reports` and `reportReasons` (`{offensive | unsafe | picture | other: n}`),
   `imageRequests`, `imagesDelivered`, `imageFailures` (pictures, not requests), `imageMicroUsd` (the pictures' booked
   spend, part of `spentMicroUsd`), `imageGivenBackCredits` (part of `refundedCredits`),
@@ -2090,6 +2234,9 @@ Server-only. Documents:
   `reviewVersion`), `inputBytes`, `reservedMicroUsd`, `model`, `modelVersion`, `usage`, `costMicroUsd`, `costKnown`,
   `report` (`summary`, `promptProblems`, `judgeProblems`, `dropped`), `expiresAt` (TTL, 365 days). No uid, nothing
   about a person; the advice is model text.
+- `weeklyReports/{YYYY-Www}` ("Weekly app report"): one per ISO week: `week`, `from`, `to`, `trigger`, `version`,
+  `generatedAt`, `figures` (the week's totals), `previous` (`week`, `source` `stored` / `computed`, its `figures`),
+  `lines` (the email's fields). Kept (no TTL): totals only, no uid, no purchase id, nothing about a person.
 - `config/runtime`: see below.
 - `config/owner` (set by the owner in the console, never in the repo): `uids` (Firebase uids)
   and/or `emails` (addresses of Google accounts linked to the user, matched against its
@@ -2110,7 +2257,7 @@ console", "Settings": checked, field paths only, audited and alerted), rather th
 fields that are read-only there (prices, the provider setup) are changed by the profile switch or
 by hand. Created in the console if missing (Firestore > `config` > `runtime`). Every field is optional; a missing
 field uses the default. A present but invalid field never fails open: `generationEnabled`,
-`allowSandbox`, `consumptionSampleContentProvided`, `outputJudgeKeepText` and `promptReviewEnabled` then read as `false`, every other field uses
+`allowSandbox`, `consumptionSampleContentProvided`, `outputJudgeKeepText`, `promptReviewEnabled` and `weeklyReportEnabled` then read as `false`, every other field uses
 its default, and a warning "config/runtime has invalid fields" names them. Instances cache it for
 30 s.
 
@@ -2119,6 +2266,7 @@ its default, and a warning "config/runtime has invalid fields" names them. Insta
 | `generationEnabled` | bool | `true` | Kill switch for new generations. The budget alert sets it to `false` (with `disabledBy` `budget alert …` and `disabledAt`); only you set it back: with `npm run admin -- config set generationEnabled on --apply --confirm generationEnabled`, which also deletes `disabledBy` / `disabledAt`, or by hand in the Firestore console (then delete those two as well). The owner console turns it back on only after a pause of its own or one by hand, never after the budget alert's ("The console's envelope"). |
 | `outputJudgeKeepText` | bool | `false` | Keep the judged recipe text with each output judge answer (`judgeAnswers.text`, "Prompt injection defences" item 5). Only after the privacy policy says so. |
 | `promptReviewEnabled` | bool | `true` | Run the weekly prompt review ("Weekly prompt review"). Off: the Monday run reads and spends nothing. Invalid reads as `false`. |
+| `weeklyReportEnabled` | bool | `true` | Make the weekly app report and send its email ("Weekly app report"). Off: nothing is read, stored or logged for it. Invalid reads as `false`. |
 | `allowSandbox` | bool | `false` | Grant credits for Play licence-tester and App Store sandbox/TestFlight purchases. Turn on for App Review and your own testing, off otherwise. Anyone with a TestFlight build can then get free credits, up to the two caps below. |
 | `sandboxDailyCap` | integer ≥ 0 | `20` | Sandbox purchases that may grant credits per UTC day, across all users. Over it: `RETRY`. |
 | `sandboxDailyCredits` | integer ≥ 0 | `200` | Credits sandbox purchases may grant per UTC day, across all users. Over it: `RETRY`; one purchase worth more than this: `REJECTED_PERMANENT`. |
@@ -2599,7 +2747,10 @@ min(absolute, base + share × net per recipe × net recipes sold in 7 days)), it
 read-only fields that belong with it, folded away. The last card, **Weekly prompt review**, also
 shows the latest report ("Weekly prompt review"): week, answers analysed, the cost of the run, the
 summary, and each prompt or judge problem with its before → after, all model text set as text; the
-section's `reviews` in `getOwnerSettings` (four reads of `promptReviews`). A header link opens the board (its address is
+section's `reviews` in `getOwnerSettings` (four reads of `promptReviews`). After it, **Weekly report** shows the
+latest weekly app report ("Weekly app report"): every figure with its change against the week before and a note, the
+caveats, and the last six weeks in a table, all preformatted by the server and set as text; the section's `weekly` (up to
+six reads of `weeklyReports`). A header link opens the board (its address is
 `getOwnerSettings`' `boardUrl`, from `BOARD_BUCKET`). The board stays static and request-free
 and only links to the console.
 

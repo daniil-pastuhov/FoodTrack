@@ -658,6 +658,38 @@ No new role, API or vendor: Vertex AI (Vertex AI User, as the judge) and Firesto
   `gcloud scheduler jobs run firebase-schedule-weeklyPromptReview-europe-west1 --project=bestbefore-f9ee1 --location=europe-west1`.
 - Decide: whether to keep the judged text (`outputJudgeKeepText`, off; the privacy policy first):
   without it the review sees the judge's codes and notes only, which is cheaper and less specific.
+
+
+### 13e. Weekly app report by email (functions/README.md "Weekly app report") **(owner, after the next deploy)**
+
+The same Monday job (`weeklyPromptReview`, no new scheduler job) also stores last week's figures
+in `weeklyReports/{week}` (sales, estimated net revenue and margin, model spend split text /
+pictures / second check / prompt review, recipes and menus, free recipes and their cost, refunds,
+ceiling and cap days, reports) with the changes against the week before, and logs
+`weekly_report_ready`, which a log-based alert policy turns into an email to the existing channel.
+No model call, no new vendor, secret, role or API; Firestore reads only (well under USD 0.001 a
+week). On by default (`config/runtime.weeklyReportEnabled`). Independent of the prompt review: it
+runs with the review off or failing, and the other way round.
+
+- [ ] Deploy the functions (the reservation now also writes `stats/{day}.menuGenerations`, so the
+  report can split recipes from menus from that day on; earlier days show as not split).
+- [ ] Apply the new alert policy "Recipe: weekly app report"
+  (`functions/alerts/policies/weekly-report.json`, severity WARNING, the lowest: **it is a report,
+  not a problem**): `python3 functions/alerts/alerts.py --project bestbefore-f9ee1` (dry run), then
+  `--apply`. It uses label extractors and a documentation template, which only the API (not the
+  console's form) can set; `alerts.py` does that.
+- [ ] Optional, to see one now: `npm run admin -- report weekly --run --project bestbefore-f9ee1`
+  (dry run: prints the report and the email's fields), then with `--apply` to store it (the
+  command sends no email). The first email comes the Monday after the deploy; or run the job by
+  hand: `gcloud scheduler jobs run firebase-schedule-weeklyPromptReview-europe-west1 --project=bestbefore-f9ee1 --location=europe-west1`
+  (this also runs the prompt review).
+- [ ] Check the first email reads well (whether Cloud Monitoring's email renders the Markdown was
+  not verifiable from the documentation; the text reads the same either way).
+- To mute the email but keep the report: disable the policy in Cloud Monitoring (Alerting >
+  Policies), or set `"enabled": false` in its file and apply. To stop the report: the toggle
+  "Make and email the weekly report" on the owner console's card "Weekly report".
+- Decide: whether `netMicroUsdPerCredit` (USD 0.12 a recipe, the conservative net after store
+  fees and VAT) is still right: the report's revenue and margin are that figure times recipes sold.
   Each report costs about USD 0.06 (at most USD 0.19), booked against the day's spend ceiling.
 
 ### A model is being retired (runbook)

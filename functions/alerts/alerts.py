@@ -35,6 +35,19 @@ DEFAULT_CHANNEL_NAME = "Recipe backend alerts (owner)"
 # Cloud Monitoring's AlertPolicy.Severity: CRITICAL, ERROR, WARNING (WARNING is the lowest; there is
 # no INFO, and SEVERITY_UNSPECIFIED is not accepted here). The API refuses anything else on create.
 SEVERITIES = {"CRITICAL", "ERROR", "WARNING"}
+# Label extractors per log-match condition: at most this many (no documented cap was found for
+# log-based alerting policies; 10 is the log-based metrics' label limit, kept as this files' own).
+MAX_LABEL_EXTRACTORS = 10
+# Documentation limits (AlertPolicy.Documentation): content 8,192 characters and 10,240 bytes; a
+# subject is cut to 255 bytes after the variables are filled in, so its own text stays well under;
+# up to 3 links.
+DOC_CONTENT_CHARS = 8192
+DOC_CONTENT_BYTES = 10240
+SUBJECT_CHARS = 255
+DOC_LINKS = 3
+LABEL_KEY = re.compile(r"^[a-z][a-z0-9_]{0,62}$")
+EXTRACTOR = re.compile(r"^(EXTRACT\(jsonPayload\.[A-Za-z_][A-Za-z0-9_]*\)|REGEXP_EXTRACT\(jsonPayload\.[A-Za-z_][A-Za-z0-9_]*, *\"[^\"]+\"\))$")
+VARIABLE = re.compile(r"\$\{log\.extracted_label\.([^}]*)\}")
 # Fields of a live policy or metric that the server owns: never compared, never sent.
 SERVER_FIELDS = {"name", "creationRecord", "mutationRecord", "createTime", "updateTime", "metricDescriptor.name",
                  "metricDescriptor.type", "metricDescriptor.displayName", "metricDescriptor.monitoredResourceTypes"}
@@ -90,8 +103,32 @@ def validate(metrics, policies):
             problems.append(f"{where}: severity {p.get('severity')!r} must be one of {sorted(SEVERITIES)}")
         if p.get("combiner") not in ("OR", "AND"):
             problems.append(f"{where}: combiner must be OR or AND")
-        if not p.get("documentation", {}).get("content"):
+        doc = p.get("documentation", {})
+        content = doc.get("content") or ""
+        if not content:
             problems.append(f"{where}: documentation.content is required")
+        if len(content) > DOC_CONTENT_CHARS or len(content.encode("utf-8")) > DOC_CONTENT_BYTES:
+            problems.append(f"{where}: documentation.content is over {DOC_CONTENT_CHARS} characters or {DOC_CONTENT_BYTES} bytes")
+        if len(VARIABLE.sub("", doc.get("subject", ""))) > SUBJECT_CHARS:
+            problems.append(f"{where}: documentation.subject is over {SUBJECT_CHARS} characters before its variables")
+        if len(doc.get("links", [])) > DOC_LINKS:
+            problems.append(f"{where}: documentation.links holds at most {DOC_LINKS}")
+        extracted = set()
+        for c in p.get("conditions") or []:
+            if "labelExtractors" in c.get("conditionThreshold", {}):
+                problems.append(f"{where}: labelExtractors belong only in a conditionMatchedLog")
+            ex = (c.get("conditionMatchedLog") or {}).get("labelExtractors") or {}
+            if len(ex) > MAX_LABEL_EXTRACTORS:
+                problems.append(f"{where}: {len(ex)} label extractors, at most {MAX_LABEL_EXTRACTORS}")
+            for key, expr in ex.items():
+                if not LABEL_KEY.match(key) or key == "timestamp":
+                    problems.append(f"{where}: label key {key!r} must be lower case letters, digits and _ (and never timestamp)")
+                if not isinstance(expr, str) or not EXTRACTOR.match(expr) or "timestamp" in expr:
+                    problems.append(f"{where}: label {key!r}: the extractor must be EXTRACT(jsonPayload.<field>) or REGEXP_EXTRACT(jsonPayload.<field>, \"<regex>\"), never the timestamp")
+            extracted |= set(ex)
+        for used in VARIABLE.findall(content + "\n" + doc.get("subject", "")):
+            if used not in extracted:
+                problems.append(f"{where}: ${{log.extracted_label.{used}}} names no label extractor of this policy")
         conds = p.get("conditions") or []
         if not conds:
             problems.append(f"{where}: no conditions")
