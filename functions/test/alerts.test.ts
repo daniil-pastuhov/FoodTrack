@@ -205,6 +205,73 @@ describe("the alert files (functions/alerts)", () => {
     expect(out).toContain("local checks passed");
   });
 
+  test("give every policy a severity Cloud Monitoring accepts (CRITICAL, ERROR, WARNING; no INFO)", () => {
+    for (const f of readdirSync(join(dir, "policies"))) {
+      const policy = JSON.parse(readFileSync(join(dir, "policies", f), "utf8")) as { severity?: string };
+      expect(["CRITICAL", "ERROR", "WARNING"], f).toContain(policy.severity);
+    }
+  });
+
+  /** Runs Python with alerts.py importable as `alerts`; never gcloud (no runner reaches it). */
+  const py = (code: string) => execFileSync("python3", ["-c", `import sys; sys.path.insert(0, ${JSON.stringify(dir)})\nimport alerts\n${code}`], { encoding: "utf8" });
+
+  test("the offline checks refuse a severity outside CRITICAL, ERROR, WARNING", () => {
+    const out = py(`
+import json
+base = json.load(open(alerts.os.path.join(alerts.HERE, "policies", "model-lifecycle-stale.json")))
+for sev in ["INFO", "SEVERITY_UNSPECIFIED", "warning", None, "WARNING", "ERROR", "CRITICAL"]:
+    p = dict(base)
+    if sev is None:
+        p.pop("severity")
+    else:
+        p["severity"] = sev
+    try:
+        alerts.validate([], [("x.json", p)])
+        print(sev, "ok")
+    except alerts.Fail as e:
+        print(sev, "refused" if "severity" in str(e) else "other: " + str(e))
+`);
+    expect(out.trim().split("\n")).toEqual([
+      "INFO refused", "SEVERITY_UNSPECIFIED refused", "warning refused", "None refused", "WARNING ok", "ERROR ok", "CRITICAL ok",
+    ]);
+  });
+
+  test("an apply goes on past a failure and returns every failure", () => {
+    const out = py(`
+import json, tempfile
+calls = []
+def runner(args, base):
+    calls.append(" ".join(args[:4]))
+    path = args[-1].split("=", 1)[1]
+    if "bad" in open(path).read():
+        raise alerts.Fail("refused")
+metric = {"name": "m_bad", "filter": "bad"}
+threshold = {"displayName": "Recipe: t", "conditions": [{"conditionThreshold": {"filter": "metric.type=\\"logging.googleapis.com/user/m_bad\\""}}]}
+todo = [
+    ("create", "policy", "Recipe: a", "a.json", {"displayName": "Recipe: a", "severity": "bad"}, None, []),
+    ("create", "policy", "Recipe: b", "b.json", {"displayName": "Recipe: b"}, None, []),
+    ("create", "policy", "Recipe: t", "t.json", threshold, None, []),
+    ("update", "policy", "Recipe: c", "c.json", {"displayName": "Recipe: c"}, {"name": "projects/p/alertPolicies/1"}, []),
+    ("create", "metric", "m_bad", "m.json", metric, None, []),
+]
+with tempfile.TemporaryDirectory() as tmp:
+    failures = alerts.apply_plan(todo, [], tmp, runner)
+print(json.dumps({"calls": calls, "failures": [[k, n, m] for k, n, _, m in failures]}))
+`);
+    const result = JSON.parse(out.trim().split("\n").pop()!);
+    expect(result.calls).toEqual([
+      "logging metrics create m_bad",
+      "beta monitoring policies create",
+      "beta monitoring policies create",
+      "beta monitoring policies update",
+    ]);
+    expect(result.failures).toEqual([
+      ["metric", "m_bad", "refused"],
+      ["policy", "Recipe: a", "refused"],
+      ["policy", "Recipe: t", "skipped: its metric m_bad failed above"],
+    ]);
+  });
+
   test("every log line they match is one the code writes", () => {
     const names = new Set<string>();
     for (const f of files) {
