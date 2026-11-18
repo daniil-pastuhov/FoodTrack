@@ -22,7 +22,7 @@
 import { createHash } from "node:crypto";
 import { FieldPath, FieldValue, Timestamp, type Firestore } from "firebase-admin/firestore";
 import { HttpsError } from "firebase-functions/v2/https";
-import { COST_MAX, DEFAULT_COSTS, REVENUE_WINDOW_DAYS, DEFAULT_IMAGE_SELECTION, DEFAULT_MENU_DAYS, DEFAULT_MENU_SETS, DEFAULT_TEXT_SELECTION, MAX_STEP_IMAGES_LIMIT, MENU_COURSES, MENU_DAYS, type Costs } from "../constants";
+import { COST_MAX, DEFAULT_COSTS, JUDGE_LOG, REVENUE_WINDOW_DAYS, DEFAULT_IMAGE_SELECTION, DEFAULT_MENU_DAYS, DEFAULT_MENU_SETS, DEFAULT_TEXT_SELECTION, MAX_STEP_IMAGES_LIMIT, MENU_COURSES, MENU_DAYS, type Costs } from "../constants";
 import {
   DEFAULT_RUNTIME_CONFIG,
   OUTPUT_JUDGE_MODES,
@@ -771,11 +771,17 @@ export function statusOf(data: Data, cfg: RuntimeConfig, today: TodayFigures | n
     });
   }
   const judge = (SETTINGS.find((s) => s.id === "outputJudge")!.control as { options: Option[] }).options.find((o) => o.value === cfg.outputJudge);
+  // Whether the judged text is kept with each judge answer (outputJudgeKeepText, core/judgeLog.ts).
+  const kept = cfg.outputJudgeKeepText
+    ? `Each answer is kept ${JUDGE_LOG.keepDays} days with the judged recipe text.`
+    : `Each answer is kept ${JUDGE_LOG.keepDays} days without the judged text.`;
   out.push({
     label: "Second check of every answer",
-    value: judge?.label ?? cfg.outputJudge,
+    value: cfg.outputJudge === "off" ? (judge?.label ?? "Off") : `${judge?.label ?? cfg.outputJudge}, text ${cfg.outputJudgeKeepText ? "kept" : "not kept"}`,
     tone: cfg.outputJudge === "enforce" ? "good" : "neutral",
-    note: cfg.outputJudge === "off" ? "Not run." : cfg.outputJudge === "shadow" ? "Runs and logs its verdict; never blocks." : "A verdict other than ok is a content failure.",
+    note: cfg.outputJudge === "off"
+      ? `Not run.${cfg.outputJudgeKeepText ? " When on, the judged text is kept with each answer." : ""}`
+      : `${cfg.outputJudge === "shadow" ? "Runs, logs and keeps every answer; never blocks." : "A verdict other than ok is a content failure."} ${kept}`,
   });
   const welcomeOn = cfg.welcome.recipes > 0 && cfg.welcome.perDay > 0;
   out.push({

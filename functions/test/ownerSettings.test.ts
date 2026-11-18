@@ -274,6 +274,19 @@ describe("the registry", () => {
     expect(view.sections.find((s) => s.id === "spending")!.facts).toEqual([expect.objectContaining({ label: "Today's ceiling", value: "unknown" })]);
   });
 
+  test("the judge's settings sit in the On/off card, and its status tile says whether the judged text is kept", () => {
+    const onoff = settingsViewOf({}, D).sections.find((s) => s.id === "onoff")!.settings.map((s) => s.id);
+    expect(onoff).toEqual(expect.arrayContaining(["outputJudge", "outputJudgeKeepText"]));
+    expect(onoff.indexOf("outputJudgeKeepText")).toBe(onoff.indexOf("outputJudge") + 1);
+    const tile = (data: Record<string, unknown>) => settingsViewOf(data, D).status.find((s) => s.label === "Second check of every answer")!;
+    expect(tile({ outputJudge: "shadow" })).toMatchObject({ value: "Shadow (log only), text not kept", tone: "neutral" });
+    expect(tile({ outputJudge: "shadow" }).note).toBe("Runs, logs and keeps every answer; never blocks. Each answer is kept 90 days without the judged text.");
+    expect(tile({ outputJudge: "shadow", outputJudgeKeepText: true })).toMatchObject({ value: "Shadow (log only), text kept" });
+    expect(tile({ outputJudge: "shadow", outputJudgeKeepText: true }).note).toContain("kept 90 days with the judged recipe text");
+    expect(tile({ outputJudge: "enforce", outputJudgeKeepText: true })).toMatchObject({ value: "Enforce, text kept", tone: "good" });
+    expect(tile({ outputJudge: "off" })).toMatchObject({ value: "Off", note: "Not run." });
+  });
+
   test("today's figures: the ceiling worked out from the values in force, the status strip, the free recipes", () => {
     const cfg = parseRuntimeConfig({});
     const today = todayFiguresOf(cfg, "2026-11-18", [
@@ -301,7 +314,7 @@ describe("the registry", () => {
     expect(paused.status[0]).toEqual({ label: "Recipes from packs", value: "Paused", tone: "crit", note: "Paused by budget alert B: 10 of 10 since 2026-11-18 09:30 UTC. Only the admin command turns it back on." });
     const reached = todayFiguresOf(cfg, "2026-11-18", [{ spentMicroUsd: 2_000_000, spendAlerts: { "100": 1 } }]);
     expect(settingsViewOf({ allowSandbox: true, outputJudge: "enforce" }, D, undefined, null, { today: reached }).status.map((s) => [s.value, s.tone])).toEqual([
-      ["On, ceiling reached", "warn"], ["USD 2.00 of USD 1.20", "crit"], ["0 of 1,000", "neutral"], ["Enforce", "good"], ["3 per sign-in", "neutral"], ["Grant recipes", "warn"],
+      ["On, ceiling reached", "warn"], ["USD 2.00 of USD 1.20", "crit"], ["0 of 1,000", "neutral"], ["Enforce, text not kept", "good"], ["3 per sign-in", "neutral"], ["Grant recipes", "warn"],
     ]);
   });
 });

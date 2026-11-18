@@ -1283,8 +1283,8 @@ and each Firestore document is at most 600,000 bytes plus a few fields, under 60
 3. A picture that still failed follows the give-back rules ("How the money works").
 
 The budgets run from the start of the pictures: the dish's picture has 50 s
-(`budgetMs.dish`), the step pictures until 100 s (`budgetMs.steps`). Text 40 s + judge 12 s +
-dish 50 s = 102 s inside the 115 s reservation (60 + 55) for `"dish"`; 40 + 12 + 100 = 152 s
+(`budgetMs.dish`), the step pictures until 100 s (`budgetMs.steps`). Text 40 s + judge 10 s +
+dish 50 s = 100 s inside the 115 s reservation (60 + 55) for `"dish"`; 40 + 10 + 100 = 150 s
 inside the 165 s reservation (60 + 105) and the 180 s function timeout for `"steps"`; the apps
 wait 130 s and 190 s. Typically: Flash-Lite Image about 3 s a picture (a recipe with two step
 pictures about 6 s more than without); a 429 retried once adds 2–6 s; the fallback Nano Banana 2.1
@@ -1670,10 +1670,10 @@ would have come from Flash-Lite Image after BFL had already charged for its aban
 | reservation, `"dish"` / `"steps"` | 60 + 55 = 115 s / 60 + 105 = 165 s | 60 + 68 = 128 s / 165 s |
 
 45 s covers every observed time but the 75.9 s outlier with 12 s to spare; 20 s for Flash-Lite
-Image (about 3 s a picture) is the core's `minAttemptMs`. The bounds: text 40 s + judge 12 s +
-65 s = 117 s inside the 128 s reservation, which stays under the apps' 130 s wait for `"dish"`
+Image (about 3 s a picture) is the core's `minAttemptMs`. The bounds: text 40 s + judge 10 s +
+65 s = 115 s inside the 128 s reservation, which stays under the apps' 130 s wait for `"dish"`
 (so 45 s is about the most the first attempt can get without the apps waiting longer); steps
-unchanged (152 s inside 165 s, the 180 s function timeout and the apps' 190 s). The fallback
+unchanged (150 s inside 165 s, the 180 s function timeout and the apps' 190 s). The fallback
 attempt keeps the default 35 s cap, whatever its provider. A task abandoned at 45 s is still
 booked at its flat price (BFL finishes and charges it), so a timeout that falls back still costs
 USD 0.049. After switching, watch `image_call` `durationMs` and `image_fallback` with reason
@@ -2368,7 +2368,7 @@ A web page laid out as a dashboard. At the top, a **status strip** of what is in
 provider setup (text, pictures, fallback; ready, or not ready and why, from `getProviderProfiles`),
 recipes from packs on or paused (by whom, since when; a budget pause says only the command lifts
 it), today's spend against today's ceiling and recipes against `dailyCap` (meters), the second
-check's mode, the free-recipe offer with today's grants and free recipes used, and sandbox
+check's mode and whether the judged text is kept with its answers (`outputJudgeKeepText`), the free-recipe offer with today's grants and free recipes used, and sandbox
 purchases. Below it, **one card per group** in a responsive grid (one column on a phone, two or
 three on a desktop): **Providers** (each profile with its readiness and what is missing, the last
 change, and a switch behind a confirmation dialog), then one card per section of the settings

@@ -209,8 +209,8 @@ export const JUDGE = {
  * (`retryBaseMs` x 2^(n-1) x 0.5..1.5) while at most `maxAttempts` attempts are made and at least
  * `minAttemptMs` is left of the picture's budget: `budgetMs.dish` from the start of the pictures for
  * the dish's, `budgetMs.steps` from the same start for the step pictures. The arithmetic (text 40 s +
- * judge 12 s before any picture): dish 40 + 12 + 50 = 102 s inside the 115 s reservation
- * (60 + 55); steps 40 + 12 + 100 = 152 s inside the 165 s reservation (60 + 105) and the 180 s
+ * judge 10 s before any picture; JUDGE.abortMs.recipe): dish 40 + 10 + 50 = 100 s inside the 115 s reservation
+ * (60 + 55); steps 40 + 10 + 100 = 150 s inside the 165 s reservation (60 + 105) and the 180 s
  * function timeout. The apps wait 130 s (dish) and 190 s (steps).
  *
  * A picture provider may set longer times for its own attempts while it is the selected model
