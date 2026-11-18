@@ -24,6 +24,7 @@ the caller. The client wire contract is in [CONTRACT.md](CONTRACT.md).
 | `src/core/generation.ts` | `generateRecipe` (reserve, call the LLM, settle) and `getGeneration` (polling) |
 | `src/core/reports.ts` | `reportRecipe` ("Report this recipe") and keeping a deleted account's reports without its uid (see "Reports") |
 | `src/providers/types.ts`, `registry.ts`, `router.ts`, `failure.ts`, `balance.ts` | The common provider interface: the descriptor every text or picture adapter exports, the registry of them (one entry each), the routers that pick the adapter per call, the shared failure taxonomy and the balance probe (see "Adding a provider") |
+| `src/providers/lifecycle.ts`, `src/adapters/modelProbes.ts` | The model lifecycle table (announced retirement dates, their source, when last checked), which models a config puts in use, the daily check and its log lines, and the providers' free metadata probes (see "Model lifecycle") |
 | `src/providers/profiles.ts`, `src/core/providerSwitch.ts` | The named provider setups (profiles: text and pictures) and the one core that switches between them, for `npm run admin -- providers` and the owner console (see "Provider profiles", "The owner console") |
 | `src/core/ownerSettings.ts` | The registry of runtime settings the owner may change and the one core that changes them, for `npm run admin -- config` and the owner console (see "The owner console", "Settings") |
 | `src/core/recipeImage.ts` | A recipe's picture: the fixed prompt template around the checked brief, the call under its time limit, the `image_call` line (see "Recipe pictures") |
@@ -34,7 +35,7 @@ the caller. The client wire contract is in [CONTRACT.md](CONTRACT.md).
 | `src/core/welcome.ts` | The welcome grant: `getWelcomeOffer`, `claimWelcome`, `welcomeRecipes` and the day's brake (see "Welcome grant") |
 | `src/core/appleToken.ts` | `registerAppleSignIn`, and removing the stored Sign in with Apple token (deletion, unlink, tombstones) |
 | `src/board/` | The owner's spend and sales board: reader, aggregation and renderer shared by `npm run admin -- board` and the scheduled `redrawBoard`, and `hosted.ts`, the redraw into a private bucket (see "The board") |
-| `src/admin/` | The owner's offline commands, none deployed as a function: deletion requests by email (`npm run admin`, see "Deletion requests by email"), the spend and sales board by hand (`npm run admin -- board`, see "The board"), the provider profiles (`npm run admin -- providers list | use`, older name `image`, see "Provider profiles"), the prompt replay (`npm run prompt-body`) and the prompt-injection red-team runner (`npm run redteam`, `src/admin/redteam/`; see "Replaying a prompt against the live model") |
+| `src/admin/` | The owner's offline commands, none deployed as a function: deletion requests by email (`npm run admin`, see "Deletion requests by email"), the spend and sales board by hand (`npm run admin -- board`, see "The board"), the provider profiles (`npm run admin -- providers list | use`, older name `image`, see "Provider profiles"), the models in use and their retirement dates (`npm run admin -- models`, read-only, see "Model lifecycle"), the prompt replay (`npm run prompt-body`) and the prompt-injection red-team runner (`npm run redteam`, `src/admin/redteam/`; see "Replaying a prompt against the live model") |
 | `src/taste/` | The taste profile quiz: `catalogue.ts` (every step, option, text and prompt word; see "Taste profile quiz") and `quiz.ts` (`getTasteQuiz`, the version, cleaning a request's `taste`) |
 | `src/core/guard.ts` | Pre-Firestore throttles, client address, log sampling |
 | `src/ports.ts` | `PlayVerifier`, `AppStoreVerifier`, `RecipeGenerator`, `RecipeImageGenerator`, `AppleTokenRevoker` interfaces |
@@ -60,6 +61,7 @@ the caller. The client wire contract is in [CONTRACT.md](CONTRACT.md).
 | `sweepReservations` | every 5 min | Refunds reservations still pending 60 s after their deadline; retries Play consumes and owed consumption answers; watches negative balances |
 | `pollPlayVoidedPurchases` | daily 04:00 UTC | Voided Purchases API, last 3 days, for RTDNs that never arrived |
 | `checkProviderBalances` | hourly at :41 UTC | Asks the balance of every prepaid provider that has a probe and a threshold in `config/runtime.providerBalanceAlerts`, and logs `provider_balance_low` under it; with no threshold (the default) it reads only `config/runtime` (see "Provider balances") |
+| `checkModelLifecycle` | daily 06:23 UTC | For every model in use (text, its fallback, the output judge, pictures, their fallback, the deploy defaults) and every model of a listed profile: the announced retirement date against 90 / 30 / 7 days, the age of the table's last check, and each provider's free metadata probe; logs `model_retirement_near`, `model_unavailable`, `model_lifecycle_changed`, `model_lifecycle_stale` (see "Model lifecycle") |
 | `redrawBoard` | hourly at :17 UTC | Redraws the owner's board (30 days) into the private bucket `BOARD_BUCKET` as `board.html` and `board.json`; read-only on Firestore, and writes nothing unless the bucket is private (see "The board", "Always on") |
 | `playNotifications` | Pub/Sub topic `PLAY_RTDN_TOPIC` | Play voided-purchase RTDNs (full and quantity-based partial refunds) |
 | `appStoreNotifications` | HTTPS (public) | App Store Server Notifications v2: `REFUND`, `REVOKE`, `REFUND_REVERSED`, `CONSUMPTION_REQUEST`; signature verified |
@@ -580,6 +582,7 @@ concurrency 1 below 1 vCPU), 1 instance:
 | `appStoreNotifications` | 1 | n/a (no Firestore before Apple's signature checks out) | 30 s |
 | `getProviderProfiles`, `setProviderProfile`, `getOwnerSettings`, `setOwnerSettings` | 1 each | 30 for all callers but a listed owner together, at most 5 of them per client address; a listed owner 30 apart; calls without a token refused uncounted ("The owner console") | 30 s |
 | `playNotifications`, `budgetKillSwitch`, `sweepReservations`, `pollPlayVoidedPurchases` | 1 | n/a (Pub/Sub or scheduler; not callable from the internet) | |
+| `checkModelLifecycle` | 1 (no retry: the next day checks again) | n/a (scheduler); one free probe per model, 10 s each | 120 s |
 | `redrawBoard` | 1 (no retry: the next hour redraws anyway) | n/a (scheduler); at most 2,000 purchases read a run (`BOARD_PURCHASES_CAP`) | 120 s |
 
 Before any Firestore access, every callable is throttled per instance in memory: 30 calls a minute
@@ -743,6 +746,11 @@ Create log-based alerts in Cloud Logging on `jsonPayload.message` (all are struc
 | `provider_out_of_credit` | error | **Alerted on** (`provider-out-of-credit`): a text or picture provider said its prepaid balance or spending limit is exhausted ("Adding a provider"): `provider`, `model`, `surface` (`text` / `image`). Never the provider's message. The request went to the fallback or the default provider; anything not made was given back. |
 | `text_fallback` | info | **Worth watching**: the recipe text's provider failed before writing anything and the fallback was asked once: `uidHash`, `provider`, `model`, `fallbackProvider`, `fallbackModel`, `reason` (`OUT_OF_CREDIT`, `CAPACITY`, `CONFIG`). The `llm_call` line then has `provider` (who answered) and `textFallback: true`. |
 | `provider_balance_low` / `provider_balance_unavailable` | error / warning | The hourly balance probe ("Provider balances"): `provider`, `amount`, `unit`, `threshold`; or `provider`, `reason` (`TIMEOUT`, `FAILED`). The first is **alerted on** (`provider-balance-low`). |
+| `model_retirement_near` | info / warning / error | **Alerted on** (`model-retirement`): the daily `checkModelLifecycle` ("Model lifecycle") found a model within 90 / 30 / 7 days of its announced retirement or past it: `provider`, `model`, `role` (the first) and `roles` (`text`, `text_fallback`, `judge`, `image`, `image_fallback`, `text_default`, `image_default`, `profile:<id>`), `inUse`, `retiresOn`, `daysLeft`, `band` (90, 30, 7, 0 for past), `from` (`table` / `api`), `earliest` (a "this date or later" date). In use: info at 90, warning at 30, error at 7 and past; only listed: info, then warning at 7. Once per band (marks in `modelLifecycle/`), and every day once past while in use. |
+| `model_unavailable` | error / warning | **Alerted on** (`model-unavailable`): a provider's free metadata probe says the id is not found or not served where the server calls it (Vertex AI: 404 from `countTokens` in the configured location; OpenAI: 404 from `GET /v1/models/{model}`): `provider`, `model`, `role`, `roles`, `inUse` (error when in use). Every daily run while it lasts. |
+| `model_lifecycle_changed` | warning | **Alerted on** (`model-retirement`): a provider's API reported a retirement date earlier than the table's, or one the table lacks: `provider`, `model`, `roles`, `inUse`, `tableRetiresOn`, `apiRetiresOn`. Once per reported date; the bands go by the earlier date meanwhile. Update the table. |
+| `model_lifecycle_stale` | warning | **Alerted on** (`model-lifecycle-stale`): a model in use whose lifecycle entry was last checked more than 60 days ago (`reason` `OLD_CHECK`), or which has none (`NO_ENTRY`: set by hand in `config/runtime`): `provider`, `model`, `roles`, `checkedOn`, `checkedDaysAgo`, `staleDays`. Weekly while it lasts. The reminder of the review in "Model lifecycle". |
+| `model_probe_failed` / `model_lifecycle_checked` / `model_lifecycle_marks_unavailable` | info / info / warning | Informational: a probe failed for another reason than "not found" (`reason` `TIMEOUT` / `FAILED`; never the provider's text; never an alarm); the run's summary (`models`, `inUse`, `soonestDaysLeft`, `stale`, `unavailable`, `probeFailed`); the marks could not be read or written (`reason`; then lines may repeat). |
 | `provider_balance_unprobed` | warning | A `providerBalanceAlerts` threshold nothing can probe ("Provider balances"): `provider`, `reason` (`UNKNOWN_PROVIDER`, `NO_PROBE`); once per such threshold per hourly run. Remove the threshold or fix its id. |
 | `owner_settings_changed` | info / warning | **Alerted on** (console changes): runtime settings were changed ("The owner console", "Settings"): `via` (`web` / `cli`), `uidHash` for the console, `settings` (ids), `sensitive` (the sensitive ids among them; the line is a warning when there is any), `changes` (`id`, `from`, `to`, for plain values; lists and tables are in the audit record), `change` (the `ownerSettingChanges/` id). Never an email or uid. |
 | `owner_call_refused` | warning | A call to the owner console's callables was refused: `function`, `reason` (a fixed code: `SIGN_IN`, `RATE_LIMITED`, `NOT_OWNER`, `RECENT_SIGN_IN`, `NOT_READY`, `STALE`, `UNKNOWN_PROFILE`, `PRICES_INVALID`, `INVALID_RESULT`, `INVALID_REQUEST`, for the settings `UNKNOWN_SETTING`, `INVALID_VALUE`, `STORED_INVALID`, `CONFIRM_SENSITIVE`, `WEB_LIMIT`, else the error's code such as `INVALID_ARGUMENT`; never text from the request). Refusals before anything is counted or at the throttle (`SIGN_IN` without a token, `RATE_LIMITED`) are sampled, 10 a minute per instance, with `suppressedSinceLast`; every other one is logged (the throttle bounds them) with the caller's `uidHash`. Never the uid or email. Many `NOT_OWNER` mean someone is trying the page; any other reason but `SIGN_IN` / `RATE_LIMITED` is **alerted on** (`owner-refusals`). |
@@ -757,7 +765,7 @@ Create log-based alerts in Cloud Logging on `jsonPayload.message` (all are struc
 The owner is emailed by Cloud Monitoring alert policies on the log lines above, through the
 existing email channel "Recipe backend alerts (owner)". They are code in `functions/alerts/`: two
 log-based metrics (`metrics/recipe_generation_refused.json`, `metrics/recipe_image_failed.json`)
-and seventeen policies (`policies/*.json`, no channel in them). `alerts.py` applies them: dry run by default (local checks, every log filter
+and twenty policies (`policies/*.json`, no channel in them). `alerts.py` applies them: dry run by default (local checks, every log filter
 checked against the project with a read-only `gcloud logging read`, then the plan), `--apply` to
 create or update (matched by display name, so re-running is safe and prints "unchanged"). The
 channel is chosen by `--channel <id>` or `--channel-name` (default the one above); the script never
@@ -788,6 +796,9 @@ and Logs Configuration Writer (`--account` picks one other than the active accou
 | Recipe: recipe pictures failing broadly (`image-failures`) | more than 3 `CONFIG` or more than 10 `INFRA` pictures not delivered in an hour, after their retries and fallback (metric threshold) | `image_call` through the metric `recipe_image_failed` |
 | Recipe: provider out of credit (`provider-out-of-credit`) | a text or picture provider's prepaid balance or spending limit ran out (at most one email an hour) | `provider_out_of_credit` |
 | Recipe: provider balance low (`provider-balance-low`) | a prepaid provider's balance is under its `providerBalanceAlerts` threshold (at most one email per 6 hours) | `provider_balance_low` |
+| Recipe: model retirement near (`model-retirement`) | a model in use or in a listed profile is within 90 / 30 / 7 days of its announced retirement, or past it (once per band; daily once past while in use), or a provider's API reports an earlier retirement than the table (at most one email an hour) | `model_retirement_near`, `model_lifecycle_changed` |
+| Recipe: model not served (`model-unavailable`) | a provider's metadata probe says a model id is not found or not served there (at most one email per 6 hours; the check is daily) | `model_unavailable` |
+| Recipe: model lifecycle table stale (`model-lifecycle-stale`) | the lifecycle entry of a model in use is older than 60 days, or missing (weekly while it lasts) | `model_lifecycle_stale` |
 | Recipe: owner board (`owner-board`, existing) | the hourly redraw failed or the bucket check refused to write | `board_redraw_failed`, `board_bucket_public` |
 | Recipe: backend errors, refunds, blocked buyers, stuck purchases, prompt safety (existing) | as in the two "Logs to alert on" tables | see those tables |
 
@@ -1556,6 +1567,85 @@ in **credits**, 1 credit = USD 0.01, so a threshold of 500 is USD 5, about 550 K
 other provider does yet. With no threshold it calls nothing and logs nothing. It is a new
 scheduled function: the next deploy creates its Cloud Scheduler job.
 
+### Model lifecycle
+
+Models are retired quickly now, so the server keeps a lifecycle table and checks it every day
+(`src/providers/lifecycle.ts`). How each provider announces a retirement, read on **2026-11-18**:
+
+| provider | where it is announced | what an API says | notice |
+|---|---|---|---|
+| Google, Vertex AI (`google` text and judge, `vertex` pictures) | The "Model versions and lifecycle" page, <https://docs.cloud.google.com/vertex-ai/generative-ai/docs/learn/model-versions> (a retirement-date column per model; "When we schedule a model for retirement, we post a fixed date … that gives you at least 45 days to migrate", and dates are never moved earlier), and the release notes, <https://docs.cloud.google.com/vertex-ai/generative-ai/docs/release-notes>. The deprecations page (<https://docs.cloud.google.com/vertex-ai/generative-ai/docs/deprecations>) lists no Gemini model. No Google page describes emails; projects using a model are reported (third party) to get a "Google Cloud deprecation notice". | No API gives a date: `publishers.models.get` has `launchStage` and `versionState` only (<https://docs.cloud.google.com/gemini-enterprise-agent-platform/reference/rest/v1beta1/publishers.models/get>). The probe is `countTokens` in the project and location the adapter calls: free ("There is no charge or quota restriction for using the `CountTokens` API", 3000 a minute, <https://docs.cloud.google.com/vertex-ai/generative-ai/docs/multimodal/get-token-count>, which lists the picture models too), needs `aiplatform.endpoints.predict` (in Vertex AI User, which the service account has), and answers 404 "Publisher Model … was not found or your project does not have access to it" for a retired, wrong or not-offered-there id (community sources; not documented). | at least 45 days |
+| OpenAI (`openai`, listed only) | <https://developers.openai.com/api/docs/deprecations> ("Impacted customers will always be notified by email and in our documentation"; image models at least 3 months). | `GET /v1/models/{model}` has `shutdown_date` (date, or null when none is announced; <https://developers.openai.com/api/reference/resources/models/methods/retrieve>). Not said whether it is billed (a metadata read; no generation). A model past its date may still be listed (community report), so the date is compared, not only the 404. | at least 3 months for image models |
+| Black Forest Labs (`bfl`, listed only) | Only the release notes, <https://docs.bfl.ai/release-notes> (no deprecations page, no stated email or notice policy; the one precedent, `flux-pro-1.0`, was announced 2025-10-03 for 2025-10-31). | None: no model list or metadata endpoint (<https://api.bfl.ai/openapi.json>: the only GETs are credits, results and finetunes). A GET on a model path answers 405 while it exists and 404 once retired, but that is framework behaviour, not a contract, so no probe is built. | about 4 weeks, once |
+| Mistral (no adapter yet) | The models page's deprecated table (Deprecation, Retirement, Alternative; <https://docs.mistral.ai/getting-started/models/>) and the lifecycle policy, <https://docs.mistral.ai/inference/model-lifecycle> (6 months' notice for GA models, 1 month for preview; a retired id answers 404). | `GET /v1/models/{model_id}` has `deprecation` (a date) and `deprecation_replacement_model` in the SDK's schema (<https://raw.githubusercontent.com/mistralai/client-python/main/docs/models/basemodelcard.md>); its `modelInfo` should report `deprecation` as `retiresOn` only if Mistral documents it as the retirement, else nothing. | 6 months (GA) |
+
+**The models in use and their dates** (the table; `npm run admin -- models` prints it live):
+
+| provider / model | role today | announced retirement | source |
+|---|---|---|---|
+| `google` / `gemini-3.8-flash` | recipe text, and the output judge while `GEMINI_JUDGE_MODEL` is empty | 2027-09-02 **or later** (GA, released 2026-09-02) | Vertex lifecycle page |
+| `vertex` / `gemini-3.1-flash-lite-image` | pictures (default), fallback of `nano-banana`, fallback of `flux-eu` | 2027-06-28 **or later** | Vertex lifecycle page |
+| `vertex` / `gemini-nano-banana-2.1` | picture fallback (default), model of `nano-banana` | none announced (a "short-term" model: it gets a fixed date at least 45 days ahead when Google sets one) | Vertex lifecycle page |
+| `openai` / `gpt-image-1-mini` | profile `openai` (listed only) | **2026-12-01** (deprecated, notice 2026-06-02) | OpenAI deprecations |
+| `bfl` / `flux-3-image-klein`, `flux-3-image` | profile `flux-eu` (listed only); `flux-3-image` priced, in no profile | none announced | BFL release notes |
+
+For a future judge model: `gemini-3.5-flash-lite` is GA until 2027-07-21 or later, `gemini-3.1-flash-lite`
+until 2027-05-07 or later; the short-term `gemini-3.6-flash` retires 2026-11-19 and `gemini-3.7-flash`
+2027-01-28 (all from the Vertex page, 2026-11-18). On-device models (Gemini Nano, Apple Foundation
+Models) ship with the phones' systems and are not the backend's concern.
+
+**The table** (`MODEL_LIFECYCLE`): per provider/model `retiresOn` (YYYY-MM-DD, or null when none is
+announced; `earliest: true` for Google's "this date or later"), `source` (the page) and `checkedOn`
+(the day a person or agent last read it). `test/modelLifecycle.test.ts` fails when a model that a
+profile, a deploy default (`DEFAULT_TEXT_SELECTION`, `DEFAULT_IMAGE_SELECTION` and its fallback), a
+provider's default model or default param (`GEMINI_MODEL`, and `GEMINI_JUDGE_MODEL` read from
+`src/index.ts`) or a price table names has no entry: a model can't be added without one.
+
+**The check** (`checkModelLifecycle`, daily at 06:23 UTC; best effort, never on a request's path, no
+new IAM role): it reads `config/runtime` as the other functions do (over the params, over the
+defaults) and takes every model it selects or names as a fallback: the text and its fallback, the
+output judge (`GEMINI_JUDGE_MODEL`, else `GEMINI_MODEL`; in use while `outputJudge` is not `off`),
+the pictures and their fallback, and the deploy defaults that out-of-credit failures go to; then,
+less urgently (`inUse: false`), every model of a listed profile. For each:
+
+- **Retirement**: the earlier of the table's date and one the API reported. Inside 90, 30 and 7 days
+  and past it, `model_retirement_near` (in use: info, warning, error, error; only listed: info, then
+  warning from 7 days), once per band (the marks in `modelLifecycle/`), and every day once past while
+  in use. A model first seen already inside a band is told at once; a changed date starts over.
+- **Probe** (where the provider has a free metadata call, `modelInfo` on its descriptor: Vertex AI
+  for `google` and `vertex` in `VERTEX_LOCATION` / `VERTEX_IMAGE_LOCATION`, OpenAI): "not found" is
+  `model_unavailable` (error when in use); a reported date earlier than the table's, or one it lacks,
+  is `model_lifecycle_changed` (once per date). Anything else (a timeout, 403, 429, 5xx, a key not
+  readable) is `model_probe_failed` (info), never an alarm. Never a generating call. The OpenAI probe
+  reads its key like the adapter does, so while the key isn't granted it only logs `model_probe_failed`.
+- **Staleness**: a model in use whose entry was checked more than 60 days ago, or which has no
+  entry (a model set by hand), is `model_lifecycle_stale`, weekly while it lasts.
+
+Log lines and alerts: "Logs to alert on" and "Alerts" (`model-retirement`, `model-unavailable`,
+`model-lifecycle-stale`). No key, token or URL with a secret is logged.
+
+```bash
+cd functions
+npm run admin -- models                                        # emulators' config/runtime; table only
+npm run admin -- models --project bestbefore-f9ee1             # live config/runtime and deploy params, read-only
+npm run admin -- models --probe --project bestbefore-f9ee1     # and ask the providers now (free metadata calls)
+```
+
+It prints the models in use and those only listed, their roles, retirement date, days left, last
+check and source, and with `--probe` each probe's outcome. It writes nothing and logs nothing. Live,
+with the operator's Application Default Credentials (Datastore User; the Vertex probe sends
+`x-goog-user-project`, so the account needs Service Usage Consumer, which the owner has; Secret
+Accessor only for the OpenAI probe).
+
+**"Outdated" is not detected.** Whether a newer, better or cheaper model exists is a judgement no API
+answers reliably (a newer id is not always better for recipes, and prices and quality change), so
+the code doesn't pretend to. The routine instead: **every month, and whenever
+`model_lifecycle_stale` arrives**, re-read each entry's `source` and the providers' release notes
+(the pages above), update `retiresOn` and `checkedOn` (`checkedOn` even when nothing changed),
+note newer models worth trying, and deploy. A replacement is then tried like any model change:
+priced, a profile, the red-team run and a few real recipes before switching (docs/recipe-setup.md
+"A model is being retired"). The stale warning at 60 days is that review's reminder.
+
 ## Reports
 
 "Report this recipe" (`reportRecipe`, CONTRACT.md `reportRecipe`): a person flags a recipe or menu
@@ -1739,6 +1829,10 @@ Server-only. Documents:
   nobody.
 - `providerProfileChanges/{id}`: one per provider profile switch ("Provider profiles"): `at`,
   `actor` (`{via: "cli"}` or `{via: "web", uid}`), `from`, `to`, `writes`. Kept; a few a month.
+- `modelLifecycle/{provider}__{model}` ("Model lifecycle"): what the daily check already told about
+  a model, so a band or a stale entry is emailed once: `band` + `bandRetiresOn`, `staleLoggedAt` +
+  `staleCheckedOn`, `changedRetiresOn`, and `lastRun` (`at`, `probe`, `daysLeft`, `retiresOn`,
+  `inUse`, `roles`). One per model ever checked; safe to delete (the next run tells again).
 
 ### `config/runtime`
 

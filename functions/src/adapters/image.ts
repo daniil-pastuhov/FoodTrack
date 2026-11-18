@@ -19,6 +19,7 @@ import { safetySettingsFor } from "./gemini";
 import { ImageGenerationError, type GeneratedImage, type ImagePrompt, type ImageTarget, type ImageUsage, type RecipeImageGenerator } from "../ports";
 import { CAPACITY_5XX as RETRYABLE_5XX, retryAfterMs } from "../providers/failure";
 import type { ImageProviderDescriptor } from "../providers/types";
+import { openaiModelInfo, vertexModelInfo } from "./modelProbes";
 
 export { ImageRouter } from "../providers/router";
 
@@ -302,6 +303,7 @@ export const vertexImage: ImageProviderDescriptor = {
     },
   ],
   create: (ctx) => new VertexImageGenerator({ project: ctx.project, location: ctx.param("VERTEX_IMAGE_LOCATION") }),
+  modelInfo: (ctx, model, signal) => vertexModelInfo({ project: ctx.project, location: ctx.param("VERTEX_IMAGE_LOCATION"), model, signal, ...(ctx.fetch ? { fetch: ctx.fetch } : {}) }),
 };
 
 /**
@@ -327,4 +329,5 @@ export const openaiImage: ImageProviderDescriptor = {
   usdPerImage: { "gpt-image-1-mini": 0.02 },
   tokenPrices: { "gpt-image-1-mini": { input: 2, outputText: 8, outputImage: 8 } },
   create: (ctx) => new OpenAIImageGenerator({ apiKey: () => ctx.secret(), ...(ctx.fetch ? { fetch: ctx.fetch } : {}) }),
+  modelInfo: async (ctx, model, signal) => openaiModelInfo({ model, apiKey: await ctx.secret(), signal, ...(ctx.fetch ? { fetch: ctx.fetch } : {}) }),
 };

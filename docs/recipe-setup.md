@@ -586,6 +586,50 @@ the service account can read it. When the adapter is merged and before switching
   in the test of 2026-11-17 about half of the pictures took longer than the 30 s an attempt gets,
   and each of those would be made again by Flash-Lite Image after BFL had charged for it.
 
+### 13c. Model lifecycle alerts (functions/README.md "Model lifecycle") **(owner, after the next deploy)**
+
+The scheduled `checkModelLifecycle` (daily 06:23 UTC) warns before a model in use is retired. It
+needs no new role: its Vertex AI probe is `countTokens` (free, within Vertex AI User), the OpenAI
+probe reads the key only once that grant exists, and its marks are in Firestore (`modelLifecycle/`).
+
+- [ ] Deploy the functions (the deploy creates the Cloud Scheduler job
+  `firebase-schedule-checkModelLifecycle-europe-west1`); run it once with
+  `gcloud scheduler jobs run firebase-schedule-checkModelLifecycle-europe-west1 --project=bestbefore-f9ee1 --location=europe-west1`
+  and look for `model_lifecycle_checked` in the logs (`probeFailed` should be 0 for the Vertex models;
+  the OpenAI one fails quietly until its key is granted).
+- [ ] Apply the three new alert policies, "Recipe: model retirement near", "Recipe: model not
+  served", "Recipe: model lifecycle table stale" (`functions/alerts/policies/model-retirement.json`,
+  `model-unavailable.json`, `model-lifecycle-stale.json`):
+  `python3 functions/alerts/alerts.py --project bestbefore-f9ee1` (dry run), then
+  `python3 functions/alerts/alerts.py --project bestbefore-f9ee1 --apply`.
+- [ ] Expect one email soon after: `gpt-image-1-mini` (profile `openai`, listed only) is shut down by
+  OpenAI on 2026-12-01. Decide whether to drop the `openai` profile or move it to a current OpenAI
+  image model (runbook below); nothing in use depends on it.
+- [ ] Monthly (and when "model lifecycle table stale" arrives): the review in functions/README.md
+  "Model lifecycle": re-read each entry's source page, update `retiresOn` / `checkedOn` in
+  `functions/src/providers/lifecycle.ts`, deploy.
+
+### A model is being retired (runbook)
+
+When "Recipe: model retirement near" or "Recipe: model not served" names a model in use (`npm run
+admin -- models --probe --project bestbefore-f9ee1` shows them all, with roles and days left):
+
+1. **Pick the replacement**: the provider's lifecycle page usually names one (the "Replacement"
+   column on Vertex AI, "Recommended replacement" at OpenAI). Prefer a GA model with a fixed date
+   far out over a short-term one.
+2. **Price it**: add its price to the adapter's table (`prices` for text, `usdPerImage` and
+   `tokenPrices` for pictures) from the provider's pricing page, and its entry to
+   `MODEL_LIFECYCLE` (`retiresOn`, `source`, `checkedOn`): the tests refuse a model without either.
+3. **Try it**: a profile for it (`src/providers/profiles.ts`), the red-team run and a few real recipes
+   or pictures on the emulators and then live (functions/README.md "Replaying a prompt against the
+   live model", "The red-team run").
+4. **Switch**: deploy, then `npm run admin -- providers use <profile> --apply --project bestbefore-f9ee1`
+   or the owner console; for the recipe text's default, `GEMINI_MODEL` in `functions/.env.bestbefore-f9ee1`
+   (and `GEMINI_JUDGE_MODEL` if it names the old model) and a deploy.
+5. **Update the table**: the old model's entry stays while any profile or default names it; remove
+   it with the last one. Past the date, `model_unavailable` follows within a day if anything still
+   calls it.
+
 ### App Review switch
 
 Before submitting a version that sells packs, set `allowSandbox: true` and make sure the caps
