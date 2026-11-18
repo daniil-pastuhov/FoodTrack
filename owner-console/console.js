@@ -53,6 +53,8 @@ function show(signedIn) {
   $("signed-out").hidden = signedIn;
   $("account").hidden = !signedIn;
   if (!signedIn) {
+    $("load-failed").hidden = true;
+    $("loading").hidden = true;
     $("console").hidden = true;
     $("settings").hidden = true;
     $("status-strip").hidden = true;
@@ -96,28 +98,36 @@ function el(tag, props = {}, ...children) {
   for (const [k, v] of Object.entries(props)) {
     if (k === "class") e.className = v;
     else if (k === "text") e.textContent = v;
-    else if (k.startsWith("aria-") || k.startsWith("data-")) e.setAttribute(k, v);
+    else if (k === "role" || k.startsWith("aria-") || k.startsWith("data-")) e.setAttribute(k, v);
     else e[k] = v;
   }
   for (const c of children) if (c !== null && c !== undefined && c !== false) e.append(c);
   return e;
 }
 
-/** A status dot: the tone in words for screen readers too. */
+/** A state mark: its shape differs by tone (check, triangle, octagon), so colour never carries it alone. */
 function dot(tone) {
   return el("span", { class: `dot ${tone}`, "aria-hidden": "true" });
 }
 
-/** A tile of the status strip (the board's look): label, value, a meter, a line. */
-function tile({ label, value, tone = "neutral", note = "", meter = null, wide = false }) {
+/** A value such as "USD 0.92 of USD 5.00": the first part large, "of …" quieter beside it. */
+function valueNode(value) {
+  const at = value.indexOf(" of ");
+  if (at <= 0) return el("span", { class: "t-main", text: value });
+  return el("span", {}, el("span", { class: "t-main", text: value.slice(0, at) }), el("span", { class: "t-of", text: value.slice(at) }));
+}
+
+/** A tile of the status strip: label, value, a meter, a line (or labelled lines). */
+function tile({ label, value, tone = "neutral", note = "", meter = null, wide = false, lines = null }) {
   const m = meter && meter.max > 0
     ? el("meter", { min: 0, max: meter.max, value: Math.min(meter.value, meter.max), low: meter.max * 0.8, high: meter.max * 0.999, optimum: 0, "aria-label": label })
     : null;
   return el("div", { class: `tile ${tone}${wide ? " wide" : ""}` },
-    el("div", { class: "t-label", text: label }),
-    el("div", { class: "t-value" }, tone !== "neutral" ? dot(tone) : null, el("span", { text: value })),
+    el("div", { class: "t-label" }, tone !== "neutral" ? dot(tone) : null, el("span", { text: label })),
+    el("div", { class: "t-value" }, valueNode(value)),
     m,
-    note ? el("p", { class: "t-note", text: note }) : null);
+    note ? el("p", { class: "t-note", text: note }) : null,
+    lines ? el("dl", { class: "t-lines" }, ...lines.flatMap(([k, v]) => [el("dt", { text: k }), el("dd", { text: v })])) : null);
 }
 
 // --- Providers (getProviderProfiles / setProviderProfile) -------------------------------------
@@ -150,12 +160,14 @@ function render() {
     const radio = el("input", { type: "radio", name: "profile", id, value: p.id, checked: p.id === pick });
     radio.addEventListener("change", describe);
     const inForce = p.id === a.profile;
-    const state = inForce ? ["good", "In force"] : p.ready ? ["good", "Ready"] : ["crit", "Not ready"];
-    return el("li", { class: "profile" + (p.id === pick ? " checked" : "") },
+    const state = inForce ? ["active", "In force"] : p.ready ? ["good", "Ready"] : ["crit", "Not ready"];
+    const text = textModels(p);
+    return el("li", { class: "profile" + (p.id === pick ? " checked" : "") + (inForce ? " in-force" : "") + (p.ready || inForce ? "" : " not-ready") },
       radio,
-      el("div", {},
+      el("div", { class: "p-body" },
         el("label", { htmlFor: id, text: p.label }),
-        el("p", { class: "p-state" }, dot(state[0]), el("span", { text: state[1] + (p.ready || inForce ? "" : ` · ${p.missing.length} missing`) })),
+        el("span", { class: `p-state ${state[0]}` }, state[0] === "active" ? null : dot(state[0]), el("span", { text: state[1] + (p.ready || inForce ? "" : ` · ${p.missing.length} missing`) })),
+        el("p", { class: "p-models" }, text ? el("span", {}, el("span", { class: "p-k", text: "Text " }), el("span", { text })) : null, el("span", {}, el("span", { class: "p-k", text: "Pictures " }), el("span", { text: models(p) }))),
         !p.ready && p.missing.length ? el("ul", { class: "p-missing" }, ...p.missing.map((m) => el("li", { text: m }))) : null));
   }));
   describe();
@@ -179,23 +191,42 @@ function describe() {
 
 /** The status strip: the provider setup from the profiles, then what the settings say is in force. */
 function renderStatus() {
-  const tiles = [];
+  // What the settings say first, in the server's order; the provider setup (a wide tile) last.
+  const tiles = [...(settingsView?.status ?? [])];
   if (view) {
     const a = view.active;
     const p = view.profiles.find((x) => x.id === a.profile);
     const text = textModels(a);
-    const setup = `${text ? `Text ${text}. ` : ""}Pictures ${models(a)}${a.picturesOn ? "" : " (not offered to the apps)"}.`;
-    if (!p) tiles.push({ label: "Provider setup", wide: true, value: a.label, tone: "warn", note: `${setup} Set by hand, not a profile: readiness unknown.` });
-    else if (p.ready) tiles.push({ label: "Provider setup", wide: true, value: a.label, tone: "good", note: `Ready. ${setup}` });
-    else tiles.push({ label: "Provider setup", wide: true, value: a.label, tone: "crit", note: `Not ready: ${p.missing.join("; ")}. ${setup}` });
+    const lines = [
+      ...(text ? [[`Text`, text]] : []),
+      [`Pictures`, `${models(a)}${a.picturesOn ? "" : " (not offered to the apps)"}`],
+    ];
+    if (!p) tiles.push({ label: "Provider setup", wide: true, value: a.label, tone: "warn", note: "Set by hand, not a profile: readiness unknown.", lines });
+    else if (p.ready) tiles.push({ label: "Provider setup", wide: true, value: a.label, tone: "good", note: "Ready.", lines });
+    else tiles.push({ label: "Provider setup", wide: true, value: a.label, tone: "crit", note: `Not ready: ${p.missing.join("; ")}.`, lines });
   }
-  for (const s of settingsView?.status ?? []) tiles.push(s);
   $("status").replaceChildren(...tiles.map(tile));
+  // The one line to read first: what needs attention (the server's own tones), or that nothing does.
+  const attention = tiles.filter((t) => t.tone === "crit" || t.tone === "warn");
+  const worst = attention.some((t) => t.tone === "crit") ? "crit" : attention.length ? "warn" : "good";
+  $("status-summary").className = `summary ${worst}`;
+  $("status-summary").replaceChildren(dot(worst), el("span", {
+    text: attention.length ? `Needs attention: ${attention.map((t) => `${t.label}, ${t.value}`).join(" · ")}` : "Nothing needs attention",
+  }));
   $("status-strip").hidden = tiles.length === 0;
+}
+
+/** The page's own panel for a load that failed (the dock is for what happens after). */
+function loadFailed(title, text) {
+  $("load-failed-title").textContent = title;
+  $("load-failed-text").textContent = text;
+  $("load-failed").hidden = false;
 }
 
 async function load() {
   say("Loading…");
+  $("load-failed").hidden = true;
+  $("loading").hidden = false;
   try {
     view = await call("getProviderProfiles");
     say("");
@@ -206,9 +237,12 @@ async function load() {
     $("settings").hidden = true;
     $("status-strip").hidden = true;
     clearCards();
-    if (e.reason === "NOT_OWNER") say("This Google account may not use the owner console.", true);
-    else if (e.reason === "SIGN_IN" || e.reason === "UNAUTHENTICATED") say("Sign in with Google.", true);
-    else say(`Could not load: ${e.message}`, true);
+    say("");
+    if (e.reason === "NOT_OWNER") loadFailed("Not the owner's account", "This Google account may not use the owner console. Sign out and sign in with the owner's account.");
+    else if (e.reason === "SIGN_IN" || e.reason === "UNAUTHENTICATED") loadFailed("Signed out", "Sign in with Google.");
+    else loadFailed("Could not load", `The server answered: ${e.message}`);
+  } finally {
+    $("loading").hidden = true;
   }
 }
 
@@ -325,8 +359,8 @@ function settingById(id) {
 function controlFor(s, fid) {
   const c = s.control;
   if (c.kind === "toggle") {
-    const box = el("input", { type: "checkbox", id: fid, checked: s.value === true, disabled: Boolean(s.blocked) });
-    const word = el("span", { text: s.value === true ? "On" : "Off" });
+    const box = el("input", { type: "checkbox", id: fid, checked: s.value === true, disabled: Boolean(s.blocked), role: "switch" });
+    const word = el("span", { class: "switch-word", text: s.value === true ? "On" : "Off", "aria-hidden": "true" });
     box.addEventListener("change", () => { word.textContent = box.checked ? "On" : "Off"; });
     return {
       node: el("span", { class: "switch" }, box, word),
@@ -346,9 +380,11 @@ function controlFor(s, fid) {
       value: s.value === null ? "" : String(s.value / k), disabled: Boolean(s.blocked),
     });
     if (c.emptyMeans) box.placeholder = `empty: ${c.emptyMeans}`;
-    const unit = isUsd(c) ? el("span", { class: "unit", text: "USD", "aria-hidden": "true" }) : null;
+    // The unit inside the field, right after the figure (USD, recipes, days).
+    const unitText = isUsd(c) ? "USD" : c.unit === "recipes" || c.unit === "days" ? c.unit : "";
+    const unit = unitText ? el("span", { class: "unit", text: unitText, "aria-hidden": "true" }) : null;
     return {
-      node: unit ? el("span", { class: "s-num" }, unit, box) : box,
+      node: el("span", { class: `field${box.disabled ? " disabled" : ""}` }, box, unit),
       get: () => {
         const t = box.value.trim();
         if (t === "") return null;
@@ -434,9 +470,10 @@ function settingNode(s, sec) {
   const node = el("div", { class: "setting" + (block ? " block" : "") + (s.changed ? " changed" : "") });
   const entry = { get: ctl.get, state: ctl.state, restore: ctl.restore, reset: false, sec: sec.id, node, meta, setting: s };
   inputs.set(s.id, entry);
+  // Two quiet marks: "sensitive" (a lock) and "changed" from the default (a dot; the default is on the line below).
   const chips = el("span", { class: "s-chips" },
-    s.sensitive ? el("span", { class: "chip sens", text: "sensitive" }) : null,
-    s.changed ? el("span", { class: "chip changed", text: "changed from default" }) : null);
+    s.changed ? el("span", { class: "chip changed", text: "changed" }) : null,
+    s.sensitive ? el("span", { class: "chip sens", text: "sensitive" }) : null);
   const name = block
     ? el("p", { class: "s-name", id: `${fid}-name` }, el("span", { text: s.label }), chips)
     : el("label", { class: "s-name", htmlFor: fid, id: `${fid}-name` }, el("span", { text: s.label }), chips);
@@ -446,16 +483,17 @@ function settingNode(s, sec) {
     s.web ? el("p", { text: `On this page: ${s.web.text}.` }) : null,
     s.web ? el("p", {}, el("span", { text: "Larger changes: use the command " }), el("code", { text: commandText(s) })) : null,
   ];
-  const more = el("details", { class: "s-more" }, el("summary", { text: "About" }), ...facts);
+  const more = el("details", { class: "s-more" }, el("summary", { text: "About" }), el("div", { class: "s-about" }, ...facts));
+  const tools = el("div", { class: "s-tools" }, more);
   node.append(...[
     el("div", { class: "s-head" }, name),
     el("div", { class: "s-ctl" }, ctl.node),
     meta,
-    more,
+    tools,
     s.blocked ? el("p", { class: "s-warn", text: s.blocked }) : null,
   ].filter(Boolean));
   if (s.overridden && !s.blocked) {
-    const btn = el("button", { type: "button", class: "small", text: "Reset to default" });
+    const btn = el("button", { type: "button", class: "link", text: "Reset to default" });
     btn.addEventListener("click", () => {
       entry.reset = !entry.reset;
       btn.textContent = entry.reset ? "Will reset on Save (undo)" : "Reset to default";
@@ -463,7 +501,7 @@ function settingNode(s, sec) {
       refreshPending();
     });
     entry.resetButton = btn;
-    node.append(el("div", { class: "s-actions" }, btn));
+    more.before(btn);
   }
   node.addEventListener("input", refreshPending);
   node.addEventListener("change", refreshPending);
@@ -482,12 +520,46 @@ function readOnlyNode(rows) {
   return el("details", { class: "ro" }, el("summary", { text: `Shown here, changed elsewhere (${rows.length})` }), dl);
 }
 
+/**
+ * A worked line the server sends as "min(A, B) = C. Rest." set as a small formula block: one term
+ * a line, the result last. Only the layout is the page's; the figures and words are the server's.
+ * Anything else stays a plain note.
+ */
+function formulaNode(note) {
+  const m = /^min\((.+?), (.+)\) = ([^,;]+?)\.(?:\s+(.*))?$/s.exec(note);
+  if (!m) return null;
+  const row = (op, text, cls = "") => el("div", { class: `fx-row${cls}` }, el("span", { class: "fx-op", text: op }), el("span", { class: "fx-term", text }));
+  return el("div", { class: "f-formula" },
+    el("div", { class: "fx" },
+      row("min(", m[1]),
+      row("", m[2] + " )"),
+      row("=", m[3], " fx-result")),
+    m[4] ? el("p", { class: "f-note", text: m[4] }) : null);
+}
+
 function figuresNode(facts) {
   if (!facts?.length) return null;
-  return el("div", { class: "figures" }, ...facts.map((f) => el("div", { class: "figure" + (f.note.length > 120 ? " formula" : "") },
-    el("div", { class: "f-label", text: f.label }),
-    el("div", { class: "f-value", text: f.value }),
-    f.note ? el("p", { class: "f-note", text: f.note }) : null)));
+  return el("div", { class: "figures" }, ...facts.map((f) => {
+    const formula = f.note ? formulaNode(f.note) : null;
+    return el("div", { class: "figure" + (formula ? " formula" : "") },
+      el("div", { class: "f-label", text: f.label }),
+      el("div", { class: "f-value", text: f.value }),
+      formula ?? (f.note ? el("p", { class: "f-note", text: f.note }) : null));
+  }));
+}
+
+/** One change as "Group › Setting  before → after", each part its own span, the sensitive ones marked. */
+function changeItem({ where, label, from, to, note = "", sensitive = false, invalid = false }) {
+  return el("li", { class: (sensitive ? "sensitive" : "") + (invalid ? " invalid" : "") },
+    el("span", { class: "c-what" }, where ? el("span", { class: "c-where", text: `${where} › ` }) : null, el("span", { class: "c-label", text: label }),
+      sensitive ? el("span", { class: "chip sens", text: "sensitive" }) : null),
+    invalid
+      ? el("span", { class: "c-diff" }, el("span", { class: "c-bad", text: "not a valid entry" }))
+      : el("span", { class: "c-diff" },
+        el("span", { class: "c-from", text: from }),
+        el("span", { class: "c-arrow", text: " → " }),
+        el("span", { class: "c-to", text: to }),
+        note ? el("span", { class: "c-note", text: ` ${note}` }) : null));
 }
 
 function clearCards() {
@@ -506,10 +578,10 @@ function cardNode(sec, readOnly) {
   const hid = `h-sec-${sec.id}`;
   const node = el("section", { class: "card" + (sec.wide ? " wide" : ""), "aria-labelledby": hid },
     el("header", { class: "card-head" },
-      el("div", {}, el("h2", { id: hid, text: sec.title }), el("p", { class: "help", text: sec.help })),
+      el("div", { class: "card-title" }, el("h2", { id: hid, text: sec.title }), el("p", { class: "help", text: sec.help })),
       badge),
     figuresNode(sec.facts),
-    ...sec.settings.map((s) => settingNode(s, sec)),
+    el("div", { class: "rows" }, ...sec.settings.map((s) => settingNode(s, sec))),
     readOnlyNode(readOnly),
     el("div", { class: "card-foot" }, discard, save));
   save.addEventListener("click", () => saveScope({ title: sec.title, sections: [sec] }).catch(saveFailed));
@@ -542,7 +614,7 @@ function renderSettings(carry = new Map()) {
   const rest = v.readOnly.filter((r) => r.section !== "providers" && !known.has(r.section));
   if (rest.length) {
     const node = el("section", { class: "card", "aria-labelledby": "h-sec-other" },
-      el("header", { class: "card-head" }, el("div", {}, el("h2", { id: "h-sec-other", text: "Other, changed elsewhere" }),
+      el("header", { class: "card-head" }, el("div", { class: "card-title" }, el("h2", { id: "h-sec-other", text: "Other, changed elsewhere" }),
         el("p", { class: "help", text: "Shown here with the value in force; changed by hand or by a code change, not on this page." }))),
       readOnlyNode(rest));
     cards.set("other", { node, badge: null, save: null, discard: null, sec: null });
@@ -586,8 +658,8 @@ function refreshPending() {
       if (dirty) {
         n++;
         review.push(p.invalid
-          ? { text: `${card.sec.title} › ${s.label}: not a valid entry`, sensitive: false }
-          : { text: `${card.sec.title} › ${s.label}: ${short(s.control, s.value)} → ${short(s.control, p.to)}${p.change.reset ? " (reset)" : ""}`, sensitive: s.sensitive });
+          ? { where: card.sec.title, label: s.label, invalid: true }
+          : { where: card.sec.title, label: s.label, from: short(s.control, s.value), to: short(s.control, p.to), note: p.change.reset ? "(reset)" : "", sensitive: s.sensitive });
       }
       if (p.invalid) invalid++;
     }
@@ -601,7 +673,7 @@ function refreshPending() {
   $("pending").hidden = total === 0;
   $("pending").textContent = total === 0 ? "" : `${total} unsaved ${total === 1 ? "change" : "changes"}${invalid ? ` (${invalid} not valid yet)` : ""}`;
   $("pending-actions").hidden = total === 0;
-  $("pending-list").replaceChildren(...review.map((r) => el("li", { class: r.sensitive ? "sensitive" : "", text: r.text + (r.sensitive ? " · sensitive" : "") })));
+  $("pending-list").replaceChildren(...review.map(changeItem));
   if (total === 0) setReview(false);
   dock();
 }
@@ -652,9 +724,8 @@ async function saveScope(scope) {
   say("");
   pendingPlan = { changes, plan };
   const ctlOf = (id) => settingById(id)?.control ?? null;
-  $("settings-confirm-list").replaceChildren(...plan.changes.map((c) => el("li", {
-    class: c.sensitive ? "sensitive" : "",
-    text: `${c.label}: ${fmt(ctlOf(c.id), c.from)} → ${fmt(ctlOf(c.id), c.to)}${c.reset ? " (reset to default)" : ""}${c.sensitive ? " · sensitive" : ""}`,
+  $("settings-confirm-list").replaceChildren(...plan.changes.map((c) => changeItem({
+    label: c.label, from: fmt(ctlOf(c.id), c.from), to: fmt(ctlOf(c.id), c.to), note: c.reset ? "(reset to default)" : "", sensitive: c.sensitive,
   })));
   $("settings-confirm-side").textContent = plan.sideEffects.length
     ? `Also changes with it: ${plan.sideEffects.map((s) => `${s.label}: ${fmt(ctlOf(s.id), s.from)} → ${fmt(ctlOf(s.id), s.to)}`).join("; ")}.`
@@ -666,10 +737,13 @@ async function saveScope(scope) {
     : "";
   $("settings-typed").value = "";
   if (sensitive) {
-    $("settings-confirm-sensitive-text").textContent = `${plan.changes.filter((c) => c.sensitive).map((c) => c.label).join(", ")}: sensitive (${plan.changes.filter((c) => c.sensitive).map((c) => settingById(c.id)?.sensitiveWhy).filter(Boolean).join("; ")}).`;
+    const why = [...new Set(plan.changes.filter((c) => c.sensitive).map((c) => settingById(c.id)?.sensitiveWhy).filter(Boolean))];
+    $("settings-confirm-sensitive-text").textContent = `${plan.changes.filter((c) => c.sensitive).map((c) => c.label).join(", ")}: sensitive (${why.join("; ")}).`;
     $("settings-typed-label").textContent = `Type ${settingsView.confirmWord} to save${plan.changes.length > 1 ? " all of these" : ""}`;
   }
   $("settings-confirm-ok").disabled = sensitive;
+  $("settings-confirm-ok").classList.toggle("danger", sensitive);
+  $("settings-confirm-ok").classList.toggle("primary", !sensitive);
   $("settings-confirm").showModal();
 }
 
