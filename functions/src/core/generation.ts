@@ -26,7 +26,6 @@ import {
   CREDITS_PER_CONTENT_REFUND,
   CREDITS_PER_TIMEOUT_REFUND,
   GENERATION_TTL_MS,
-  IMAGE,
   JUDGE,
   MAX_OUTPUT_TOKENS,
   REVENUE_WINDOW_DAYS,
@@ -40,6 +39,7 @@ import { buildPrompt, inputTokenBound, newCanary } from "../adapters/prompt";
 import { JUDGE_INSTRUCTION } from "../adapters/gemini";
 import { QUALITY_OUTPUT_RULES, SUSPICIOUS_OUTPUT_RULES, checkImageBrief, checkOutput, checkStepBriefs, hasEnoughItems, usableStaples } from "./outputSafety";
 import { briefRefused, logOutOfCredit, makeRecipeImage, makeStepImages, type ImageOutcome } from "./recipeImage";
+import { imageTimingOf } from "../providers/registry";
 import {
   assertOpen,
   costKeyOf,
@@ -215,14 +215,27 @@ const refusalLog = new LogSampler(60_000, 30);
  * (`welcomeUnspent` to `welcomeSpent`). Only charges after the grant can: one before it found
  * nothing unspent. fifoConsumed leaves `welcomeSpent` out, so free recipes never count as bought
  * use, and bought use before the grant is never hidden by them. Writes nothing for an account
- * without free recipes.
+ * without free recipes. Returns how many free recipes the charge took (for `stats/{day}`).
  */
-function chargeFreeFirst(user: UserDoc | undefined, cost: number, userUpdate: Record<string, unknown>): void {
+function chargeFreeFirst(user: UserDoc | undefined, cost: number, userUpdate: Record<string, unknown>): number {
   const unspent = user?.welcomeUnspent ?? 0;
-  if (unspent <= 0) return;
+  if (unspent <= 0) return 0;
   const take = Math.min(unspent, cost);
   userUpdate.welcomeUnspent = FieldValue.increment(-take);
   userUpdate.welcomeSpent = FieldValue.increment(take);
+  return take;
+}
+
+/**
+ * The share of a settle's booked spend that free recipes paid for (`stats/{day}.welcomeUsedMicroUsd`):
+ * pro rata by recipes, the booked spend x free recipes charged / recipes charged. A charge wholly
+ * from free recipes books all of it, a mixed one its share; a refunded failure (nothing charged)
+ * books none here, though its spend stays in `spentMicroUsd` like everyone's. Never money: only
+ * the owner's figure of what free recipes cost.
+ */
+export function welcomeShareMicroUsd(bookedMicroUsd: number, freeCharged: number, charged: number): number {
+  if (!(freeCharged > 0) || !(charged > 0)) return 0;
+  return Math.round((bookedMicroUsd * Math.min(freeCharged, charged)) / charged);
 }
 
 /**
@@ -380,7 +393,7 @@ async function reserveTx(
       reservedMicroUsd,
       statsDay: day,
       createdAt: Timestamp.fromMillis(now),
-      deadlineAt: Timestamp.fromMillis(now + TIMINGS[req.kind].reservationMs + (req.image ? IMAGE.reservationExtraMs[req.image] : 0)),
+      deadlineAt: Timestamp.fromMillis(now + TIMINGS[req.kind].reservationMs + (req.image ? imageTimingOf(config.image.provider).reservationExtraMs[req.image] : 0)),
       ...(plan.image && "share" in plan.image
         ? {
             imageLevel: req.image!,
@@ -536,6 +549,9 @@ export async function settle(
     let rejectionsToday: number | null = null;
     /** Credits of the picture's share given back (a recipe delivered without its picture). */
     let givenBack = 0;
+    /** Recipes this settle charged, and how many of them were free ones (the welcome grant). */
+    let charged = 0;
+    let freeCharged = 0;
 
     if (outcome.ok) {
       // The text was delivered. Without its picture, the picture's share as stored at
@@ -553,7 +569,8 @@ export async function settle(
       const kept = gen.cost - givenBack;
       const deliveredSteps = picture ? picture.steps.filter((s) => s.outcome.ok) : [];
       userUpdate.consumedCredits = FieldValue.increment(kept);
-      chargeFreeFirst(user, kept, userUpdate);
+      charged = kept;
+      freeCharged = chargeFreeFirst(user, kept, userUpdate);
       if (givenBack > 0) {
         userUpdate.balance = FieldValue.increment(givenBack);
         balance += givenBack;
@@ -632,7 +649,8 @@ export async function settle(
         givenBack = Math.max(0, Math.min(gen.cost, (gen.imageCost ?? 0) + (gen.stepImagesCost ?? 0)));
         const kept = gen.cost - givenBack;
         userUpdate.consumedCredits = FieldValue.increment(kept);
-        chargeFreeFirst(user, kept, userUpdate);
+        charged = kept;
+        freeCharged = chargeFreeFirst(user, kept, userUpdate);
         if (givenBack > 0) {
           userUpdate.balance = FieldValue.increment(givenBack);
           balance += givenBack;
@@ -669,6 +687,12 @@ export async function settle(
       [outcome.ok ? "succeeded" : `${outcome.failureClass}Failures`]: FieldValue.increment(1),
     };
     if (refunded) statsUpdate.refundedCredits = FieldValue.increment(gen.cost);
+    // What free recipes (the welcome grant) paid for, for the owner's board: written on every
+    // settle, 0 included, so a day that has the field is a day it was counted (older days lack it
+    // and read as unknown). A closed account's update is not written, so nothing of it counts.
+    const freeHere = closed ? 0 : freeCharged;
+    statsUpdate.welcomeUsedCredits = FieldValue.increment(freeHere);
+    statsUpdate.welcomeUsedMicroUsd = FieldValue.increment(welcomeShareMicroUsd(actual, freeHere, charged));
     if (gen.imageLevel) {
       statsUpdate.imageRequests = FieldValue.increment(1);
       if (picture) {
@@ -1177,18 +1201,19 @@ export async function generateRecipe(deps: Deps, caller: Caller, data: unknown):
     // No dish picture, no step pictures: without a dish brief none is asked at all. The dish's
     // picture first, within IMAGE.budgetMs.dish; only when it was made, the step pictures, at most
     // IMAGE.maxParallel at once, within IMAGE.budgetMs.steps from the same start (constants.ts IMAGE
-    // has the arithmetic). When the dish's fails, no step picture is asked (NO_DISH, nothing spent).
+    // has the arithmetic; a provider's own `timing` may lengthen both, imageTimingOf). When the dish's fails, no step picture is asked (NO_DISH, nothing spent).
     const withDish = stillPending && outcome.imageBrief !== undefined;
     const stepBriefs = withDish ? (outcome.stepBriefs ?? []) : [];
     const picturesFrom = deps.now();
+    const budgetMs = imageTimingOf(config.image.provider).budgetMs;
     const dish = !stillPending
       ? settledAway
       : outcome.imageBrief !== undefined
-        ? await makeRecipeImage(deps, caller.uid, outcome.imageBrief, config, picturesFrom + IMAGE.budgetMs.dish)
+        ? await makeRecipeImage(deps, caller.uid, outcome.imageBrief, config, picturesFrom + budgetMs.dish)
         : briefRefused(outcome.briefRule ?? "MISSING");
     const noDish: ImageOutcome = { ok: false, failure: "NO_DISH", microUsd: 0, model: null };
     const steps = dish.ok && stepBriefs.length > 0
-      ? await makeStepImages(deps, caller.uid, stepBriefs, config, picturesFrom + IMAGE.budgetMs.steps)
+      ? await makeStepImages(deps, caller.uid, stepBriefs, config, picturesFrom + budgetMs.steps)
       : stepBriefs.map(() => noDish);
     outcome = { ...outcome, picture: { dish, steps: stepBriefs.map((s, i) => ({ step: s.step, outcome: steps[i] })) } };
   }

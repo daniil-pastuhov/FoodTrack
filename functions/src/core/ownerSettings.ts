@@ -22,14 +22,17 @@
 import { createHash } from "node:crypto";
 import { FieldPath, FieldValue, Timestamp, type Firestore } from "firebase-admin/firestore";
 import { HttpsError } from "firebase-functions/v2/https";
-import { COST_MAX, DEFAULT_COSTS, DEFAULT_IMAGE_SELECTION, DEFAULT_MENU_DAYS, DEFAULT_MENU_SETS, DEFAULT_TEXT_SELECTION, MAX_STEP_IMAGES_LIMIT, MENU_COURSES, MENU_DAYS, type Costs } from "../constants";
+import { COST_MAX, DEFAULT_COSTS, REVENUE_WINDOW_DAYS, DEFAULT_IMAGE_SELECTION, DEFAULT_MENU_DAYS, DEFAULT_MENU_SETS, DEFAULT_TEXT_SELECTION, MAX_STEP_IMAGES_LIMIT, MENU_COURSES, MENU_DAYS, type Costs } from "../constants";
 import {
   DEFAULT_RUNTIME_CONFIG,
   OUTPUT_JUDGE_MODES,
   WELCOME_PER_DAY_MAX,
   WELCOME_RECIPES_MAX,
+  dailySpendCeiling,
   parseRuntimeConfig,
+  statsRef,
   uidHash,
+  utcDay,
   validCosts,
   type ImageSelection,
   type RuntimeConfig,
@@ -69,15 +72,20 @@ export const WEB_PRICE_STEP = 1;
 
 export type SectionId = "onoff" | "spending" | "perAccount" | "sandbox" | "costs" | "welcome" | "pictures" | "taste" | "reports" | "balances";
 
-export const SECTIONS: readonly { id: SectionId; title: string; help: string }[] = [
+/**
+ * The console's groups, in this order: each is a card on the page (title, one line of help, its
+ * settings, the read-only fields that belong with it, and any figures listSettings works out for
+ * it, sectionFacts). `wide`: the card spans two columns of the page's grid (a table, a long list).
+ */
+export const SECTIONS: readonly { id: SectionId; title: string; help: string; wide?: boolean }[] = [
   { id: "onoff", title: "On/off", help: "Switches that start or stop parts of the service at once." },
   { id: "spending", title: "Spending limits", help: "Estimated model spend per UTC day, across everyone. At a ceiling new recipes from packs are refused (nothing is charged)." },
   { id: "perAccount", title: "Limits per account", help: "Brakes on what one account can do; each refusal says no recipes were taken." },
   { id: "sandbox", title: "Test purchases", help: "Brakes on sandbox, TestFlight and licence-tester purchases while they are allowed." },
-  { id: "costs", title: "What things cost users", help: "Recipes from a pack each request takes. The apps show the table the server sends; more days or courses are never cheaper, and no menu is cheaper than a recipe." },
+  { id: "costs", title: "What things cost users", help: "Recipes from a pack each request takes. The apps show the table the server sends; more days or courses are never cheaper, and no menu is cheaper than a recipe.", wide: true },
   { id: "welcome", title: "Free recipes for signing in", help: "The welcome grant: free recipes once per Google or Apple account." },
   { id: "pictures", title: "Pictures", help: "Recipe pictures. The provider and model are switched with the provider profiles above." },
-  { id: "taste", title: "Taste quiz", help: "Steps and options left out of the quiz and dropped from requests, without a deploy." },
+  { id: "taste", title: "Taste quiz", help: "Steps and options left out of the quiz and dropped from requests, without a deploy.", wide: true },
   { id: "reports", title: "Reports", help: "\"Report this recipe\": how many, and how long they are kept." },
   { id: "balances", title: "Provider balances", help: "The hourly balance check logs provider_balance_low (alerted on) under these thresholds. Empty: not checked." },
 ];
@@ -253,7 +261,7 @@ export const SETTINGS: readonly SettingDef[] = [
   },
   {
     id: "netMicroUsdPerCredit", web: LOWER_ONLY, section: "spending", label: "Net revenue per recipe sold (estimate)",
-    help: "What one production recipe nets after store fees and VAT, conservatively; the revenue part of the ceiling is worked out with it.",
+    help: "What one recipe bought in a store nets after store fees and VAT, conservatively; the revenue part of the ceiling is worked out with it (net recipes sold in the last 7 days × this × the share above). Only store-bought production recipes count: free recipes (the welcome grant) and test purchases add nothing to it, while the model spend of what free recipes pay for counts in the spend like everyone's.",
     control: usd(1, 0.001), sensitive: SPEND, path: ["netMicroUsdPerCredit"], read: top("netMicroUsdPerCredit"),
   },
   {
@@ -351,6 +359,8 @@ export const SETTINGS: readonly SettingDef[] = [
 /** Fields shown but not editable here, with why. */
 export interface ReadOnlyDef {
   id: string;
+  /** The card it is shown in: a section, the provider profiles ("providers"), or the last card ("other"). */
+  section: SectionId | "providers" | "other";
   label: string;
   reason: string;
   read(cfg: RuntimeConfig): unknown;
@@ -360,20 +370,20 @@ const RAW_PRICES = "Raw model prices: every reservation, the spend ceilings and 
 const BY_PROFILE = "Set by the provider profile switch above, which checks the provider's key, its privacy approval and its price first; a model typed here could be unpriced (pictures off, or the text falling back) or a provider not yet approved.";
 
 export const READ_ONLY: readonly ReadOnlyDef[] = [
-  { id: "prices.inputUsdPerMTok", label: "Gemini text: USD per 1M input tokens", reason: RAW_PRICES, read: (c) => c.prices.inputUsdPerMTok },
-  { id: "prices.outputUsdPerMTok", label: "Gemini text: USD per 1M output tokens", reason: RAW_PRICES, read: (c) => c.prices.outputUsdPerMTok },
-  { id: "prices.imageUsdPerImage", label: "USD per picture, by provider/model", reason: RAW_PRICES, read: (c) => c.prices.imageUsdPerImage ?? {} },
-  { id: "prices.textUsdPerMTok", label: "Other text providers' token prices", reason: RAW_PRICES, read: (c) => c.prices.textUsdPerMTok ?? {} },
-  { id: "image.provider", label: "Picture provider", reason: BY_PROFILE, read: (c) => c.image.provider },
-  { id: "image.model", label: "Picture model", reason: BY_PROFILE, read: (c) => c.image.model },
-  { id: "image.fallbackModel", label: "Picture fallback model", reason: BY_PROFILE, read: (c) => c.image.fallbackModel },
-  { id: "image.fallbackProvider", label: "Picture fallback provider", reason: BY_PROFILE, read: (c) => c.image.fallbackProvider ?? "" },
-  { id: "text.provider", label: "Recipe text provider", reason: BY_PROFILE, read: (c) => c.text.provider },
-  { id: "text.model", label: "Recipe text model", reason: BY_PROFILE, read: (c) => c.text.model },
-  { id: "text.fallbackProvider", label: "Recipe text fallback provider", reason: BY_PROFILE, read: (c) => c.text.fallbackProvider },
-  { id: "text.fallbackModel", label: "Recipe text fallback model", reason: BY_PROFILE, read: (c) => c.text.fallbackModel },
+  { id: "prices.inputUsdPerMTok", section: "spending", label: "Gemini text: USD per 1M input tokens", reason: RAW_PRICES, read: (c) => c.prices.inputUsdPerMTok },
+  { id: "prices.outputUsdPerMTok", section: "spending", label: "Gemini text: USD per 1M output tokens", reason: RAW_PRICES, read: (c) => c.prices.outputUsdPerMTok },
+  { id: "prices.imageUsdPerImage", section: "spending", label: "USD per picture, by provider/model", reason: RAW_PRICES, read: (c) => c.prices.imageUsdPerImage ?? {} },
+  { id: "prices.textUsdPerMTok", section: "spending", label: "Other text providers' token prices", reason: RAW_PRICES, read: (c) => c.prices.textUsdPerMTok ?? {} },
+  { id: "image.provider", section: "providers", label: "Picture provider", reason: BY_PROFILE, read: (c) => c.image.provider },
+  { id: "image.model", section: "providers", label: "Picture model", reason: BY_PROFILE, read: (c) => c.image.model },
+  { id: "image.fallbackModel", section: "providers", label: "Picture fallback model", reason: BY_PROFILE, read: (c) => c.image.fallbackModel },
+  { id: "image.fallbackProvider", section: "providers", label: "Picture fallback provider", reason: BY_PROFILE, read: (c) => c.image.fallbackProvider ?? "" },
+  { id: "text.provider", section: "providers", label: "Recipe text provider", reason: BY_PROFILE, read: (c) => c.text.provider },
+  { id: "text.model", section: "providers", label: "Recipe text model", reason: BY_PROFILE, read: (c) => c.text.model },
+  { id: "text.fallbackProvider", section: "providers", label: "Recipe text fallback provider", reason: BY_PROFILE, read: (c) => c.text.fallbackProvider },
+  { id: "text.fallbackModel", section: "providers", label: "Recipe text fallback model", reason: BY_PROFILE, read: (c) => c.text.fallbackModel },
   {
-    id: "consumptionSampleContentProvided", label: "Told to Apple: sample content provided",
+    id: "consumptionSampleContentProvided", section: "other", label: "Told to Apple: sample content provided",
     reason: "A statement to Apple in every refund consumption answer (the pack sheet explains what a recipe buys before purchase). It changes only if the app's pack sheet changes, with a code review, not as a setting.",
     read: (c) => c.consumptionSampleContentProvided,
   },
@@ -550,9 +560,52 @@ export interface SettingView {
   command: string;
 }
 
+/** A figure the page shows as it is (worked out here, so the page holds no rule). */
+export interface Fact {
+  label: string;
+  value: string;
+  note: string;
+}
+
+/** One tile of the page's status strip: what is in force right now. */
+export interface StatusItem {
+  label: string;
+  value: string;
+  tone: "good" | "warn" | "crit" | "neutral";
+  note: string;
+  /** A meter under the value (e.g. spend against the ceiling). */
+  meter?: { value: number; max: number };
+}
+
+/** Today's figures from `stats/` (UTC), read with the settings: the spend ceiling's both sides. */
+export interface TodayFigures {
+  day: string;
+  spentMicroUsd: number;
+  reservedMicroUsd: number;
+  /** dailySpendCeiling over the config in force and `netCredits7d`, as reserve works it out. */
+  ceilingMicroUsd: number;
+  /** Production recipes sold, net of refunds, today and the 6 days before (`netCreditsGranted`). */
+  netCredits7d: number;
+  generationUnits: number;
+  ceilingReached: boolean;
+  dailyCapReached: boolean;
+  welcomeGrants: number;
+  welcomeCredits: number;
+  welcomeUsedCredits: number;
+  welcomeUsedMicroUsd: number;
+}
+
 export interface SettingsView {
-  sections: { id: string; title: string; help: string; settings: SettingView[] }[];
-  readOnly: { id: string; label: string; value: unknown; default: unknown; reason: string }[];
+  /** The console's groups (SECTIONS); `facts`: figures worked out for the group (sectionFacts). */
+  sections: { id: string; title: string; help: string; wide: boolean; facts: Fact[]; settings: SettingView[] }[];
+  /** `section`: the card it belongs in (a section id, "providers" or "other"). */
+  readOnly: { id: string; section: string; label: string; value: unknown; default: unknown; reason: string }[];
+  /** What is in force right now, for the page's status strip (statusOf). */
+  status: StatusItem[];
+  /** Today's figures, null when they could not be read (the settings still are). */
+  today: TodayFigures | null;
+  /** The owner's board (README "The board", "Always on"), or null when not known. */
+  boardUrl: string | null;
   confirmWord: string;
   /** A save with a sensitive setting needs a sign-in at most this many minutes old (others: 30). */
   sensitiveSignInMinutes: number;
@@ -617,24 +670,154 @@ export const settingDefaultsOf = (env: Pick<SwitchEnv, "imageDefaults" | "textDe
   textDefaults: env.textDefaults ?? DEFAULT_TEXT_SELECTION,
 });
 
-/** Pure: the view of a config/runtime document. */
+// --- Figures for the page: the status strip and each group's facts ---------------------------
+
+const usdText = (micro: number, digits = 2) => `USD ${(micro / USD).toFixed(digits)}`;
+const intText = (n: number) => Math.round(n).toLocaleString("en-US");
+const pctOf = (part: number, whole: number) => (whole > 0 ? Math.round((part / whole) * 100) : 0);
+const plural = (n: number, one: string, many: string) => `${intText(n)} ${n === 1 ? one : many}`;
+
+/** Today's figures from the stats documents of today and the REVENUE_WINDOW_DAYS - 1 days before (today first). */
+export function todayFiguresOf(cfg: RuntimeConfig, day: string, stats: readonly (Data | undefined)[]): TodayFigures {
+  const n = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
+  const s = stats[0] ?? {};
+  const netCredits7d = stats.reduce((sum, x) => sum + n(x?.netCreditsGranted), 0);
+  return {
+    day,
+    spentMicroUsd: n(s.spentMicroUsd),
+    reservedMicroUsd: n(s.reservedMicroUsd),
+    ceilingMicroUsd: dailySpendCeiling(cfg, netCredits7d),
+    netCredits7d,
+    generationUnits: n(s.generationUnits),
+    ceilingReached: isObj(s.spendAlerts) && s.spendAlerts["100"] !== undefined,
+    dailyCapReached: s.dailyCapReachedAt !== undefined,
+    welcomeGrants: n(s.welcomeGrants),
+    welcomeCredits: n(s.welcomeCredits),
+    welcomeUsedCredits: n(s.welcomeUsedCredits),
+    welcomeUsedMicroUsd: n(s.welcomeUsedMicroUsd),
+  };
+}
+
+/** The spend ceiling's arithmetic with the values in force (model.ts dailySpendCeiling), as one line. */
+export function ceilingWorkedLine(cfg: RuntimeConfig, netCredits7d: number): string {
+  const revenue = cfg.dailySpendRevenueFraction * Math.max(0, netCredits7d) * cfg.netMicroUsdPerCredit;
+  const ceiling = dailySpendCeiling(cfg, netCredits7d);
+  return `min(${usdText(cfg.dailySpendMaxMicroUsd)} absolute, ${usdText(cfg.dailySpendBaseMicroUsd)} + ${cfg.dailySpendRevenueFraction} × ${usdText(cfg.netMicroUsdPerCredit, 3)} × ${intText(netCredits7d)} net recipes sold in 7 days = ${usdText(cfg.dailySpendBaseMicroUsd + revenue)}) = ${usdText(ceiling)}`;
+}
+
+/** Figures worked out for one group (none for most). */
+export function sectionFacts(id: SectionId, cfg: RuntimeConfig, today: TodayFigures | null): Fact[] {
+  if (id === "spending") {
+    if (!today) return [{ label: "Today's ceiling", value: "unknown", note: "Today's figures could not be read; the settings below are as stored." }];
+    const booked = today.spentMicroUsd + today.reservedMicroUsd;
+    return [
+      {
+        label: "Today's ceiling",
+        value: usdText(today.ceilingMicroUsd),
+        note: `${ceilingWorkedLine(cfg, today.netCredits7d)}. Only store-bought production recipes count as sold; free recipes and test purchases add nothing.`,
+      },
+      {
+        label: "Booked today",
+        value: usdText(booked),
+        note: `${pctOf(booked, today.ceilingMicroUsd)} % of the ceiling: ${usdText(today.spentMicroUsd)} settled + ${usdText(today.reservedMicroUsd)} reserved for calls in flight${today.ceilingReached ? "; the ceiling was reached today" : ""}. Free recipes' calls count here like everyone's.`,
+      },
+    ];
+  }
+  if (id === "welcome") {
+    if (!today) return [];
+    return [{
+      label: "Today",
+      value: plural(today.welcomeGrants, "grant", "grants"),
+      note: `${plural(today.welcomeCredits, "free recipe", "free recipes")} granted, of at most ${intText(cfg.welcome.perDay)} grants a day; ${plural(today.welcomeUsedCredits, "free recipe", "free recipes")} used today, estimated model cost ${usdText(today.welcomeUsedMicroUsd, 3)}. Not sales: they never raise the spend ceiling.`,
+    }];
+  }
+  return [];
+}
+
+/** What is in force right now: the status strip (the provider setup comes from getProviderProfiles). */
+export function statusOf(data: Data, cfg: RuntimeConfig, today: TodayFigures | null): StatusItem[] {
+  const out: StatusItem[] = [];
+  const by = typeof data.disabledBy === "string" ? data.disabledBy : "";
+  const at = data.disabledAt instanceof Timestamp ? ` since ${data.disabledAt.toDate().toISOString().slice(0, 16).replace("T", " ")} UTC` : "";
+  out.push(cfg.generationEnabled
+    ? {
+        label: "Recipes from packs",
+        value: today?.ceilingReached ? "On, ceiling reached" : "On",
+        tone: today?.ceilingReached ? "warn" : "good",
+        note: today?.ceilingReached ? "Refused at today's spend ceiling until calls in flight settle or the UTC day ends." : "The kill switch is off: new recipes from packs are written.",
+      }
+    : {
+        label: "Recipes from packs",
+        value: "Paused",
+        tone: "crit",
+        note: `${by ? `Paused by ${by}` : "Paused"}${at}.${budgetPaused(data) ? " Only the admin command turns it back on." : ""}`,
+      });
+  if (today) {
+    const booked = today.spentMicroUsd + today.reservedMicroUsd;
+    const p = pctOf(booked, today.ceilingMicroUsd);
+    out.push({
+      label: "Spend today",
+      value: `${usdText(booked)} of ${usdText(today.ceilingMicroUsd)}`,
+      tone: today.ceilingReached || p >= 100 ? "crit" : p >= 80 ? "warn" : "neutral",
+      note: `${p} % of today's ceiling (${today.day}, UTC)${today.reservedMicroUsd > 0 ? `, ${usdText(today.reservedMicroUsd)} of it reserved for calls in flight` : ""}.`,
+      meter: { value: booked, max: today.ceilingMicroUsd },
+    });
+    out.push({
+      label: "Recipes used today",
+      value: `${intText(today.generationUnits)} of ${intText(cfg.dailyCap)}`,
+      tone: today.dailyCapReached ? "crit" : pctOf(today.generationUnits, cfg.dailyCap) >= 80 ? "warn" : "neutral",
+      note: today.dailyCapReached ? "The daily recipe cap was reached today." : "Against the daily recipe cap, everyone together.",
+      meter: { value: today.generationUnits, max: cfg.dailyCap },
+    });
+  }
+  const judge = (SETTINGS.find((s) => s.id === "outputJudge")!.control as { options: Option[] }).options.find((o) => o.value === cfg.outputJudge);
+  out.push({
+    label: "Second check of every answer",
+    value: judge?.label ?? cfg.outputJudge,
+    tone: cfg.outputJudge === "enforce" ? "good" : "neutral",
+    note: cfg.outputJudge === "off" ? "Not run." : cfg.outputJudge === "shadow" ? "Runs and logs its verdict; never blocks." : "A verdict other than ok is a content failure.",
+  });
+  const welcomeOn = cfg.welcome.recipes > 0 && cfg.welcome.perDay > 0;
+  out.push({
+    label: "Free recipes for signing in",
+    value: welcomeOn ? `${intText(cfg.welcome.recipes)} per sign-in` : "Off",
+    tone: "neutral",
+    note: today
+      ? `${plural(today.welcomeGrants, "grant", "grants")} today of at most ${intText(cfg.welcome.perDay)}; ${plural(today.welcomeUsedCredits, "free recipe", "free recipes")} used today.`
+      : `At most ${intText(cfg.welcome.perDay)} grants a day.`,
+    ...(today && welcomeOn ? { meter: { value: today.welcomeGrants, max: cfg.welcome.perDay } } : {}),
+  });
+  out.push(cfg.allowSandbox
+    ? { label: "Sandbox purchases", value: "Grant recipes", tone: "warn", note: "Anyone with a TestFlight build can get free recipes, up to the test-purchase brakes. Turn off after testing." }
+    : { label: "Sandbox purchases", value: "Grant nothing", tone: "good", note: "Test purchases grant no recipes." });
+  return out;
+}
+
+/** Pure: the view of a config/runtime document (`today`: the figures listSettings read, if any). */
 export function settingsViewOf(
   data: Data,
   d: SettingDefaults,
   last = new Map<string, { at: string; via: string }>(),
   lastChange: SettingsView["lastChange"] = null,
+  extra: { today?: TodayFigures | null; boardUrl?: string | null } = {},
 ): SettingsView {
   const cfg = parse(data, d);
   const empty = parse({}, d);
   const invalid = invalidFields(data, d.imageDefaults, d.textDefaults);
+  const today = extra.today ?? null;
   return {
     sections: SECTIONS.map((s) => ({
       id: s.id,
       title: s.title,
       help: s.help,
+      wide: s.wide === true,
+      facts: sectionFacts(s.id, cfg, today),
       settings: SETTINGS.filter((x) => x.section === s.id).map((x) => settingView(x, data, cfg, d, invalid, last)),
     })).filter((s) => s.settings.length > 0),
-    readOnly: READ_ONLY.map((r) => ({ id: r.id, label: r.label, value: r.read(cfg) ?? null, default: r.read(empty) ?? null, reason: r.reason })),
+    readOnly: READ_ONLY.map((r) => ({ id: r.id, section: r.section, label: r.label, value: r.read(cfg) ?? null, default: r.read(empty) ?? null, reason: r.reason })),
+    status: statusOf(data, cfg, today),
+    today,
+    boardUrl: extra.boardUrl ?? null,
     confirmWord: SENSITIVE_CONFIRM_WORD,
     sensitiveSignInMinutes: OWNER_SENSITIVE_SIGN_IN_S / 60,
     invalid,
@@ -659,9 +842,23 @@ async function lastChanges(db: Firestore): Promise<{ per: Map<string, { at: stri
   return { per, latest };
 }
 
-export async function listSettings(env: Pick<SwitchEnv, "db" | "imageDefaults" | "textDefaults">): Promise<SettingsView> {
-  const [snap, last] = await Promise.all([env.db.doc(RUNTIME_DOC).get(), lastChanges(env.db)]);
-  return settingsViewOf((snap.data() ?? {}) as Data, settingDefaultsOf(env), last.per, last.latest);
+/**
+ * The settings, with today's figures (the stats documents of today and the 6 days before: 7 reads,
+ * read-only) and the board's address. A failed stats read leaves the figures out, never the settings.
+ */
+export async function listSettings(env: Pick<SwitchEnv, "db" | "now" | "imageDefaults" | "textDefaults"> & { boardUrl?: string }): Promise<SettingsView> {
+  const nowMs = env.now();
+  const day = utcDay(nowMs);
+  const statDays = Array.from({ length: REVENUE_WINDOW_DAYS }, (_, i) => utcDay(nowMs - i * 86_400_000));
+  const [snap, last, stats] = await Promise.all([
+    env.db.doc(RUNTIME_DOC).get(),
+    lastChanges(env.db),
+    env.db.getAll(...statDays.map((x) => statsRef(env.db, x))).then((s) => s.map((x) => x.data() as Data | undefined), () => null),
+  ]);
+  const data = (snap.data() ?? {}) as Data;
+  const d = settingDefaultsOf(env);
+  const today = stats ? todayFiguresOf(parse(data, d), day, stats) : null;
+  return settingsViewOf(data, d, last.per, last.latest, { today, boardUrl: env.boardUrl ?? null });
 }
 
 // --- Planning -------------------------------------------------------------------------------
