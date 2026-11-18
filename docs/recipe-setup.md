@@ -665,32 +665,88 @@ No new role, API or vendor: Vertex AI (Vertex AI User, as the judge) and Firesto
 The same Monday job (`weeklyPromptReview`, no new scheduler job) also stores last week's figures
 in `weeklyReports/{week}` (sales, estimated net revenue and margin, model spend split text /
 pictures / second check / prompt review, recipes and menus, free recipes and their cost, refunds,
-ceiling and cap days, reports) with the changes against the week before, and logs
-`weekly_report_ready`, which a log-based alert policy turns into an email to the existing channel.
-No model call, no new vendor, secret, role or API; Firestore reads only (well under USD 0.001 a
-week). On by default (`config/runtime.weeklyReportEnabled`). Independent of the prompt review: it
-runs with the review off or failing, and the other way round.
+ceiling and cap days, reports) with the changes against the week before. It is emailed to the owner
+as a real email (step 13f). No model call; Firestore reads only (well under USD 0.001 a week). On by
+default (`config/runtime.weeklyReportEnabled`). Independent of the prompt review: it runs with the
+review off or failing, and the other way round.
 
-- [ ] Deploy the functions (the reservation now also writes `stats/{day}.menuGenerations`, so the
-  report can split recipes from menus from that day on; earlier days show as not split).
-- [ ] Apply the new alert policy "Recipe: weekly app report"
-  (`functions/alerts/policies/weekly-report.json`, severity WARNING, the lowest: **it is a report,
-  not a problem**): `python3 functions/alerts/alerts.py --project bestbefore-f9ee1` (dry run), then
-  `--apply`. It uses label extractors and a documentation template, which only the API (not the
-  console's form) can set; `alerts.py` does that.
 - [ ] Optional, to see one now: `npm run admin -- report weekly --run --project bestbefore-f9ee1`
-  (dry run: prints the report and the email's fields), then with `--apply` to store it (the
-  command sends no email). The first email comes the Monday after the deploy; or run the job by
-  hand: `gcloud scheduler jobs run firebase-schedule-weeklyPromptReview-europe-west1 --project=bestbefore-f9ee1 --location=europe-west1`
-  (this also runs the prompt review).
-- [ ] Check the first email reads well (whether Cloud Monitoring's email renders the Markdown was
-  not verifiable from the documentation; the text reads the same either way).
-- To mute the email but keep the report: disable the policy in Cloud Monitoring (Alerting >
-  Policies), or set `"enabled": false` in its file and apply. To stop the report: the toggle
-  "Make and email the weekly report" on the owner console's card "Weekly report".
+  (dry run: prints the report), then with `--apply` to store it (storing sends no email; step 13f
+  sends it).
+- To stop the report (and its email): the toggle "Make and email the weekly report" on the owner
+  console's card "Weekly report".
 - Decide: whether `netMicroUsdPerCredit` (USD 0.12 a recipe, the conservative net after store
   fees and VAT) is still right: the report's revenue and margin are that figure times recipes sold.
-  Each report costs about USD 0.06 (at most USD 0.19), booked against the day's spend ceiling.
+
+### 13f. Report emails through your Gmail (functions/README.md "Report emails") **(owner, before the next deploy)**
+
+Both weekly reports (the app report and the prompt review) are sent by the Monday job itself as
+real emails, from your Gmail address to the same address, over SMTP with a Gmail **app password**.
+Each is sent once. Alerts stay Cloud Monitoring alerts. The function `weeklyPromptReview` now
+declares two Secret Manager secrets, and **a function that declares a secret cannot be deployed
+until the secret exists**, so do steps 1 to 3 before the next `firebase deploy`. The address is a
+secret too (the repository is public): never put it in a file, a commit or a command line.
+
+1. [ ] **An app password** (needs 2-Step Verification on the Google account): Google Account >
+   Security > 2-Step Verification (turn it on if it is off), then
+   <https://myaccount.google.com/apppasswords>, name it "BestBefore reports", Create. Google shows
+   16 letters once; keep the window open for step 2. (Changing the account's password, or turning
+   2-Step Verification off, revokes it: the next Monday then alerts `AUTH_FAILED`.)
+2. [ ] **The two secrets**, typed at a prompt that does not echo, so the values are neither on the
+   screen nor in the shell's history (`read` and `printf` are shell built-ins, so the value is not
+   in the process list either):
+
+   ```bash
+   read -rs REPORT_SECRET_VALUE   # type your Gmail address, then Enter (nothing is shown)
+   printf '%s' "$REPORT_SECRET_VALUE" | gcloud secrets create REPORT_EMAIL --project=bestbefore-f9ee1 --replication-policy=automatic --data-file=-
+   read -rs REPORT_SECRET_VALUE   # paste the 16-letter app password (spaces or not), then Enter
+   printf '%s' "$REPORT_SECRET_VALUE" | gcloud secrets create REPORT_SMTP_PASSWORD --project=bestbefore-f9ee1 --replication-policy=automatic --data-file=-
+   unset REPORT_SECRET_VALUE
+   ```
+
+   (`npx firebase functions:secrets:set REPORT_EMAIL --project bestbefore-f9ee1` asks for the value
+   without echoing it, and works as well.) A new app password later:
+   `gcloud secrets versions add REPORT_SMTP_PASSWORD --project=bestbefore-f9ee1 --data-file=-` the same
+   way, then redeploy `weeklyPromptReview` (Firebase pins the version at deploy).
+3. [ ] **The grant**: the scheduled function runs as `recipe-functions@bestbefore-f9ee1.iam.gserviceaccount.com`
+   (`FUNCTIONS_SERVICE_ACCOUNT`, set for every function by `setGlobalOptions` in `functions/src/index.ts`).
+   `firebase deploy` usually grants it access to the secrets a function declares; grant it anyway, on
+   these two secrets only:
+
+   ```bash
+   for s in REPORT_EMAIL REPORT_SMTP_PASSWORD; do
+     gcloud secrets add-iam-policy-binding "$s" --member=serviceAccount:recipe-functions@bestbefore-f9ee1.iam.gserviceaccount.com --role=roles/secretmanager.secretAccessor --project=bestbefore-f9ee1
+   done
+   ```
+4. [ ] **Deploy** (`cd functions && npm ci && npx firebase deploy --only functions,firestore --project bestbefore-f9ee1`).
+5. [ ] **Retire the old report alert** and add the two new ones, after the deploy (until then the
+   old function still mails the report through the old policy):
+   `python3 functions/alerts/alerts.py --project bestbefore-f9ee1` (dry run: it should plan
+   `create policy 'Recipe: weekly app report failed'` and `create policy 'Recipe: report email not
+   sent'`, and, if the old policy was ever applied (step 13e of before), `delete policy 'Recipe:
+   weekly app report' (retired)`), then the same with `--apply`. The old policy is deleted by name (`RETIRED_POLICIES` in `alerts.py`); deleting
+   its file alone would have left it emailing. Afterwards Monitoring > Alerting > Policies should
+   list no "Recipe: weekly app report" (the two new names end in "failed" and "not sent").
+6. [ ] **A test email with made-up figures** (reads and writes no report), from `functions/`:
+
+   ```bash
+   npm run admin -- report email-test --to-self /tmp/bestbefore-test.html   # preview only: the two emails as files
+   REPORT_EMAIL=$(gcloud secrets versions access latest --secret=REPORT_EMAIL --project=bestbefore-f9ee1) \
+   REPORT_SMTP_PASSWORD=$(gcloud secrets versions access latest --secret=REPORT_SMTP_PASSWORD --project=bestbefore-f9ee1) \
+     npm run admin -- report email-test --apply --project bestbefore-f9ee1   # sends two "[test] …" emails
+   ```
+
+   This checks the app password and the look (open them on the phone, in dark mode too), but runs on
+   your machine, not in Cloud Functions. The first real send from Cloud Functions is the next
+   Monday's run; to have it now, run the job by hand:
+   `gcloud scheduler jobs run firebase-schedule-weeklyPromptReview-europe-west1 --project=bestbefore-f9ee1 --location=europe-west1`.
+   That leaves the stored report and review alone (both are done for last week), and emails last
+   week's reports if they were not emailed yet, once each (it writes their `email` field; a second
+   run sends nothing).
+- If an email was not sent ("Recipe: report email not sent"): fix the reason it names, then
+  `npm run admin -- report weekly --send --apply --week <week> --project bestbefore-f9ee1` (or
+  `judge review --send --apply`) with the two variables set as in step 6. Without `--apply` it
+  only shows the state; `--to-self <file.html>` writes the email to a file.
 
 ### A model is being retired (runbook)
 

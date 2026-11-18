@@ -239,7 +239,11 @@ for sev in ["INFO", "SEVERITY_UNSPECIFIED", "warning", None, "WARNING", "ERROR",
   test("the offline checks of label extractors and the documentation template", () => {
     const out = py(`
 import json
-base = json.load(open(alerts.os.path.join(alerts.HERE, "policies", "weekly-report.json")))
+base = json.load(open(alerts.os.path.join(alerts.HERE, "policies", "prompt-review-failed.json")))
+cond = base["conditions"][0]["conditionMatchedLog"]
+cond["labelExtractors"] = {k: "EXTRACT(jsonPayload." + k + ")" for k in ["period", "revenue", "purchases", "spend", "margin", "recipes", "free", "refunds", "problems", "console"]}
+base["documentation"]["subject"] = "Recipe: x \${log.extracted_label.period}"
+base["documentation"]["content"] += " \${log.extracted_label.console}"
 def check(mut):
     p = json.loads(json.dumps(base))
     mut(p)
@@ -295,6 +299,37 @@ print(json.dumps({"calls": calls, "failures": [[k, n, m] for k, n, _, m in failu
       ["policy", "Recipe: a", "refused"],
       ["policy", "Recipe: t", "skipped: its metric m_bad failed above"],
     ]);
+  });
+
+  test("a retired policy is deleted by --apply, every live copy of it, and no file may take its name", () => {
+    const out = py(`
+import json, tempfile
+live = {
+    "Recipe: weekly app report": [{"name": "projects/p/alertPolicies/7"}, {"name": "projects/p/alertPolicies/8"}],
+    "Recipe: something else": [{"name": "projects/p/alertPolicies/9"}],
+}
+plan = alerts.retired_plan(live)
+calls = []
+def runner(args, base):
+    calls.append(" ".join(args))
+with tempfile.TemporaryDirectory() as tmp:
+    failures = alerts.apply_plan(plan, [], tmp, runner)
+print(json.dumps({"plan": [[a, k, n] for a, k, n, *_ in plan], "calls": calls, "failures": failures}))
+p = json.load(open(alerts.os.path.join(alerts.HERE, "policies", "weekly-report-failed.json")))
+p["displayName"] = "Recipe: weekly app report"
+try:
+    alerts.validate([], [("x.json", p)])
+    print("accepted")
+except alerts.Fail as e:
+    print("refused" if "retired" in str(e) else "other: " + str(e))
+`);
+    const [json, verdict] = out.trim().split("\n").slice(-2);
+    expect(JSON.parse(json)).toEqual({
+      plan: [["delete", "policy", "Recipe: weekly app report"], ["delete", "policy", "Recipe: weekly app report"]],
+      calls: ["beta monitoring policies delete projects/p/alertPolicies/7", "beta monitoring policies delete projects/p/alertPolicies/8"],
+      failures: [],
+    });
+    expect(verdict).toBe("refused");
   });
 
   test("every log line they match is one the code writes", () => {

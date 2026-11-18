@@ -6,8 +6,9 @@ metrics, LogMetric resources) and policies/*.json (Cloud Monitoring alert polici
 notification channels). Policies are matched to the live project by displayName, metrics by name.
 
 Dry run by default: validates the files, checks every log filter against the project with a
-read-only `gcloud logging read`, and prints what --apply would create or update. Nothing is
-written without --apply. Re-running after --apply prints "unchanged" for everything. An --apply
+read-only `gcloud logging read`, and prints what --apply would create, update or delete. Nothing is
+written without --apply. A policy whose file is removed is NOT deleted by that alone (the script only
+knows the files): list its display name in RETIRED_POLICIES and --apply deletes the live policy. Re-running after --apply prints "unchanged" for everything. An --apply
 goes on past an item that fails, then lists every failure and exits 1.
 
 The notification channel is never in the files: pass --channel (its resource name or id), or
@@ -45,6 +46,13 @@ DOC_CONTENT_CHARS = 8192
 DOC_CONTENT_BYTES = 10240
 SUBJECT_CHARS = 255
 DOC_LINKS = 3
+# Policies whose files were removed: --apply deletes a live policy of this display name (once; then
+# the plan shows nothing for it). A file may not reuse a retired name.
+RETIRED_POLICIES = {
+    # 2026-11-18: the weekly app report is a real email now (functions/README.md "Report emails");
+    # its failures are "Recipe: weekly app report failed" (policies/weekly-report-failed.json).
+    "Recipe: weekly app report": "the weekly report is emailed by the job itself",
+}
 LABEL_KEY = re.compile(r"^[a-z][a-z0-9_]{0,62}$")
 EXTRACTOR = re.compile(r"^(EXTRACT\(jsonPayload\.[A-Za-z_][A-Za-z0-9_]*\)|REGEXP_EXTRACT\(jsonPayload\.[A-Za-z_][A-Za-z0-9_]*, *\"[^\"]+\"\))$")
 VARIABLE = re.compile(r"\$\{log\.extracted_label\.([^}]*)\}")
@@ -96,6 +104,8 @@ def validate(metrics, policies):
             problems.append(f"{where}: displayName must start with 'Recipe: '")
         if name in names:
             problems.append(f"{where}: duplicate displayName {name!r}")
+        if name in RETIRED_POLICIES:
+            problems.append(f"{where}: displayName {name!r} is retired (RETIRED_POLICIES); pick another")
         names.add(name)
         if "notificationChannels" in p:
             problems.append(f"{where}: notificationChannels is set by the script, not the file")
@@ -228,7 +238,7 @@ def threshold_metrics(policy):
 
 
 def apply_plan(todo, gcloud_base, tmp, runner=None):
-    """Creates or updates every planned item; one failure does not stop the others.
+    """Creates, updates or deletes every planned item; one failure does not stop the others.
 
     Metrics go first, since a threshold policy needs its metric; a policy whose metric failed is
     skipped. Returns the failures as (kind, name, file, message), in the order they happened."""
@@ -245,9 +255,12 @@ def apply_plan(todo, gcloud_base, tmp, runner=None):
                 missing = sorted(threshold_metrics(body) & failed_metrics)
                 if missing:
                     raise Fail(f"skipped: its metric {', '.join(missing)} failed above")
-                with open(path, "w", encoding="utf-8") as fh:
-                    json.dump(body, fh)
-                if action == "create":
+                if action != "delete":
+                    with open(path, "w", encoding="utf-8") as fh:
+                        json.dump(body, fh)
+                if action == "delete":
+                    runner(["beta", "monitoring", "policies", "delete", live["name"]], gcloud_base)
+                elif action == "create":
                     runner(["beta", "monitoring", "policies", "create", f"--policy-from-file={path}"], gcloud_base)
                 else:
                     runner(["beta", "monitoring", "policies", "update", live["name"], f"--policy-from-file={path}"], gcloud_base)
@@ -259,6 +272,15 @@ def apply_plan(todo, gcloud_base, tmp, runner=None):
             continue
         print(f"  {action}d {kind} {name!r}")
     return failures
+
+
+def retired_plan(live_policies):
+    """A delete for every live policy whose display name is retired (all of them, if there are several)."""
+    plan = []
+    for name, why in sorted(RETIRED_POLICIES.items()):
+        for live in live_policies.get(name, []):
+            plan.append(("delete", "policy", name, "(retired)", {}, live, [why]))
+    return plan
 
 
 def main():
@@ -325,10 +347,13 @@ def main():
         d = diff(desired, live)
         plan.append(("update" if d else "unchanged", "policy", p["displayName"], f, desired, live, d))
 
+    plan += retired_plan(live_policies)
+
     print("Plan:")
     for action, kind, name, f, _, _, d in plan:
-        print(f"  {action:9} {kind:6} {name!r}  ({f})" + (f"\n            differs at: {', '.join(d[:8])}{' …' if len(d) > 8 else ''}" if d else ""))
-    todo = [x for x in plan if x[0] in ("create", "update")]
+        why = f"\n            retired: {d[0]}" if action == "delete" else (f"\n            differs at: {', '.join(d[:8])}{' …' if len(d) > 8 else ''}" if d else "")
+        print(f"  {action:9} {kind:6} {name!r}  ({f})" + why)
+    todo = [x for x in plan if x[0] in ("create", "update", "delete")]
     if not opts.apply:
         print(f"Dry run: {len(todo)} change(s) would be made. Nothing was written. Re-run with --apply to make them.")
         return 0

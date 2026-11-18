@@ -366,13 +366,13 @@ export const SETTINGS: readonly SettingDef[] = [
   // Weekly prompt review (core/promptReview.ts)
   {
     id: "promptReviewEnabled", section: "promptReview", label: "Run the weekly prompt review",
-    help: `Mondays at 03:41 UTC, on the week before: one call to ${PROMPT_REVIEW.model} with the week's counts, a sample of the answers that were not ok and the current prompts. At most USD ${(PROMPT_REVIEW_WORST_MICRO_USD / USD).toFixed(2)} a run at today's prices, booked against the day's spend ceiling; nothing with fewer than ${PROMPT_REVIEW.minAnswers} answers in the week. Off: nothing is read or spent.`,
+    help: `Mondays at 03:41 UTC, on the week before: one call to ${PROMPT_REVIEW.model} with the week's counts, a sample of the answers that were not ok and the current prompts. At most USD ${(PROMPT_REVIEW_WORST_MICRO_USD / USD).toFixed(2)} a run at today's prices, booked against the day's spend ceiling; nothing with fewer than ${PROMPT_REVIEW.minAnswers} answers in the week. The advice is emailed to the owner once (a week with too few answers: a note in the weekly report's email). Off: nothing is read, spent or emailed.`,
     control: { kind: "toggle" }, path: ["promptReviewEnabled"], read: top("promptReviewEnabled"),
   },
   // Weekly app report (core/weeklyReport.ts)
   {
     id: "weeklyReportEnabled", section: "weeklyReport", label: "Make and email the weekly report",
-    help: "Mondays at 03:41 UTC with the prompt review, on the week before: purchases, estimated revenue and margin, model spend, recipes, free recipes, refunds and problems, with the changes against the week before. Arithmetic over stored figures, a few hundred Firestore reads, no model call. Off: nothing is read, stored or emailed. To keep the report but stop the email, disable the alert policy \"Recipe: weekly app report\" instead.",
+    help: "Mondays at 03:41 UTC with the prompt review, on the week before: purchases, estimated revenue and margin, model spend, recipes, free recipes, refunds and problems, with the changes against the week before. Arithmetic over stored figures, a few hundred Firestore reads, no model call. It is emailed to the owner once, from the owner's own Gmail. Off: nothing is read, stored or emailed.",
     control: { kind: "toggle" }, path: ["weeklyReportEnabled"], read: top("weeklyReportEnabled"),
   },
 ];

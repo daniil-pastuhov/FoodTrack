@@ -10,6 +10,8 @@
  *   npm run admin -- judge summary | export [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--out <file.jsonl>]  (README "Prompt injection defences" item 5: read-only)
  *   npm run admin -- judge review [--week YYYY-Www] [--run [--apply]]  (README "Weekly prompt review": the stored report; --run is a dry run unless --apply)
  *   npm run admin -- report weekly [--week YYYY-Www] [--run [--apply]]  (README "Weekly app report": the stored report; --run is a dry run unless --apply)
+ *   npm run admin -- report weekly | judge review --send [--to-self <file.html>] [--apply [--force]]  (README "Report emails": the email; a dry run unless --apply)
+ *   npm run admin -- report email-test [--to-self <file.html>] [--apply]  (README "Report emails": made-up figures, no report read or written)
  *
  * Against the emulators (project demo-foodtracker, 127.0.0.1:8080 / :9099) unless `--project` names
  * a live project; then with the operator's Application Default Credentials. `delete` is a dry run
@@ -52,6 +54,7 @@ import { HttpsError } from "firebase-functions/v2/https";
 import { parseJudgeArgs, runJudgeAnswers } from "./judgeAnswers";
 import { parseReviewArgs, runReviewCommand, type ReviewCommandEnv } from "./promptReviewCli";
 import { parseWeeklyArgs, runWeeklyCommand, type WeeklyCommandEnv } from "./weeklyReportCli";
+import { mailerFor, parseEmailTestArgs, runEmailTest } from "./reportEmailCli";
 import { GeminiPromptReviewer } from "../adapters/gemini";
 import { RestStreamingModels } from "./vertexRest";
 import { EmulatorPromptReviewer } from "../emulatorFakes";
@@ -81,8 +84,10 @@ const USAGE = `usage:
   npm run admin -- judge summary [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--project <id>]
   npm run admin -- judge export  [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--out <file.jsonl>] [--project <id>]
   npm run admin -- judge review  [--week YYYY-Www] [--run [--apply]] [--project <id>]   (--apply live: VERTEX_TOKEN)
-  npm run admin -- report weekly [--week YYYY-Www] [--run [--apply]] [--project <id>]   (no model call; no email)
-Without --project: the local emulators (${EMULATOR_PROJECT}). delete, providers use, config set / reset, judge review --run and report weekly --run are dry runs without --apply.`;
+  npm run admin -- report weekly [--week YYYY-Www] [--run [--apply]] [--project <id>]   (no model call; storing sends no email)
+  npm run admin -- report weekly | judge review --send [--week YYYY-Www] [--to-self <file.html> | --apply [--force]] [--project <id>]   (the email, once; live: REPORT_EMAIL, REPORT_SMTP_PASSWORD)
+  npm run admin -- report email-test [--to-self <file.html> | --apply] [--project <id>]   (made-up figures, "[test]" subject; no report read or written)
+Without --project: the local emulators (${EMULATOR_PROJECT}). delete, providers use, config set / reset, judge review --run / --send, report weekly --run / --send and report email-test are dry runs without --apply.`;
 
 const OPTIONS = {
   email: { type: "string" },
@@ -683,6 +688,7 @@ export function buildReviewEnv(project: string): ReviewCommandEnv {
     logger: stderrLogger,
     config: () => loadRuntimeConfig(db, stderrLogger),
     reviewerModel: model,
+    mailer: () => mailerFor(project),
     reviewer: () => {
       if (!live) return new EmulatorPromptReviewer();
       if (!process.env.VERTEX_TOKEN) throw new AdminRefusal("--apply on a live project calls Vertex AI: set VERTEX_TOKEN, e.g. VERTEX_TOKEN=$(gcloud auth print-access-token).");
@@ -701,11 +707,11 @@ export function reviewModelOf(params: Readonly<Record<string, string>>, geminiMo
   return (set ? params.PROMPT_REVIEW_MODEL : PROMPT_REVIEW.model) || geminiModel;
 }
 
-/** The weekly report's command: Firestore only, logging to stderr (so never the report email). */
+/** The weekly report's command: Firestore, logging to stderr; a mailer only for --send --apply. */
 export function buildWeeklyEnv(project: string): WeeklyCommandEnv {
   const { app } = adminApp(project);
   const db = getFirestore(app);
-  return { db, now: () => Date.now(), print: (l) => console.log(l), logger: stderrLogger, config: () => loadRuntimeConfig(db, stderrLogger) };
+  return { db, now: () => Date.now(), print: (l) => console.log(l), logger: stderrLogger, config: () => loadRuntimeConfig(db, stderrLogger), mailer: () => mailerFor(project) };
 }
 
 export function buildBoardEnv(project: string): BoardEnv {
@@ -807,6 +813,12 @@ async function main(): Promise<void> {
       const reviewEnv = buildReviewEnv(args.project);
       console.log(args.project.startsWith("demo-") ? `[emulators, ${args.project}]` : `[LIVE project ${args.project}${args.apply ? "" : ", read-only"}]`);
       await runReviewCommand(args, reviewEnv);
+      return;
+    }
+    if (argv[0] === "report" && argv[1] === "email-test") {
+      const args = parseEmailTestArgs(argv, EMULATOR_PROJECT);
+      console.log(args.project.startsWith("demo-") ? `[emulators, ${args.project}]` : `[LIVE project ${args.project}${args.apply ? ", sends two test emails" : ", nothing sent"}]`);
+      await runEmailTest(args, { now: () => Date.now(), print: (l) => console.log(l), mailer: () => mailerFor(args.project) });
       return;
     }
     if (argv[0] === "report") {

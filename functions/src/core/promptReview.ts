@@ -38,6 +38,7 @@ import { createHash } from "node:crypto";
 import { FieldValue, Timestamp, type Firestore } from "firebase-admin/firestore";
 import { JUDGE_INSTRUCTION, JUDGE_VERSION } from "../adapters/gemini";
 import { systemInstruction } from "../adapters/prompt";
+import { emailRecordOf, emailStatusText } from "./emailState";
 import { JUDGE_LOG, PROMPT_REVIEW, REVENUE_WINDOW_DAYS } from "../constants";
 import { validateGenerateRequest, type GenerateRequest } from "../contract";
 import { dailySpendCeiling, microUsd, statsRef, textPricesOf, utcDay, type RuntimeConfig } from "../model";
@@ -911,6 +912,8 @@ export interface PromptReviewView {
   summary: string;
   promptProblems: ReviewProblem[];
   judgeProblems: ReviewProblem[];
+  /** Its email: sent (or noted in the weekly report's), not sent and why, or null before one was tried. */
+  email: string | null;
 }
 
 const iso = (t: unknown) => (t instanceof Timestamp ? t.toDate().toISOString() : null);
@@ -932,6 +935,7 @@ export function promptReviewViewOf(d: Record<string, unknown>): PromptReviewView
     summary: report?.summary ?? "",
     promptProblems: Array.isArray(report?.promptProblems) ? report.promptProblems : [],
     judgeProblems: Array.isArray(report?.judgeProblems) ? report.judgeProblems : [],
+    email: emailStatusText(emailRecordOf(d), "prompt_review"),
   };
 }
 

@@ -263,6 +263,30 @@ export const WEEKLY_REPORT = {
 } as const;
 
 /**
+ * The owner's report emails (core/reportEmail.ts, adapters/gmailSmtp.ts, README "Report emails"):
+ * the weekly app report and the weekly prompt review, sent by the Monday job through the owner's own
+ * Gmail over SMTP (implicit TLS on 465, TLS 1.2 at least), from and to the address in the secret
+ * REPORT_EMAIL. Short timeouts and no retry, so a slow server cannot hold the job or send twice;
+ * `staleSendingMs`: a send claimed longer ago than this and never recorded may be forced again by
+ * hand (`--force`). `historyWeeks`: the trend table's weeks. `modelChars`: the prompt review's
+ * model text is cut again to these when it is put in an email.
+ */
+export const REPORT_EMAIL = {
+  brand: "BestBefore",
+  smtpHost: "smtp.gmail.com",
+  smtpPort: 465,
+  connectionTimeoutMs: 10_000,
+  greetingTimeoutMs: 10_000,
+  socketTimeoutMs: 30_000,
+  dnsTimeoutMs: 10_000,
+  staleSendingMs: 10 * 60_000,
+  historyWeeks: 6,
+  modelChars: { summary: 800, title: 120, cause: 600, before: 800, after: 1_200, exampleId: 64, code: 40 },
+  maxProblems: 5,
+  maxExampleIds: 5,
+} as const;
+
+/**
  * A recipe's picture (README "Recipe pictures"): made after the text passed every check, within
  * the same reservation, so a recipe with pictures reserves `reservationExtraMs[level]` more.
  *

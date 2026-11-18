@@ -5,6 +5,8 @@
  *   npm run admin -- judge review [--week YYYY-Www] [--project <id>]                  the stored report (default: the latest)
  *   npm run admin -- judge review --run [--week YYYY-Www] [--project <id>]            dry run: reads and counts, prints the plan and its worst case
  *   npm run admin -- judge review --run --apply [--week YYYY-Www] [--project <id>]    runs it: one model call, writes promptReviews/{week}
+ *   npm run admin -- judge review --send [--to-self <file.html>] [--week YYYY-Www]     the email: its state, and a preview written to a file
+ *   npm run admin -- judge review --send --apply [--force] [--week YYYY-Www]           sends it if it was not sent (admin/reportEmailCli.ts)
  *
  * The default week of --run is the last complete ISO week (the one Monday's run reviews). --apply
  * against a live project calls Vertex AI with the bearer token in VERTEX_TOKEN (e.g.
@@ -15,15 +17,23 @@
 import { parseArgs } from "node:util";
 import type { Firestore } from "firebase-admin/firestore";
 import { PROMPT_REVIEW } from "../constants";
+import { emailRecordOf, emailStatusText } from "../core/emailState";
+import { ownerConsoleUrl } from "../board/boardData";
+import { sendPromptReviewEmail } from "../core/reportEmail";
+import { renderPromptReviewEmail } from "../core/reportEmailRender";
+import { SEND_OPTIONS, sendFlags } from "./weeklyReportCli";
+import { outcomeLine, writePreview } from "./reportEmailCli";
 import { lastCompleteWeek, planPromptReview, promptReviewViewOf, reviewRef, runPromptReview, weekRange, type PromptReviewEnv, type PromptReviewView, type ReviewOutcome, type ReviewProblem } from "../core/promptReview";
 import type { RuntimeConfig } from "../model";
-import type { Logger, PromptReviewer } from "../ports";
+import type { Logger, Mailer, PromptReviewer } from "../ports";
 import { AdminRefusal } from "./accountRequests";
 
 export const REVIEW_USAGE = `usage:
   npm run admin -- judge review [--week YYYY-Www] [--project <id>]                 the stored report (default: the latest)
   npm run admin -- judge review --run [--week YYYY-Www] [--project <id>]           dry run: the plan and its worst case
   npm run admin -- judge review --run --apply [--week YYYY-Www] [--project <id>]   run it (one model call; live: VERTEX_TOKEN)
+  npm run admin -- judge review --send [--to-self <file.html>] [--week YYYY-Www] [--project <id>]   the email's state; --to-self writes a preview
+  npm run admin -- judge review --send --apply [--force] [--week YYYY-Www] [--project <id>]          send it now if not sent (live: REPORT_EMAIL, REPORT_SMTP_PASSWORD)
 Advice only: nothing changes a prompt.`;
 
 export interface ReviewArgs {
@@ -31,24 +41,29 @@ export interface ReviewArgs {
   week?: string;
   run: boolean;
   apply: boolean;
+  send?: boolean;
+  toSelf?: string;
+  force?: boolean;
 }
 
 export function parseReviewArgs(argv: string[], defaultProject: string): ReviewArgs {
   let parsed;
   try {
-    parsed = parseArgs({ args: argv, options: { week: { type: "string" }, run: { type: "boolean" }, apply: { type: "boolean" }, project: { type: "string" } }, allowPositionals: true, strict: true });
+    parsed = parseArgs({ args: argv, options: { week: { type: "string" }, run: { type: "boolean" }, apply: { type: "boolean" }, project: { type: "string" }, ...SEND_OPTIONS }, allowPositionals: true, strict: true });
   } catch (e) {
     throw new AdminRefusal((e as Error).message + "\n" + REVIEW_USAGE);
   }
   const { values, positionals } = parsed;
   if (positionals[0] !== "judge" || positionals[1] !== "review" || positionals.length !== 2) throw new AdminRefusal(REVIEW_USAGE);
-  if (values.apply && !values.run) throw new AdminRefusal("--apply goes with --run.\n" + REVIEW_USAGE);
+  const send = sendFlags(values, REVIEW_USAGE);
+  if (values.apply && !values.run && !values.send) throw new AdminRefusal("--apply goes with --run or --send.\n" + REVIEW_USAGE);
   if (values.week !== undefined && !weekRange(values.week)) throw new AdminRefusal("--week must be an ISO week, YYYY-Www (e.g. 2026-W46).\n" + REVIEW_USAGE);
   return {
     project: values.project ?? defaultProject,
     ...(values.week !== undefined ? { week: values.week } : {}),
     run: values.run === true,
     apply: values.apply === true,
+    ...send,
   };
 }
 
@@ -61,6 +76,8 @@ export interface ReviewCommandEnv {
   /** The model; only --run --apply calls it (built on first use, so a dry run needs no token). */
   reviewer(): PromptReviewer;
   reviewerModel: string;
+  /** The mailer for --send --apply; built on first use. */
+  mailer(): Mailer;
 }
 
 const usd = (micro: number) => "USD " + (micro / 1e6).toFixed(4);
@@ -85,6 +102,7 @@ export function renderReview(v: PromptReviewView, d: Record<string, unknown>): s
   const lines = ["Weekly prompt review " + v.week + " (" + day(d.from as string) + " to " + day(new Date(Date.parse(String(d.to)) - 86_400_000).toISOString()) + ", UTC): " + v.status + (v.reason && v.status !== "done" ? " (" + v.reason + ")" : "")];
   const tokens = v.usage ? " (input " + v.usage.inputTokens + ", output " + v.usage.outputTokens + ", thinking " + v.usage.thinkingTokens + " tokens)" : "";
   lines.push("  answers " + (v.answers ?? "?") + (v.sampled !== null ? ", sampled " + v.sampled : "") + ", model " + (v.model ?? "?") + ", cost " + usd(v.costMicroUsd) + tokens + (v.finishedAt ? ", finished " + v.finishedAt : ""));
+  if (v.email) lines.push("  " + v.email);
   if (v.status !== "done") return lines;
   lines.push("  Summary: " + (v.summary || "(none)"), "");
   lines.push(...problemLines("Prompt problems (the recipe writer's prompt)", v.promptProblems), "");
@@ -93,8 +111,36 @@ export function renderReview(v: PromptReviewView, d: Record<string, unknown>): s
   return lines;
 }
 
+async function runReviewSend(args: ReviewArgs, env: ReviewCommandEnv): Promise<null> {
+  const p = env.print;
+  const week = args.week ?? lastCompleteWeek(env.now());
+  if (args.apply) {
+    const mailer = env.mailer();
+    const out = await sendPromptReviewEmail({ db: env.db, logger: env.logger, now: env.now, project: args.project, mailer }, { week, trigger: "cli", force: args.force === true });
+    p(outcomeLine(out, args.project.startsWith("demo-")));
+    return null;
+  }
+  const doc = (await reviewRef(env.db, week).get()).data();
+  if (!doc || (doc.status !== "done" && doc.status !== "not_enough_data")) {
+    p("No prompt review with an email for " + week + (doc ? " (it is " + String(doc.status) + ")" : "") + ": nothing to send.");
+    return null;
+  }
+  const mail = renderPromptReviewEmail({ doc, consoleUrl: ownerConsoleUrl(args.project), project: args.project });
+  p("Dry run for " + week + "'s email, nothing sent or written.");
+  p("  State: " + (emailStatusText(emailRecordOf(doc), "prompt_review") ?? "not emailed yet."));
+  p("  Subject: " + mail.subject);
+  if (doc.status === "not_enough_data") p("  Too few answers: its note goes in the weekly report's email; it is sent on its own only when there is no weekly report.");
+  if (args.toSelf) {
+    const w = writePreview(args.toSelf, mail);
+    p("  Wrote " + w.html + " and " + w.text + ".");
+  }
+  p("To send it (once): the same command with --apply instead of --to-self" + (args.project.startsWith("demo-") ? "" : " --project " + args.project + ", with REPORT_EMAIL and REPORT_SMTP_PASSWORD set") + ".");
+  return null;
+}
+
 export async function runReviewCommand(args: ReviewArgs, env: ReviewCommandEnv): Promise<ReviewOutcome | null> {
   const p = env.print;
+  if (args.send) return runReviewSend(args, env);
   if (!args.run) {
     const snap = args.week
       ? await reviewRef(env.db, args.week).get().then((s) => (s.exists ? [s.data()!] : []))
