@@ -148,15 +148,51 @@ export const TIMINGS: Readonly<Record<GenerationKind, { llmAbortMs: number; rese
   menu: { llmAbortMs: 120_000, reservationMs: 180_000 },
 };
 /**
- * The optional output judge (config/runtime `outputJudge`, README "Prompt injection defences"):
- * its answer is one enum value, so 32 visible tokens; output plus thinking observed above
- * `tokenCeiling` aborts it. It runs after the generator, within the same reservation:
- * llmAbortMs + abortMs stays below reservationMs for both kinds.
+ * The optional output judge (config/runtime `outputJudge`, README "Prompt injection defences"
+ * item 5). It only classifies a validated answer, so it runs on a lite model by default: `model`,
+ * the GEMINI_JUDGE_MODEL parameter's default (Gemini 3.5 Flash-Lite on Vertex AI, `global`,
+ * GA, model page and "Model versions" on docs.cloud.google.com, read 2026-11-18), priced by
+ * JUDGE_PRICES below, with the lowest thinking its model takes (MINIMAL for Flash-Lite;
+ * adapters/gemini.ts judgeThinkingConfigFor), never the generator's GEMINI_THINKING_LEVEL.
+ *
+ * Its answer is a small JSON object (adapters/gemini.ts JUDGE_SCHEMA): the `verdict` that alone
+ * decides, then `where`, up to `maxIssues` issue codes, a `quality` of 1 to 5 and a `note` of
+ * at most `noteChars` characters, for the owner's analysis (core/judgeLog.ts). Pretty-printed that
+ * is about 30 tokens of structure and at most ~60 of note. A verdict-only answer measured 7 to 14
+ * output tokens (2026-11-18, thinking reported as 0), but at a 32-token limit one in 15 stopped
+ * with MAX_TOKENS after 10 visible tokens, so MINIMAL ("the fewest possible tokens for thinking",
+ * not none) seems to take ~20 tokens of the budget unreported: `maxOutputTokens` 160 covers all
+ * of it, and an answer still cut in its note keeps its verdict (parseJudgeAnswer). Output plus
+ * thinking observed above `tokenCeiling` (2 x maxOutputTokens) aborts the call, and the
+ * reservation books it at `tokenCeiling` output-priced tokens (was 2,048 at LOW thinking).
+ *
+ * `abortMs`: measured on Vertex AI (global), the lite judge answered 14 of 15 verdict-only calls
+ * in 0.7 to 1.4 s, a 4 x 3 menu of 5,230 input tokens included (the largest menu is at most
+ * ~26,500), and the described answer on that menu (5,794 input, 28 output tokens) in 1.7 s; one
+ * 2-day menu took 25 s. 10 s and 20 s are 6 to 12 times the usual time, so only such an outlier
+ * is cut (under `enforce` an infrastructure failure, refunded; under `shadow` only logged), and
+ * llmAbortMs + abortMs stays below reservationMs for both kinds (40 + 10 < 60, 120 + 20 < 180).
  */
+/**
+ * Every judge answer is kept for the owner's analysis (core/judgeLog.ts, README item 5): one
+ * `judgeAnswers/{random id}` document per judged generation, never the uid, deleted by the
+ * Firestore TTL policy on `judgeAnswers.expiresAt` `keepDays` after it was written
+ * (docs/recipe-setup.md). The judged text only while config/runtime `outputJudgeKeepText` is on,
+ * cut to `textMaxChars`.
+ */
+export const JUDGE_LOG = {
+  collection: "judgeAnswers",
+  keepDays: 90,
+  textMaxChars: 200_000,
+} as const;
+
 export const JUDGE = {
-  maxOutputTokens: 32,
-  tokenCeiling: 2048,
-  abortMs: { recipe: 12_000, menu: 25_000 } as Readonly<Record<GenerationKind, number>>,
+  model: "gemini-3.5-flash-lite",
+  maxOutputTokens: 160,
+  tokenCeiling: 320,
+  maxIssues: 3,
+  noteChars: 200,
+  abortMs: { recipe: 10_000, menu: 20_000 } as Readonly<Record<GenerationKind, number>>,
 } as const;
 
 /**
@@ -303,6 +339,20 @@ export const THINKING_FACTOR = 2;
  * judge's, whichever provider writes the recipe; another text provider's prices are in its adapter.
  */
 export const DEFAULT_PRICES = { inputUsdPerMTok: 1.5, outputUsdPerMTok: 7.5 } as const;
+
+/**
+ * The output judge's own prices, USD per 1M tokens, by Vertex AI model id (standard tier, global
+ * endpoint, prompts <= 200k, thinking billed as output; cloud.google.com/vertex-ai/generative-ai/pricing,
+ * read 2026-11-18): the judge is reserved and booked at these, not at the generator's.
+ * `config/runtime.prices.textUsdPerMTok["google/<model>"]` overrides an entry or prices another
+ * model (model.ts judgePricesOf); a judge model with neither is booked at `prices` (the
+ * generator's, as before the judge had its own), so switching the judge to an unlisted Flash model
+ * never books less than it costs. Update an entry when Google's price changes.
+ */
+export const JUDGE_PRICES: Readonly<Record<string, { inputUsdPerMTok: number; outputUsdPerMTok: number }>> = {
+  "gemini-3.5-flash-lite": { inputUsdPerMTok: 0.3, outputUsdPerMTok: 2.5 },
+  "gemini-3.1-flash-lite": { inputUsdPerMTok: 0.25, outputUsdPerMTok: 1.5 },
+};
 
 /**
  * How long a finished generation doc is kept for idempotent retries. Firestore TTL deletes it some

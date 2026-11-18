@@ -14,12 +14,12 @@
  */
 import { readFileSync } from "node:fs";
 import { buildPrompt, inputTokenBound, newCanary } from "../../adapters/prompt";
-import { JUDGE_INSTRUCTION } from "../../adapters/gemini";
-import { COST_KEYS, MAX_OUTPUT_TOKENS, THINKING_FACTOR, type CostKey } from "../../constants";
+import { JUDGE_INSTRUCTION, judgeThinkingConfigFor } from "../../adapters/gemini";
+import { COST_KEYS, JUDGE, MAX_OUTPUT_TOKENS, THINKING_FACTOR, type CostKey } from "../../constants";
 import { isNameRejection, type GenerateRequest } from "../../contract";
 import { planFor } from "../../core/generation";
 import { hasEnoughItems } from "../../core/outputSafety";
-import { DEFAULT_RUNTIME_CONFIG, costKeyOf, microUsd, type Prices, type RuntimeConfig } from "../../model";
+import { DEFAULT_RUNTIME_CONFIG, costKeyOf, judgePricesOf, microUsd, type Prices, type RuntimeConfig } from "../../model";
 import { requestFrom, vertexBody } from "../promptBody";
 import type { InputVerdict, LoadedCase } from "./cases";
 
@@ -53,8 +53,18 @@ export const EXPECTED_OUTPUT: Readonly<Record<CostKey, { output: number; thinkin
   }),
 ) as Record<CostKey, { output: number; thinking: number }>;
 export const STEP_BY_STEP_FACTOR = 2;
-/** The judge's answer is one enum value: 32 visible tokens at most, plus LOW thinking; assumed 300 together. */
-export const JUDGE_EXPECTED_OUTPUT = 300;
+/**
+ * The judge's described answer (verdict, where, issues, quality, a note of at most 200
+ * characters): 28 output tokens measured on gemini-3.5-flash-lite at MINIMAL thinking
+ * (2026-11-18, thinking reported as 0) with a short note; assumed 64 for a full note.
+ */
+export const JUDGE_EXPECTED_OUTPUT = 64;
+
+/** The judge's thinking as sent: a level, or "off" (budget 0, gemini-2.x). */
+function judgeThinkingLabel(model: string): string {
+  const t = judgeThinkingConfigFor(model);
+  return t.thinkingLevel ?? "off";
+}
 
 /** Bytes per input token, measured: the live 2-course menu's input bound over the most input tokens it was logged with. */
 export function bytesPerToken(liveMenu: GenerateRequest): number {
@@ -77,11 +87,18 @@ export function runtimeConfigFor(judge: "off" | "shadow" | "enforce", prices: Pr
   return { ...DEFAULT_RUNTIME_CONFIG, outputJudge: judge, prices };
 }
 
-/** One call's three figures. */
-export function estimateCall(req: GenerateRequest, judge: "off" | "shadow" | "enforce", prices: Prices, bpt: number): CallEstimate {
+/** One call's three figures; the judge's at its own model's prices (judgePricesOf). */
+export function estimateCall(
+  req: GenerateRequest,
+  judge: "off" | "shadow" | "enforce",
+  prices: Prices,
+  bpt: number,
+  judgeModel: string = JUDGE.model,
+): CallEstimate {
   const costKey = costKeyOf(req);
   const inputBytes = inputTokenBound(req);
-  const plan = planFor(req, runtimeConfigFor(judge, prices));
+  const config = runtimeConfigFor(judge, prices);
+  const plan = planFor(req, config, judgeModel);
   const upperGeneratorMicroUsd = microUsd(prices, inputBytes, THINKING_FACTOR * MAX_OUTPUT_TOKENS[costKey]);
   const out = EXPECTED_OUTPUT[costKey];
   const factor = req.config.detail === "stepByStep" ? STEP_BY_STEP_FACTOR : 1;
@@ -90,7 +107,7 @@ export function estimateCall(req: GenerateRequest, judge: "off" | "shadow" | "en
   let expectedMicroUsd = microUsd(prices, expectedInputTokens, expectedOutputTokens);
   if (judge !== "off") {
     const judgeInput = Math.ceil(Buffer.byteLength(JUDGE_INSTRUCTION, "utf8") / bpt) + Math.ceil(out.output * factor * 1.1);
-    expectedMicroUsd += microUsd(prices, judgeInput, JUDGE_EXPECTED_OUTPUT);
+    expectedMicroUsd += microUsd(judgePricesOf(config, judgeModel), judgeInput, JUDGE_EXPECTED_OUTPUT);
   }
   return {
     costKey,
@@ -141,6 +158,8 @@ export interface PlanOptions {
   bytesPerToken: number;
   model: string;
   thinkingLevel: string;
+  /** The judge's model (GEMINI_JUDGE_MODEL); its calls are priced at judgePricesOf. Default JUDGE.model. */
+  judgeModel?: string;
   /** Model calls per case for the sections in `repeatSections` ("all": every section). */
   repeat: number;
   repeatSections: string[] | "all";
@@ -164,7 +183,7 @@ export function planCases(cases: readonly LoadedCase[], o: PlanOptions): Planned
       req,
       judge,
       attempts: inputAsExpected ? repeats : 0,
-      estimate: estimateCall(req, judge, o.prices, o.bytesPerToken),
+      estimate: estimateCall(req, judge, o.prices, o.bytesPerToken, o.judgeModel ?? JUDGE.model),
       bodyBytes: Buffer.byteLength(JSON.stringify(body), "utf8"),
     };
   });
@@ -265,8 +284,9 @@ export function renderPlan(planned: readonly PlannedCase[], ctx: PlanContext): s
   const auto = planned.filter((p) => p.c.mode !== "manual");
   lines.push(
     `Red-team plan: ${planned.length} cases from ${ctx.casesPath}${ctx.localCases ? ` (+${ctx.localCases} local)` : ""}`,
-    `Model ${ctx.model} (thinking ${ctx.thinkingLevel}), judge model ${ctx.judgeModel}, project ${ctx.project}, location ${ctx.location}`,
+    `Model ${ctx.model} (thinking ${ctx.thinkingLevel}), judge model ${ctx.judgeModel} (thinking ${judgeThinkingLabel(ctx.judgeModel)}), project ${ctx.project}, location ${ctx.location}`,
     `Prices: USD ${ctx.prices.inputUsdPerMTok} input / ${ctx.prices.outputUsdPerMTok} output per 1M tokens (DEFAULT_PRICES, thinking billed as output)`,
+    `Judge prices: USD ${judgePricesOf({ prices: ctx.prices }, ctx.judgeModel).inputUsdPerMTok} input / ${judgePricesOf({ prices: ctx.prices }, ctx.judgeModel).outputUsdPerMTok} output per 1M tokens (judgePricesOf: JUDGE_PRICES, else the prices above)`,
     "",
     " id   sec  kind    input verdict              calls  body B  bound B   upper/call  expected/call  judge",
   );

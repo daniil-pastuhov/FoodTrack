@@ -10,6 +10,11 @@
  * hashes and costs before the provider refactor") and are in
  * test/fixtures/provider-pin-2026-11-17.json; this file and that one are never regenerated to make
  * a refactor pass.
+ *
+ * Changed on purpose since, and only these values: on 2026-11-18 the output judge moved to a lite
+ * model with its own prices, a 320-token ceiling and a described answer (README "Prompt injection
+ * defences" item 5), so `judgeSent`, `judgeWorstCase` and every `reservedWithJudge` were
+ * recomputed; the judge pinned here still runs on gemini-3.8-flash at LOW, that model's least.
  */
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
@@ -90,9 +95,10 @@ async function computeRequests(): Promise<Record<string, unknown>> {
     }
   }
   const judge = recorder();
-  await new GeminiOutputJudge({ project: "p", location: "global", model: "gemini-3.8-flash", thinkingLevel: "LOW" }, judge.models)
+  // The judge on the generator's model (GEMINI_JUDGE_MODEL empty) sends what it always sent: LOW is that model's least thinking.
+  await new GeminiOutputJudge({ project: "p", location: "global", model: "gemini-3.8-flash" }, judge.models)
     .judge({ recipe: sampleRecipe() as unknown as Recipe }, new AbortController().signal);
-  await new GeminiOutputJudge({ project: "p", location: "global", model: "gemini-3.8-flash", thinkingLevel: "LOW", jailbreakFilter: true }, judge.models)
+  await new GeminiOutputJudge({ project: "p", location: "global", model: "gemini-3.8-flash", jailbreakFilter: true }, judge.models)
     .judge({ recipe: sampleRecipe() as unknown as Recipe, imageBrief: SAMPLE_BRIEF }, new AbortController().signal);
   out.judgeSent = judge.sent;
   out.judgeWorstCase = Object.fromEntries(Object.entries(MAX_OUTPUT_TOKENS).map(([k, n]) => [k, judgeWorstCaseMicroUsd(DEFAULT_RUNTIME_CONFIG, n)]));

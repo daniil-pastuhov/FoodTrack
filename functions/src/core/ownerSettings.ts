@@ -226,9 +226,14 @@ export const SETTINGS: readonly SettingDef[] = [
   },
   {
     id: "outputJudge", web: { kind: "stricter" }, section: "onoff", label: "Second check of every answer (output judge)",
-    help: "Off; shadow (run and log its verdict, never block); enforce (a verdict other than ok is a content failure). Each check is one more model call.",
+    help: "Off; shadow (run it, log and keep every answer, never block: the mode for collecting answers); enforce (a verdict other than ok is a content failure). Each check is one call to a lite model (gemini-3.5-flash-lite, no thinking): about USD 0.0004 for a recipe, 0.002 for a large menu, usually 1 to 2 s; reserved at most USD 0.002 (recipe) to 0.009 (4-day 3-course menu), cut after 10 s / 20 s.",
     control: { kind: "select", options: OUTPUT_JUDGE_MODES.map((m) => ({ value: m, label: m === "off" ? "Off" : m === "shadow" ? "Shadow (log only)" : "Enforce" })) },
     sensitive: "it turns a safety check on or off", path: ["outputJudge"], read: top("outputJudge"),
+  },
+  {
+    id: "outputJudgeKeepText", web: { kind: "offOnly" }, section: "onoff", label: "Keep the judged text with each judge answer",
+    help: "Off: the judge's answers are kept 90 days without the recipe they judged. On: with the generated recipe text too (never the user's input, never the uid). The privacy policy must say so first: it says results are kept 7 days.",
+    control: { kind: "toggle" }, sensitive: "it keeps generated recipes for 90 days", path: ["outputJudgeKeepText"], read: top("outputJudgeKeepText"),
   },
   // Spending limits
   {

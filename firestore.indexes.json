@@ -85,6 +85,22 @@
       "collectionGroup": "reportPictures",
       "fieldPath": "data",
       "indexes": []
+    },
+    {
+      "collectionGroup": "judgeAnswers",
+      "fieldPath": "expiresAt",
+      "ttl": true,
+      "indexes": []
+    },
+    {
+      "collectionGroup": "judgeAnswers",
+      "fieldPath": "text",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "judgeAnswers",
+      "fieldPath": "note",
+      "indexes": []
     }
   ]
 }

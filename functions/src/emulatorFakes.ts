@@ -21,6 +21,7 @@
  */
 import { randomBytes } from "node:crypto";
 import { coursesFor, menuDates, menuDaysOf, type GenerateRequest } from "./contract";
+import { JUDGE } from "./constants";
 import {
   type AppleTokenRevoker,
   GenerationError,
@@ -177,8 +178,13 @@ export class EmulatorImageGenerator implements RecipeImageGenerator {
 }
 
 export class EmulatorJudge implements OutputJudge {
+  readonly model = JUDGE.model;
   async judge(): Promise<JudgeResult> {
-    return { verdict: "ok", usage: { inputTokens: 500, outputTokens: 5, thinkingTokens: 0, model: "emulator-fake", finishReason: "STOP" } };
+    return {
+      verdict: "ok",
+      answer: { where: "none", issues: [], quality: 5, note: "Emulator: no judge ran." },
+      usage: { inputTokens: 500, outputTokens: 40, thinkingTokens: 0, model: "emulator-fake", finishReason: "STOP" },
+    };
   }
 }
 

@@ -244,6 +244,8 @@ export interface RecipeGenerator {
 
 /** What the judge classifies: a validated answer, and the picture's brief when one was asked. */
 export interface JudgedOutput {
+  /** The recipe language asked for (config.language), a code from a fixed list. */
+  language?: string;
   recipe?: Recipe;
   menu?: Menu;
   imageBrief?: string;
@@ -254,13 +256,95 @@ export interface JudgedOutput {
 /** The optional second check on a validated answer (config/runtime `outputJudge`). */
 export type JudgeVerdict = "ok" | "off_topic" | "unsafe_food" | "harmful";
 
+/** The field the judge found the most serious problem in (`where`). */
+export const JUDGE_WHERE = ["title", "summary", "ingredients", "steps", "tip", "imageBrief", "stepBriefs", "none"] as const;
+export type JudgeWhere = (typeof JUDGE_WHERE)[number];
+
+/**
+ * The judge's issue codes, for improving the recipe writer's prompt (README item 5 defines each):
+ * what the deterministic checks and the quality gate cannot see.
+ */
+export const JUDGE_ISSUES = [
+  "vague_amount",
+  "missing_step",
+  "step_order",
+  "unclear_step",
+  "unsafe_temp_time",
+  "non_food",
+  "implausible",
+  "title_mismatch",
+  "wrong_language",
+  "off_topic_text",
+  "image_mismatch",
+] as const;
+export type JudgeIssue = (typeof JUDGE_ISSUES)[number];
+
+/**
+ * The judge's description of an answer, best effort: each field absent when the model left it out
+ * or wrote something malformed. Never decides anything. `note` is model text about untrusted
+ * content: never shown to app users, never fed into a prompt, never logged.
+ */
+export interface JudgeAnswer {
+  where?: JudgeWhere;
+  issues?: JudgeIssue[];
+  /** 1 (can't be cooked as written) to 5. */
+  quality?: number;
+  note?: string;
+}
+
 export interface JudgeResult {
   verdict: JudgeVerdict;
+  answer?: JudgeAnswer;
   /** Absent when unknown: the call is then booked at its reserved worst case. */
   usage?: LlmUsage;
 }
 
+/**
+ * One judge answer as the owner collects it (core/judgeLog.ts): no uid, no user input. `note`
+ * and `text` are model text about untrusted content (see JudgeAnswer).
+ */
+export interface JudgeEntry {
+  kind: "recipe" | "menu";
+  days?: number;
+  courses?: number;
+  image?: string;
+  language: string;
+  /** Who wrote the answer (the provider and model asked, and the version that answered). */
+  textProvider: string;
+  textModel: string;
+  textModelVersion: string | null;
+  judgeModel: string;
+  judgeModelVersion: string | null;
+  /** adapters/gemini.ts JUDGE_VERSION. */
+  judgeVersion: string;
+  /** The generator's system instruction and schema for this request, canary masked, hashed. */
+  promptHash: string;
+  /** The deployed revision (K_REVISION), or null outside Cloud Run. */
+  revision: string | null;
+  mode: "shadow" | "enforce";
+  /** The quality-gate rule that had refused the answer before the judge saw it, if any. */
+  gateRule: string | null;
+  /** null when the judge failed (`failure` says why). */
+  verdict: JudgeVerdict | null;
+  failure: string | null;
+  where: JudgeWhere | null;
+  issues: JudgeIssue[];
+  quality: number | null;
+  note: string | null;
+  latencyMs: number;
+  usage: { inputTokens: number; outputTokens: number; thinkingTokens: number; finishReason: string | null } | null;
+  /** judgeText's document, only while config/runtime `outputJudgeKeepText` is on. */
+  text?: string;
+}
+
+/** Where judge answers are kept (core/judgeLog.ts FirestoreJudgeLog). Best effort: may reject, never awaited by a request. */
+export interface JudgeLog {
+  record(entry: JudgeEntry): Promise<void>;
+}
+
 export interface OutputJudge {
+  /** The Vertex AI model id it calls: its calls are reserved and booked at that model's prices (model.ts judgePricesOf). */
+  readonly model: string;
   /**
    * Classifies a validated recipe or menu. Sees only the answer (never the user's input), and
    * answers with an enum. Throws GenerationError ("content" when the judge's own safety filter
@@ -365,6 +449,8 @@ export interface Deps {
   appStore: AppStoreVerifier;
   generator: RecipeGenerator;
   judge: OutputJudge;
+  /** Where every judge answer is kept for the owner (core/judgeLog.ts); absent: not kept. */
+  judgeLog?: JudgeLog;
   /** Recipe pictures, whatever the provider (RecipeImageGenerator). */
   imageGenerator: RecipeImageGenerator;
   appleRevoker: AppleTokenRevoker;

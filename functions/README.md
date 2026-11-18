@@ -22,6 +22,7 @@ the caller. The client wire contract is in [CONTRACT.md](CONTRACT.md).
 | `src/core/buyers.ts` | FIFO attribution of spent credits to purchases, buyer keys, the refund-after-use blocklist |
 | `src/core/consumption.ts` | Answers Apple's `CONSUMPTION_REQUEST` for consenting buyers |
 | `src/core/generation.ts` | `generateRecipe` (reserve, call the LLM, settle) and `getGeneration` (polling) |
+| `src/core/judgeLog.ts`, `src/admin/judgeAnswers.ts` | Keeping every output judge answer in `judgeAnswers`, and `npm run admin -- judge summary | export` to read them (see "Prompt injection defences" item 5) |
 | `src/core/reports.ts` | `reportRecipe` ("Report this recipe") and keeping a deleted account's reports without its uid (see "Reports") |
 | `src/providers/types.ts`, `registry.ts`, `router.ts`, `failure.ts`, `balance.ts` | The common provider interface: the descriptor every text or picture adapter exports, the registry of them (one entry each), the routers that pick the adapter per call, the shared failure taxonomy and the balance probe (see "Adding a provider") |
 | `src/providers/profiles.ts`, `src/core/providerSwitch.ts` | The named provider setups (profiles: text and pictures) and the one core that switches between them, for `npm run admin -- providers` and the owner console (see "Provider profiles", "The owner console") |
@@ -34,7 +35,7 @@ the caller. The client wire contract is in [CONTRACT.md](CONTRACT.md).
 | `src/core/welcome.ts` | The welcome grant: `getWelcomeOffer`, `claimWelcome`, `welcomeRecipes` and the day's brake (see "Welcome grant") |
 | `src/core/appleToken.ts` | `registerAppleSignIn`, and removing the stored Sign in with Apple token (deletion, unlink, tombstones) |
 | `src/board/` | The owner's spend and sales board: reader, aggregation and renderer shared by `npm run admin -- board` and the scheduled `redrawBoard`, and `hosted.ts`, the redraw into a private bucket (see "The board") |
-| `src/admin/` | The owner's offline commands, none deployed as a function: deletion requests by email (`npm run admin`, see "Deletion requests by email"), the spend and sales board by hand (`npm run admin -- board`, see "The board"), the provider profiles (`npm run admin -- providers list | use`, older name `image`, see "Provider profiles"), the prompt replay (`npm run prompt-body`) and the prompt-injection red-team runner (`npm run redteam`, `src/admin/redteam/`; see "Replaying a prompt against the live model") |
+| `src/admin/` | The owner's offline commands, none deployed as a function: deletion requests by email (`npm run admin`, see "Deletion requests by email"), the spend and sales board by hand (`npm run admin -- board`, see "The board"), the provider profiles (`npm run admin -- providers list | use`, older name `image`, see "Provider profiles"), the output judge's answers (`npm run admin -- judge summary | export`, read-only, see "Prompt injection defences" item 5), the prompt replay (`npm run prompt-body`) and the prompt-injection red-team runner (`npm run redteam`, `src/admin/redteam/`; see "Replaying a prompt against the live model") |
 | `src/taste/` | The taste profile quiz: `catalogue.ts` (every step, option, text and prompt word; see "Taste profile quiz") and `quiz.ts` (`getTasteQuiz`, the version, cleaning a request's `taste`) |
 | `src/core/guard.ts` | Pre-Firestore throttles, client address, log sampling |
 | `src/ports.ts` | `PlayVerifier`, `AppStoreVerifier`, `RecipeGenerator`, `RecipeImageGenerator`, `AppleTokenRevoker` interfaces |
@@ -45,7 +46,7 @@ the caller. The client wire contract is in [CONTRACT.md](CONTRACT.md).
 | `certs/AppleRootCA-G3.cer` | Apple's public root CA (SHA-256 `63:34:3A:BF:…:91:79`, checked by a test) |
 | `../owner-console/` | The owner console: a static page on Firebase Hosting with the provider setup's drop-down (text and pictures); and the runtime settings; everything it shows or changes goes through `getProviderProfiles` / `setProviderProfile` and `getOwnerSettings` / `setOwnerSettings` (see "The owner console") |
 | `../firestore.rules` | Denies every client read and write; only the Admin SDK touches Firestore |
-| `../firestore.indexes.json` | Sweeper indexes and the TTL policies on `generations.expiresAt` and `recipeImages.expiresAt` |
+| `../firestore.indexes.json` | Sweeper indexes and the TTL policies on `generations.expiresAt`, `recipeImages.expiresAt`, the reports' and `judgeAnswers.expiresAt` |
 
 ### Functions
 
@@ -207,7 +208,7 @@ global ceiling (USD 1.20 a day without sales, at most USD 2.00) and the same per
 0.45; 3 recipes are well under it). So the bill can never exceed what "Spend ceilings" states.
 What farming can do is **use up the ceiling for everyone**: at a typical USD 0.02 a recipe, the
 600 a day would be about USD 12 of model use, far above USD 1.20; booked at the worst case (about
-USD 0.08 a recipe, 0.11 with the judge on) the base ceiling holds about 15 such recipes, a typical
+USD 0.08 a recipe, 0.085 with the judge on) the base ceiling holds about 15 such recipes, a typical
 one about 60, i.e. 20 farmed claims. A determined farmer with many Google accounts could therefore
 keep generation paused (`GENERATION_DISABLED`) for paying users for the rest of a UTC day. If that
 shows up (many `welcome_granted` lines and `GENERATION_DISABLED` with little revenue on the board),
@@ -419,7 +420,8 @@ Every LLM call is priced before it is made and paid for by a credit:
 
 Worst-case reservations at the default prices (1.50 / 7.50 USD per 1M tokens), from a small
 request to the largest valid one: recipe USD 0.067–0.082, 2-course menu 0.217–0.233, 3-course menu
-0.307–0.323 (with `outputJudge` on, add 0.024, 0.040 and 0.050; the largest is the table below).
+0.307–0.323 (with `outputJudge` on, add 0.003, 0.006 and 0.008 for the lite judge since
+2026-11-18, 0.024, 0.040 and 0.050 before; the largest is the table below).
 The date and extras rules of November 2026 (the list of items past their date, the extras and
 staples lines) added 450–655 bytes to the input bound, under USD 0.001 a call; the output
 dominates. A typical measured 3-course menu (≈3,000 input, 12,000 output, 2,000 thinking tokens)
@@ -467,13 +469,15 @@ call; the units step's share is 989 bytes, about USD 0.0015. The price is unchan
 
 | request | largest, no profile | largest, with the largest profile (judge off / on) |
 |---|---|---|
-| recipe | 13,979 bytes, USD 0.08241 / 0.10606 | 16,437 bytes, USD 0.08610 / 0.10975 |
-| 3-day 2-course menu | 15,243 bytes, USD 0.23286 / 0.27286 | 17,729 bytes, USD 0.23659 / 0.27659 |
-| 3-day 3-course menu | 15,262 bytes, USD 0.32289 / 0.37279 | 17,748 bytes, USD 0.32662 / 0.37652 |
-| 4-day 3-course menu | 15,287 bytes, USD 0.38293 / 0.43943 | 17,773 bytes, USD 0.38666 / 0.44316 |
+| recipe | 13,979 bytes, USD 0.08241 / 0.08525 | 16,437 bytes, USD 0.08610 / 0.08894 |
+| 3-day 2-course menu | 15,243 bytes, USD 0.23286 / 0.23897 | 17,729 bytes, USD 0.23659 / 0.24270 |
+| 3-day 3-course menu | 15,262 bytes, USD 0.32289 / 0.33098 | 17,748 bytes, USD 0.32662 / 0.33471 |
+| 4-day 3-course menu | 15,287 bytes, USD 0.38293 / 0.39234 | 17,773 bytes, USD 0.38666 / 0.39607 |
 
+(Judge on: the lite judge of 2026-11-18, item 5 of "Prompt injection defences"; with the judge on
+the generator's model the four were 0.10606 / 0.27286 / 0.37279 / 0.43943 without a profile.)
 The largest of all, 4 days of 3 courses with the judge on, still fits the per-user USD 0.45 (by
-0.0068); `test/taste.test.ts` checks every menu set and the recipe against it with the judge off
+0.054, 0.0068 with the old judge); `test/taste.test.ts` checks every menu set and the recipe against it with the judge off
 and on, and that the blocks add under 2,600 bytes and USD 0.004.
 
 **Staples add at most 2,600 bytes** (November 2026, CONTRACT.md "Staples"): the third data block
@@ -487,13 +491,13 @@ call. The price is unchanged.
 
 | request | largest with the largest profile, no staples (judge off / on) | the same with the largest staples |
 |---|---|---|
-| recipe | 15,448 bytes, USD 0.08461 / 0.10827 | 18,048 bytes, USD 0.08851 / 0.11217 |
-| 3-day 2-course menu | 16,740 bytes, USD 0.23511 / 0.27511 | 19,340 bytes, USD 0.23901 / 0.27901 |
-| 3-day 3-course menu | 16,759 bytes, USD 0.32514 / 0.37503 | 19,359 bytes, USD 0.32904 / 0.37893 |
-| 4-day 3-course menu | 16,784 bytes, USD 0.38518 / 0.44167 | 19,384 bytes, USD 0.38908 / 0.44557 |
+| recipe | 15,448 bytes, USD 0.08461 / 0.08745 | 18,048 bytes, USD 0.08851 / 0.09135 |
+| 3-day 2-course menu | 16,740 bytes, USD 0.23511 / 0.24122 | 19,340 bytes, USD 0.23901 / 0.24512 |
+| 3-day 3-course menu | 16,759 bytes, USD 0.32514 / 0.33323 | 19,359 bytes, USD 0.32904 / 0.33713 |
+| 4-day 3-course menu | 16,784 bytes, USD 0.38518 / 0.39459 | 19,384 bytes, USD 0.38908 / 0.39849 |
 
 The largest of all, 4 days of 3 courses with the judge on, still fits the per-user USD 0.45 (by
-0.0044), so the server keeps the apps' 400 code points. `test/staples.test.ts` checks every menu
+0.052 with the lite judge, 0.0044 with the old one), so the server keeps the apps' 400 code points. `test/staples.test.ts` checks every menu
 set and the recipe against it with the judge off and on, with optional items as well, and that
 the staples add at most 2,700 bytes.
 
@@ -505,10 +509,13 @@ the per-user ceiling with the judge off and on), in USD, judge off / on:
 
 | days | 1 course | 2 courses | 3 courses |
 |---|---|---|---|
-| 1 | 0.067 / 0.089 | 0.098 / 0.123 | 0.128 / 0.156 |
-| 2 | 0.105 / 0.131 | 0.165 / 0.198 | 0.218 / 0.256 |
-| 3 | 0.150 / 0.181 | 0.233 / 0.273 | 0.323 / 0.373 |
-| 4 | 0.195 / 0.231 | 0.308 / 0.356 | 0.383 / 0.439 |
+| 1 | 0.067 / 0.069 | 0.098 / 0.101 | 0.128 / 0.132 |
+| 2 | 0.105 / 0.108 | 0.165 / 0.170 | 0.218 / 0.224 |
+| 3 | 0.150 / 0.154 | 0.233 / 0.239 | 0.323 / 0.331 |
+| 4 | 0.195 / 0.200 | 0.308 / 0.316 | 0.383 / 0.392 |
+
+(Judge on: the lite judge since 2026-11-18; with the judge on the generator's model the 3 x 3 and
+4 x 3 cells were 0.373 and 0.439.)
 
 The input bound grows by about 80 bytes a day and 20 a course (the schema's date enum and course
 lists); the output cap dominates. The largest, 4 days of 3 courses at 0.383, fits the 0.45 once a
@@ -527,12 +534,12 @@ checks the inequality for each kind.
 instruction lines and its schema field, under USD 0.001, plus the picture's reserved price (USD
 0.06 by default: the dearer of Flash-Lite Image, 0.04, and its fallback Nano Banana 2.1, 0.06). The
 largest recipe (every field at its maximum, 4-byte names, multi-choice config) is USD 0.0824 without
-a picture and 0.1431 with one (0.1060 / 0.1668 with the judge on). Measured (2026-11-17), a picture
+a picture and 0.1431 with one (0.0852 / 0.1459 with the lite judge on; 0.1060 / 0.1668 with the judge on the generator's model). Measured (2026-11-17), a picture
 is USD 0.0336 on Flash-Lite Image (1,120 image tokens, no thinking) and 0.0415 on Nano Banana 2.1
 (1,120 image tokens plus about 1,037 thinking tokens at the text rate), so a recipe with a picture
 is about 0.02 + 0.034 = USD 0.054 against at least 2 × 0.106 net (the 100-pack after a 30 % store
-cut and 25 % VAT): the default price of 2 covers it about four times typically and 1.3 times at the
-worst case with the judge on. Per user, at most three pictures a day start when every one is
+cut and 25 % VAT): the default price of 2 covers it about four times typically and 1.45 times at the
+worst case with the lite judge on (1.3 with the old one). Per user, at most three pictures a day start when every one is
 booked at its worst case (0.143 × 3 = 0.43), about eight at measured cost. Menus get no pictures, so the menu arithmetic below is unchanged.
 
 - **Per user: USD 0.45 a day** (`perUserDailySpendMicroUsd: 450000`). A call starts only if
@@ -699,7 +706,9 @@ introductory 0.75 / 3.75 until then makes the estimates conservative). When the 
 (`GEMINI_MODEL`) or Google's price changes, set `config/runtime.prices` to
 `{ inputUsdPerMTok, outputUsdPerMTok }` (numbers from 0.01 to 1000) from the Vertex AI pricing page,
 and update `DEFAULT_PRICES` in the next deploy. A price set too low makes the breaker too lenient.
-These are the `google` text provider's prices and the output judge's. Another text provider's
+These are the `google` text provider's prices, and the output judge's only for a judge model
+without its own (`JUDGE_PRICES` in constants.ts, overridable as
+`prices.textUsdPerMTok["google/<model>"]`; "Prompt injection defences" item 5). Another text provider's
 prices are in its adapter (`prices` by model, at the endpoint's own rate), overridable without a
 deploy in `config/runtime.prices.textUsdPerMTok` ("Adding a provider", "Money").
 
@@ -935,26 +944,110 @@ Only a caller with credits reaches the model, and an answer goes back only to th
    are never stored (`generations/{id}` keeps state, cost, usage and `failureReason: "output rule
    X"`, no text) and never returned.
 5. **The output judge** (`config/runtime.outputJudge`, default **`off`**). A second model call
-   that sees only the validated answer (never the user's input) and answers one enum:
-   `ok` / `off_topic` / `unsafe_food` / `harmful`. `shadow` runs it and logs
-   `prompt_judge_verdict` without blocking; `enforce` makes any other verdict a content failure
-   (counted as a rejection) and a judge failure an infrastructure failure (the answer is never
-   delivered unchecked). An invalid value reads as `enforce`. Arithmetic at the default prices
-   (judge on the same model, `GEMINI_JUDGE_MODEL` empty): worst case added to the reservation USD
-   0.024 (recipe), 0.040 (2-course), 0.050 (3-course); measured cost typically USD 0.005–0.02,
-   about a quarter of a recipe's measured model cost and a fifth of a menu's, 3–5 % of what the credits net. **Why off by default:**
-   with the judge's worst case reserved, the per-user ceiling (USD 0.45) allows one 3-course menu a
-   day instead of two (0.13 booked + 0.365 > 0.45), which contradicts CONTRACT.md "Limits"; its
-   false-positive rate on honest recipes is unknown until measured, and every false positive is
-   charged to an honest user once the allowance is spent; it is injectable by the same text it
-   judges (the impact is bounded: it can only flip its own enum); and the deterministic checks
-   plus LOW safety filters already cover the high-severity cases (links, contact details, markup,
-   allergens, diet, non-food). What it would add is semantic: off-topic prose made of ordinary
-   words, in-language slurs below the filter threshold, subtly unsafe food handling.
-   **Recommendation:** run the red-team checklist (`test/injection-prompts.md`, `npm run redteam`) after deploy; if
-   anything harmful or off-topic gets through, set `outputJudge: "shadow"` for a week to measure
-   verdicts, then `"enforce"`, and raise `perUserDailySpendMicroUsd` to `500000` (or set
-   `GEMINI_JUDGE_MODEL` to a cheaper model and `prices` accordingly) to keep two 3-course menus.
+   that sees only the validated answer and the recipe language asked for (never the user's input)
+   and answers a small JSON object. Only its `verdict` decides anything: `ok` / `off_topic` /
+   `unsafe_food` / `harmful`. `shadow` runs it, logs `prompt_judge_verdict` and keeps the answer
+   without blocking (**the mode for collecting answers**); `enforce` makes any other verdict a
+   content failure (counted as a rejection) and a judge failure an infrastructure failure (the
+   answer is never delivered unchecked). An invalid value reads as `enforce`. The judge's own
+   safety filter refusing the text reads as `harmful`.
+   - **Model, thinking, time** (since 2026-11-18; constants.ts `JUDGE`): a lite model,
+     `GEMINI_JUDGE_MODEL` = `gemini-3.5-flash-lite` (GA on Vertex AI, `global`; Google names it
+     the replacement for Gemini 2.5 Flash-Lite, and its page recommends MINIMAL thinking for
+     classification), at the least thinking its model takes (`judgeThinkingConfigFor`: MINIMAL for
+     Flash-Lite, LOW for 3.7/3.8 Flash, budget 0 for 2.x), never `GEMINI_THINKING_LEVEL`.
+     `maxOutputTokens` 160, aborted past 320 output + thinking tokens, after 10 s (recipe) / 20 s
+     (menu). Before: `gemini-3.8-flash` at LOW, a 2,048-token ceiling, 12 s / 25 s.
+   - **Its prices**: reserved and booked at the judge model's own price, `JUDGE_PRICES` (Flash-Lite
+     3.5: USD 0.30 / 2.50 per 1M tokens, 3.1: 0.25 / 1.50; cloud.google.com/vertex-ai/generative-ai/pricing,
+     standard tier, global, read 2026-11-18), overridable as
+     `config/runtime.prices.textUsdPerMTok["google/<model>"]`; a judge model with neither is booked
+     at `prices`, the generator's (`judgePricesOf`), so an unlisted model is never booked below a
+     Flash price. Worst case added to the reservation, before → after: recipe USD 0.024 → 0.003,
+     3-day 2-course menu 0.040 → 0.006, 3-day 3-course 0.050 → 0.008, 4-day 3-course 0.056 → 0.009.
+     Typical cost of a check: about USD 0.0004 for a recipe (≈1,000 input and 30 output tokens) and
+     0.001–0.002 for a menu (a 4 x 3 menu measured 5,794 input, 28 output tokens: USD 0.0018);
+     before, USD 0.005–0.02.
+   - **The answer** (adapters/gemini.ts `JUDGE_SCHEMA`, schema-constrained, `verdict` first so an
+     answer cut short still has it): `verdict`; `where`, the field with the most serious problem
+     (`title`, `summary`, `ingredients`, `steps`, `tip`, `imageBrief`, `stepBriefs`, `none`);
+     `issues`, up to 3 codes, worst first, also on an `ok` answer; `quality`, 1 (can't be cooked
+     as written) to 5; `note`, one English sentence of at most 200 characters. Only an unusable
+     `verdict` fails the check; every other field is best effort, dropped when missing or malformed
+     (`parseJudgeAnswer`). The issue codes, what the deterministic checks and the quality gate
+     can't see:
+
+     | code | meaning |
+     |---|---|
+     | `vague_amount` | an ingredient that needs an amount has none, or one nobody can measure |
+     | `missing_step` | an ingredient is never used in the steps, or a needed step (such as cooking it) is missing |
+     | `step_order` | the steps are in an order that does not work |
+     | `unclear_step` | a step is too vague to follow |
+     | `unsafe_temp_time` | a temperature, time or storage that leaves food unsafe |
+     | `non_food` | an ingredient is not food |
+     | `implausible` | an ingredient, amount or combination that makes no sense for the dish |
+     | `title_mismatch` | the title or summary does not match the ingredients and steps |
+     | `wrong_language` | text not in the language asked for (food names excepted) |
+     | `off_topic_text` | text about anything other than cooking the dish |
+     | `image_mismatch` | a picture brief does not show the dish or its step |
+
+     The note is model text about untrusted content, and that content can steer it: it is never
+     shown in the apps, never fed into a prompt, never logged (`prompt_judge_verdict` carries
+     `where`, `issues` and `quality` only); it is kept with control characters removed and
+     anything that looks like a link, an address or a phone number replaced (`cleanJudgeNote`),
+     and printed only JSON-escaped (`admin judge export`) or quoted (red-team report).
+   - **What is kept of the judge's answers**: one `judgeAnswers/{random id}` document per judged
+     generation, shadow and enforce, ok or not, judge failures with their reason
+     (core/judgeLog.ts): `at`, `kind`, `days` / `courses` (menus), `image`, `language`, the
+     generator's `textProvider` / `textModel` / `textModelVersion`, `judgeModel` /
+     `judgeModelVersion`, `judgeVersion` (a hash of the judge's instruction and schema),
+     `promptHash` (a hash of this request's generator instruction and schema, canary masked: equal
+     requests compare across prompt changes), `revision` (the deployed Cloud Run revision), `mode`,
+     `gateRule` (the quality-gate rule that had refused it, if any), `verdict` (null on a failure),
+     `failure`, `where`, `issues`, `quality`, `note`, `latencyMs`, `usage`, and `expiresAt`.
+     **No uid, hashed or not, no request id, no user input**, so a document can't be tied to a
+     person and account deletion has nothing to remove (its promises are unchanged). Kept
+     `JUDGE_LOG.keepDays` (90) days, then deleted by the TTL policy on `judgeAnswers.expiresAt`
+     (`firestore.indexes.json`). Written after the verdict and never awaited by the request: a
+     failed write only logs `judge_log_failed`; it reads nothing. **The judged text**
+     (`judgeText`: the generated fields only) is kept as `text` only while
+     `config/runtime.outputJudgeKeepText` is on, **off by default**: the privacy policy says a
+     result is kept 7 days, and these documents live 90. Seeing the judged recipe is what makes a
+     note actionable, so the trade-off is the owner's: turn it on only after a policy line saying
+     that generated recipes (without any link to the person) are kept 90 days to improve the
+     prompts (docs/privacy-policy-changes.md); the console can only turn it off.
+   - **Reading them**: `npm run admin -- judge summary [--from YYYY-MM-DD] [--to YYYY-MM-DD]`
+     (counts by verdict, issue, where and quality, latency, tokens, and by language, judge model,
+     judge version, prompt hash, text model, mode and kind; never a note) and `npm run admin --
+     judge export [--from] [--to] [--out file.jsonl]` (one JSON object per answer). Read-only;
+     UTC days, both ends included, the last 30 by default (src/admin/judgeAnswers.ts).
+   - **Measured on Vertex AI** (2026-11-18, 20 calls, under USD 0.01): 15 verdict-only calls over 5
+     honest recipes (en, ru, de, fr, es), an honest raw-beef tartare with a flambéed pear, 2 honest
+     menus, a 4 x 3 menu of 5,230 input tokens, and 3 hostile answers (off-topic code and a
+     voucher link, bleach and antifreeze, a drink to drug someone), plus 4 diagnostic calls and 1
+     with the described answer. Latency 0.7–1.7 s on 19 calls, one 25 s outlier (a 2-day menu);
+     output 7–14 tokens verdict-only, 28 described, thinking always reported 0. Every honest recipe
+     and menu was `ok`, but at a 32-token limit one German recipe stopped with MAX_TOKENS after 10
+     visible tokens (hence 160). The hostile ones were all refused, mostly by the judge's own safety
+     filter (`SAFETY`, read as `harmful`) rather than by its verdict (`off_topic` once): the
+     four-value enum costs nothing extra and showed no harm, so it stays. **A false positive**: the
+     honest tartare was blocked by that filter (`DANGEROUS_CONTENT` probability HIGH, severity
+     LOW) and read as `harmful`; with the filter off the model answered `ok`. The described
+     answer on the 4 x 3 menu said `ok`, no issues, quality 5, although its dishes were in five
+     languages and `language` was `en` (one sample: the lite model under-reports issues there).
+   - **Why still off by default**: the false-positive rate on honest recipes is unknown (one honest
+     recipe in 9 was refused above, by the safety filter), and under `enforce` every false positive
+     is charged to an honest user once the allowance is spent; it is injectable by the text it
+     judges (bounded: it can only flip its own verdict and write its own note); and the
+     deterministic checks plus the safety filters already cover the high-severity cases. The cost
+     is no longer a reason: with the lite judge's worst case reserved, two 3-course menus still fit
+     the per-user USD 0.45 when the first booked at most USD 0.119 (a typical one books ≈ 0.111
+     with its check; 0.111 + 0.331 ≤ 0.45), so CONTRACT.md "Limits" holds.
+     **Recommendation:** after deploy, set `outputJudge: "shadow"` (about USD 0.04–0.2 a day at 100
+     generations) and read `npm run admin -- judge summary` after a week or two: the verdicts
+     against what was delivered, and the issue codes and quality by language and prompt hash for
+     the recipe writer's prompt. Consider the judge's `DANGEROUS_CONTENT` threshold (or its
+     severity method) before `enforce`, as the tartare shows; then `"enforce"`.
 6. **Rejection counter.** Suspicious input refusals (`MARKS`, `MIXED_SCRIPT`, `ENCODED`,
    `REPEATED`, `SPACED_LETTERS`, `INSTRUCTION`), counted output refusals, model safety blocks and
    judge rejections increment `users/{uid}.promptRejections` (`{day, count}`). At
@@ -1012,7 +1105,8 @@ person's text either ("Recipe pictures"):
 |---|---|---|---|
 | `config/runtime` | `rejectedPromptsPerDay` | `5` | Rejections per account per UTC day before generation is refused (integer ≥ 0; 0 refuses every generation). |
 | `config/runtime` | `outputJudge` | `"off"` | `off`, `shadow` or `enforce` (see above). Invalid reads as `enforce`. |
-| param | `GEMINI_JUDGE_MODEL` | empty | Judge model id; empty uses `GEMINI_MODEL`. Its cost is booked at `prices` (conservative for a cheaper model). |
+| `config/runtime` | `outputJudgeKeepText` | `false` | Keep the judged text with each judge answer (`judgeAnswers.text`, see above). Off unless the privacy policy says so. Invalid reads as `false`. |
+| param | `GEMINI_JUDGE_MODEL` | `gemini-3.5-flash-lite` | Judge model id; empty uses `GEMINI_MODEL`. Booked at its `JUDGE_PRICES` entry (or `prices.textUsdPerMTok["google/<model>"]`), else at `prices`. Its thinking is the least the model takes, whatever `GEMINI_THINKING_LEVEL` says. |
 | param | `GEMINI_JAILBREAK_FILTER` | `false` | `true` adds `HARM_CATEGORY_JAILBREAK` at `BLOCK_LOW_AND_ABOVE`. Vertex documents it as a Preview for `gemini-3-flash-preview` only; enable only for a model that supports it, or every call may fail. |
 
 ### Logs to alert on
@@ -1022,7 +1116,8 @@ person's text either ("Recipe pictures"):
 | `prompt_input_rejected` | warning | `uidHash`, `field` (`ingredient` / `allergen`), `rule`, `suspicious`, `rejectionsToday` |
 | `prompt_output_rejected` | warning | `uidHash`, `kind`, `code` (`OUTPUT_<rule>`, `PROMPT_BLOCKED`, `FINISH_SAFETY`..., `JUDGE_<verdict>`), `charged`, `rejectionsToday` |
 | `prompt_rejection_limit` | warning | `uidHash`, `rejectionsToday`, `limit`: an account was refused for the day |
-| `prompt_judge_verdict` / `prompt_judge_failed` | info / warning | `uidHash`, `kind`, `verdict` or `reason`, `mode` |
+| `prompt_judge_verdict` / `prompt_judge_failed` | info / warning | `uidHash`, `kind`, `verdict` or `reason`, `mode`; a verdict also `where`, `issues`, `quality` (never the note) |
+| `judge_log_failed` | warning | `reason`: a judge answer could not be kept in `judgeAnswers` (the request was not affected) |
 
 Never logged: names, prompts, answers, the canary, the uid. Suggested alert:
 `jsonPayload.message="prompt_rejection_limit"` (any), and `prompt_output_rejected` with `code`
@@ -1383,7 +1478,7 @@ fallback is named and the provider is not the default, the default's price
 (`imageReservedMicroUsdOf`): so a hand-written `config/runtime.image` at another provider with no
 fallback named reserves at least the default picture model's price, even when its own is cheaper.
 Settle books each call at its own provider's price (`Outcome.spend`;
-the judge always at Gemini's), so a cheaper provider books less than it reserved. When any call's
+the judge at its own Gemini model's, `judgePricesOf`), so a cheaper provider books less than it reserved. When any call's
 usage is unknown, the reservation stays booked (`bookedMicroUsd`), never the measured part at
 Gemini's prices. With the deploy
 default and no fallback all of this is exactly what it was (`test/providerPin.test.ts`).
@@ -1731,6 +1826,9 @@ Server-only. Documents:
   `generatedAt`, `createdAt`,
   `expiresAt` (TTL, `reports.keepDays` days); and `reports/{reportId}/reportPictures/{main | step-<i>}`,
   copies of the generation's pictures with the same `expiresAt`.
+- `judgeAnswers/{random id}` ("Prompt injection defences" item 5): one output judge answer per
+  judged generation, no uid and no user input; `text` only with `outputJudgeKeepText`;
+  `expiresAt` (TTL, 90 days). Read with `npm run admin -- judge`.
 - `config/runtime`: see below.
 - `config/owner` (set by the owner in the console, never in the repo): `uids` (Firebase uids)
   and/or `emails` (addresses of Google accounts linked to the user, matched against its
@@ -1747,13 +1845,14 @@ console", "Settings": checked, field paths only, audited and alerted), rather th
 fields that are read-only there (prices, the provider setup) are changed by the profile switch or
 by hand. Created in the console if missing (Firestore > `config` > `runtime`). Every field is optional; a missing
 field uses the default. A present but invalid field never fails open: `generationEnabled`,
-`allowSandbox` and `consumptionSampleContentProvided` then read as `false`, every other field uses
+`allowSandbox`, `consumptionSampleContentProvided` and `outputJudgeKeepText` then read as `false`, every other field uses
 its default, and a warning "config/runtime has invalid fields" names them. Instances cache it for
 30 s.
 
 | field | type | default | meaning |
 |---|---|---|---|
 | `generationEnabled` | bool | `true` | Kill switch for new generations. The budget alert sets it to `false` (with `disabledBy` `budget alert …` and `disabledAt`); only you set it back: with `npm run admin -- config set generationEnabled on --apply --confirm generationEnabled`, which also deletes `disabledBy` / `disabledAt`, or by hand in the Firestore console (then delete those two as well). The owner console turns it back on only after a pause of its own or one by hand, never after the budget alert's ("The console's envelope"). |
+| `outputJudgeKeepText` | bool | `false` | Keep the judged recipe text with each output judge answer (`judgeAnswers.text`, "Prompt injection defences" item 5). Only after the privacy policy says so. |
 | `allowSandbox` | bool | `false` | Grant credits for Play licence-tester and App Store sandbox/TestFlight purchases. Turn on for App Review and your own testing, off otherwise. Anyone with a TestFlight build can then get free credits, up to the two caps below. |
 | `sandboxDailyCap` | integer ≥ 0 | `20` | Sandbox purchases that may grant credits per UTC day, across all users. Over it: `RETRY`. |
 | `sandboxDailyCredits` | integer ≥ 0 | `200` | Credits sandbox purchases may grant per UTC day, across all users. Over it: `RETRY`; one purchase worth more than this: `REJECTED_PERMANENT`. |
@@ -2400,6 +2499,7 @@ a refusal (`WEB_LIMIT`) says the same. The table (USD amounts are stored in micr
 | `generationEnabled` | on | off at any time; on again, except while the budget alert's pause stands (`disabledBy` starting `budget alert`) | on/off; on clears `disabledBy` / `disabledAt` | yes |
 | `allowSandbox` | off | only off | on/off | yes |
 | `outputJudge` | off | only stricter: off → shadow → enforce | off / shadow / enforce | yes |
+| `outputJudgeKeepText` | off | only off | on/off | yes |
 | **Spending limits** | | | | |
 | `dailySpendBaseMicroUsd` | USD 1.20 | up to USD 3.00 (2.5×), or any lower value | USD 0–20 | yes |
 | `dailySpendMaxMicroUsd` | USD 2.00 | up to USD 5.00 (2.5×), or lower | USD 0–50 | yes |

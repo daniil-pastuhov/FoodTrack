@@ -192,7 +192,7 @@ describe("the registry", () => {
     generationEnabled: false, allowSandbox: true, consumptionSampleContentProvided: false,
     dailyCap: 10, sandboxDailyCap: 1, sandboxDailyCredits: 2, perUserPerMinute: 1, perUserPerDay: 2, verifyPerMinute: 1, infraRefundsPerDay: 1,
     dailySpendBaseMicroUsd: 1, dailySpendMaxMicroUsd: 2, dailySpendRevenueFraction: 0.5, netMicroUsdPerCredit: 1, perUserDailySpendMicroUsd: 1,
-    refundAbuseThreshold: 3, budgetKillFraction: 0.5, rejectedPromptsPerDay: 1, outputJudge: "enforce",
+    refundAbuseThreshold: 3, budgetKillFraction: 0.5, rejectedPromptsPerDay: 1, outputJudge: "enforce", outputJudgeKeepText: true,
     costs: { recipe: 2, menu2: 5, menu3: 7, recipeImage: 5, recipeImageSteps: 6, menuSets: { "4": { "3": 9 } } },
     prices: { inputUsdPerMTok: 2, outputUsdPerMTok: 8, imageUsdPerImage: { "vertex/gemini-3.1-flash-image": 0.08 }, textUsdPerMTok: { "mistral/mistral-medium-latest": { inputUsdPerMTok: 1, outputUsdPerMTok: 3 } } },
     image: { provider: "vertex", model: "gemini-3.1-flash-lite-image", fallbackModel: "gemini-nano-banana-2.1", maxStepImages: 1 },

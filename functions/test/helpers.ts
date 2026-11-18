@@ -9,10 +9,11 @@ import { randomUUID } from "node:crypto";
 import type { GenerateRequest } from "../src/contract";
 import type { Prompt } from "../src/adapters/prompt";
 import { menuDates, menuDaysOf, coursesFor } from "../src/contract";
-import { ANDROID_FIREBASE_APP_ID, IOS_FIREBASE_APP_ID } from "../src/constants";
+import { ANDROID_FIREBASE_APP_ID, IOS_FIREBASE_APP_ID, JUDGE } from "../src/constants";
 import { loadRuntimeConfig } from "../src/model";
 import { verifyPurchase as verifyCore } from "../src/core/purchases";
 import { EnvelopeSealer, LocalKeyWrapper } from "../src/adapters/envelope";
+import { FirestoreJudgeLog } from "../src/core/judgeLog";
 import {
   AppleTokenError,
   ConsumptionRejectedError,
@@ -29,6 +30,8 @@ import {
   type Deps,
   type GenerationLimits,
   type GenerationResult,
+  type JudgeAnswer,
+  type JudgedOutput,
   type JudgeResult,
   type JudgeVerdict,
   type LlmUsage,
@@ -360,16 +363,22 @@ export class FakeImageGenerator implements RecipeImageGenerator {
 
 /** The output judge: answers `verdict` (or the queued ones) and counts its calls. */
 export class FakeJudge implements OutputJudge {
+  /** The deploy default, so a test's reservation is planFor's default. */
+  model: string = JUDGE.model;
   calls = 0;
   verdict: JudgeVerdict = "ok";
   next: (() => Promise<JudgeResult>)[] = [];
   usage: LlmUsage | undefined = fakeUsage({ inputTokens: 800, outputTokens: 5, thinkingTokens: 20 });
+  answer: JudgeAnswer | undefined = { where: "none", issues: [], quality: 5, note: "Looks fine." };
+  /** What the last call judged. */
+  seen?: JudgedOutput;
 
-  async judge(): Promise<JudgeResult> {
+  async judge(output: JudgedOutput): Promise<JudgeResult> {
     this.calls++;
+    this.seen = output;
     const n = this.next.shift();
     if (n) return n();
-    return { verdict: this.verdict, ...(this.usage ? { usage: this.usage } : {}) };
+    return { verdict: this.verdict, ...(this.answer ? { answer: this.answer } : {}), ...(this.usage ? { usage: this.usage } : {}) };
   }
 }
 
@@ -423,6 +432,8 @@ export interface TestDeps extends Deps {
   appStore: FakeAppStore;
   generator: FakeGenerator;
   judge: FakeJudge;
+  /** The real Firestore writer of judge answers (core/judgeLog.ts); `await deps.judgeLog.settled()` before reading them. */
+  judgeLog: FirestoreJudgeLog;
   imageGenerator: FakeImageGenerator;
   appleRevoker: FakeRevoker;
   clock: Clock;
@@ -451,6 +462,7 @@ export function makeDeps(): TestDeps {
     appStore: new FakeAppStore(),
     generator: new FakeGenerator(),
     judge: new FakeJudge(),
+    judgeLog: new FirestoreJudgeLog(db, clock.now),
     imageGenerator: new FakeImageGenerator(),
     appleRevoker: new FakeRevoker(),
     // The real envelope code, with an in-memory key-encryption key in place of Cloud KMS.

@@ -12,6 +12,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { GenerateContentParameters, GenerateContentResponse } from "@google/genai";
 import { GeminiRecipeGenerator, type StreamingModels } from "../src/adapters/gemini";
+import { JUDGE, JUDGE_PRICES } from "../src/constants";
 import { buildPrompt } from "../src/adapters/prompt";
 import { validateGenerateRequest } from "../src/contract";
 import { generateRecipe, planFor, spendMicroUsd } from "../src/core/generation";
@@ -265,7 +266,7 @@ describe("selecting a new provider: config, profile, readiness", () => {
 });
 
 describe("generateRecipe through the new provider", () => {
-  test("its answer is delivered, booked at its own price (the judge at Gemini's) and logged by provider", async () => {
+  test("its answer is delivered, booked at its own price (the judge at its own model's) and logged by provider", async () => {
     await seed(5);
     const q = fetchQueue([{ status: 200, body: sse(sampleRecipe()) }]);
     const deps = routed(q.fetch);
@@ -281,7 +282,7 @@ describe("generateRecipe through the new provider", () => {
     const judge = deps.judge.usage!;
     expect(g.actualMicroUsd).toBe(spendMicroUsd([
       { inputUsdPerMTok: 0.11, outputUsdPerMTok: 0.33, inputTokens: 900, outputTokens: 400 },
-      { inputUsdPerMTok: 1.5, outputUsdPerMTok: 7.5, inputTokens: judge.inputTokens, outputTokens: judge.outputTokens + judge.thinkingTokens },
+      { ...JUDGE_PRICES[JUDGE.model], inputTokens: judge.inputTokens, outputTokens: judge.outputTokens + judge.thinkingTokens },
     ]));
     expect(g.actualMicroUsd).toBeLessThan(microUsd(DEFAULT_RUNTIME_CONFIG.prices, 900 + judge.inputTokens, 400 + judge.outputTokens + judge.thinkingTokens));
     expect(g).toMatchObject({ textProvider: "fakeeu", usage: { model: "fake-small-2611", inputTokens: 900 + judge.inputTokens } });
