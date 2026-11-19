@@ -465,7 +465,7 @@ them with `allowSandbox` only.
   (`gcloud secrets add-iam-policy-binding OPENAI_API_KEY --member serviceAccount:recipe-functions@bestbefore-f9ee1.iam.gserviceaccount.com --role roles/secretmanager.secretAccessor --project bestbefore-f9ee1`),
   then switch the picture model or the text model to an OpenAI option (step 13). OpenAI then
   becomes a data processor of the picture prompts, and, for the text, of the recipe requests
-  themselves (update the privacy policy first; step 13e).
+  themselves (update the privacy policy first; step 13g).
 
 ### 13. Owner console: switching the providers (functions/README.md "The owner console")
 
@@ -473,7 +473,7 @@ A dashboard page (what is in force now, the four provider switches and the runti
 (`https://bestbefore-f9ee1.firebaseapp.com/`). Until these are done the switches work from a shell
 only (`npm run admin -- providers list | set <switch> <value> --apply --project bestbefore-f9ee1`, "Provider
 switches"), and the board shows the setup in force with a link that leads nowhere yet. (The page
-first shipped with named profiles, 2026-11-18; step 13e replaces them with the four switches.)
+first shipped with named profiles, 2026-11-18; step 13g replaces them with the four switches.)
 
 - [x] **(done 2026-11-18, agent)** **Register a Web app** in the Firebase project (Project settings > General > Your apps > Add
   app > Web; a nickname such as "Owner console"; Hosting can be left unticked). The page reads its
@@ -530,12 +530,12 @@ first shipped with named profiles, 2026-11-18; step 13e replaces them with the f
 - [x] **(done 2026-11-18, agent)** Apply the new alert, "Recipe: provider profile switched"
   (`functions/alerts/policies/provider-profile-changed.json`):
   `python3 functions/alerts/alerts.py --project bestbefore-f9ee1` (dry run), then with `--apply`.
-- [ ] **Check**: step 13e, once the four switches are deployed.
+- [ ] **Check**: step 13g, once the four switches are deployed.
 - [ ] Decide whether OpenAI may ever be switched on: its options stay "not ready" until the code's
   `approved` flags (`openaiImage` for pictures, `openaiText` for the recipe text) are turned on
   (after the privacy policy names OpenAI) and its key is set (step 12, last item).
 
-### 13e. The four provider switches (2026-11-19; functions/README.md "Provider switches") **(owner)**
+### 13g. The four provider switches (2026-11-19; functions/README.md "Provider switches") **(owner)**
 
 The named profiles are replaced by four switches, each set on its own: the text model, the text
 fallback, the picture model, the picture fallback. Two callables are new and two are gone, so:
@@ -635,7 +635,7 @@ until the service account can read it. When the adapter is merged and before swi
 - [ ] **Deploy the functions** (the approval and the longer times are code):
   `cd functions && npm ci && npx firebase deploy --only functions,firestore --project bestbefore-f9ee1`.
 - [ ] **Switch the pictures to FLUX** (what the `flux-eu` profile was): in the owner console
-  (step 13e, the Picture model switch: `bfl/flux-3-image-klein`; the Picture fallback,
+  (step 13g, the Picture model switch: `bfl/flux-3-image-klein`; the Picture fallback,
   `vertex/gemini-nano-banana-2.1` by default, may stay or be switched to Flash-Lite Image) or from a
   shell: `npm run admin -- providers set image bfl/flux-3-image-klein` (dry run), then the same
   with `--apply --project bestbefore-f9ee1`. `providers list` should show it ready first. Then
