@@ -20,6 +20,7 @@ import { ImageGenerationError, type GeneratedImage, type ImagePrompt, type Image
 import { CAPACITY_5XX as RETRYABLE_5XX, retryAfterMs } from "../providers/failure";
 import type { ImageProviderDescriptor } from "../providers/types";
 import { openaiModelInfo, vertexModelInfo } from "./modelProbes";
+import { OPENAI_EXHAUSTED, OPENAI_SECRET } from "./openaiText";
 
 export { ImageRouter } from "../providers/router";
 
@@ -192,7 +193,7 @@ export function openAISize(model: string, aspectRatio: ImagePrompt["aspectRatio"
  * 2026-11-17, and again 2026-11-18 for GPT-Image-2.6): one JPEG in the prompt's shape (openAISize),
  * compression 85, moderation "auto" (the stricter of the two). GPT-Image-2.6's `complexity` is
  * left out (the model's default, `high`; "no separate fee", but it can add latency): to be
- * compared once the profile is tried live. No `safety_identifier` and no `user`: OpenAI gets no identifier of the
+ * compared once the option is tried live. No `safety_identifier` and no `user`: OpenAI gets no identifier of the
  * person.
  */
 export function openAIImageBody(prompt: ImagePrompt, model: string, quality: "low" | "medium" | "high"): Record<string, unknown> {
@@ -245,9 +246,10 @@ export class OpenAIImageGenerator implements RecipeImageGenerator {
       const code = `${body.error?.code ?? ""} ${body.error?.type ?? ""}`;
       if (res.status === 400 && MODERATION.test(code)) throw new ImageGenerationError("safety", "OpenAI moderation", false);
       if (res.status === 401 || res.status === 403) throw new ImageGenerationError("config", `OpenAI ${res.status}`, false);
-      // An exhausted account (`insufficient_quota`, or a 402) made nothing and was not billed: the
-      // core asks the fallback, or the default provider (README "Adding a provider").
-      if (res.status === 402 || (res.status === 429 && /insufficient_quota/.test(code))) {
+      // An exhausted account (a 402, or a 429 whose code says the credit, a spending limit or the
+      // usage limit is used up: OPENAI_EXHAUSTED) made nothing and was not billed: the core asks
+      // the fallback, or the default provider (README "Adding a provider").
+      if (res.status === 402 || (res.status === 429 && OPENAI_EXHAUSTED.test(code))) {
         throw new ImageGenerationError("out_of_credit", `OpenAI ${res.status}`, false, false, res.status);
       }
       // A refused request is not billed; a 5xx may have been. A rate limit (429) and the passing
@@ -332,12 +334,8 @@ export const openaiImage: ImageProviderDescriptor = {
   processing: "OpenAI, United States (no EU-only processing by default)",
   // Owner's decision needed before this flips: README "What a new provider means for privacy".
   privacy: { approved: false, missing: "OpenAI is not yet named in the privacy policy's processor list (a code change turns this on)" },
-  secret: {
-    id: "openai",
-    param: "OPENAI_API_KEY_SECRET",
-    name: "OPENAI_API_KEY",
-    missing: "The OpenAI API key is not in Secret Manager, or the service account can't read it",
-  },
+  // The same key as the recipe text (adapters/openaiText.ts).
+  secret: OPENAI_SECRET,
   usdPerImage: { "gpt-image-2.6-flare": 0.035 },
   tokenPrices: { "gpt-image-2.6-flare": { input: 5, outputText: 30, outputImage: 30 } },
   create: (ctx) => new OpenAIImageGenerator({ apiKey: () => ctx.secret(), ...(ctx.fetch ? { fetch: ctx.fetch } : {}) }),

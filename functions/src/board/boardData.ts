@@ -6,8 +6,7 @@
  * (uid, token, order or transaction id) ever reaches this module (see `purchaseRow`).
  */
 import { REVENUE_WINDOW_DAYS } from "../constants";
-import { dailySpendCeiling, imageMicroUsdOf, utcDay, type RuntimeConfig } from "../model";
-import { PROVIDER_PROFILES, activeProfileOf } from "../providers/profiles";
+import { dailySpendCeiling, imageFallbackOf, imageMicroUsdOf, utcDay, type RuntimeConfig } from "../model";
 
 /** The owner console (README "The owner console"): the project's default Firebase Hosting site. */
 export const ownerConsoleUrl = (project: string) => `https://${project}.firebaseapp.com/`;
@@ -157,10 +156,11 @@ export interface Board {
   /** The welcome grant's setting (config/runtime.welcome): free recipes per claim, grants a day. */
   welcome: RuntimeConfig["welcome"];
   /**
-   * The recipe pictures' setup in force (config/runtime.image), read-only: the matching provider
-   * profile ("custom" when set by hand) and whether the apps are offered pictures.
+   * The provider switches in force (config/runtime.text and .image), read-only: the text's model and
+   * fallback, the picture's (each "provider/model", or "none"; the picture "off"), and whether the
+   * apps are offered pictures.
    */
-  pictures: { profile: string; label: string; provider: string; model: string; fallbackModel: string; on: boolean; consoleUrl: string };
+  pictures: { text: string; textFallback: string; provider: string; model: string; fallback: string; on: boolean; consoleUrl: string };
   dailySpendMaxMicroUsd: number;
   dailySpendBaseMicroUsd: number;
   /** What the breaker compares with today's ceiling: spent plus the worst cases still reserved. */
@@ -412,14 +412,14 @@ export function buildBoard(input: BoardInput): Board {
 }
 
 function picturesOf(config: RuntimeConfig, project: string): Board["pictures"] {
-  // A profile matches only with its text setup in force too (the board's "picture setup" line names it).
-  const p = activeProfileOf(config.image, PROVIDER_PROFILES, config.text, config.providerDefaults?.text);
+  const t = config.text;
+  const fb = imageFallbackOf(config);
   return {
-    profile: p?.id ?? "custom",
-    label: p?.label ?? "Set by hand (no profile)",
+    text: `${t.provider}/${t.model}`,
+    textFallback: t.fallbackModel ? `${t.fallbackProvider || t.provider}/${t.fallbackModel}` : "none",
     provider: config.image.provider,
     model: config.image.provider === "off" ? "" : config.image.model,
-    fallbackModel: config.image.provider === "off" ? "" : config.image.fallbackModel,
+    fallback: fb ? `${fb.provider}/${fb.model}` : "none",
     on: imageMicroUsdOf(config) !== null && config.costs.recipeImage !== undefined,
     consoleUrl: ownerConsoleUrl(project),
   };

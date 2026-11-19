@@ -7,13 +7,13 @@
  *   it is announced on, and the day a person or agent last read that page. Providers announce
  *   retirements on documentation pages (and by email to projects using the model); only some APIs
  *   say anything about it, so the table is the source and the probes below only add to it.
- *   `lifecycleProblems` (run by test/modelLifecycle.test.ts) fails when a model any profile, deploy
+ *   `lifecycleProblems` (run by test/modelLifecycle.test.ts) fails when a model any switch option, deploy
  *   default, default param or price table uses has no entry, so a model cannot be added without one.
  * - **The check** (`assessModels` + `logModelLifecycle`, run daily by the scheduled function
  *   checkModelLifecycle; read-only by `npm run admin -- models`): for every model selected or
  *   configured as a fallback in `config/runtime` (over the params, over the defaults: text, its
  *   fallback, the output judge, the weekly prompt review, pictures, their fallback, the deploy defaults that out-of-credit
- *   failures go to) and, less urgently, every model of a listed profile:
+ *   failures go to) and, less urgently, every model a provider switch offers (providers/catalogue.ts):
  *   `model_retirement_near` inside 90 / 30 / 7 days of the retirement date or past it (once per
  *   band, rising severity; every run once past while in use), `model_lifecycle_stale` when the
  *   table's last check of a model in use is older than LIFECYCLE_STALE_DAYS (or it has no entry),
@@ -32,7 +32,7 @@ import type { Firestore } from "firebase-admin/firestore";
 import { DEFAULT_IMAGE_SELECTION, DEFAULT_TEXT_SELECTION, JUDGE, JUDGE_PRICES, PROMPT_REVIEW } from "../constants";
 import type { RuntimeConfig } from "../model";
 import type { Logger } from "../ports";
-import { PROVIDER_PROFILES, type ProviderProfile } from "./profiles";
+import { catalogueModels } from "./catalogue";
 import { allProviders, imageProviders, textProviders } from "./registry";
 import type { ModelInfo, ProviderContext, ProviderDescriptor } from "./types";
 
@@ -112,7 +112,23 @@ export const MODEL_LIFECYCLE: readonly LifecycleEntry[] = [
     retiresOn: null,
     source: OPENAI_DEPRECATIONS,
     checkedOn: "2026-11-18",
-    note: "Not on the deprecations page: no shutdown announced. Named there (with gpt-image-2.6-sunburst) as the replacement of gpt-image-1-mini, shut down December 1, 2026, which it replaced in profile openai (listed only, not tried live).",
+    note: "Not on the deprecations page: no shutdown announced (re-read 2026-11-19). Named there (with gpt-image-2.6-sunburst) as the replacement of gpt-image-1-mini, shut down December 1, 2026, and of gpt-image-2, shut down February 10, 2027. A picture option (listed only, not tried live).",
+  },
+  {
+    provider: "openai",
+    model: "gpt-6.1-terra",
+    retiresOn: null,
+    source: OPENAI_DEPRECATIONS,
+    checkedOn: "2026-11-19",
+    note: "Not on the deprecations page: no shutdown announced. Named there as the replacement of gpt-5-mini (shut down December 11, 2026). The OpenAI text adapter's default model (listed only, not tried live).",
+  },
+  {
+    provider: "openai",
+    model: "gpt-6-luna",
+    retiresOn: null,
+    source: OPENAI_DEPRECATIONS,
+    checkedOn: "2026-11-19",
+    note: "Not on the deprecations page: no shutdown announced. Named there as the replacement of gpt-5-nano, GPT-4o, GPT-4o mini, GPT-4.1 and GPT-4.1 mini. A text option (listed only, not tried live).",
   },
   {
     provider: "bfl",
@@ -170,32 +186,19 @@ export function retirementBand(daysLeft: number): 0 | 7 | 30 | 90 | null {
 
 // --- Which models are in use ---------------------------------------------------------------------
 
-export type ModelRole = "text" | "text_fallback" | "judge" | "prompt_review" | "image" | "image_fallback" | "text_default" | "image_default" | `profile:${string}`;
+export type ModelRole = "text" | "text_fallback" | "judge" | "prompt_review" | "image" | "image_fallback" | "text_default" | "image_default" | "option";
 
 export interface ModelUse {
   provider: string;
   model: string;
-  /** Every role it has; profile roles are `profile:<id>`. */
+  /** Every role it has; `option`: offered by a provider switch. */
   roles: ModelRole[];
-  /** Selected, a fallback or a deploy default (true), or only in a listed profile (false). */
+  /** Selected, a fallback or a deploy default (true), or only offered by a switch (false). */
   inUse: boolean;
 }
 
-function profileModels(p: ProviderProfile): { provider: string; model: string }[] {
-  const out: { provider: string; model: string }[] = [];
-  if (p.text) {
-    out.push({ provider: p.text.provider, model: p.text.model });
-    if (p.text.fallbackModel) out.push({ provider: p.text.fallbackProvider || p.text.provider, model: p.text.fallbackModel });
-  }
-  if (p.image.provider !== "off" && p.image.model) {
-    out.push({ provider: p.image.provider, model: p.image.model });
-    if (p.image.fallbackModel) out.push({ provider: p.image.fallbackProvider || p.image.provider, model: p.image.fallbackModel });
-  }
-  return out;
-}
-
 /**
- * The models a parsed `config/runtime` puts in use, then those only in a listed profile. `judge`
+ * The models a parsed `config/runtime` puts in use, then those only a switch offers (`listed`). `judge`
  * is the output judge's model (GEMINI_JUDGE_MODEL, else GEMINI_MODEL; always the google provider),
  * in use while `outputJudge` is not "off". `review` is the weekly prompt review's model
  * (PROMPT_REVIEW_MODEL, always the google provider; core/promptReview.ts), in use while
@@ -204,7 +207,7 @@ function profileModels(p: ProviderProfile): { provider: string; model: string }[
 export function modelsInUse(
   config: Pick<RuntimeConfig, "text" | "image" | "providerDefaults" | "outputJudge"> & Partial<Pick<RuntimeConfig, "promptReviewEnabled">>,
   judge: { provider: string; model: string } | null,
-  profiles: readonly ProviderProfile[] = PROVIDER_PROFILES,
+  listed: readonly { provider: string; model: string }[] = catalogueModels(config.providerDefaults?.text),
   review: { provider: string; model: string } | null = null,
 ): ModelUse[] {
   const out: ModelUse[] = [];
@@ -230,7 +233,7 @@ export function modelsInUse(
   }
   add(config.providerDefaults.text.provider, config.providerDefaults.text.model, "text_default", true);
   if (config.providerDefaults.image) add(config.providerDefaults.image.provider, config.providerDefaults.image.model, "image_default", true);
-  for (const p of profiles) for (const m of profileModels(p)) add(m.provider, m.model, `profile:${p.id}`, false);
+  for (const m of listed) add(m.provider, m.model, "option", false);
   // In use first, then listed; each in the order found.
   return [...out.filter((u) => u.inUse), ...out.filter((u) => !u.inUse)];
 }
@@ -238,7 +241,7 @@ export function modelsInUse(
 // --- The table's own checks ----------------------------------------------------------------------
 
 /**
- * Every problem with the table (empty when sound): a model a profile, a deploy default, a
+ * Every problem with the table (empty when sound): a model a switch option, a deploy default, a
  * provider's default model or default param, the output judge's default (JUDGE.model, the
  * GEMINI_JUDGE_MODEL param's default) or a price table (JUDGE_PRICES included) names without an entry; an entry
  * twice; an entry for a provider the registry doesn't have; a malformed date or source. `extra`
@@ -268,7 +271,7 @@ export function lifecycleProblems(
   // So is the weekly prompt review (core/promptReview.ts).
   need.push({ provider: "google", model: PROMPT_REVIEW.model, why: "PROMPT_REVIEW.model (PROMPT_REVIEW_MODEL default)" });
   for (const m of Object.keys(JUDGE_PRICES)) need.push({ provider: "google", model: m, why: "JUDGE_PRICES" });
-  for (const p of PROVIDER_PROFILES) for (const m of profileModels(p)) need.push({ ...m, why: `profile ${p.id}` });
+  for (const m of catalogueModels()) need.push({ provider: m.provider, model: m.model, why: `${m.slot} option` });
   const missing = new Set<string>();
   for (const n of need) {
     const key = `${n.provider}/${n.model}`;

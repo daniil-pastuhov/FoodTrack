@@ -91,7 +91,7 @@ export const SECTIONS: readonly { id: SectionId; title: string; help: string; wi
   { id: "sandbox", title: "Test purchases", help: "Brakes on sandbox, TestFlight and licence-tester purchases while they are allowed." },
   { id: "costs", title: "What things cost users", help: "Recipes from a pack each request takes. The apps show the table the server sends; more days or courses are never cheaper, and no menu is cheaper than a recipe.", wide: true },
   { id: "welcome", title: "Free recipes for signing in", help: "The welcome grant: free recipes once per Google or Apple account." },
-  { id: "pictures", title: "Pictures", help: "Recipe pictures. The provider and model are switched with the provider profiles above." },
+  { id: "pictures", title: "Pictures", help: "Recipe pictures. The model and its fallback are switched with the provider switches above." },
   { id: "taste", title: "Taste quiz", help: "Steps and options left out of the quiz and dropped from requests, without a deploy.", wide: true },
   { id: "reports", title: "Reports", help: "\"Report this recipe\": how many, and how long they are kept." },
   { id: "balances", title: "Provider balances", help: "The hourly balance check logs provider_balance_low (alerted on) under these thresholds. Empty: not checked." },
@@ -380,29 +380,29 @@ export const SETTINGS: readonly SettingDef[] = [
 /** Fields shown but not editable here, with why. */
 export interface ReadOnlyDef {
   id: string;
-  /** The card it is shown in: a section, the provider profiles ("providers"), or the last card ("other"). */
+  /** The card it is shown in: a section, the provider switches ("providers"), or the last card ("other"). */
   section: SectionId | "providers" | "other";
   label: string;
   reason: string;
   read(cfg: RuntimeConfig): unknown;
 }
 
-const RAW_PRICES = "Raw model prices: every reservation, the spend ceilings and the per-account brake are worked out from them, and a price below the provider's real one lets real spend pass every ceiling unnoticed. Change them in Firestore by hand after checking the provider's price page (README \"Price table\"); a provider profile switch raises a picture price it needs itself.";
-const BY_PROFILE = "Set by the provider profile switch above, which checks the provider's key, its privacy approval and its price first; a model typed here could be unpriced (pictures off, or the text falling back) or a provider not yet approved.";
+const RAW_PRICES = "Raw model prices: every reservation, the spend ceilings and the per-account brake are worked out from them, and a price below the provider's real one lets real spend pass every ceiling unnoticed. Change them in Firestore by hand after checking the provider's price page (README \"Price table\"); a provider switch raises a picture price it needs itself.";
+const BY_SWITCH = "Set by the provider switches above, each of which checks the provider's key, its privacy approval and its price first; a model typed here could be unpriced (pictures off, or the text falling back) or a provider not yet approved.";
 
 export const READ_ONLY: readonly ReadOnlyDef[] = [
   { id: "prices.inputUsdPerMTok", section: "spending", label: "Gemini text: USD per 1M input tokens", reason: RAW_PRICES, read: (c) => c.prices.inputUsdPerMTok },
   { id: "prices.outputUsdPerMTok", section: "spending", label: "Gemini text: USD per 1M output tokens", reason: RAW_PRICES, read: (c) => c.prices.outputUsdPerMTok },
   { id: "prices.imageUsdPerImage", section: "spending", label: "USD per picture, by provider/model", reason: RAW_PRICES, read: (c) => c.prices.imageUsdPerImage ?? {} },
   { id: "prices.textUsdPerMTok", section: "spending", label: "Other text providers' token prices", reason: RAW_PRICES, read: (c) => c.prices.textUsdPerMTok ?? {} },
-  { id: "image.provider", section: "providers", label: "Picture provider", reason: BY_PROFILE, read: (c) => c.image.provider },
-  { id: "image.model", section: "providers", label: "Picture model", reason: BY_PROFILE, read: (c) => c.image.model },
-  { id: "image.fallbackModel", section: "providers", label: "Picture fallback model", reason: BY_PROFILE, read: (c) => c.image.fallbackModel },
-  { id: "image.fallbackProvider", section: "providers", label: "Picture fallback provider", reason: BY_PROFILE, read: (c) => c.image.fallbackProvider ?? "" },
-  { id: "text.provider", section: "providers", label: "Recipe text provider", reason: BY_PROFILE, read: (c) => c.text.provider },
-  { id: "text.model", section: "providers", label: "Recipe text model", reason: BY_PROFILE, read: (c) => c.text.model },
-  { id: "text.fallbackProvider", section: "providers", label: "Recipe text fallback provider", reason: BY_PROFILE, read: (c) => c.text.fallbackProvider },
-  { id: "text.fallbackModel", section: "providers", label: "Recipe text fallback model", reason: BY_PROFILE, read: (c) => c.text.fallbackModel },
+  { id: "image.provider", section: "providers", label: "Picture provider", reason: BY_SWITCH, read: (c) => c.image.provider },
+  { id: "image.model", section: "providers", label: "Picture model", reason: BY_SWITCH, read: (c) => c.image.model },
+  { id: "image.fallbackModel", section: "providers", label: "Picture fallback model", reason: BY_SWITCH, read: (c) => c.image.fallbackModel },
+  { id: "image.fallbackProvider", section: "providers", label: "Picture fallback provider", reason: BY_SWITCH, read: (c) => c.image.fallbackProvider ?? "" },
+  { id: "text.provider", section: "providers", label: "Recipe text provider", reason: BY_SWITCH, read: (c) => c.text.provider },
+  { id: "text.model", section: "providers", label: "Recipe text model", reason: BY_SWITCH, read: (c) => c.text.model },
+  { id: "text.fallbackProvider", section: "providers", label: "Recipe text fallback provider", reason: BY_SWITCH, read: (c) => c.text.fallbackProvider },
+  { id: "text.fallbackModel", section: "providers", label: "Recipe text fallback model", reason: BY_SWITCH, read: (c) => c.text.fallbackModel },
   {
     id: "consumptionSampleContentProvided", section: "other", label: "Told to Apple: sample content provided",
     reason: "A statement to Apple in every refund consumption answer (the pack sheet explains what a recipe buys before purchase). It changes only if the app's pack sheet changes, with a code review, not as a setting.",
@@ -777,7 +777,7 @@ export function sectionFacts(id: SectionId, cfg: RuntimeConfig, today: TodayFigu
   return [];
 }
 
-/** What is in force right now: the status strip (the provider setup comes from getProviderProfiles). */
+/** What is in force right now: the status strip (the provider switches come from getProviderSwitches). */
 export function statusOf(data: Data, cfg: RuntimeConfig, today: TodayFigures | null): StatusItem[] {
   const out: StatusItem[] = [];
   const by = typeof data.disabledBy === "string" ? data.disabledBy : "";

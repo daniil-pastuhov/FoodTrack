@@ -1,7 +1,7 @@
 /**
  * Every recipe-text and recipe-picture provider the server can call: one entry per adapter
  * (README "Adding a provider"). The rest of the server reads providers only through this file:
- * which ids are valid in config/runtime and the profiles, their default prices, their secrets,
+ * which ids are valid in config/runtime and the switches' options (providers/catalogue.ts), their default prices, their secrets,
  * params and readiness, and the adapters src/index.ts builds.
  *
  * To add a provider: write its adapter file in src/adapters/ exporting a descriptor
@@ -11,6 +11,7 @@ import { IMAGE as IMAGE_TIMES } from "../constants";
 import { bflImage } from "../adapters/bfl";
 import { googleText } from "../adapters/gemini";
 import { openaiImage, vertexImage } from "../adapters/image";
+import { openaiText } from "../adapters/openaiText";
 import type {
   ImageProviderDescriptor,
   ImageTiming,
@@ -23,6 +24,7 @@ import type {
 
 const TEXT: TextProviderDescriptor[] = [
   googleText,
+  openaiText,
 ];
 
 const IMAGE: ImageProviderDescriptor[] = [

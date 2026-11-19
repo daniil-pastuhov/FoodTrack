@@ -17,7 +17,7 @@ import { Timestamp } from "firebase-admin/firestore";
 import { DEFAULT_RUNTIME_CONFIG, dailySpendCeiling, loadRuntimeConfig, parseRuntimeConfig, statsRef, uidHash, utcDay, validCosts } from "../src/model";
 import { OwnerCallGate, refusalReason, type OwnerCallRequest } from "../src/core/ownerCall";
 import type { Logger } from "../src/ports";
-import { OWNER_DOC, PROFILE_CHANGES, RUNTIME_DOC, SwitchRefused, activateProfile, type OwnerEnv } from "../src/core/providerSwitch";
+import { OWNER_DOC, RUNTIME_DOC, SWITCH_CHANGES, SwitchRefused, switchProvider, type OwnerEnv } from "../src/core/providerSwitch";
 import {
   EXCLUDED,
   FAMILIES,
@@ -560,14 +560,15 @@ describe("applySettings", () => {
     expect(env.logs.filter((l) => l.message === "owner_settings_changed")).toEqual([]);
   });
 
-  test("the profile switch still works beside it, and neither touches the other's fields", async () => {
+  test("the provider switches still work beside it, and neither touches the other's fields", async () => {
     await db.doc(RUNTIME_DOC).set(FULL_CONFIG);
     const env = makeEnv();
     await applySettings(env, [{ id: "image.maxStepImages", value: 1 }], { apply: true, actor: { via: "cli" }, confirmSensitive: ["image.maxStepImages"] });
-    await activateProfile(env, "nano-banana", { apply: true, actor: { via: "cli" } });
+    await switchProvider(env, "image-fallback", "none", { apply: true, actor: { via: "cli" } });
+    await switchProvider(env, "image", "vertex/gemini-nano-banana-2.1", { apply: true, actor: { via: "cli" } });
     const image = (await runtime())!.image as Record<string, unknown>;
-    expect(image).toEqual({ provider: "vertex", model: "gemini-nano-banana-2.1", fallbackModel: "gemini-3.1-flash-lite-image", maxStepImages: 1 });
-    expect((await db.collection(PROFILE_CHANGES).get()).size).toBe(1);
+    expect(image).toEqual({ provider: "vertex", model: "gemini-nano-banana-2.1", fallbackModel: "", maxStepImages: 1 });
+    expect((await db.collection(SWITCH_CHANGES).get()).size).toBe(2);
     expect((await audits()).length).toBe(1);
   });
 
@@ -1054,7 +1055,7 @@ describe("the owner callables", () => {
     expect(await runtime()).toBeUndefined();
   });
 
-  test("src/index.ts binds both through the owner gate, like the profile callables", () => {
+  test("src/index.ts binds both through the owner gate, like the provider switch callables", () => {
     const index = readFileSync(join(__dirname, "../src/index.ts"), "utf8");
     expect(index).toMatch(/export const getOwnerSettings = onCall\(ownerCallable, \(request\) =>\s*ownerCall\("getOwnerSettings", request, \(env, authorization\) => ownerSettingsCore\(env, authorization\)\)\);/);
     expect(index).toMatch(/export const setOwnerSettings = onCall\(ownerCallable, \(request\) =>\s*ownerCall\("setOwnerSettings", request, \(env, authorization\) => setOwnerSettingsCore\(env, authorization, request\.data\)\)\);/);

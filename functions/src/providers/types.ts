@@ -89,7 +89,7 @@ export interface ProviderParam {
  * roles/secretmanager.secretAccessor on this secret alone (docs/recipe-setup.md).
  */
 export interface ProviderSecret {
-  /** Stable id used by profiles' readiness checks, e.g. "openai". */
+  /** Stable id used by the switch options' readiness checks, e.g. "openai"; adapters sharing a key share it. */
   id: string;
   /** The deploy parameter naming the secret, e.g. OPENAI_API_KEY_SECRET. */
   param: string;
@@ -113,7 +113,7 @@ export interface ProviderContext {
 
 /** The parts every provider descriptor has. */
 interface DescriptorBase {
-  /** Stable id, as written in config/runtime and the profiles; never reused for another provider. */
+  /** Stable id, as written in config/runtime and the switches' values; never reused for another provider. */
   id: string;
   label: string;
   /** Where it processes the prompt, in plain words (for the console and the privacy decision). */
@@ -121,7 +121,7 @@ interface DescriptorBase {
   /**
    * The owner's privacy approval of this provider, normally once the privacy policy's processor
    * list names it (README "What a new provider means for privacy"; bfl was approved before that,
-   * 2026-11-18). false keeps every profile using it listed but never
+   * 2026-11-18). false keeps every switch option using it listed but never
    * switchable; the text is what the console shows.
    */
   privacy: { approved: boolean; missing: string };
@@ -155,7 +155,7 @@ export interface TextProvider {
 
 export interface TextProviderDescriptor extends DescriptorBase {
   kind: "text";
-  /** Its default model when a profile or config names none. */
+  /** Its default model when a config names none. */
   defaultModel: string;
   /** The deploy parameter that overrides defaultModel (e.g. GEMINI_MODEL), if any. */
   defaultModelParam?: string;

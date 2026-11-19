@@ -474,8 +474,8 @@ export function renderBoardHtml(b: Board, hosted?: HostedOptions): string {
       meter(t.welcomeGrants, b.welcome.perDay, "Welcome grants today against the daily limit")),
     tile("Recipe pictures",
       b.pictures.on ? status("good", "On") : status("warn", "Off"),
-      `${esc(b.pictures.label)}` +
-        (b.pictures.provider === "off" ? "" : ` (<code>${esc(b.pictures.provider)}/${esc(b.pictures.model)}</code>, fallback ${b.pictures.fallbackModel ? `<code>${esc(b.pictures.fallbackModel)}</code>` : "none"})`) +
+      (b.pictures.provider === "off" ? "Pictures off" : `<code>${esc(b.pictures.provider)}/${esc(b.pictures.model)}</code>, fallback ${b.pictures.fallback === "none" ? "none" : `<code>${esc(b.pictures.fallback)}</code>`}`) +
+        `; recipe text <code>${esc(b.pictures.text)}</code>, fallback ${b.pictures.textFallback === "none" ? "none" : `<code>${esc(b.pictures.textFallback)}</code>`}` +
         `. Read-only here; <a href="${esc(b.pictures.consoleUrl)}" rel="noopener noreferrer">switch on the owner console</a>.`),
     tile("Unspent recipes",
       esc(int(b.holders.recipes)),
@@ -704,8 +704,8 @@ export function boardSummary(b: Board): string[] {
       ` Estimated margin (net revenue minus all model spend): ${usd(s.estimatedMarginMicroUsd)}.`,
     `Generations: ${int(p.succeeded)} written, ${int(p.contentFailures)} content failures, ${int(p.infraFailures)} infrastructure failures, ` +
       `${int(p.qualityFailures)} quality refusals; ${int(p.refundedCredits)} recipes refunded; ${int(p.unknownUsageCalls)} calls at worst case.`,
-    `Picture setup: ${b.pictures.profile} (${b.pictures.provider === "off" ? "off" : `${b.pictures.provider}/${b.pictures.model}, fallback ${b.pictures.fallbackModel || "none"}`}); ` +
-      `offered to the apps: ${b.pictures.on ? "yes" : "no"}. Switch: npm run admin -- providers use <profile>, or ${b.pictures.consoleUrl}`,
+    `Provider switches: text ${b.pictures.text}, fallback ${b.pictures.textFallback}; pictures ${b.pictures.provider === "off" ? "off" : `${b.pictures.provider}/${b.pictures.model}, fallback ${b.pictures.fallback}`}; ` +
+      `offered to the apps: ${b.pictures.on ? "yes" : "no"}. Switch: npm run admin -- providers set <switch> <value>, or ${b.pictures.consoleUrl}`,
     `Pictures: ${int(p.imageRequests)} recipes asked with pictures, ${int(p.imagesDelivered)} pictures delivered, ${int(p.imageFailures)} not. ` +
       `Reports (recipe_reported): ${int(t.reports)} today, ${int(p.reports)} in the period.`,
     ...(b.purchasesCapped
@@ -731,12 +731,12 @@ export function boardJson(b: Board): Record<string, unknown> {
     generationEnabled: b.generationEnabled,
     allowSandbox: b.allowSandbox,
     pictures: {
-      profile: b.pictures.profile,
       provider: b.pictures.provider,
       model: b.pictures.model,
-      fallbackModel: b.pictures.fallbackModel,
+      fallback: b.pictures.fallback,
       offered: b.pictures.on,
     },
+    text: { model: b.pictures.text, fallback: b.pictures.textFallback },
     today: {
       day: b.today,
       estimatedSpendMicroUsd: b.todayBookedMicroUsd,

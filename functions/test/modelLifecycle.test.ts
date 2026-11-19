@@ -46,7 +46,7 @@ const ctx = (): ProviderContext => ({ project: "p", param: () => "global", secre
 const entry = (model: string, over: Partial<LifecycleEntry> = {}): LifecycleEntry => ({
   provider: "vertex", model, retiresOn: null, source: "https://example.com/lifecycle", checkedOn: day(NOW), ...over,
 });
-const use = (model: string, inUse = true, roles: ModelUse["roles"] = [inUse ? "image" : "profile:x"]): ModelUse => ({ provider: "vertex", model, roles, inUse });
+const use = (model: string, inUse = true, roles: ModelUse["roles"] = [inUse ? "image" : "option"]): ModelUse => ({ provider: "vertex", model, roles, inUse });
 const prober = (fn: (model: string, signal: AbortSignal) => Promise<ModelInfo>): ProviderDescriptor =>
   ({ ...vertexImage, modelInfo: (_c: ProviderContext, m: string, s: AbortSignal) => fn(m, s) }) as ProviderDescriptor;
 const noProbe: ProviderDescriptor = { ...vertexImage, modelInfo: undefined } as ProviderDescriptor;
@@ -80,7 +80,7 @@ describe("the table", () => {
     expect(judgeModelOf({ GEMINI_JUDGE_MODEL: "" }, "gemini-3.8-flash")).toBe("gemini-3.8-flash");
   });
 
-  test("has an entry for every model a profile, a default, a default param or a price table uses", () => {
+  test("has an entry for every model a switch offers, a default, a default param or a price table uses", () => {
     expect(lifecycleProblems(MODEL_LIFECYCLE)).toEqual([]);
   });
 
@@ -117,16 +117,19 @@ describe("the table", () => {
 });
 
 describe("which models are in use", () => {
-  test("the defaults: text, the judge while it is on, pictures and their fallback; then the listed profiles", () => {
+  test("the defaults: text, the judge while it is on, pictures and their fallback; then the models only a switch offers", () => {
     const off = modelsInUse(parseRuntimeConfig({}), { provider: "google", model: "gemini-3.8-flash" });
     expect(off.filter((u) => u.inUse).map((u) => [`${u.provider}/${u.model}`, u.roles])).toEqual([
-      ["google/gemini-3.8-flash", ["text", "judge", "text_default"]],
-      ["vertex/gemini-3.1-flash-lite-image", ["image", "image_default", "profile:flash-lite", "profile:nano-banana", "profile:flux-eu"]],
-      ["vertex/gemini-nano-banana-2.1", ["image_fallback", "profile:flash-lite", "profile:nano-banana"]],
+      ["google/gemini-3.8-flash", ["text", "judge", "text_default", "option"]],
+      ["vertex/gemini-3.1-flash-lite-image", ["image", "image_default", "option"]],
+      ["vertex/gemini-nano-banana-2.1", ["image_fallback", "option"]],
     ]);
     expect(off.filter((u) => !u.inUse).map((u) => [`${u.provider}/${u.model}`, u.roles])).toEqual([
-      ["openai/gpt-image-2.6-flare", ["profile:openai"]],
-      ["bfl/flux-3-image-klein", ["profile:flux-eu"]],
+      ["openai/gpt-6.1-terra", ["option"]],
+      ["openai/gpt-6-luna", ["option"]],
+      ["openai/gpt-image-2.6-flare", ["option"]],
+      ["bfl/flux-3-image-klein", ["option"]],
+      ["bfl/flux-3-image", ["option"]],
     ]);
     // The judge's own model is in use only while the judge runs.
     const judgeOff = modelsInUse(parseRuntimeConfig({}), { provider: "google", model: "gemini-3.5-flash-lite" });
@@ -142,13 +145,13 @@ describe("which models are in use", () => {
   test("config/runtime over the defaults: a hand-set picture setup and pictures off", () => {
     const custom = parseRuntimeConfig({ image: { provider: "vertex", model: "gemini-nano-banana-2.1", fallbackModel: "" } });
     const inUse = modelsInUse(custom, null).filter((u) => u.inUse);
-    expect(inUse.map((u) => [u.model, u.roles.filter((r) => !r.startsWith("profile:"))])).toEqual([
+    expect(inUse.map((u) => [u.model, u.roles.filter((r) => r !== "option")])).toEqual([
       ["gemini-3.8-flash", ["text", "text_default"]],
       ["gemini-nano-banana-2.1", ["image"]],
       ["gemini-3.1-flash-lite-image", ["image_default"]],
     ]);
     const off = modelsInUse(parseRuntimeConfig({ image: { provider: "off" } }), null).filter((u) => u.inUse);
-    expect(off.map((u) => u.roles.filter((r) => !r.startsWith("profile:")))).toEqual([["text", "text_default"], ["image_default"]]);
+    expect(off.map((u) => u.roles.filter((r) => r !== "option"))).toEqual([["text", "text_default"], ["image_default"]]);
   });
 });
 
@@ -175,7 +178,7 @@ describe("retirement bands, told once each, against the marks in Firestore", () 
     expect(mark).toMatchObject({ provider: "vertex", model: "m1", band: 0, bandRetiresOn: day(NOW + 80 * DAY), lastRun: { probe: "none", daysLeft: -1, inUse: true } });
   });
 
-  test("a model only in a listed profile: lower severity, and once even when past", async () => {
+  test("a model only a switch offers: lower severity, and once even when past", async () => {
     const table = [entry("m2", { retiresOn: day(NOW + 5 * DAY) })];
     let r = await run([use("m2", false)], table, NOW);
     expect(r.logs.map((l) => [l.level, l.message, l.data?.band, l.data?.inUse])).toEqual([["warn", "model_retirement_near", 7, false]]);
@@ -336,12 +339,13 @@ describe("npm run admin -- models (read-only)", () => {
     const reports = await runModels({ probe: false, project: "demo-foodtracker" }, env);
     const text = lines.join("\n");
     expect(text).toContain("In use:");
-    expect(text).toContain("vertex/gemini-nano-banana-2.1  [image, profile:flash-lite, profile:nano-banana]");
+    expect(text).toContain("vertex/gemini-nano-banana-2.1  [image, option]");
     expect(text).toContain("vertex/gemini-3.1-flash-lite-image  [image_fallback, image_default,");
-    expect(text).toContain("google/gemini-3.8-flash  [text, judge, prompt_review, text_default]");
+    expect(text).toContain("google/gemini-3.8-flash  [text, judge, prompt_review, text_default, option]");
     expect(text).toContain("retires 2027-09-02 or later (288 days left); checked 2026-11-18 (0 days ago)");
-    expect(text).toContain("Only in listed profiles:");
-    expect(text).toContain("openai/gpt-image-2.6-flare  [profile:openai]");
+    expect(text).toContain("Only offered by a switch:");
+    expect(text).toContain("openai/gpt-image-2.6-flare  [option]");
+    expect(text).toContain("openai/gpt-6.1-terra  [option]");
     expect(text).toContain("no retirement announced");
     expect(text).toContain("Add --probe");
     expect(reports.every((r) => r.probe === "skipped")).toBe(true);

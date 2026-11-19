@@ -323,7 +323,7 @@ export interface ImageSelection {
   model: string;
   /**
    * The fallback's provider, when it is not `provider` (absent: the same provider). Lets a
-   * profile fall back across providers, e.g. FLUX to Vertex AI.
+   * picture fall back across providers, e.g. FLUX to Vertex AI (the picture fallback switch).
    */
   fallbackProvider?: string;
   /**

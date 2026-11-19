@@ -35,10 +35,11 @@ don't offer them). Checked against `functions/README.md` "Recipe pictures" and "
   retries, then deleted; on your device they stay with the saved recipe until you delete it (they
   are not in the app's backup file, nor in Android's cloud backup). (If the provider is ever switched, for example to OpenAI,
   the policy must name it before the switch: functions/README.md "What a new provider means for
-  privacy".)
+  privacy". The picture switches offer OpenAI already, listed but not switchable until its
+  approval flag is turned on.)
 - **Black Forest Labs, if pictures are switched to FLUX** (functions/README.md "FLUX by Black Forest
   Labs"). **Owner's decision, 2026-11-18: switching does not wait for this wording.** The code's
-  approval flag is on and the `flux-eu` profile can be switched as soon as the functions are
+  approval flag is on and the FLUX picture option (`bfl/flux-3-image-klein`) can be switched as soon as the functions are
   deployed. The owner's reasoning: no user data goes to the picture model; the picture is
   generated for a generated recipe (the fixed template and the dish brief), which is not user
   data. The wording below is kept, to publish when the policy is next changed. Wording to add to the recipe pictures paragraph and the processor list: "Pictures may
@@ -49,6 +50,30 @@ don't offer them). Checked against `functions/README.md` "Recipe pictures" and "
   them and to use them to train and improve its models; they state no retention period." Re-read
   the App Privacy / Data safety answers then (no new data type is expected: the description is
   not personal data, and nothing of the person is sent).
+- **OpenAI, only if the recipe text (or its fallback) is ever switched to OpenAI** (functions/README.md
+  "OpenAI for the recipe text"; the adapter is in, `openaiText`, listed but not switchable:
+  `privacy.approved: false`). This one is user data, unlike the pictures: the request carries the
+  ticked items (names, dates, quantities), the other items with "Send all products" on, the names
+  of the staples, the recipe settings, the taste answers and, after the consent step, the
+  allergens (health data, GDPR Art. 9). The policy must name OpenAI (OpenAI, L.L.C. / OpenAI
+  Ireland Ltd., as the contract says) as a processor of recipe requests before the flag is turned
+  on, with where it processes: the United States by default (no EU data residency is set up).
+  Checked on OpenAI's "Your data" page (read 2026-11-19): API data is not used for training by
+  default; abuse-monitoring logs are kept up to 30 days; the adapter sends `store: false`, so no
+  response is stored for later retrieval, and no identifier of the person, device or account (no
+  `user`, no `safety_identifier`). Wording to add to the paid recipes paragraph and the
+  processor list: "Recipes from packs may instead be written by OpenAI, in the United States. It
+  receives the same request as Google's model would (the items you chose, your recipe settings,
+  your taste answers and, if you gave consent, your allergens) and nothing that identifies you or
+  your device; OpenAI does not use it to train its models and keeps it for up to 30 days to detect
+  abuse." **The allergen consent covers Google only**: its wording (`recipe_allergen_consent_body`,
+  both apps, eight languages) says the list goes "to our server and to Google's AI model", so a
+  consent given to it does not cover OpenAI. Before OpenAI may write recipes the wording must name
+  it too (or say "our AI provider" and the policy name them), in both apps and all eight languages,
+  with `ALLERGEN_CONSENT_VERSION` / `AllergenConsent.version` raised so everyone is asked again,
+  and that version shipped and live before the approval flag is turned on. Re-read the App Privacy
+  / Data safety answers then: no new data type, but a new recipient of the health data and the
+  user content.
 - **Reports.** If you report a recipe or menu from a pack ("Report this recipe"), we receive the
   reason you chose, any note you write (up to 500 characters), your app's platform, version and
   language, and keep it under your account together with a copy of the reported recipe or menu

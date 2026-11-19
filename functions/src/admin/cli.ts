@@ -4,7 +4,7 @@
  *   npm run admin -- find   --email <address> | --play-order <GPA.…> | --apple-order <id> | --apple-transaction <id> | --uid <uid>
  *   npm run admin -- delete <one of the above> [--apply --confirm <uid>] [--kind <request kind>, with --uid]
  *   npm run admin -- board  [--days 30] [--out <file.html>]   (README "The board": read-only)
- *   npm run admin -- providers list | use <profile> [--apply]  (README "Provider profiles"; `image` is the older name)
+ *   npm run admin -- providers list | set <text|text-fallback|image|image-fallback> <value> [--apply]  (README "Provider switches"; `image` is the older name)
  *   npm run admin -- config list | set <id> <value> ... | reset <id> ... [--apply [--confirm <id,id>]]  (README "The owner console")
  *   npm run admin -- models [--probe]  (README "Model lifecycle": read-only)
  *   npm run admin -- judge summary | export [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--out <file.jsonl>]  (README "Prompt injection defences" item 5: read-only)
@@ -49,7 +49,8 @@ import { providerSecrets, textProviderById } from "../providers/registry";
 import { assessModels, modelsInUse, type ModelReport } from "../providers/lifecycle";
 import type { ProviderContext, ProviderDescriptor } from "../providers/types";
 import { validImageSelection, type ImageSelection } from "../model";
-import { SwitchRefused, activateProfile, listProfiles, type PlannedWrite, type SetupView, type SwitchEnv } from "../core/providerSwitch";
+import { SWITCH_CHANGES, SwitchRefused, listSwitches, switchProvider, type PlannedWrite, type Setup, type SlotView, type SwitchEnv } from "../core/providerSwitch";
+import { SLOTS } from "../providers/catalogue";
 import { HttpsError } from "firebase-functions/v2/https";
 import { parseJudgeArgs, runJudgeAnswers } from "./judgeAnswers";
 import { parseReviewArgs, runReviewCommand, type ReviewCommandEnv } from "./promptReviewCli";
@@ -76,7 +77,7 @@ const USAGE = `usage:
   npm run admin -- delete (same lookup) [--project <id>] [--apply --confirm <uid>] [--kind <${REQUEST_KINDS.join("|")}>, with --uid]
   npm run admin -- board  [--days <1-${BOARD_MAX_DAYS}, default 30>] [--out <file.html>] [--project <id>]
   npm run admin -- providers list [--project <id>]        (or: image list)
-  npm run admin -- providers use <profile> [--apply] [--project <id>]
+  npm run admin -- providers set <text|text-fallback|image|image-fallback> <provider/model|none|off> [--apply] [--project <id>]
   npm run admin -- config list [--project <id>]
   npm run admin -- config set <id> <value> [<id> <value> ...] [--apply [--confirm <sensitive id,...>]] [--project <id>]
   npm run admin -- config reset <id> [<id> ...] [--apply [--confirm <sensitive id,...>]] [--project <id>]
@@ -87,7 +88,7 @@ const USAGE = `usage:
   npm run admin -- report weekly [--week YYYY-Www] [--run [--apply]] [--project <id>]   (no model call; storing sends no email)
   npm run admin -- report weekly | judge review --send [--week YYYY-Www] [--to-self <file.html> | --apply [--force]] [--project <id>]   (the email, once; live: REPORT_EMAIL, REPORT_SMTP_PASSWORD)
   npm run admin -- report email-test [--to-self <file.html> | --apply] [--project <id>]   (made-up figures, "[test]" subject; no report read or written)
-Without --project: the local emulators (${EMULATOR_PROJECT}). delete, providers use, config set / reset, judge review --run / --send, report weekly --run / --send and report email-test are dry runs without --apply.`;
+Without --project: the local emulators (${EMULATOR_PROJECT}). delete, providers set, config set / reset, judge review --run / --send, report weekly --run / --send and report email-test are dry runs without --apply.`;
 
 const OPTIONS = {
   email: { type: "string" },
@@ -251,16 +252,18 @@ export async function runBoard(args: BoardArgs, env: BoardEnv): Promise<{ path: 
   return { path, html };
 }
 
-// --- Provider profiles: text and pictures (README "Provider profiles") ---------------------------------------------
+// --- Provider switches: text, its fallback, pictures, their fallback (README "Provider switches") -----------------
 
-const IMAGE_OPTIONS = { project: { type: "string" }, apply: { type: "boolean" } } as const;
+const PROVIDERS_OPTIONS = { project: { type: "string" }, apply: { type: "boolean" } } as const;
 
-export type ImageArgs = { command: "list"; project: string } | { command: "use"; profile: string; apply: boolean; project: string };
+export type ProviderArgs =
+  | { command: "list"; project: string }
+  | { command: "set"; slot: string; value: string; apply: boolean; project: string };
 
-export function parseImageArgs(argv: string[]): ImageArgs {
+export function parseProviderArgs(argv: string[]): ProviderArgs {
   let parsed;
   try {
-    parsed = parseArgs({ args: argv, options: IMAGE_OPTIONS, allowPositionals: true, strict: true });
+    parsed = parseArgs({ args: argv, options: PROVIDERS_OPTIONS, allowPositionals: true, strict: true });
   } catch (e) {
     throw new AdminRefusal(`${(e as Error).message}\n${USAGE}`);
   }
@@ -268,10 +271,15 @@ export function parseImageArgs(argv: string[]): ImageArgs {
   if (positionals[0] !== "image" && positionals[0] !== "providers") throw new AdminRefusal(USAGE);
   const project = values.project ?? EMULATOR_PROJECT;
   if (positionals[1] === "list" && positionals.length === 2) {
-    if (values.apply) throw new AdminRefusal(`--apply belongs to ${positionals[0]} use.`);
+    if (values.apply) throw new AdminRefusal(`--apply belongs to ${positionals[0]} set.`);
     return { command: "list", project };
   }
-  if (positionals[1] === "use" && positionals.length === 3) return { command: "use", profile: positionals[2], apply: values.apply === true, project };
+  if (positionals[1] === "set" && positionals.length === 4) {
+    return { command: "set", slot: positionals[2], value: positionals[3], apply: values.apply === true, project };
+  }
+  if (positionals[1] === "use") {
+    throw new AdminRefusal(`The provider profiles were replaced by four switches (README "Provider switches"): ${positionals[0]} set <${SLOTS.join("|")}> <provider/model|none|off>.\n${USAGE}`);
+  }
   throw new AdminRefusal(USAGE);
 }
 
@@ -280,52 +288,50 @@ export interface ImageEnv extends SwitchEnv {
   flush?(): Promise<void>;
 }
 
-const usd = (n: number) => `USD ${n.toFixed(3).replace(/0$/, "")}`;
-
-/** The recipe text's part of a line: shown only when it is not the deploy default with no fallback. */
-function textPart(s: Pick<SetupView, "textProvider" | "textModel" | "textFallbackProvider" | "textFallbackModel">, defaults: TextTarget | undefined): string {
-  if (defaults && s.textProvider === defaults.provider && s.textModel === defaults.model && !s.textFallbackModel) return "";
-  const fb = s.textFallbackModel ? `${s.textFallbackProvider}/${s.textFallbackModel}` : "none";
-  return `; text ${s.textProvider} / ${s.textModel}, fallback ${fb}`;
-}
-
-function setupLine(s: SetupView, defaults?: TextTarget): string {
-  if (s.provider === "off") return `${s.profile} (pictures off${textPart(s, defaults)})`;
-  const fb = s.fallbackModel ? `${s.fallbackProvider ? `${s.fallbackProvider}/` : ""}${s.fallbackModel}` : "none";
-  return `${s.profile}: ${s.provider} / ${s.model}, fallback ${fb}; step pictures at most ${s.maxStepImages}; ` +
-    `pictures ${s.picturesOn ? "offered" : "NOT offered (no price, or costs.recipeImage is 0)"}${textPart(s, defaults)}`;
-}
-
 const writeLine = (w: PlannedWrite) => `  - ${w.path.join(" > ")} = ${JSON.stringify(w.value)}`;
 
-/** `image list` and `image use`; throws AdminRefusal for a refused switch (nothing changed then). */
-export async function runImage(args: ImageArgs, env: ImageEnv): Promise<void> {
+/** One switch's value with its label, as the list and the switch print it. */
+function slotLine(s: SlotView): string {
+  const note = s.custom ? " (set by hand: no option)" : s.inert ? " (kept while pictures are off; asked by nobody)" : "";
+  return `${s.value}${note}`;
+}
+
+const setupLine = (s: Setup) => SLOTS.map((slot) => `${slot} ${s[slot]}`).join(", ");
+
+/** `providers list` and `providers set`; throws AdminRefusal for a refused switch (nothing changed then). */
+export async function runProviders(args: ProviderArgs, env: ImageEnv): Promise<void> {
   const { print } = env;
   if (args.command === "list") {
-    const view = await listProfiles(env);
-    print(`Active:      ${setupLine(view.active, env.textDefaults)}`);
-    print(`Last change: ${view.lastChange ? `${view.lastChange.at} (${view.lastChange.via}) ${view.lastChange.from} -> ${view.lastChange.to}` : "none recorded"}`);
-    print("Profiles:");
-    for (const p of view.profiles) {
-      const mark = p.id === view.active.profile ? "*" : " ";
-      const fbAt = p.fallbackProvider || p.provider;
-      const models = p.provider === "off" ? "no pictures"
-        : [[p.provider, p.model], [fbAt, p.fallbackModel]].filter(([, m]) => Boolean(m)).map(([pr, m]) => `${pr}/${m} (${usd(p.usdPerImage[`${pr}/${m}`])})`).join(", fallback ");
-      print(`${mark} ${p.id.padEnd(12)} ${p.ready ? "ready    " : "NOT READY"}  ${p.label}: ${models}${p.setsText ? textPart(p, undefined) : ""}`);
-      for (const m of p.missing) print(`                         - ${m}`);
+    const view = await listSwitches(env);
+    const c = view.lastChange;
+    print(`Last change: ${c ? `${c.at} (${c.via}) ${c.slot}: ${c.from} -> ${c.to}` : "none recorded"}`);
+    print(`Pictures ${view.picturesOn ? "offered" : "NOT offered (off, no price, or costs.recipeImage is 0)"}; step pictures at most ${view.maxStepImages}.`);
+    for (const s of view.slots) {
+      print("");
+      print(`${s.label} (${s.id}): ${slotLine(s)}`);
+      const width = Math.max(...s.options.map((o) => o.value.length));
+      for (const o of s.options) {
+        const mark = o.current ? "*" : " ";
+        const state = o.current ? "in force " : !o.ready ? "NOT READY" : o.blocked ? "blocked  " : "ready    ";
+        const about = [o.price, o.providerLabel].filter(Boolean).join("; ");
+        print(`  ${mark} ${o.value.padEnd(width)}  ${state}  ${o.label === o.value ? "" : o.label}${about ? (o.label === o.value ? about : ` (${about})`) : ""}`.trimEnd());
+        if (!o.current) for (const m of o.missing) print(`      - ${m}`);
+        if (!o.current && o.ready && o.blocked) print(`      - ${o.blocked}`);
+      }
     }
-    print("Switch with: npm run admin -- providers use <profile> (a dry run; add --apply to write).");
+    print("");
+    print(`Switch one with: npm run admin -- providers set <${SLOTS.join("|")}> <value> (a dry run; add --apply to write).`);
     return;
   }
   let out;
   try {
-    out = await activateProfile(env, args.profile, { apply: args.apply, actor: { via: "cli" } });
+    out = await switchProvider(env, args.slot, args.value, { apply: args.apply, actor: { via: "cli" } });
   } catch (e) {
     if (e instanceof SwitchRefused) throw new AdminRefusal(`Refused (${e.reason}): ${e.message}`);
     throw e;
   }
-  print(`From: ${setupLine(out.plan.from, env.textDefaults)}`);
-  print(`To:   ${setupLine(out.plan.to, env.textDefaults)}`);
+  print(`From: ${setupLine(out.plan.from)}`);
+  print(`To:   ${setupLine(out.plan.to)}`);
   if (!out.changed) {
     print("Already in force: nothing to write.");
     return;
@@ -333,8 +339,8 @@ export async function runImage(args: ImageArgs, env: ImageEnv): Promise<void> {
   print(out.applied ? "Done, written to config/runtime:" : "Dry run, nothing changed. --apply would write to config/runtime:");
   for (const w of out.plan.writes) print(writeLine(w));
   print(out.applied
-    ? `Audit record providerProfileChanges/${out.changeId}. New requests use it within 30 s (the instances' config cache).`
-    : `To switch: npm run admin -- providers use ${args.profile} --apply${args.project === EMULATOR_PROJECT ? "" : ` --project ${args.project}`}`);
+    ? `Audit record ${SWITCH_CHANGES}/${out.changeId}. New requests use it within 30 s (the instances' config cache).`
+    : `To switch: npm run admin -- providers set ${args.slot} ${args.value} --apply${args.project === EMULATOR_PROJECT ? "" : ` --project ${args.project}`}`);
 }
 
 export function buildImageEnv(project: string): ImageEnv {
@@ -417,7 +423,7 @@ export async function runModels(args: ModelsArgs, env: ModelsEnv): Promise<Model
   for (const group of [true, false]) {
     const rows = reports.filter((r) => r.inUse === group);
     if (!rows.length) continue;
-    env.print(group ? "In use:" : "Only in listed profiles:");
+    env.print(group ? "In use:" : "Only offered by a switch:");
     for (const r of rows) {
       const retires = r.retiresOn === null
         ? (r.entry ? "no retirement announced" : "NO LIFECYCLE ENTRY")
@@ -780,11 +786,11 @@ async function main(): Promise<void> {
   let env: AdminEnv | undefined;
   try {
     if (argv[0] === "image" || argv[0] === "providers") {
-      const args = parseImageArgs(argv);
+      const args = parseProviderArgs(argv);
       const imageEnv = buildImageEnv(args.project);
       console.log(args.project.startsWith("demo-") ? `[emulators, ${args.project}]` : `[LIVE project ${args.project}]`);
       try {
-        await runImage(args, imageEnv);
+        await runProviders(args, imageEnv);
       } finally {
         await imageEnv.flush?.();
       }

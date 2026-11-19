@@ -458,19 +458,22 @@ them with `allowSandbox` only.
   by the recipe model, never the person's items, allergens or taste answers. No new data type is
   collected (App Privacy / Data safety unchanged); re-read the age-rating answers for
   AI-generated images.
-- [ ] Only to use OpenAI instead (functions/README.md "Switching provider and model"): create the
-  secret `npx firebase functions:secrets:set OPENAI_API_KEY`, grant
+- [ ] Only to use OpenAI (pictures, recipe text or both; functions/README.md "Switching provider
+  and model", "OpenAI for the recipe text"): create the secret
+  `npx firebase functions:secrets:set OPENAI_API_KEY` (one key for both), grant
   `recipe-functions@` **Secret Manager Secret Accessor on that secret only**
   (`gcloud secrets add-iam-policy-binding OPENAI_API_KEY --member serviceAccount:recipe-functions@bestbefore-f9ee1.iam.gserviceaccount.com --role roles/secretmanager.secretAccessor --project bestbefore-f9ee1`),
-  then set `config/runtime.image` to `{provider: "openai", model: "gpt-image-1-mini"}`. OpenAI then
-  becomes a data processor of the picture prompts (update the privacy policy first).
+  then switch the picture model or the text model to an OpenAI option (step 13). OpenAI then
+  becomes a data processor of the picture prompts, and, for the text, of the recipe requests
+  themselves (update the privacy policy first; step 13g).
 
-### 13. Owner console: switching the picture provider (functions/README.md "The owner console")
+### 13. Owner console: switching the providers (functions/README.md "The owner console")
 
-A dashboard page (what is in force now, the provider profiles and the runtime settings in cards), on Firebase Hosting
-(`https://bestbefore-f9ee1.firebaseapp.com/`). Until these are done the switch works from a shell
-only (`npm run admin -- providers list | use <profile> --apply --project bestbefore-f9ee1`, "Provider
-profiles"), and the board shows the setup in force with a link that leads nowhere yet.
+A dashboard page (what is in force now, the four provider switches and the runtime settings in cards), on Firebase Hosting
+(`https://bestbefore-f9ee1.firebaseapp.com/`). Until these are done the switches work from a shell
+only (`npm run admin -- providers list | set <switch> <value> --apply --project bestbefore-f9ee1`, "Provider
+switches"), and the board shows the setup in force with a link that leads nowhere yet. (The page
+first shipped with named profiles, 2026-11-18; step 13g replaces them with the four switches.)
 
 - [x] **(done 2026-11-18, agent)** **Register a Web app** in the Firebase project (Project settings > General > Your apps > Add
   app > Web; a nickname such as "Owner console"; Hosting can be left unticked). The page reads its
@@ -520,21 +523,53 @@ profiles"), and the board shows the setup in force with a link that leads nowher
     return to the handler, could break). If either shows them, stop and say so;
   - the page opens and its "Sign in with Google" pop-up works there (the preview channel's host
     may first need adding to Authentication > Settings > Authorized domains; remove it after).
-    The profiles won't load there: the callables' CORS answers only the live site's two hosts.
+    The switches won't load there: the callables' CORS answers only the live site's two hosts.
 
   Then deploy the live site: `npx firebase deploy --only hosting --project bestbefore-f9ee1`, and
   run the same two `curl -sI` checks on `https://bestbefore-f9ee1.firebaseapp.com`.
 - [x] **(done 2026-11-18, agent)** Apply the new alert, "Recipe: provider profile switched"
   (`functions/alerts/policies/provider-profile-changed.json`):
   `python3 functions/alerts/alerts.py --project bestbefore-f9ee1` (dry run), then with `--apply`.
+- [ ] **Check**: step 13g, once the four switches are deployed.
+- [ ] Decide whether OpenAI may ever be switched on: its options stay "not ready" until the code's
+  `approved` flags (`openaiImage` for pictures, `openaiText` for the recipe text) are turned on
+  (after the privacy policy names OpenAI) and its key is set (step 12, last item).
+
+### 13g. The four provider switches (2026-11-19; functions/README.md "Provider switches") **(owner)**
+
+The named profiles are replaced by four switches, each set on its own: the text model, the text
+fallback, the picture model, the picture fallback. Two callables are new and two are gone, so:
+
+- [ ] **Deploy the two new callables**:
+  `cd functions && npm ci && npx firebase deploy --only functions:getProviderSwitches,functions:setProviderSwitch --project bestbefore-f9ee1`
+  (or the next full `--only functions,firestore` deploy, which also carries the OpenAI text adapter
+  and the other changed functions).
+- [ ] **Deploy the page**: `npx firebase deploy --only hosting --project bestbefore-f9ee1` (the
+  headers are unchanged; the two `curl -sI` checks of step 13 still apply). The functions first:
+  the new page calls the new names.
+- [ ] **Remove the two old callables**, which nothing calls any more:
+  `npx firebase functions:delete getProviderProfiles setProviderProfile --region europe-west1 --project bestbefore-f9ee1`
+  (a full deploy offers to delete them too).
+- [ ] **Re-apply the alerts** whose documentation changed (the filters did not:
+  `provider_profile_changed` keeps its name and now carries `slot`, `from`, `to`):
+  `python3 functions/alerts/alerts.py --project bestbefore-f9ee1` (dry run), then with `--apply`.
 - [ ] **Check**: open the page signed out of everything (a private window) and see only the
   sign-in button; sign in with another Google account and get "may not use the owner console";
-  sign in with yours and see the profiles, `flash-lite` in force and `openai` not ready. Switch to
-  `nano-banana` and back to `flash-lite` once, and see the alert email and the two
-  `providerProfileChanges/` records. On an iPhone, Safari may ask to allow the sign-in pop-up.
-- [ ] Decide whether OpenAI may ever be switched on: it stays "not ready" until the code's
-  `approved` flag for it is turned on (after the privacy policy names OpenAI) and its key is set
-  (step 12, last item).
+  sign in with yours and see four switches: Text model `google/gemini-3.8-flash`, Text fallback
+  none, Picture model `vertex/gemini-3.1-flash-lite-image`, Picture fallback
+  `vertex/gemini-nano-banana-2.1`, the OpenAI options listed but not ready. Switch the picture
+  fallback to "No fallback" and back once, and see the alert emails and the two
+  `providerProfileChanges/` records (each names its switch). On an iPhone, Safari may ask to allow
+  the sign-in pop-up.
+- [ ] **OpenAI for the recipe text** (new adapter, not tried live; functions/README.md "OpenAI for
+  the recipe text"): unlike pictures, the text request carries user data (the ticked items, the
+  allergens, which are health data, the diets and the taste answers), so the privacy policy and
+  processor list must name OpenAI for it, with where it processes (the United States by default),
+  and the App Privacy / Data safety answers be re-read (docs/privacy-policy-changes.md, "Pending")
+  before `openaiText`'s `privacy.approved` is set to `true` in code. Then the key (step 12), a
+  deploy, the red-team run against it (functions/README.md "The red-team run") and a few real
+  recipes on the emulators and live before it is chosen as the text model; as a fallback first is
+  the cautious order.
 
 ### 13b. Owner console: the other runtime settings (functions/README.md "The owner console", "Settings")
 
@@ -569,8 +604,8 @@ works as soon as it is merged).
 The keys are in Secret Manager already (`MISTRAL_API_KEY`, `BFL_API_KEY`); access is granted on
 `BFL_API_KEY` only (2026-11-18).
 The functions read a provider's key at run time, only while a provider using it is selected
-(functions/README.md "Adding a provider", "Secrets"); a profile using it shows "not ready" until
-the service account can read it. When the adapter is merged and before switching to it:
+(functions/README.md "Adding a provider", "Secrets"); a switch option using it shows "not ready"
+until the service account can read it. When the adapter is merged and before switching to it:
 
 - [x] **(done 2026-11-18, agent)** Grant `recipe-functions@bestbefore-f9ee1.iam.gserviceaccount.com`
   **Secret Manager Secret Accessor on `BFL_API_KEY` only** (no role on the project, no other secret):
@@ -578,7 +613,7 @@ the service account can read it. When the adapter is merged and before switching
 - [ ] The same grant on `MISTRAL_API_KEY` only, when the Mistral adapter is merged:
   `gcloud secrets add-iam-policy-binding MISTRAL_API_KEY --member serviceAccount:recipe-functions@bestbefore-f9ee1.iam.gserviceaccount.com --role roles/secretmanager.secretAccessor --project bestbefore-f9ee1`.
 - [ ] Mistral: the privacy policy's processor list names it (and its EU endpoint), then the
-  adapter's `privacy.approved` is set to `true` in code. Until both, its profiles are listed but
+  adapter's `privacy.approved` is set to `true` in code. Until both, its options are listed but
   not switchable.
 - [x] **(done 2026-11-18, owner's decision)** Black Forest Labs: `privacy.approved: true` in
   `bflImage` without waiting for the policy text, because no user data goes to the picture model:
@@ -592,19 +627,20 @@ the service account can read it. When the adapter is merged and before switching
   if that is on. The probe reads the key, so it needs the grant above.
 - [x] **(done 2026-11-18, agent)** Apply the new alert policies (`python3 functions/alerts/alerts.py --project bestbefore-f9ee1 --apply`,
   step 9): out of credit, balance low, pictures failing broadly.
-- [x] **(done 2026-11-18, agent)** **Black Forest Labs (FLUX pictures, profile `flux-eu`)**: the
+- [x] **(done 2026-11-18, agent)** **Black Forest Labs (FLUX pictures, option `bfl/flux-3-image-klein`)**: the
   adapter is in (`functions/src/adapters/bfl.ts`, functions/README.md "FLUX by Black Forest Labs"),
   approved (above), its key readable (above), and while it is the selected model each attempt gets
   up to 45 s and the dish's picture 65 s (the defaults' 30 s first attempt would have abandoned
   about half of the 2026-11-17 test pictures, already charged, to Flash-Lite Image).
 - [ ] **Deploy the functions** (the approval and the longer times are code):
   `cd functions && npm ci && npx firebase deploy --only functions,firestore --project bestbefore-f9ee1`.
-- [ ] **Switch the profile to `flux-eu`**, in the owner console (step 13, the profile drop-down) or
-  from a shell: `npm run admin -- providers use flux-eu` (dry run), then
-  `npm run admin -- providers use flux-eu --apply --project bestbefore-f9ee1`. `providers list`
-  should show it ready first. Then watch `image_call` `durationMs` and `image_fallback` with reason
-  `TIMEOUT` (functions/README.md "FLUX by Black Forest Labs"); the way back is
-  `providers use flash-lite`.
+- [ ] **Switch the pictures to FLUX** (what the `flux-eu` profile was): in the owner console
+  (step 13g, the Picture model switch: `bfl/flux-3-image-klein`; the Picture fallback,
+  `vertex/gemini-nano-banana-2.1` by default, may stay or be switched to Flash-Lite Image) or from a
+  shell: `npm run admin -- providers set image bfl/flux-3-image-klein` (dry run), then the same
+  with `--apply --project bestbefore-f9ee1`. `providers list` should show it ready first. Then
+  watch `image_call` `durationMs` and `image_fallback` with reason `TIMEOUT` (functions/README.md
+  "FLUX by Black Forest Labs"); the way back is `providers set image vertex/gemini-3.1-flash-lite-image`.
 
 ### 13c. Model lifecycle alerts (functions/README.md "Model lifecycle") **(owner, after the next deploy)**
 
@@ -626,10 +662,10 @@ probe reads the key only once that grant exists, and its marks are in Firestore 
   `INFO`, which it doesn't have, and the script then stopped. The policy is `WARNING` now, and an
   apply goes on past a failure; re-run it.)
 - [x] **(done 2026-11-18, agent, owner's request "openai should use newer model")** `gpt-image-1-mini`
-  (profile `openai`, listed only) is shut down by OpenAI on 2026-12-01: the profile now names
-  `gpt-image-2.6-flare`, one of the two replacements OpenAI names, with no retirement announced
-  (functions/README.md "Recipe pictures", "OpenAI's model"). Not tried live: OpenAI stays
-  unapproved and its key ungranted, so the profile stays listed only.
+  (then profile `openai`, listed only) is shut down by OpenAI on 2026-12-01: OpenAI's picture
+  option is now `gpt-image-2.6-flare`, one of the two replacements OpenAI names, with no retirement
+  announced (functions/README.md "Recipe pictures", "OpenAI's model"; re-read 2026-11-19). Not
+  tried live: OpenAI stays unapproved and its key ungranted, so the option stays listed only.
 - [ ] Monthly (and when "model lifecycle table stale" arrives): the review in functions/README.md
   "Model lifecycle": re-read each entry's source page, update `retiresOn` / `checkedOn` in
   `functions/src/providers/lifecycle.ts`, deploy.
@@ -759,13 +795,13 @@ admin -- models --probe --project bestbefore-f9ee1` shows them all, with roles a
 2. **Price it**: add its price to the adapter's table (`prices` for text, `usdPerImage` and
    `tokenPrices` for pictures) from the provider's pricing page, and its entry to
    `MODEL_LIFECYCLE` (`retiresOn`, `source`, `checkedOn`): the tests refuse a model without either.
-3. **Try it**: a profile for it (`src/providers/profiles.ts`), the red-team run and a few real recipes
+3. **Try it**: priced in its adapter, it is offered by the switches by itself; the red-team run and a few real recipes
    or pictures on the emulators and then live (functions/README.md "Replaying a prompt against the
    live model", "The red-team run").
-4. **Switch**: deploy, then `npm run admin -- providers use <profile> --apply --project bestbefore-f9ee1`
-   or the owner console; for the recipe text's default, `GEMINI_MODEL` in `functions/.env.bestbefore-f9ee1`
+4. **Switch**: deploy, then `npm run admin -- providers set <switch> <provider/model> --apply --project bestbefore-f9ee1`
+   or the owner console (the fallback first, if the new model is to be tried there); for the recipe text's default, `GEMINI_MODEL` in `functions/.env.bestbefore-f9ee1`
    (and `GEMINI_JUDGE_MODEL` if it names the old model) and a deploy.
-5. **Update the table**: the old model's entry stays while any profile or default names it; remove
+5. **Update the table**: the old model's entry stays while any price table or default names it; remove
    it with the last one. Past the date, `model_unavailable` follows within a day if anything still
    calls it.
 

@@ -89,8 +89,8 @@ import {
 import { boardBrowserUrl, redrawBoard as redrawBoardCore } from "./board/hosted";
 import { CloudStorageBoardBucket } from "./adapters/boardBucket";
 import {
-  getProviderProfiles as providerProfilesCore,
-  setProviderProfile as setProviderProfileCore,
+  getProviderSwitches as providerSwitchesCore,
+  setProviderSwitch as setProviderSwitchCore,
   ownerConsoleOrigins,
   type OwnerEnv,
 } from "./core/providerSwitch";
@@ -626,7 +626,7 @@ export const checkProviderBalances = onSchedule(
 );
 
 // Model lifecycle (README "Model lifecycle"): daily, the retirement dates of the models in use and
-// of the listed profiles, the table's age, and each provider's free metadata probe. Best effort:
+// only offered by a switch, the table's age, and each provider's free metadata probe. Best effort:
 // it never touches a request, and a probe that fails is only an info line.
 export const checkModelLifecycle = onSchedule(
   { schedule: "23 6 * * *", timeZone: "Etc/UTC", timeoutSeconds: 120, retryCount: 0, maxInstances: 1, concurrency: 1 },
@@ -710,10 +710,10 @@ export const redrawBoard = onSchedule(
   },
 );
 
-// --- The owner console (README "Provider profiles", "The owner console") ----------------------
+// --- The owner console (README "Provider switches", "The owner console") ----------------------
 //
-// Four callables for the owner's web page on Firebase Hosting, never for the apps: the provider
-// profiles and the runtime settings (core/ownerSettings.ts). A caller must be
+// Four callables for the owner's web page on Firebase Hosting, never for the apps: the four provider
+// switches and the runtime settings (core/ownerSettings.ts). A caller must be
 // a Google sign-in (verified email) listed in config/owner; the ID token is checked again with
 // revocation, a switch or a save needs a sign-in from the last 30 minutes (a sensitive save 5, and
 // only within the console's envelope, core/ownerSettings.ts WebRule), and every refusal answers the same
@@ -767,11 +767,11 @@ function ownerCall<T>(name: string, request: CallableRequest, fn: (env: OwnerEnv
   return guarded(name, () => ownerGate().run(name, request, (authorization) => fn(ownerEnv(), authorization)));
 }
 
-export const getProviderProfiles = onCall(ownerCallable, (request) =>
-  ownerCall("getProviderProfiles", request, (env, authorization) => providerProfilesCore(env, authorization)));
+export const getProviderSwitches = onCall(ownerCallable, (request) =>
+  ownerCall("getProviderSwitches", request, (env, authorization) => providerSwitchesCore(env, authorization)));
 
-export const setProviderProfile = onCall(ownerCallable, (request) =>
-  ownerCall("setProviderProfile", request, (env, authorization) => setProviderProfileCore(env, authorization, request.data)));
+export const setProviderSwitch = onCall(ownerCallable, (request) =>
+  ownerCall("setProviderSwitch", request, (env, authorization) => setProviderSwitchCore(env, authorization, request.data)));
 
 export const getOwnerSettings = onCall(ownerCallable, (request) =>
   ownerCall("getOwnerSettings", request, (env, authorization) => ownerSettingsCore(env, authorization)));

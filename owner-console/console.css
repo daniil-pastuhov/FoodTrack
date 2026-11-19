@@ -260,16 +260,18 @@ label.s-name{cursor:pointer}
 .ro .facts dd .note{margin:2px 0 6px}
 
 /* --- Providers ----------------------------------------------------------------------------- */
-.prov{display:grid;grid-template-columns:minmax(260px,5fr) minmax(0,7fr);gap:24px;align-items:start}
-.inforce{background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--line);border-radius:var(--r);padding:16px}
-.eyebrow{font-size:12px;font-weight:600;color:var(--ink-3)}
-.inforce-name{font-size:16px;font-weight:600;letter-spacing:-.01em;margin:4px 0 12px;overflow-wrap:anywhere}
-.inforce .facts{grid-template-columns:minmax(0,1fr);gap:0}
-.inforce .facts dt{font-size:12px;margin-top:10px}
-.inforce .facts dt:first-child{margin-top:0}
-.inforce .facts dd.mono{font-size:12px;color:var(--ink-2)}
-.profiles{border:0;padding:0;margin:0;min-width:0}
-.profiles legend{font-weight:600;font-size:12px;color:var(--ink-3);padding:0;margin:0 0 8px}
+.prov-facts{margin:0 0 16px}
+.switches{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+.switch-block{border:0;margin:0;min-width:0;background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:8px}
+.switch-block legend{float:left;width:100%;padding:0;font-weight:600;font-size:14px;letter-spacing:-.01em}
+.switch-block legend+*{clear:both}
+.eyebrow{font-size:12px;font-weight:600;color:var(--ink-3);margin:0}
+.inforce-name{font-size:13px;font-weight:600;margin:0;overflow-wrap:anywhere}
+.switch-block .note{margin:0}
+.switch-block .profile-list{background:var(--surface)}
+.switch-block .p-body{padding-right:6.5rem}
+.switch-foot{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:4px}
+.switch-summary{flex:1 1 12rem;min-width:0;color:var(--ink-2);font-size:12.5px}
 .profile-list{list-style:none;margin:0;padding:0;border-radius:var(--r);box-shadow:inset 0 0 0 1px var(--line-2);overflow:hidden}
 .profile{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 12px;align-items:start;padding:12px 14px;min-width:0;cursor:pointer;transition:background-color .12s}
 .profile+.profile{border-top:1px solid var(--line)}
@@ -285,15 +287,11 @@ label.s-name{cursor:pointer}
 .p-state .dot{width:12px;height:12px}
 .p-state.good{color:var(--good)}
 .p-state.crit{color:var(--crit)}
+.p-state.warn{color:var(--warn)}
 .p-state.active{color:var(--accent);background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent-line);border-radius:999px;padding:1px 8px}
 .p-missing{list-style:none;font-size:12px;color:var(--ink-2);margin:6px 0 0;padding:0;display:grid;gap:2px}
 .p-missing li{display:flex;gap:6px}
 .p-missing li::before{content:"";flex:none;width:5px;height:5px;margin-top:7px;border-radius:50%;background:var(--crit)}
-.prov-foot{justify-content:space-between;align-items:center}
-.selection{flex:1 1 20rem;min-width:0}
-.selection .note{color:var(--ink-2);font-size:12.5px}
-/* The selected profile's missing items are already listed in its row. */
-.missing{display:none}
 #providers-readonly:empty{display:none}
 #providers-readonly .ro{margin-top:16px}
 
@@ -376,7 +374,7 @@ dialog label{display:block;font-weight:600;font-size:13px;margin:14px 0 6px}
   main{padding:20px 20px 136px}
   .top-inner{padding:12px 20px}
   .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .prov{grid-template-columns:minmax(0,1fr)}
+  .switches{grid-template-columns:minmax(0,1fr)}
   .skel-strip{grid-template-columns:repeat(2,minmax(0,1fr))}
   .skel-cards{grid-template-columns:minmax(0,1fr)}
 }
@@ -409,9 +407,9 @@ dialog label{display:block;font-weight:600;font-size:13px;margin:14px 0 6px}
   .profile{padding:12px}
   .p-body{padding-right:0}
   .p-state{position:static;align-self:flex-start;margin:4px 0 2px}
-  .prov-foot{flex-direction:column;align-items:stretch}
-  .selection{flex:none}
-  .prov-foot button{width:100%}
+  .switch-block .p-body{padding-right:0}
+  .switch-foot{flex-direction:column;align-items:stretch}
+  .switch-foot button{width:100%}
   .about{text-align:left;margin-left:0;flex-basis:100%}
   .dock{bottom:8px;width:calc(100% - 16px)}
   .dock-inner{padding:10px 12px}
@@ -436,7 +434,7 @@ dialog label{display:block;font-weight:600;font-size:13px;margin:14px 0 6px}
 @media (forced-colors:active){
   meter{forced-color-adjust:auto}
   .dot,.chip::before,.badge::before,.pending::before{forced-color-adjust:none;background:CanvasText}
-  .card,.tiles,.dock,dialog,.signin,.empty,.inforce,.figure,.profile-list{border:1px solid CanvasText}
+  .card,.tiles,.dock,dialog,.signin,.empty,.switch-block,.figure,.profile-list{border:1px solid CanvasText}
   .switch input[type="checkbox"]{-webkit-appearance:auto;appearance:auto}
 }
 @media print{

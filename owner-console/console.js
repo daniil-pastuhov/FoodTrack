@@ -1,6 +1,6 @@
 // The owner console (functions/README.md "The owner console"). Static and harmless on its own:
-// every fact it shows and every change it makes goes through the callables getProviderProfiles,
-// setProviderProfile, getOwnerSettings and setOwnerSettings, which accept only the owner's Google
+// every fact it shows and every change it makes goes through the callables getProviderSwitches,
+// setProviderSwitch, getOwnerSettings and setOwnerSettings, which accept only the owner's Google
 // sign-in (config/owner). Nothing is
 // kept in the browser: the sign-in lives in memory only (inMemoryPersistence), so each visit
 // signs in afresh, and Google's name and photo are never read. Text goes in with textContent only.
@@ -130,80 +130,149 @@ function tile({ label, value, tone = "neutral", note = "", meter = null, wide = 
     lines ? el("dl", { class: "t-lines" }, ...lines.flatMap(([k, v]) => [el("dt", { text: k }), el("dd", { text: v })])) : null);
 }
 
-// --- Providers (getProviderProfiles / setProviderProfile) -------------------------------------
+// --- Providers (getProviderSwitches / setProviderSwitch) -------------------------------------
+// Four switches, each on its own: the recipe text's model, its fallback, the picture model, its
+// fallback. Every option, its price and its readiness come from the server.
 
-function models(p) {
-  if (p.provider === "off") return "none (pictures off)";
-  const fb = p.fallbackModel ? `${p.fallbackProvider ? `${p.fallbackProvider} / ` : ""}${p.fallbackModel}` : "none";
-  return `${p.provider} / ${p.model}, fallback ${fb}`;
+/** The option chosen (not yet switched) on each switch, by switch id. */
+const chosen = new Map();
+
+const slotOf = (id) => view?.slots.find((s) => s.id === id);
+const optionOf = (s, value) => s?.options.find((o) => o.value === value);
+
+/** "model (provider/model)" for a value, or the option's own label for none / off. */
+function valueText(s, value) {
+  const o = optionOf(s, value);
+  if (!o) return `${value} (set by hand)`;
+  return o.label === value || !value.includes("/") ? o.label : `${o.label} (${value})`;
 }
 
-// The recipe text's part (older servers send none of these fields: then nothing is shown).
-function textModels(p) {
-  if (!p.textProvider) return "";
-  const fb = p.textFallbackModel ? `${p.textFallbackProvider} / ${p.textFallbackModel}` : "none";
-  return `${p.textProvider} / ${p.textModel}, fallback ${fb}`;
+function inForceNote(s) {
+  if (s.custom) return "Set by hand: no option matches. Any option below replaces it.";
+  if (s.inert) return "Pictures are off: kept for when they are back, asked by nobody now.";
+  return "";
+}
+
+function renderSwitch(s) {
+  const pick = optionOf(s, chosen.get(s.id))?.value ?? s.value;
+  chosen.set(s.id, pick);
+  const list = el("ul", { class: "profile-list" }, ...s.options.map((o, i) => {
+    const id = `opt-${s.id}-${i}`;
+    const radio = el("input", { type: "radio", name: `opt-${s.id}`, id, value: o.value, checked: o.value === pick });
+    radio.addEventListener("change", () => {
+      chosen.set(s.id, o.value);
+      describeSwitch(s.id);
+    });
+    const state = o.current ? ["active", "In force"] : !o.ready ? ["crit", "Not ready"] : o.blocked ? ["warn", "Not now"] : ["good", "Ready"];
+    const sub = [o.value.includes("/") ? o.value : "", o.providerLabel, o.price].filter(Boolean).join(" · ");
+    const why = !o.current && !o.ready ? o.missing : !o.current && o.blocked ? [o.blocked] : [];
+    return el("li", { class: "profile" + (o.value === pick ? " checked" : "") + (o.current ? " in-force" : "") + (o.current || (o.ready && !o.blocked) ? "" : " not-ready") },
+      radio,
+      el("div", { class: "p-body" },
+        el("label", { htmlFor: id, text: o.label }),
+        el("span", { class: `p-state ${state[0]}` }, state[0] === "active" ? null : dot(state[0]), el("span", { text: state[1] })),
+        sub ? el("p", { class: "p-models", text: sub }) : null,
+        why.length ? el("ul", { class: "p-missing" }, ...why.map((m) => el("li", { text: m }))) : null));
+  }));
+  const note = inForceNote(s);
+  const button = el("button", { type: "button", class: "primary", text: "Switch…" });
+  button.addEventListener("click", () => confirmSwitch(s.id));
+  return el("fieldset", { class: "switch-block", "data-slot": s.id },
+    el("legend", { text: s.label }),
+    el("p", { class: "eyebrow", text: "In force" }),
+    el("p", { class: "inforce-name mono", text: valueText(s, s.value) }),
+    note ? el("p", { class: "note", text: note }) : null,
+    list,
+    el("div", { class: "switch-foot" }, el("p", { class: "note switch-summary" }), button));
+}
+
+/** The chosen option's line and whether its switch can be pressed. */
+function describeSwitch(id) {
+  const s = slotOf(id);
+  const block = document.querySelector(`fieldset[data-slot="${id}"]`);
+  if (!s || !block) return;
+  const o = optionOf(s, chosen.get(id));
+  for (const li of block.querySelectorAll("li.profile")) li.classList.toggle("checked", li.querySelector("input")?.checked === true);
+  const summary = block.querySelector(".switch-summary");
+  const button = block.querySelector("button");
+  if (!o || o.current) {
+    summary.textContent = "Choose another option to switch.";
+    button.disabled = true;
+  } else if (!o.ready) {
+    summary.textContent = `${o.label} is not ready.`;
+    button.disabled = true;
+  } else if (o.blocked) {
+    summary.textContent = `${o.label}: ${o.blocked}.`;
+    button.disabled = true;
+  } else {
+    summary.textContent = `From ${valueText(s, s.value)} to ${valueText(s, o.value)}.`;
+    button.disabled = false;
+  }
 }
 
 function render() {
-  const a = view.active;
-  $("active").textContent = a.label + (a.profile === "custom" ? "" : ` (${a.profile})`);
-  $("active-text").textContent = textModels(a) || "not reported by this server";
-  $("active-models").textContent = `${models(a)}; step pictures at most ${a.maxStepImages}`;
-  $("active-on").textContent = a.picturesOn ? "Yes" : "No";
+  $("active-on").textContent = view.picturesOn ? "Yes" : "No";
   const c = view.lastChange;
-  $("last-change").textContent = c ? `${new Date(c.at).toLocaleString()} (${c.via === "web" ? "this console" : "admin command"}): ${c.from} → ${c.to}` : "None recorded";
-  const keep = selected()?.id;
-  const pick = view.profiles.some((p) => p.id === keep) ? keep : (view.profiles.find((p) => p.id === a.profile)?.id ?? view.profiles[0]?.id ?? "");
-  $("profile").replaceChildren(...view.profiles.map((p, i) => {
-    const id = `profile-${i}`;
-    const radio = el("input", { type: "radio", name: "profile", id, value: p.id, checked: p.id === pick });
-    radio.addEventListener("change", describe);
-    const inForce = p.id === a.profile;
-    const state = inForce ? ["active", "In force"] : p.ready ? ["good", "Ready"] : ["crit", "Not ready"];
-    const text = textModels(p);
-    return el("li", { class: "profile" + (p.id === pick ? " checked" : "") + (inForce ? " in-force" : "") + (p.ready || inForce ? "" : " not-ready") },
-      radio,
-      el("div", { class: "p-body" },
-        el("label", { htmlFor: id, text: p.label }),
-        el("span", { class: `p-state ${state[0]}` }, state[0] === "active" ? null : dot(state[0]), el("span", { text: state[1] + (p.ready || inForce ? "" : ` · ${p.missing.length} missing`) })),
-        el("p", { class: "p-models" }, text ? el("span", {}, el("span", { class: "p-k", text: "Text " }), el("span", { text })) : null, el("span", {}, el("span", { class: "p-k", text: "Pictures " }), el("span", { text: models(p) }))),
-        !p.ready && p.missing.length ? el("ul", { class: "p-missing" }, ...p.missing.map((m) => el("li", { text: m }))) : null));
-  }));
-  describe();
+  $("last-change").textContent = c
+    ? `${new Date(c.at).toLocaleString()} (${c.via === "web" ? "this console" : "admin command"}): ${c.slot === "profile" ? "profile" : (slotOf(c.slot)?.label ?? c.slot)} ${c.from} → ${c.to}`
+    : "None recorded";
+  $("switches").replaceChildren(...view.slots.map(renderSwitch));
+  for (const s of view.slots) describeSwitch(s.id);
   $("console").hidden = false;
   renderStatus();
 }
 
-function selected() {
-  const r = document.querySelector('#profile input[name="profile"]:checked');
-  return r ? view?.profiles.find((p) => p.id === r.value) : undefined;
+let pendingSwitch = null;
+
+function confirmSwitch(id) {
+  const s = slotOf(id);
+  const o = optionOf(s, chosen.get(id));
+  if (!s || !o || o.current || !o.ready || o.blocked) return;
+  pendingSwitch = { body: { slot: s.id, value: o.value, expect: s.value, confirm: true }, label: s.label, to: valueText(s, o.value) };
+  $("confirm-title").textContent = `Switch the ${s.label.toLowerCase()}?`;
+  $("confirm-text").textContent = `From ${valueText(s, s.value)} to ${valueText(s, o.value)}. The other three switches stay as they are.`;
+  $("confirm").showModal();
 }
 
-function describe() {
-  const p = selected();
-  for (const li of $("profile").children) li.classList.toggle("checked", li.querySelector("input")?.checked === true);
-  const text = p ? textModels(p) : "";
-  $("profile-summary").textContent = p ? `${p.summary} Text: ${text || "unchanged"}. Pictures: ${models(p)}.` : "";
-  $("profile-missing").replaceChildren(...(p?.missing ?? []).map((m) => el("li", { text: m })));
-  $("switch").disabled = !p || !p.ready || p.id === view.active.profile;
+async function doSwitch() {
+  const p = pendingSwitch;
+  pendingSwitch = null;
+  if (!p) return;
+  say("Switching…");
+  try {
+    view = await call("setProviderSwitch", p.body);
+  } catch (e) {
+    if (e.reason !== "RECENT_SIGN_IN") throw e;
+    askSignInAgain(`Not switched: ${e.message}. Sign in again, then the switch is sent once more.`, () => sendSwitch(p));
+    return;
+  }
+  chosen.delete(p.body.slot);
+  render();
+  say(`${p.label} switched to ${p.to}.`);
 }
 
-/** The status strip: the provider setup from the profiles, then what the settings say is in force. */
+async function sendSwitch(p) {
+  say("Switching…");
+  view = await call("setProviderSwitch", p.body);
+  chosen.delete(p.body.slot);
+  render();
+  say(`${p.label} switched to ${p.to}.`);
+}
+
+/** The status strip: what the settings say is in force, then the four provider switches. */
 function renderStatus() {
   // What the settings say first, in the server's order; the provider setup (a wide tile) last.
   const tiles = [...(settingsView?.status ?? [])];
   if (view) {
-    const a = view.active;
-    const p = view.profiles.find((x) => x.id === a.profile);
-    const text = textModels(a);
-    const lines = [
-      ...(text ? [[`Text`, text]] : []),
-      [`Pictures`, `${models(a)}${a.picturesOn ? "" : " (not offered to the apps)"}`],
-    ];
-    if (!p) tiles.push({ label: "Provider setup", wide: true, value: a.label, tone: "warn", note: "Set by hand, not a profile: readiness unknown.", lines });
-    else if (p.ready) tiles.push({ label: "Provider setup", wide: true, value: a.label, tone: "good", note: "Ready.", lines });
-    else tiles.push({ label: "Provider setup", wide: true, value: a.label, tone: "crit", note: `Not ready: ${p.missing.join("; ")}.`, lines });
+    const lines = view.slots.map((s) => [s.label, valueText(s, s.value) + (s.inert ? " (inert)" : "")]);
+    const inForce = view.slots.map((s) => [s, optionOf(s, s.value)]);
+    const missing = inForce.flatMap(([s, o]) => (o && !o.ready ? o.missing.map((m) => `${s.label}: ${m}`) : []));
+    const custom = inForce.filter(([, o]) => !o).map(([s]) => s.label);
+    const pictures = view.picturesOn ? "pictures offered" : "pictures not offered";
+    const value = `${valueText(view.slots[0], view.slots[0].value)}; ${pictures}`;
+    if (missing.length) tiles.push({ label: "Provider switches", wide: true, value, tone: "crit", note: `Not ready: ${missing.join("; ")}.`, lines });
+    else if (custom.length) tiles.push({ label: "Provider switches", wide: true, value, tone: "warn", note: `Set by hand, no option: ${custom.join(", ")}; readiness unknown.`, lines });
+    else tiles.push({ label: "Provider switches", wide: true, value, tone: "good", note: "Ready.", lines });
   }
   $("status").replaceChildren(...tiles.map(tile));
   // The one line to read first: what needs attention (the server's own tones), or that nothing does.
@@ -228,7 +297,7 @@ async function load() {
   $("load-failed").hidden = true;
   $("loading").hidden = false;
   try {
-    view = await call("getProviderProfiles");
+    view = await call("getProviderSwitches");
     say("");
     render();
     await loadSettings();
@@ -275,29 +344,6 @@ function signInFailed(e) {
   } else {
     say(`Sign-in failed: ${e.code ?? e.message}`, true);
   }
-}
-
-async function doSwitch() {
-  const p = selected();
-  if (!p) return;
-  const body = { profile: p.id, expect: view.active.profile, confirm: true };
-  say("Switching…");
-  try {
-    view = await call("setProviderProfile", body);
-  } catch (e) {
-    if (e.reason !== "RECENT_SIGN_IN") throw e;
-    askSignInAgain(`Not switched: ${e.message}. Sign in again, then the switch is sent once more.`, () => sendSwitch(body, p));
-    return;
-  }
-  render();
-  say(`Switched to ${p.label}.`);
-}
-
-async function sendSwitch(body, p) {
-  say("Switching…");
-  view = await call("setProviderProfile", body);
-  render();
-  say(`Switched to ${p.label}.`);
 }
 
 // --- Settings (getOwnerSettings / setOwnerSettings) -------------------------------------------
@@ -931,7 +977,7 @@ async function start() {
     dock();
     signIn().then(() => again?.()).catch((e) => (e.reason ? say(`Not done: ${e.message}`, true) : signInFailed(e)));
   });
-  $("sign-out").addEventListener("click", () => signOut(auth).then(() => { view = null; settingsView = null; retry = null; show(false); say("Signed out."); }));
+  $("sign-out").addEventListener("click", () => signOut(auth).then(() => { view = null; settingsView = null; retry = null; chosen.clear(); show(false); say("Signed out."); }));
   $("settings-typed").addEventListener("input", () => {
     $("settings-confirm-ok").disabled = $("settings-typed").value.trim() !== settingsView?.confirmWord;
   });
@@ -947,17 +993,14 @@ async function start() {
   });
   // Every group with changes, in one check, one confirmation and one save.
   $("save-all").addEventListener("click", () => saveScope({ title: "any group", sections: settingsView?.sections ?? [] }).catch(saveFailed));
-  $("switch").addEventListener("click", () => {
-    const p = selected();
-    const text = textModels(p);
-    $("confirm-text").textContent = `From ${view.active.label} to ${p.label} (${text ? `text ${text}; ` : ""}pictures ${models(p)}).`;
-    $("confirm").showModal();
+  $("confirm-cancel").addEventListener("click", () => {
+    pendingSwitch = null;
+    $("confirm").close();
   });
-  $("confirm-cancel").addEventListener("click", () => $("confirm").close());
   $("confirm-ok").addEventListener("click", () => {
     $("confirm").close();
     doSwitch().catch((e) => {
-      say(e.reason === "STALE" ? "The setup was changed meanwhile; reloaded, check and try again." : `Not switched: ${e.message}`, true);
+      say(e.reason === "STALE" ? "That switch was changed meanwhile; reloaded, check and try again." : `Not switched: ${e.message}`, true);
       if (e.reason === "STALE") load();
     });
   });

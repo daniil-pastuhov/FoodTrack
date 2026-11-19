@@ -1,7 +1,7 @@
 {
   "displayName": "Recipe: model not served",
   "documentation": {
-    "content": "A provider's free metadata probe in the daily `checkModelLifecycle` says a model id is not found or not served where the server calls it (`model_unavailable`: `provider`, `model`, `roles`, `inUse`; for Vertex AI a 404 from `countTokens` in the configured location: retired, renamed, or not offered there). With `inUse: true` calls to it are failing or about to (pictures fall back, text goes to its fallback or fails): switch to another profile now (functions/README.md \"Provider profiles\"), then follow docs/recipe-setup.md \"A model is being retired\". A probe that failed for any other reason is `model_probe_failed` (info) and is not alerted on. See functions/README.md, \"Model lifecycle\".",
+    "content": "A provider's free metadata probe in the daily `checkModelLifecycle` says a model id is not found or not served where the server calls it (`model_unavailable`: `provider`, `model`, `roles`, `inUse`; for Vertex AI a 404 from `countTokens` in the configured location: retired, renamed, or not offered there). With `inUse: true` calls to it are failing or about to (pictures fall back, text goes to its fallback or fails): switch that model's switch (text, text fallback, picture or picture fallback) to another option now (functions/README.md \"Provider switches\"), then follow docs/recipe-setup.md \"A model is being retired\". A probe that failed for any other reason is `model_probe_failed` (info) and is not alerted on. See functions/README.md, \"Model lifecycle\".",
     "mimeType": "text/markdown"
   },
   "conditions": [
