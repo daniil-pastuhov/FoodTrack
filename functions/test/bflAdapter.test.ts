@@ -3,7 +3,7 @@
  * Labs"): the submit, poll and download against a fake fetch; every failure mapped to the shared
  * taxonomy; the hosts the key and the picture may travel to; the size cap; the cost booked; the
  * fallback to Google pictures through the core's own rules; the balance probe; that the registry
- * entry and the profile are sound and switchable once the key is readable (privacy approved by
+ * entry and its switch options are sound and switchable once the key is readable (privacy approved by
  * the owner on 2026-11-18); and the longer first attempt while BFL is the selected model.
  */
 import { BFL_SAFETY_TOLERANCE, BflImageGenerator, bflBody, bflImage, bflUrl, BFL_HOSTS } from "../src/adapters/bfl";
@@ -12,7 +12,8 @@ import { IMAGE } from "../src/constants";
 import { DEFAULT_RUNTIME_CONFIG, parseRuntimeConfig } from "../src/model";
 import { ImageGenerationError, type Deps, type GeneratedImage } from "../src/ports";
 import { checkProviderBalances } from "../src/providers/balance";
-import { PROVIDER_PROFILES, readinessOf, registryProblems } from "../src/providers/profiles";
+import { catalogue, catalogueProblems, optionOf, readinessOf } from "../src/providers/catalogue";
+import { planSwitch } from "../src/core/providerSwitch";
 import { imageProviderIds, imageTimingOf, imageProviders, providerRegistryProblems, providerSecrets, registerProviderForTests } from "../src/providers/registry";
 import { ImageRouter } from "../src/providers/router";
 import type { ProviderContext } from "../src/providers/types";
@@ -338,7 +339,7 @@ describe("through the core: booking and the fallback to Google pictures", () => 
   });
 });
 
-describe("registry, profile and balance", () => {
+describe("registry, switch options and balance", () => {
   test("one registry entry: priced, its secret declared, sound; the default setup is unchanged", () => {
     expect(providerRegistryProblems()).toEqual([]);
     expect(imageProviderIds()).toContain("bfl");
@@ -348,22 +349,24 @@ describe("registry, profile and balance", () => {
     expect(parseRuntimeConfig({ image: { provider: "bfl", model: "flux-3-image-klein" } }).image.provider).toBe("bfl");
   });
 
-  test("the flux-eu profile: sound, Google pictures as its fallback, switchable exactly when the key is readable", async () => {
-    expect(registryProblems()).toEqual([]);
-    const p = PROVIDER_PROFILES.find((x) => x.id === "flux-eu")!;
-    expect(p.image).toEqual({
-      provider: "bfl",
-      model: "flux-3-image-klein",
-      fallbackProvider: "vertex",
-      fallbackModel: FLASH_LITE,
-      usdPerImage: { "bfl/flux-3-image-klein": 0.01, "vertex/gemini-3.1-flash-lite-image": 0.04 },
-    });
-    expect(p.text).toBeUndefined();
+  test("its switch options: sound, either FLUX model as the picture or the fallback, switchable exactly when the key is readable", async () => {
+    expect(catalogueProblems()).toEqual([]);
+    for (const slot of ["image", "image-fallback"] as const) {
+      expect(catalogue(slot).map((o) => o.value)).toEqual(expect.arrayContaining(["bfl/flux-3-image-klein", "bfl/flux-3-image"]));
+    }
+    const klein = optionOf("image", "bfl/flux-3-image-klein")!;
+    expect(klein.usdPerImage).toBe(0.01);
     // Privacy approved (owner's decision 2026-11-18): the readable key is its only requirement.
     expect(bflImage.privacy).toEqual({ approved: true, missing: "" });
-    expect(p.requires).toEqual([{ kind: "secret", secret: "bfl", missing: bflImage.secret!.missing }]);
-    expect(await readinessOf(p, async (id) => id === "bfl")).toEqual({ ready: true, missing: [] });
-    expect(await readinessOf(p, async () => false)).toEqual({ ready: false, missing: [bflImage.secret!.missing] });
+    expect(klein.requires).toEqual([{ kind: "secret", secret: "bfl", missing: bflImage.secret!.missing }]);
+    expect(await readinessOf(klein, async (id) => id === "bfl")).toEqual({ ready: true, missing: [] });
+    expect(await readinessOf(klein, async () => false)).toEqual({ ready: false, missing: [bflImage.secret!.missing] });
+    // FLUX with Google pictures as its fallback (what the flux-eu profile was): the picture switch keeps the fallback on Vertex AI.
+    const pic = planSwitch({}, "image", "bfl/flux-3-image-klein");
+    expect(pic.to).toMatchObject({ image: "bfl/flux-3-image-klein", "image-fallback": "vertex/gemini-nano-banana-2.1" });
+    const eu = planSwitch({ image: { provider: "bfl", model: "flux-3-image-klein", fallbackProvider: "vertex", fallbackModel: "gemini-nano-banana-2.1" } }, "image-fallback", `vertex/${FLASH_LITE}`);
+    expect(eu.to).toMatchObject({ image: "bfl/flux-3-image-klein", "image-fallback": `vertex/${FLASH_LITE}` });
+    expect(eu.writes.map((w) => [w.path.join("."), w.value])).toEqual([["image.fallbackModel", FLASH_LITE]]);
   });
 
   test("the balance probe asks the EU credits endpoint; credits under the threshold are low; a failure is unavailable", async () => {

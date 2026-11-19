@@ -72,33 +72,15 @@
     <header class="card-head">
       <div class="card-title">
         <h2 id="h-providers">Providers</h2>
-        <p class="help">Who writes the recipe text and draws the pictures: the profile in force, each profile's readiness, and the switch.</p>
+        <p class="help">Who writes the recipe text and draws the pictures: four switches, each switched on its own. A fallback is asked once when its model fails for capacity, a refused key or an empty balance.</p>
       </div>
     </header>
-    <div class="prov">
-      <div class="inforce">
-        <p class="eyebrow">In force</p>
-        <p id="active" class="inforce-name"></p>
-        <dl class="facts">
-          <dt>Recipe text</dt><dd id="active-text" class="mono"></dd>
-          <dt>Pictures</dt><dd id="active-models" class="mono"></dd>
-          <dt>Pictures for the apps</dt><dd id="active-on"></dd>
-          <dt>Last change</dt><dd id="last-change"></dd>
-        </dl>
-      </div>
-      <fieldset class="profiles">
-        <legend>Switch to</legend>
-        <ul id="profile" class="profile-list"></ul>
-      </fieldset>
-    </div>
+    <dl class="facts prov-facts">
+      <dt>Pictures for the apps</dt><dd id="active-on"></dd>
+      <dt>Last change</dt><dd id="last-change"></dd>
+    </dl>
+    <div id="switches" class="switches"></div>
     <div id="providers-readonly"></div>
-    <div class="card-foot prov-foot">
-      <div class="selection">
-        <p id="profile-summary" class="note"></p>
-        <ul id="profile-missing" class="missing"></ul>
-      </div>
-      <button id="switch" type="button" class="primary" disabled>Switch…</button>
-    </div>
   </section>
 </div>
 
@@ -125,9 +107,9 @@
 </div>
 
 <dialog id="confirm" aria-labelledby="confirm-title">
-  <h2 id="confirm-title">Switch the recipe providers?</h2>
+  <h2 id="confirm-title">Switch?</h2>
   <p id="confirm-text" class="dialog-lead"></p>
-  <p class="note">New recipe requests use it within 30 seconds. Every switch is recorded and logged.</p>
+  <p class="note">New recipe requests use it within 30 seconds. Every switch is recorded, logged and emailed to you.</p>
   <div class="buttons">
     <button id="confirm-cancel" type="button">Cancel</button>
     <button id="confirm-ok" type="button" class="primary">Switch</button>

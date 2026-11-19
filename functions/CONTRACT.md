@@ -7,8 +7,8 @@ source of truth is `src/contract.ts`; this file must change with it.
 
 - All ten are Firebase **callable** functions in region **`europe-west1`**
   (`Firebase.functions("europe-west1")` / `Functions.functions(region: "europe-west1")`).
-  `getProviderProfiles` and `setProviderProfile` are not among them: they serve the owner console
-  only (README "The owner console"), take no App Check token, refuse every account but the owner's,
+  `getProviderSwitches` and `setProviderSwitch` (nor `getOwnerSettings` / `setOwnerSettings`) are not among them: they serve the owner console
+  only (README "The owner console", "Provider switches"), take no App Check token, refuse every account but the owner's,
   and are not part of this contract; the apps never call them.
 - Every call needs a signed-in Firebase Auth user (anonymous counts) and a valid **App Check**
   token. A call without either fails with `unauthenticated`. The one exception is

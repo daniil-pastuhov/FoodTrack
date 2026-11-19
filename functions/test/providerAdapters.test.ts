@@ -1,7 +1,7 @@
 /**
  * The common provider interface (README "Adding a provider"): a provider that exists only in the
  * tests (test/fakeProvider.ts, one adapter file) registered as one registry entry is selectable in
- * config/runtime and by profile, priced, reserved, routed, booked and logged with no other change;
+ * config/runtime and by the provider switches, priced, reserved, routed, booked and logged with no other change;
  * the shared failure taxonomy; fallback as an interface-level rule (out of credit to the named
  * fallback or the default provider, capacity and config to the named fallback only, never after a
  * safety refusal or once something was generated); the balance probe; and that the default path is
@@ -16,12 +16,12 @@ import { JUDGE, JUDGE_PRICES } from "../src/constants";
 import { buildPrompt } from "../src/adapters/prompt";
 import { validateGenerateRequest } from "../src/contract";
 import { generateRecipe, planFor, spendMicroUsd } from "../src/core/generation";
-import { planProfile } from "../src/core/providerSwitch";
+import { planSwitch, withWrites } from "../src/core/providerSwitch";
 import { DEFAULT_RUNTIME_CONFIG, emptyUser, microUsd, parseRuntimeConfig, textReservePricesOf, utcDay } from "../src/model";
 import { GenerationError, ImageGenerationError, type Deps, type RecipeGenerator } from "../src/ports";
 import { checkProviderBalances } from "../src/providers/balance";
 import { httpFailureKind, retryAfterMs } from "../src/providers/failure";
-import { PROVIDER_PROFILES, readinessOf, registryProblems, withProviderRequirements } from "../src/providers/profiles";
+import { catalogue, catalogueProblems, optionOf, readinessOf } from "../src/providers/catalogue";
 import { imageProviderIds, providerRegistryProblems, providerSecrets, registerProviderForTests, textProviders } from "../src/providers/registry";
 import { ImageRouter, TextRouter } from "../src/providers/router";
 import type { ProviderContext, ProviderDescriptor } from "../src/providers/types";
@@ -193,7 +193,7 @@ describe("the registry", () => {
   });
 });
 
-describe("selecting a new provider: config, profile, readiness", () => {
+describe("selecting a new provider: config, switches, readiness", () => {
   test("config/runtime.text selects it, its default model and price; unknown or unpriced is the default", () => {
     const c = parseRuntimeConfig({ text: { provider: "fakeeu" } });
     expect(c.text).toEqual({ provider: "fakeeu", model: "fake-small", fallbackProvider: "", fallbackModel: "" });
@@ -222,46 +222,39 @@ describe("selecting a new provider: config, profile, readiness", () => {
     expect(planFor(req, dear).reservedMicroUsd).toBeGreaterThan(base * 4);
   });
 
-  test("a profile with a text part: sound, readiness from its providers, the exact writes", () => {
-    const eu = withProviderRequirements({
-      id: "eu-pair",
-      label: "Fake EU pair",
-      summary: "Text and pictures at the fake providers; falls back to Google.",
-      text: { provider: "fakeeu", model: "fake-small", fallbackProvider: "google", fallbackModel: "gemini-3.8-flash" },
-      image: { provider: "fakepix", model: "fake-draw", fallbackProvider: "vertex", fallbackModel: "gemini-3.1-flash-lite-image", usdPerImage: { "fakepix/fake-draw": 0.03, "vertex/gemini-3.1-flash-lite-image": 0.04 } },
-    });
-    expect(registryProblems([...PROVIDER_PROFILES, eu])).toEqual([]);
-    expect(eu.requires.map((r) => r.missing)).toEqual([
-      "The fake key is not readable",
+  test("the switches offer it from its registry entry alone: sound, readiness from its provider, the exact writes", async () => {
+    expect(catalogueProblems()).toEqual([]);
+    expect(catalogue("text").map((o) => o.value)).toEqual(expect.arrayContaining(["fakeeu/fake-small", "fakeeu/fake-large"]));
+    expect(catalogue("text-fallback").map((o) => o.value)).toEqual(expect.arrayContaining(["fakeeu/fake-small", "fakeeu/fake-large", "none"]));
+    expect(catalogue("image").map((o) => o.value)).toContain("fakepix/fake-draw");
+    expect(optionOf("text", "fakeeu/fake-small")!.requires.map((r) => r.missing)).toEqual(["The fake key is not readable"]);
+    expect(optionOf("image", "fakepix/fake-draw")!.requires.map((r) => r.missing)).toEqual([
       "The fake picture provider is not in the privacy policy",
       "The fake picture key is not readable",
     ]);
-    const plan = planProfile({ prices: { inputUsdPerMTok: 1.5, outputUsdPerMTok: 7.5 } }, eu);
-    expect(plan.writes.map((w) => [w.path.join("."), w.value])).toEqual([
+    expect(await readinessOf(optionOf("text", "fakeeu/fake-small")!, async (id) => id === "fakeeu")).toEqual({ ready: true, missing: [] });
+    expect(await readinessOf(optionOf("text", "fakeeu/fake-small")!, async () => false)).toEqual({ ready: false, missing: ["The fake key is not readable"] });
+    // The EU pair, one switch at a time: the text at the fake provider, its fallback on Google.
+    const base = { prices: { inputUsdPerMTok: 1.5, outputUsdPerMTok: 7.5 } };
+    const text = planSwitch(base, "text", "fakeeu/fake-small");
+    expect(text.writes.map((w) => [w.path.join("."), w.value])).toEqual([["text.provider", "fakeeu"], ["text.model", "fake-small"]]);
+    const withText = withWrites(base, text.writes);
+    const fb = planSwitch(withText, "text-fallback", "google/gemini-3.8-flash");
+    expect(fb.writes.map((w) => [w.path.join("."), w.value])).toEqual([["text.fallbackProvider", "google"], ["text.fallbackModel", "gemini-3.8-flash"]]);
+    expect(parseRuntimeConfig(withWrites(withText, fb.writes)).text).toEqual({ provider: "fakeeu", model: "fake-small", fallbackProvider: "google", fallbackModel: "gemini-3.8-flash" });
+    // Its pictures, with Google's as the fallback: the default fallback is pinned to Vertex AI.
+    const pix = planSwitch(base, "image", "fakepix/fake-draw");
+    expect(pix.writes.map((w) => [w.path.join("."), w.value])).toEqual([
       ["image.provider", "fakepix"],
       ["image.model", "fake-draw"],
-      ["image.fallbackModel", "gemini-3.1-flash-lite-image"],
       ["image.fallbackProvider", "vertex"],
-      // No text map yet: written whole. No price: the adapters' own prices are already in force.
-      ["text", { provider: "fakeeu", model: "fake-small", fallbackProvider: "google", fallbackModel: "gemini-3.8-flash" }],
+      ["image.fallbackModel", "gemini-nano-banana-2.1"],
     ]);
-    // Over an existing text map: field paths, only what differs.
-    expect(planProfile({ text: { provider: "fakeeu", model: "fake-large" } }, eu).writes.filter((w) => w.path[0] === "text").map((w) => [w.path.join("."), w.value])).toEqual([
-      ["text.model", "fake-small"],
-      ["text.fallbackProvider", "google"],
-      ["text.fallbackModel", "gemini-3.8-flash"],
-    ]);
-    expect(plan.to).toMatchObject({ provider: "fakepix", fallbackProvider: "vertex", textProvider: "fakeeu", textFallbackProvider: "google" });
-    // Back to a profile without text: the text's deploy default again (text: {}).
-    const back = planProfile({ text: { provider: "fakeeu" }, image: { provider: "fakepix", model: "fake-draw", fallbackProvider: "vertex", fallbackModel: "gemini-3.1-flash-lite-image" } }, PROVIDER_PROFILES[0]);
-    expect(back.writes.map((w) => [w.path.join("."), w.value])).toEqual(expect.arrayContaining([["text", {}], ["image.fallbackProvider", ""]]));
-    expect(back.to).toMatchObject({ profile: "flash-lite", textProvider: "google" });
-  });
-
-  test("readiness checks each provider's key and privacy approval, never returning a secret", async () => {
-    const eu = withProviderRequirements({ id: "eu-text", label: "x", summary: "y", text: { provider: "fakeeu", model: "fake-small" }, image: { provider: "off", usdPerImage: {} } });
-    expect(await readinessOf(eu, async (id) => id === "fakeeu")).toEqual({ ready: true, missing: [] });
-    expect(await readinessOf(eu, async () => false)).toEqual({ ready: false, missing: ["The fake key is not readable"] });
+    // Back to the defaults, one switch each.
+    const eu = { text: { provider: "fakeeu", model: "fake-small", fallbackProvider: "google", fallbackModel: "gemini-3.8-flash" } };
+    expect(await Promise.resolve().then(() => planSwitch(eu, "text", "google/gemini-3.8-flash")).catch((e) => e.reason)).toBe("SAME_AS_PRIMARY");
+    const none = planSwitch(eu, "text-fallback", "none");
+    expect(planSwitch(withWrites(eu, none.writes), "text", "google/gemini-3.8-flash").to).toMatchObject({ text: "google/gemini-3.8-flash", "text-fallback": "none" });
   });
 });
 

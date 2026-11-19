@@ -205,7 +205,7 @@ export const JUDGE = {
  * changes a prompt: prompts are code, and the report is advice for the owner.
  *
  * `model`: the PROMPT_REVIEW_MODEL param's default, Gemini on Vertex AI (provider "google"), the
- * text profile's own model: the registry has no stronger tier priced. Booked at the google text
+ * recipe text's default model: the registry has no stronger Gemini tier priced. Booked at the google text
  * provider's prices (config/runtime.prices over DEFAULT_PRICES).
  *
  * The budget, per run: the input is bounded in bytes (every token covers at least one byte), so

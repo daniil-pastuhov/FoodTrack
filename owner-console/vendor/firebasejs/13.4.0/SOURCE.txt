@@ -11,4 +11,4 @@ Downloaded 2026-11-17 from:
 Licence: Apache-2.0 (the files' own headers). Nothing else changed; no build step.
 To update: download both files of the new version, make the same one-line change, record the
 hashes here, rename the folder and the two imports in owner-console/console.js, and update the
-test "the static page ..." in functions/test/providerProfiles.test.ts.
+test "the static page ..." in functions/test/providerSwitches.test.ts.
