@@ -540,17 +540,17 @@ first shipped with named profiles, 2026-11-18; step 13g replaces them with the f
 The named profiles are replaced by four switches, each set on its own: the text model, the text
 fallback, the picture model, the picture fallback. Two callables are new and two are gone, so:
 
-- [ ] **Deploy the two new callables**:
+- [x] **(done 2026-11-19, agent; full `--only functions,firestore` deploy)** **Deploy the two new callables**:
   `cd functions && npm ci && npx firebase deploy --only functions:getProviderSwitches,functions:setProviderSwitch --project bestbefore-f9ee1`
   (or the next full `--only functions,firestore` deploy, which also carries the OpenAI text adapter
   and the other changed functions).
-- [ ] **Deploy the page**: `npx firebase deploy --only hosting --project bestbefore-f9ee1` (the
+- [x] **(done 2026-11-19, agent)** **Deploy the page**: `npx firebase deploy --only hosting --project bestbefore-f9ee1` (the
   headers are unchanged; the two `curl -sI` checks of step 13 still apply). The functions first:
   the new page calls the new names.
-- [ ] **Remove the two old callables**, which nothing calls any more:
+- [x] **(done 2026-11-19, agent; by the full deploy, with `--force`)** **Remove the two old callables**, which nothing calls any more:
   `npx firebase functions:delete getProviderProfiles setProviderProfile --region europe-west1 --project bestbefore-f9ee1`
   (a full deploy offers to delete them too).
-- [ ] **Re-apply the alerts** whose documentation changed (the filters did not:
+- [x] **(done 2026-11-19, agent; six descriptions updated)** **Re-apply the alerts** whose documentation changed (the filters did not:
   `provider_profile_changed` keeps its name and now carries `slot`, `from`, `to`):
   `python3 functions/alerts/alerts.py --project bestbefore-f9ee1` (dry run), then with `--apply`.
 - [ ] **Check**: open the page signed out of everything (a private window) and see only the
