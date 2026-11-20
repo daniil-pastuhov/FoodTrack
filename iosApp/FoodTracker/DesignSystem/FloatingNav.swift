@@ -35,6 +35,9 @@ struct FloatingNav: View {
     @Binding var selection: RootTab
     /// Products on the shopping list, as a badge on that tab. Hidden at zero.
     var shoppingCount: Int = 0
+    /// Saved recipes and menus not seen yet (`RecipeViewModel.unreadCount`, the Recipe header's
+    /// Saved badge), as a badge on Recipe. Hidden at zero.
+    var recipeCount: Int = 0
 
     var body: some View {
         HStack(spacing: 2) {
@@ -42,7 +45,7 @@ struct FloatingNav: View {
                 FloatingNavItem(
                     tab: tab,
                     isSelected: selection == tab,
-                    badge: tab == .shopping ? shoppingCount : 0
+                    badge: tab == .shopping ? shoppingCount : tab == .recipe ? recipeCount : 0
                 ) {
                     selection = tab
                 }
@@ -109,11 +112,12 @@ private struct FloatingNavItem: View {
 private struct NavPreview: View {
     @State private var tab = RootTab.home
     var count = 5
+    var recipes = 0
 
     var body: some View {
         ZStack(alignment: .bottom) {
             LarderColor.background.ignoresSafeArea()
-            FloatingNav(selection: $tab, shoppingCount: count)
+            FloatingNav(selection: $tab, shoppingCount: count, recipeCount: recipes)
                 .padding(.bottom, LarderSpace.s3)
         }
     }
@@ -122,5 +126,6 @@ private struct NavPreview: View {
 #Preview("Pill") { NavPreview() }
 #Preview("Pill, dark") { NavPreview().preferredColorScheme(.dark) }
 #Preview("Pill, no badge") { NavPreview(count: 0) }
+#Preview("Pill, new recipes") { NavPreview(recipes: 2) }
 #Preview("Pill, 99+") { NavPreview(count: 120) }
 #Preview("Pill, large text") { NavPreview().dynamicTypeSize(.accessibility3) }

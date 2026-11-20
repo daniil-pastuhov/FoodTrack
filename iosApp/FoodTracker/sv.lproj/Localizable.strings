@@ -664,6 +664,11 @@
 "recipe_intro_packs_message" = "Vår server skriver receptet och kan också planera en meny för 3 dagar. Ett recept drar %1$@ från ett paket; en meny drar %2$@ med 2 rätter per dag eller %3$@ med 3.";
 "recipe_intro_packs_body_sets" = "Vår server skriver receptet och kan också planera ett menyset. Ett recept drar %1$@ från ett paket; ett menyset drar %2$d till %3$d, beroende på dagar och rätter per dag.";
 "recipe_saved_new" = "Ny";
+"recipe_saved_tab_all" = "Alla";
+"recipe_saved_tab_menus" = "Menyer";
+"recipe_favourite_add" = "Lägg till i favoriter";
+"recipe_favourite_remove" = "Ta bort från favoriter";
+"recipe_saved_favourite" = "Favorit";
 "recipe_courses_label" = "Rätter per dag";
 "recipe_generate_recipe" = "Skapa recept";
 "recipe_generate_menu" = "Skapa meny";

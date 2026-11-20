@@ -21,6 +21,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -44,6 +46,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -51,6 +54,8 @@ import com.foodtracker.android.R
 import com.foodtracker.android.ui.design.EmptyState
 import com.foodtracker.android.ui.design.LarderButton
 import com.foodtracker.android.ui.design.LarderButtonStyle
+import com.foodtracker.android.ui.design.LarderChip
+import com.foodtracker.android.ui.design.LarderFavouriteButton
 import com.foodtracker.android.ui.design.LarderDivider
 import com.foodtracker.android.ui.design.LarderArt
 import com.foodtracker.android.ui.design.LarderGroupPosition
@@ -70,14 +75,26 @@ import com.foodtracker.android.ui.theme.LarderSize
 import com.foodtracker.android.ui.theme.LarderSpace
 import com.foodtracker.android.ui.theme.LarderTheme
 import com.foodtracker.android.util.formatDayMonth
+import com.foodtracker.android.util.recipeMealLabel
 import com.foodtracker.recipe.DEFAULT_MENU_DAYS
 import com.foodtracker.recipe.Menu
+import com.foodtracker.recipe.MenuCourse
+import com.foodtracker.recipe.MenuCourseKind
+import com.foodtracker.recipe.MenuDay
 import com.foodtracker.recipe.Recipe
 import com.foodtracker.recipe.RecipeSource
 import com.foodtracker.recipe.RecipeStateHolder
 import com.foodtracker.recipe.SavedRecipe
 import com.foodtracker.recipe.SavedRecipeKind
+import com.foodtracker.recipe.RecipeMealType
 import com.foodtracker.recipe.SavedSelection
+import com.foodtracker.recipe.SavedTab
+import com.foodtracker.recipe.savedOrder
+import com.foodtracker.recipe.savedRowsFor
+import com.foodtracker.recipe.savedTabOf
+import com.foodtracker.recipe.savedTabOrAll
+import com.foodtracker.recipe.savedTabs
+import com.foodtracker.recipe.showsSavedTabs
 import com.foodtracker.util.DateUtils
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
@@ -112,10 +129,11 @@ internal fun savedRecipeDetails(resources: Resources, saved: SavedRecipe): List<
 /** The selected ids, kept across rotation and process death as a plain list. */
 private val SelectionSaver = listSaver<Set<String>, String>(save = { it.toList() }, restore = { it.toSet() })
 
-/** Everything written in the app, newest first, on this phone only. Swipe a row left to delete
- *  it, with Undo; the recipe's own page has Delete as well. Several go at once through selection:
- *  a long press on a row, or Select in the top bar, then Delete, with one Undo for all of them
- *  ([onDeleteSelected]). */
+/** Everything written in the app, on this phone only: new ones first, then favourites, then the
+ *  rest, each newest first ([savedOrder]), under tabs for All, each meal saved and Menus
+ *  ([savedTabs]). Swipe a row left to delete it, with Undo; the recipe's own page has Delete as
+ *  well. Several go at once through selection: a long press on a row, or Select in the top bar,
+ *  then Delete, with one Undo for all of them ([onDeleteSelected]); it acts on the tab's rows. */
 @Composable
 fun SavedRecipesScreen(
     stateHolder: RecipeStateHolder,
@@ -124,8 +142,15 @@ fun SavedRecipesScreen(
     onDeleteSelected: (Set<String>) -> Unit
 ) {
     val state by stateHolder.uiState.collectAsStateWithLifecycle()
-    // Recipes and menus alike, newest first.
-    val saved = state.saved
+    val tabs = remember(state.saved) { savedTabs(state.saved) }
+    var tabKey by rememberSaveable { mutableStateOf(SavedTab.All.key) }
+    // A tab whose last row went is gone, and so is its selection (Undo doesn't bring it back).
+    val tab = if (state.savedLoaded) savedTabOrAll(savedTabOf(tabKey), tabs) else savedTabOf(tabKey)
+    LaunchedEffect(tab.key) { tabKey = tab.key }
+    // The tab's rows: new first, then favourites, then the rest.
+    val saved = remember(state.saved, tab, state.options.unreadSaved) {
+        savedOrder(savedRowsFor(state.saved, tab), state.options.unreadSaved)
+    }
     val savedIds = remember(saved) { saved.map { it.id } }
     var selecting by rememberSaveable { mutableStateOf(false) }
     var picked by rememberSaveable(stateSaver = SelectionSaver) { mutableStateOf(emptySet()) }
@@ -143,6 +168,10 @@ fun SavedRecipesScreen(
     BackHandler(enabled = selecting, onBack = exitSelection)
     SavedRecipesScaffold(
         saved = saved,
+        tabs = tabs,
+        selectedTab = tab,
+        onSelectTab = { tabKey = it.key },
+        onFavourite = stateHolder::setSavedFavorite,
         loading = !state.savedLoaded,
         today = DateUtils.today(),
         selection = if (selecting) selected else null,
@@ -178,7 +207,13 @@ private fun SavedRecipesScaffold(
     onToggleAll: () -> Unit,
     onExitSelection: () -> Unit,
     onDeleteSelected: () -> Unit,
-    isUnread: (String) -> Boolean = { false }
+    isUnread: (String) -> Boolean = { false },
+    tabs: List<SavedTab> = listOf(SavedTab.All),
+    selectedTab: SavedTab = SavedTab.All,
+    onSelectTab: (SavedTab) -> Unit = {},
+    onFavourite: (String, Boolean) -> Unit = { _, _ -> },
+    /** Previews only, as for [SavedRecipesList]. */
+    previewThumbnails: Map<String, Painter> = emptyMap()
 ) {
     Scaffold(
         topBar = {
@@ -216,18 +251,53 @@ private fun SavedRecipesScaffold(
         },
         modifier = Modifier.fillMaxSize()
     ) { padding ->
-        SavedRecipesList(
-            saved = saved,
-            loading = loading,
-            padding = padding,
-            today = today,
-            onDelete = onDelete,
-            isUnread = isUnread,
-            selection = selection,
-            onToggle = onToggle,
-            onStartSelection = { onStartSelection(it) }
-        )
+        Column(modifier = Modifier.fillMaxSize().padding(top = padding.calculateTopPadding())) {
+            if (showsSavedTabs(tabs)) SavedTabRow(tabs, selectedTab, onSelectTab)
+            SavedRecipesList(
+                saved = saved,
+                loading = loading,
+                padding = PaddingValues(bottom = padding.calculateBottomPadding()),
+                today = today,
+                onDelete = onDelete,
+                isUnread = isUnread,
+                selection = selection,
+                onToggle = onToggle,
+                onStartSelection = { onStartSelection(it) },
+                onFavourite = onFavourite,
+                previewThumbnails = previewThumbnails
+            )
+        }
     }
+}
+
+/** Saved recipes' tabs, one chip each, scrolling sideways when they don't fit: All, the meals
+ *  saved, Menus. Shown only while there is more than All ([showsSavedTabs]). */
+@Composable
+private fun SavedTabRow(tabs: List<SavedTab>, selected: SavedTab, onSelect: (SavedTab) -> Unit) {
+    val resources = LocalContext.current.resources
+    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(LarderSpace.s2),
+            contentPadding = PaddingValues(horizontal = LarderSpace.s4),
+            modifier = Modifier.widthIn(max = 640.dp).fillMaxWidth()
+        ) {
+            items(tabs, key = { it.key }) { tab ->
+                LarderChip(
+                    label = savedTabLabel(resources, tab),
+                    selected = tab == selected,
+                    onClick = { onSelect(tab) },
+                    modifier = Modifier.animateItem()
+                )
+            }
+        }
+    }
+}
+
+/** "All", a meal's own name ("Breakfast"), "Menus". */
+internal fun savedTabLabel(resources: Resources, tab: SavedTab): String = when (tab) {
+    SavedTab.All -> resources.getString(R.string.recipe_saved_tab_all)
+    is SavedTab.Meal -> recipeMealLabel(resources, tab.meal)
+    SavedTab.Menus -> resources.getString(R.string.recipe_saved_tab_menus)
 }
 
 /** Delete for what is selected, at the bottom in thumb reach as on Home; off with nothing selected. */
@@ -264,6 +334,7 @@ private fun SavedRecipesList(
     selection: Set<String>? = null,
     onToggle: (String) -> Unit = {},
     onStartSelection: (String) -> Unit = {},
+    onFavourite: (String, Boolean) -> Unit = { _, _ -> },
     /** Previews only: drawn thumbnails by saved id, since they load no files. */
     previewThumbnails: Map<String, Painter> = emptyMap()
 ) {
@@ -367,6 +438,10 @@ private fun SavedRecipesList(
                                 // Written while the person was elsewhere and not opened yet.
                                 if (isUnread(item.id)) UnreadDot()
                                 if (!selecting) {
+                                    LarderFavouriteButton(
+                                        favourite = item.favorite,
+                                        onToggle = { onFavourite(item.id, it) }
+                                    )
                                     LarderIcon(
                                         LarderIcons.ChevronRight,
                                         contentDescription = null,
@@ -462,6 +537,69 @@ internal fun SavedRecipesSelectingPreview() = LarderTheme {
             onExitSelection = {},
             onDeleteSelected = {},
             isUnread = { it == "1" }
+        )
+    }
+}
+
+/** The tabs (All, the meals saved, Menus) over new rows first, then favourites, then the rest. */
+private fun previewTabsSaved(): List<SavedRecipe> {
+    val today = LocalDate(2026, 11, 4)
+    val day = 86_400_000L
+    val noon = today.toEpochDays() * day + day / 2
+    val dish = Recipe(title = "Lentil stew", minutes = 40, steps = listOf("a"), source = RecipeSource.SERVER)
+    return listOf(
+        SavedRecipe.of("1", Recipe(title = "Spinach and feta omelette", minutes = 15, steps = listOf("a"), source = RecipeSource.SERVER, meal = RecipeMealType.BREAKFAST), noon),
+        SavedRecipe.of("2", Recipe(title = "Yoghurt pancakes with blueberries", minutes = 25, steps = listOf("a"), source = RecipeSource.SERVER, meal = RecipeMealType.BREAKFAST), noon - day).copy(favorite = true),
+        SavedRecipe.of("3", "Menu", Menu(listOf(MenuDay(today, courses = listOf(MenuCourse(MenuCourseKind.MAIN, dish))))), noon - 2 * day),
+        SavedRecipe.of("4", Recipe(title = "Salmon with roast potatoes", minutes = 45, steps = listOf("a"), source = RecipeSource.SERVER, meal = RecipeMealType.DINNER), noon - 3 * day).copy(favorite = true),
+        SavedRecipe.of("5", Recipe(title = "Spinach yoghurt toast", minutes = 10, steps = listOf("a")), noon - 7 * day)
+    )
+}
+
+@PreviewLightDark
+@Composable
+internal fun SavedRecipesTabsPreview() = LarderTheme {
+    Surface(color = MaterialTheme.colorScheme.background) {
+        val saved = previewTabsSaved()
+        val unread = setOf("1")
+        SavedRecipesScaffold(
+            saved = savedOrder(saved, unread),
+            loading = false,
+            today = LocalDate(2026, 11, 4),
+            selection = null,
+            onBack = {},
+            onDelete = {},
+            onStartSelection = {},
+            onToggle = {},
+            onToggleAll = {},
+            onExitSelection = {},
+            onDeleteSelected = {},
+            isUnread = { it in unread },
+            tabs = savedTabs(saved)
+        )
+    }
+}
+
+@Preview
+@Composable
+internal fun SavedRecipesMealTabPreview() = LarderTheme {
+    Surface(color = MaterialTheme.colorScheme.background) {
+        val saved = previewTabsSaved()
+        val tab = SavedTab.Meal(RecipeMealType.BREAKFAST)
+        SavedRecipesScaffold(
+            saved = savedOrder(savedRowsFor(saved, tab), emptySet()),
+            loading = false,
+            today = LocalDate(2026, 11, 4),
+            selection = null,
+            onBack = {},
+            onDelete = {},
+            onStartSelection = {},
+            onToggle = {},
+            onToggleAll = {},
+            onExitSelection = {},
+            onDeleteSelected = {},
+            tabs = savedTabs(saved),
+            selectedTab = tab
         )
     }
 }

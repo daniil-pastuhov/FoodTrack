@@ -338,6 +338,81 @@ enum SavedSelection {
     }
 }
 
+/// A single recipe's meal (`Recipe.meal`): one of breakfast, lunch, dinner, snack, dessert, never
+/// "any". One rule on both platforms and the server (Android: `RecipeMeal` in
+/// `shared/.../recipe/SavedList.kt`; the server's own correction in `generateRecipe`).
+enum RecipeMeal {
+    /// A wire or stored value: absent, unknown or "any" reads as no meal.
+    static func parsed(_ raw: String?) -> RecipeMealType? {
+        guard let raw else { return nil }
+        let meal = RecipeMealType(rawValue: raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased())
+        return meal == .any ? nil : meal
+    }
+
+    /// The meal a recipe the phone wrote is saved with, from the model's `label` and the config's
+    /// meal types: exactly one configured is that one; several, the label when it is one of them,
+    /// else the first configured in the form's order; none ("Any"), the label when valid, else none.
+    static func resolved(label: String?, configured: Set<RecipeMealType>) -> RecipeMealType? {
+        let configured = RecipeChoices.orderedMeals(configured.subtracting([.any]))
+        let label = parsed(label)
+        if configured.count == 1 { return configured[0] }
+        guard let first = configured.first else { return label }
+        if let label, configured.contains(label) { return label }
+        return first
+    }
+}
+
+/// Saved recipes' tabs: All first, then one per meal that a saved recipe has, then Menus while a
+/// menu is saved. Android: `SavedTab` in `shared/.../recipe/SavedList.kt`.
+enum SavedTab: Hashable, Sendable {
+    case all
+    case meal(RecipeMealType)
+    case menus
+}
+
+/// Saved recipes' tabs and order, one rule on both platforms (Android: `savedTabs`,
+/// `savedRowsFor`, `savedOrder` in `shared/.../recipe/SavedList.kt`, `SavedListTest`, the same
+/// cases as `RecipeConfigCheck`).
+enum SavedList {
+    /// The tabs to show, in order; empty when only All would show (the row is then hidden).
+    /// Recipes saved before meals came have none and are under All only.
+    static func tabs(_ saved: [SavedRecipe]) -> [SavedTab] {
+        let meals = Set(saved.compactMap(\.meal))
+        var tabs: [SavedTab] = [.all]
+        tabs += RecipeChoices.orderedMeals(meals).map { SavedTab.meal($0) }
+        if saved.contains(where: { $0.kind == .menu }) { tabs.append(.menus) }
+        return tabs.count > 1 ? tabs : []
+    }
+
+    /// The tab in effect: `selected` while it is still shown, else All (its last row went).
+    static func shown(_ selected: SavedTab, tabs: [SavedTab]) -> SavedTab {
+        tabs.contains(selected) ? selected : .all
+    }
+
+    /// The rows a tab lists, in the order given.
+    static func rows(_ saved: [SavedRecipe], tab: SavedTab) -> [SavedRecipe] {
+        switch tab {
+        case .all: return saved
+        case .meal(let meal): return saved.filter { $0.kind == .recipe && $0.meal == meal }
+        case .menus: return saved.filter { $0.kind == .menu }
+        }
+    }
+
+    /// New (unread) rows first, then favourites, then the rest; newest first inside each group.
+    /// An unread favourite is new.
+    static func ordered(_ saved: [SavedRecipe], unread: Set<String>) -> [SavedRecipe] {
+        func group(_ entry: SavedRecipe) -> Int {
+            unread.contains(entry.id) ? 0 : entry.isFavorite ? 1 : 2
+        }
+        return saved.enumerated().sorted { a, b in
+            let ga = group(a.element), gb = group(b.element)
+            if ga != gb { return ga < gb }
+            if a.element.createdAt != b.element.createdAt { return a.element.createdAt > b.element.createdAt }
+            return a.offset < b.offset
+        }.map(\.element)
+    }
+}
+
 /// `costs` as a response carries it. Anything unreadable there reads as nil rather than failing
 /// the call it came with.
 struct WireCosts: Decodable, Sendable {

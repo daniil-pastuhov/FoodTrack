@@ -212,6 +212,11 @@ fun FoodTrackerRoot(
         stateHolder.uiState.map { it.shoppingList.size }.distinctUntilChanged()
     }.collectAsStateWithLifecycle(stateHolder.uiState.value.shoppingList.size)
 
+    // The Recipe tab's badge: the same count as the Saved recipes button's in the Recipe header.
+    val newRecipes by remember(recipeStateHolder) {
+        recipeStateHolder.uiState.map { it.unreadCount }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(recipeStateHolder.uiState.value.unreadCount)
+
     val homeConfirmation by remember(stateHolder) {
         stateHolder.uiState.map { it.homeConfirmation }.distinctUntilChanged()
     }.collectAsStateWithLifecycle(stateHolder.uiState.value.homeConfirmation)
@@ -1051,6 +1056,7 @@ fun FoodTrackerRoot(
                                     selectedTab = currentTab,
                                     onTabSelected = { currentScreen = it.route },
                                     shoppingCount = shoppingListCount,
+                                    newRecipes = newRecipes,
                                     modifier = Modifier.onGloballyPositioned {
                                         pillHeightPx = it.size.height
                                     }

@@ -1,9 +1,18 @@
 package com.foodtracker.recipe
 
 import kotlinx.datetime.LocalDate
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.descriptors.nullable
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonDecoder
+import kotlinx.serialization.json.JsonPrimitive
 
 /*
  * A written recipe and a menu, the same shape on Android, iOS and the server (camelCase when
@@ -67,7 +76,13 @@ data class Recipe(
      *  null without one. Set by the app when a reply with pictures is saved, never read from a reply. */
     val picture: RecipePicture? = null,
     /** Local only: the step pictures kept with it, in step order, each tied to its step. */
-    val stepPictures: List<RecipeStepPicture> = emptyList()
+    val stepPictures: List<RecipeStepPicture> = emptyList(),
+    /** The meal this single recipe is for, one of [RECIPE_MEAL_CHOICES]: the Saved recipes tab it
+     *  shows under ([savedTabs]). From the server's reply (`Recipe.meal`, functions/CONTRACT.md),
+     *  set by the app for the phone's model ([recipeMealOf]). Null for a menu's dishes, rows saved
+     *  before it, and a reply without one; "any" or a value this version doesn't know reads as null. */
+    @Serializable(with = RecipeMealFieldSerializer::class)
+    val meal: RecipeMealType? = null
 ) {
     /** The same recipe with nothing local a reply or a model's text could have carried: no request
      *  id and no pictures. Applied to everything that arrives before the app sets its own. */
@@ -75,6 +90,52 @@ data class Recipe(
 
     /** Whether it has any picture kept with it: the report sheet's picture reason. */
     val hasPictures: Boolean get() = picture != null || stepPictures.isNotEmpty()
+}
+
+/** A meal's wire name ("breakfast" ...) as one of [RECIPE_MEAL_CHOICES], or null for "any", a
+ *  blank or a name this version doesn't know. Case and spaces around it are forgiven, since the
+ *  phone's model writes it too. */
+fun recipeMealOfWire(name: String?): RecipeMealType? {
+    val key = name?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: return null
+    return RECIPE_MEAL_CHOICES.firstOrNull { it.name.lowercase() == key }
+}
+
+/**
+ * [Recipe.meal] as JSON: a string read through [recipeMealOfWire], anything else (a number, an
+ * object, null) as none, so an odd value can never make a reply or a saved row unreadable.
+ */
+internal object RecipeMealFieldSerializer : KSerializer<RecipeMealType?> {
+    override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("com.foodtracker.recipe.RecipeMeal", PrimitiveKind.STRING).nullable
+
+    override fun deserialize(decoder: Decoder): RecipeMealType? {
+        if (decoder is JsonDecoder) {
+            val element = decoder.decodeJsonElement() as? JsonPrimitive ?: return null
+            return if (element.isString) recipeMealOfWire(element.content) else null
+        }
+        return recipeMealOfWire(decoder.decodeString())
+    }
+
+    override fun serialize(encoder: Encoder, value: RecipeMealType?) {
+        if (value == null) encoder.encodeNull() else encoder.encodeString(value.name.lowercase())
+    }
+}
+
+/**
+ * The meal a recipe written with [mealTypes] (the config's, empty for "Any") is saved under, from
+ * the model's own [label] (null when it gave none): exactly one meal asked for is that meal; a
+ * label among those asked for (or any label, when none was asked for) is the label; otherwise the
+ * first asked for in [RECIPE_MEAL_CHOICES] order, or none when none was asked for. The phone's
+ * model; the server applies the same rule to its own (functions/).
+ */
+fun recipeMealOf(mealTypes: Set<RecipeMealType>, label: RecipeMealType?): RecipeMealType? {
+    val asked = orderedMeals(mealTypes)
+    val valid = label?.takeIf { it != RecipeMealType.ANY }
+    return when {
+        asked.size == 1 -> asked.single()
+        asked.isEmpty() -> valid
+        valid != null && valid in asked -> valid
+        else -> asked.first()
+    }
 }
 
 /** A picture kept on this device with a saved recipe: [file] is its name in that saved recipe's
@@ -212,8 +273,14 @@ data class SavedRecipe(
     val createdAtEpochMillis: Long,
     val source: RecipeSource,
     val recipe: Recipe? = null,
-    val menu: Menu? = null
+    val menu: Menu? = null,
+    /** Marked a favourite in Saved recipes: kept in its own column beside the payload, so it
+     *  survives Undo of a delete and is never part of what a reply or a model carried. */
+    val favorite: Boolean = false
 ) {
+    /** The meal tab a recipe shows under ([Recipe.meal]); never for a menu. */
+    val meal: RecipeMealType? get() = if (kind == SavedRecipeKind.RECIPE) recipe?.meal else null
+
     /** How many dishes this holds: one for a recipe, every course of every day for a menu. */
     val dishCount: Int get() = menu?.days?.sumOf { it.courses.size } ?: 1
 
@@ -264,16 +331,19 @@ fun savedRecipeFromPayload(
     title: String,
     createdAtEpochMillis: Long,
     source: RecipeSource,
-    payload: String
+    payload: String,
+    favorite: Boolean = false
 ): SavedRecipe? = runCatching {
     when (kind) {
         SavedRecipeKind.RECIPE -> SavedRecipe(
             id, kind, title, createdAtEpochMillis, source,
-            recipe = RecipeJson.decodeFromString(Recipe.serializer(), payload).copy(source = source)
+            recipe = RecipeJson.decodeFromString(Recipe.serializer(), payload).copy(source = source),
+            favorite = favorite
         )
         SavedRecipeKind.MENU -> SavedRecipe(
             id, kind, title, createdAtEpochMillis, source,
-            menu = RecipeJson.decodeFromString(Menu.serializer(), payload)
+            menu = RecipeJson.decodeFromString(Menu.serializer(), payload),
+            favorite = favorite
         )
     }
 }.getOrNull()

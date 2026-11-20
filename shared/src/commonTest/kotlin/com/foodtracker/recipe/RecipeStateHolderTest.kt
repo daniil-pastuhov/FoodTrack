@@ -76,6 +76,9 @@ private class FakeSavedRecipeRepository : SavedRecipeRepository {
         val ids = recipes.map { it.id }.toSet()
         rows.value = rows.value.filterNot { it.id in ids } + recipes
     }
+    override suspend fun setFavorite(id: String, favorite: Boolean) {
+        rows.value = rows.value.map { if (it.id == id) it.copy(favorite = favorite) else it }
+    }
     override suspend fun clearAll() {
         rows.value = emptyList()
     }
@@ -488,6 +491,27 @@ class RecipeStateHolderTest {
         assertEquals(1, saved.batchSaves, "one Undo puts all of them back at once")
         assertEquals(listOf("c", "b", "a"), holder.uiState.value.saved.map { it.id })
         assertFalse(holder.uiState.value.isUnread("a"), "as with one row, Undo doesn't bring the dot back")
+    }
+
+    @Test
+    fun aFavouriteIsShownAtOnceStoredAndKeptThroughUndo() = runUnconfined {
+        saved.save(SavedRecipe.of("a", Recipe(title = "A", steps = listOf("s")), 1L))
+        saved.save(SavedRecipe.of("b", Recipe(title = "B", steps = listOf("s")), 2L))
+        val holder = holder()
+
+        holder.setSavedFavorite("a", true)
+        holder.setSavedFavorite("gone", true)
+        assertTrue(holder.savedRecipe("a")!!.favorite)
+        assertTrue(saved.rows.value.single { it.id == "a" }.favorite, "stored with the row")
+        assertFalse(holder.savedRecipe("b")!!.favorite)
+
+        var removed: SavedRecipe? = null
+        holder.deleteSaved("a") { removed = it }
+        holder.restoreSaved(removed!!)
+        assertTrue(holder.savedRecipe("a")!!.favorite, "Undo brings it back a favourite")
+
+        holder.setSavedFavorite("a", false)
+        assertFalse(saved.rows.value.single { it.id == "a" }.favorite)
     }
 
     @Test

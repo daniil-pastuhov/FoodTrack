@@ -912,6 +912,14 @@
         <item quantity="other">Gemte opskrifter, %1$d nye</item>
     </plurals>
     <string name="recipe_saved_unread">Ny</string>
+    <string name="recipe_saved_tab_all">Alle</string>
+    <string name="recipe_saved_tab_menus">Menuer</string>
+    <string name="recipe_favourite_add">Føj til favoritter</string>
+    <string name="recipe_favourite_remove">Fjern fra favoritter</string>
+    <plurals name="nav_tab_new_recipes">
+        <item quantity="one">%1$d ny opskrift</item>
+        <item quantity="other">%1$d nye opskrifter</item>
+    </plurals>
     <string name="recipe_courses">Retter om dagen</string>
     <plurals name="recipe_courses_count">
         <item quantity="one">%1$d ret</item>

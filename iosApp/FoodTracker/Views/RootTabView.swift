@@ -306,7 +306,7 @@ struct RootTabView: View {
             }
 
             if !shellChrome.navHidden {
-                FloatingNav(selection: $selectedTab, shoppingCount: viewModel.shoppingList.count)
+                FloatingNav(selection: $selectedTab, shoppingCount: viewModel.shoppingList.count, recipeCount: recipeViewModel.unreadCount)
                     .onGeometryChange(for: CGFloat.self, of: \.size.height) { pillHeight = $0 }
                     .padding(.horizontal, LarderSpace.s3)
                     .padding(.bottom, metrics.pillBottom)
@@ -694,6 +694,9 @@ extension RootTabView {
         if arguments.bool(forKey: "demoRecipeIntro") { recipeViewModel.showIntroForDemo() }
         // `-demoRecipeUnread YES`: a recipe and a menu saved unseen (the badge, the list's dots).
         if arguments.bool(forKey: "demoRecipeUnread") { recipeViewModel.showDemoUnread() }
+        // `-demoSavedTabs YES`: saved recipes of two meals, an older one without, a menu, a
+        // favourite and an unread one (Saved recipes' tabs, order and stars; the Recipe tab's badge).
+        if arguments.bool(forKey: "demoSavedTabs") { recipeViewModel.showDemoSavedTabs() }
         // `-demoRecipeOnDevice YES|NO`: "Generate on this device" offered or not, whatever the device has.
         if arguments.object(forKey: "demoRecipeOnDevice") != nil {
             recipeViewModel.demoOnDevice = arguments.bool(forKey: "demoRecipeOnDevice")

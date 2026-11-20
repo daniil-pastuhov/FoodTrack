@@ -288,7 +288,8 @@ describe("worst-case cost", () => {
 
   test.each([["recipe", undefined], ["menu", 2], ["menu", 3]] as const)("%s %s: the fullest config adds little to the largest legacy request", (kind, courses) => {
     const config = parseRuntimeConfig({});
-    const legacy = largest(kind, courses, { maxMinutes: null, mealType: "breakfast", diet: "pescatarian" });
+    // "any" meal: since a recipe is asked for its meal (as the fullest config's is), the largest legacy one.
+    const legacy = largest(kind, courses, { maxMinutes: null, mealType: "any", diet: "pescatarian" });
     const multi = largest(kind, courses, fullest);
     const grew = inputTokenBound(multi) - inputTokenBound(legacy);
     expect(grew).toBeGreaterThan(0);

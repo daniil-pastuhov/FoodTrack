@@ -121,6 +121,11 @@ fun buildOnDeviceRecipePrompt(
         if (clean.isNotEmpty()) add("Never use anything containing: " + clean.joinToString(", "))
     }
     val language = recipeLanguageEnglishName(languageCode)
+    // The meal it is saved under (Saved recipes' tabs): asked of the model only when the config
+    // leaves a choice; with one meal asked for, the app sets it itself ([recipeMealOf]).
+    val askedMeals = orderedMeals(normalized.mealTypes)
+    val mealChoices = (if (askedMeals.isEmpty()) RECIPE_MEAL_CHOICES else askedMeals).map { it.name.lowercase() }
+    val asksMeal = askedMeals.size != 1
     return buildString {
         append("Write one home-cooking recipe that uses these items from my kitchen, ")
         append("the ones closest to their date first.")
@@ -146,8 +151,10 @@ fun buildOnDeviceRecipePrompt(
         append(
             """{"title":"","summary":"one sentence","minutes":0,"servings":${normalized.servings},""" +
                 """"difficulty":"${normalized.difficulty.name.lowercase()}",""" +
+                (if (asksMeal) """"meal":"","""  else "") +
                 """"ingredients":[{"amount":"100 g","name":"","fromPantry":true}],"steps":[""],"tip":""}"""
         )
+        if (asksMeal) append("\nSet meal to the one of ${mealChoices.joinToString(", ")} that the dish suits best.")
         append("\nSet fromPantry to true only for items from the ")
         append(
             when {
@@ -212,6 +219,7 @@ fun parseRecipeReply(
         ingredients = ingredients,
         steps = steps,
         tip = recipe.tip?.trim()?.takeIf { it.isNotEmpty() },
-        source = source
+        source = source,
+        meal = recipeMealOf(config.normalized().mealTypes, recipe.meal)
     )
 }

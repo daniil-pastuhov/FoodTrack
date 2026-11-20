@@ -997,6 +997,16 @@
         <item quantity="other">Сохранённые рецепты, %1$d новых</item>
     </plurals>
     <string name="recipe_saved_unread">Новое</string>
+    <string name="recipe_saved_tab_all">Все</string>
+    <string name="recipe_saved_tab_menus">Меню</string>
+    <string name="recipe_favourite_add">Добавить в избранное</string>
+    <string name="recipe_favourite_remove">Убрать из избранного</string>
+    <plurals name="nav_tab_new_recipes">
+        <item quantity="one">%1$d новый рецепт</item>
+        <item quantity="few">%1$d новых рецепта</item>
+        <item quantity="many">%1$d новых рецептов</item>
+        <item quantity="other">%1$d нового рецепта</item>
+    </plurals>
     <string name="recipe_courses">Блюд в день</string>
     <plurals name="recipe_courses_count">
         <item quantity="one">%1$d блюдо</item>

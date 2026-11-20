@@ -157,7 +157,9 @@ export class EmulatorGenerator implements RecipeGenerator {
       const stepBriefs = req.image === "steps"
         ? [{ step: 2, brief: "Golden pasta tossed in a pan until the sauce turns glossy and coats every strand." }].slice(0, req.stepImagesMax ?? 0)
         : undefined;
-      return { output: { ...cannedRecipe(req, "Emulator pantry dish"), ...(req.image ? { imageBrief: brief } : {}), ...(stepBriefs ? { stepBriefs } : {}) }, usage };
+      // Labels the dish as the model would when asked (adapters/prompt.ts mealLabelChoices).
+      const meal = req.config.mealTypes.length === 1 ? {} : { meal: req.config.mealTypes[0] ?? "dinner" };
+      return { output: { ...cannedRecipe(req, "Emulator pantry dish"), ...meal, ...(req.image ? { imageBrief: brief } : {}), ...(stepBriefs ? { stepBriefs } : {}) }, usage };
     }
     const output = {
       days: menuDates(req.today, menuDaysOf(req)).map((date, d) => ({

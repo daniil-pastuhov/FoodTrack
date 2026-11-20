@@ -991,6 +991,15 @@ class RecipeStateHolder(
         updateOptions { it.copy(unreadSaved = it.unreadSaved - id) }
     }
 
+    /** Saved recipes' favourite toggle (the row's star, the result's top bar): shown at once, then
+     *  stored with the row, so a delete's Undo brings it back as it was. */
+    fun setSavedFavorite(id: String, favorite: Boolean) {
+        val saved = savedRecipe(id) ?: return
+        if (saved.favorite == favorite) return
+        _uiState.update { state -> state.copy(saved = state.saved.map { if (it.id == id) it.copy(favorite = favorite) else it }) }
+        coroutineScope.launch { savedRecipeRepository.setFavorite(id, favorite) }
+    }
+
     /** Deletes a saved recipe and hands it to [onDeleted], so the caller can offer Undo through
      *  [restoreSaved]. */
     fun deleteSaved(id: String, onDeleted: (SavedRecipe) -> Unit = {}) {

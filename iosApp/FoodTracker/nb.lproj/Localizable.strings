@@ -664,6 +664,11 @@
 "recipe_intro_packs_message" = "Serveren vår skriver oppskriften og kan også sette opp en meny for 3 dager. En oppskrift bruker %1$@ fra en pakke, en meny %2$@ med 2 retter om dagen eller %3$@ med 3.";
 "recipe_intro_packs_body_sets" = "Serveren vår skriver oppskriften og kan også sette opp et menysett. En oppskrift bruker %1$@ fra en pakke, et menysett %2$d til %3$d, etter antall dager og retter om dagen.";
 "recipe_saved_new" = "Ny";
+"recipe_saved_tab_all" = "Alle";
+"recipe_saved_tab_menus" = "Menyer";
+"recipe_favourite_add" = "Legg til i favoritter";
+"recipe_favourite_remove" = "Fjern fra favoritter";
+"recipe_saved_favourite" = "Favoritt";
 "recipe_courses_label" = "Retter per dag";
 "recipe_generate_recipe" = "Lag oppskrift";
 "recipe_generate_menu" = "Lag meny";

@@ -227,6 +227,12 @@ export interface Recipe {
   ingredients: RecipeIngredient[];
   steps: string[];
   tip?: string;
+  /**
+   * A single recipe's meal (CONTRACT.md "Recipe meal"): which of MEAL_CHOICES the dish is, set by
+   * the server (core/outputSafety.ts mealOf), always one of the config's `mealTypes` when it names
+   * any. Never on a menu's dishes; absent in answers from before it and when no label could be given.
+   */
+  meal?: MealChoice;
 }
 
 export interface MenuCourse {

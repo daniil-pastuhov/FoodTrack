@@ -71,6 +71,9 @@ interface SavedRecipeRepository {
 
     /** Undo of that Delete: [recipes] back as they were, ids intact (Room: one transaction). */
     suspend fun saveAll(recipes: List<SavedRecipe>) = recipes.forEach { save(it) }
+
+    /** Marks the saved recipe or menu [id] a favourite or not; nothing when it isn't saved. */
+    suspend fun setFavorite(id: String, favorite: Boolean)
     suspend fun clearAll()
 }
 

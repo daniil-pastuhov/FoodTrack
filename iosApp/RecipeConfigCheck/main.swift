@@ -351,6 +351,56 @@ let savedRows = savedIDs.enumerated().map { index, id in
 expect(SavedSelection.toDelete(savedRows, selected: ["a", "c", "gone"]).map(\.id), ["c", "a"], "Delete removes the selected rows still listed, in list order")
 expect(SavedSelection.toDelete(savedRows, selected: []).map(\.id), [], "nothing selected, nothing removed")
 
+// A recipe's meal (Android: SavedListTest, the same cases).
+expect(RecipeMeal.parsed("dinner"), .dinner, "meal: a known value")
+expect(RecipeMeal.parsed(" Lunch "), .lunch, "meal: trimmed, any case")
+expect(RecipeMeal.parsed("any"), nil, "meal: any is none")
+expect(RecipeMeal.parsed("brunch"), nil, "meal: unknown is none")
+expect(RecipeMeal.parsed(nil), nil, "meal: absent is none")
+expect(RecipeMeal.resolved(label: "snack", configured: [.dinner]), .dinner, "meal: one configured wins")
+expect(RecipeMeal.resolved(label: nil, configured: [.dinner]), .dinner, "meal: one configured, no label")
+expect(RecipeMeal.resolved(label: "dinner", configured: [.lunch, .dinner]), .dinner, "meal: a label among several configured")
+expect(RecipeMeal.resolved(label: "snack", configured: [.dinner, .lunch]), .lunch, "meal: not among them, the first in the form's order")
+expect(RecipeMeal.resolved(label: "nonsense", configured: [.dessert, .breakfast]), .breakfast, "meal: invalid, the first configured")
+expect(RecipeMeal.resolved(label: "dessert", configured: []), .dessert, "meal: Any takes the label")
+expect(RecipeMeal.resolved(label: "any", configured: [.any]), nil, "meal: Any and no valid label, none")
+let mealJSON = #"{"title":"T","meal":"breakfast"}"#
+expect(try! JSONDecoder().decode(Recipe.self, from: Data(mealJSON.utf8)).meal, .breakfast, "meal: read from a reply")
+expect(try! JSONDecoder().decode(Recipe.self, from: Data(#"{"title":"T","meal":"elevenses"}"#.utf8)).meal, nil, "meal: an unknown value reads as none")
+expect(try! JSONDecoder().decode(Recipe.self, from: Data(#"{"title":"T","meal":3}"#.utf8)).meal, nil, "meal: a wrong type reads as none")
+expect(try! JSONDecoder().decode(Recipe.self, from: Data(#"{"title":"T"}"#.utf8)).meal, nil, "meal: a row saved before it")
+var mealRecipe = Recipe(title: "T", summary: "", minutes: 1, servings: 1, difficulty: .easy, ingredients: [], steps: [], source: .device)
+mealRecipe.meal = .snack
+expect(try! JSONDecoder().decode(Recipe.self, from: JSONEncoder().encode(mealRecipe)).meal, .snack, "meal: kept in the saved payload")
+
+// Saved recipes' tabs and order (Android: SavedListTest, the same cases).
+func sRecipe(_ id: String, _ age: Double, _ meal: RecipeMealType?, favourite: Bool = false) -> SavedRecipe {
+    var recipe = Recipe(title: id, summary: "", minutes: 10, servings: 2, difficulty: .easy, ingredients: [], steps: ["s"], source: .server)
+    recipe.meal = meal
+    return SavedRecipe(id: id, createdAt: Date(timeIntervalSince1970: 1000 - age), content: .recipe(recipe), isFavorite: favourite)
+}
+func sMenu(_ id: String, _ age: Double, favourite: Bool = false) -> SavedRecipe {
+    SavedRecipe(id: id, createdAt: Date(timeIntervalSince1970: 1000 - age), content: .menu(RecipeMenu(days: [])), isFavorite: favourite)
+}
+expect(SavedList.tabs([]), [], "tabs: nothing saved, no row")
+expect(SavedList.tabs([sRecipe("old", 1, nil), sRecipe("old2", 2, nil)]), [], "tabs: only old recipes, only All, no row")
+expect(SavedList.tabs([sRecipe("d", 1, .dinner), sRecipe("b", 2, .breakfast), sRecipe("o", 3, nil)]), [.all, .meal(.breakfast), .meal(.dinner)], "tabs: meals in the form's order")
+expect(SavedList.tabs([sRecipe("s", 1, .snack), sMenu("m", 2)]), [.all, .meal(.snack), .menus], "tabs: Menus last")
+expect(SavedList.tabs([sMenu("m", 1)]), [.all, .menus], "tabs: menus alone")
+expect(SavedList.tabs([sRecipe("l", 1, .lunch), sRecipe("l2", 2, .lunch)]), [.all, .meal(.lunch)], "tabs: one tab per meal")
+expect(SavedList.shown(.meal(.dinner), tabs: [.all, .meal(.dinner)]), .meal(.dinner), "tab: still shown")
+expect(SavedList.shown(.meal(.dinner), tabs: [.all, .menus]), .all, "tab: gone, back to All")
+expect(SavedList.shown(.menus, tabs: []), .all, "tab: no row, All")
+let sMixed = [sRecipe("d", 1, .dinner), sRecipe("o", 2, nil), sMenu("m", 3), sRecipe("b", 4, .breakfast), sRecipe("d2", 5, .dinner)]
+expect(SavedList.rows(sMixed, tab: .all).map(\.id), ["d", "o", "m", "b", "d2"], "rows: All has everything")
+expect(SavedList.rows(sMixed, tab: .meal(.dinner)).map(\.id), ["d", "d2"], "rows: a meal's recipes")
+expect(SavedList.rows(sMixed, tab: .menus).map(\.id), ["m"], "rows: Menus has only menus")
+expect(SavedList.rows(sMixed, tab: .meal(.snack)).map(\.id), [], "rows: a meal with none")
+let sOrderIn = [sRecipe("a", 1, nil), sRecipe("fav", 2, nil, favourite: true), sRecipe("new", 3, nil), sMenu("favMenu", 4, favourite: true), sRecipe("newFav", 5, nil, favourite: true), sRecipe("z", 6, nil)]
+expect(SavedList.ordered(sOrderIn, unread: ["new", "newFav", "gone"]).map(\.id), ["new", "newFav", "fav", "favMenu", "a", "z"], "order: new, then favourites, then the rest, newest first in each")
+expect(SavedList.ordered(sOrderIn.reversed(), unread: []).map(\.id), ["fav", "favMenu", "newFav", "a", "new", "z"], "order: by date, whatever order they come in")
+expect(SavedList.rows(SavedList.ordered(sMixed + [sRecipe("dFav", 9, .dinner, favourite: true)], unread: ["d2"]), tab: .meal(.dinner)).map(\.id), ["d2", "dFav", "d"], "order: the same inside a tab")
+
 // The Buy sheet's saving badge, from the store's prices only (Android: the same cases).
 func offers(_ currency: String?, _ list: [(Int, String?)]) -> [PackOffer] {
     list.map { PackOffer(recipes: $0.0, price: $0.1.flatMap { Decimal(string: $0) }, currencyCode: currency) }

@@ -43,6 +43,7 @@ class WelcomePaidTest {
         override fun getAllFlow(): Flow<List<SavedRecipe>> = MutableStateFlow(emptyList())
         override suspend fun save(recipe: SavedRecipe) = Unit
         override suspend fun delete(id: String) = Unit
+        override suspend fun setFavorite(id: String, favorite: Boolean) = Unit
         override suspend fun clearAll() = Unit
     }
 

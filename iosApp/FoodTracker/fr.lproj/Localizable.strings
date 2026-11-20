@@ -664,6 +664,11 @@
 "recipe_intro_packs_message" = "Notre serveur rédige la recette et peut aussi planifier un menu sur 3 jours. Une recette décompte %1$@ d'un pack ; un menu décompte %2$@ avec 2 plats par jour ou %3$@ avec 3.";
 "recipe_intro_packs_body_sets" = "Notre serveur rédige la recette et peut aussi planifier un set de menus. Une recette décompte %1$@ d'un pack ; un set de menus, de %2$d à %3$d, selon les jours et les plats par jour.";
 "recipe_saved_new" = "Nouvelle";
+"recipe_saved_tab_all" = "Toutes";
+"recipe_saved_tab_menus" = "Menus";
+"recipe_favourite_add" = "Ajouter aux favoris";
+"recipe_favourite_remove" = "Retirer des favoris";
+"recipe_saved_favourite" = "Favori";
 "recipe_courses_label" = "Plats par jour";
 "recipe_generate_recipe" = "Générer la recette";
 "recipe_generate_menu" = "Générer le menu";

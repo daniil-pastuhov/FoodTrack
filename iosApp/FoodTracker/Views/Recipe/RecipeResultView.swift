@@ -36,6 +36,7 @@ struct RecipeResultView: View {
                                 sharing = true
                             }
                         }
+                        favouriteItem
                     }
                     .sheet(isPresented: $sharing) {
                         ActivityView(activityItems: [RecipePromptBuilder.plainText(recipe)])
@@ -46,6 +47,7 @@ struct RecipeResultView: View {
                     RecipeDishView(recipe: course, date: menu.days[dish.day].date, menuDays: menu.days.count, foot: reportFoot(isMenu: false))
                 } else {
                     RecipeMenuView(menu: menu, onOpenDish: onOpenDish, foot: reportFoot(isMenu: true))
+                        .toolbar { favouriteItem }
                         .navigationTitle(L10n.recipeMenuResultTitle)
                 }
             case nil:
@@ -59,6 +61,16 @@ struct RecipeResultView: View {
         .shellChromeEffect(hideNav: true)
     }
 
+    /// The star beside Share on a saved recipe's or menu's page (not a menu's single dish).
+    @ToolbarContentBuilder
+    private var favouriteItem: some ToolbarContent {
+        if let model, let id = entry?.id {
+            ToolbarItem(placement: .primaryAction) {
+                RecipeFavouriteButton(model: model, id: id)
+            }
+        }
+    }
+
     /// "Report this recipe / menu" at the very end, where it applies (`RecipeViewModel.reportFoot`).
     private func reportFoot(isMenu: Bool) -> AnyView? {
         guard let model, let entry else { return nil }
@@ -68,6 +80,24 @@ struct RecipeResultView: View {
     static func course(in menu: RecipeMenu, day: Int, course: Int) -> RecipeMenuCourse? {
         guard menu.days.indices.contains(day), menu.days[day].courses.indices.contains(course) else { return nil }
         return menu.days[day].courses[course]
+    }
+}
+
+/// A saved recipe's or menu's favourite star, following the saved row as it changes.
+struct RecipeFavouriteButton: View {
+    @ObservedObject var model: RecipeViewModel
+    let id: String
+
+    var body: some View {
+        if let entry = model.savedRecipe(id: id) {
+            LarderIconButton(
+                entry.isFavorite ? .starFilled : .star,
+                label: SavedRecipesView.favouriteLabel(entry),
+                color: LarderColor.primary
+            ) {
+                withAnimation(.easeInOut(duration: 0.2)) { model.setFavorite(id: id, !entry.isFavorite) }
+            }
+        }
     }
 }
 

@@ -239,7 +239,9 @@ describe("the prompt", () => {
   // sha256 of JSON.stringify([systemInstruction, userText, schema]) with canary CANARY, recorded
   // from the server before taste profiles.
   const BEFORE: Record<string, string> = {
-    "config-recipe-2026-11-14.json": "9b260cb9583b06cc0828017c9025bba4baaf6d93a4fa44e430b195005c3078fc",
+    // Recomputed on 2026-11-20, when a single recipe started being asked for its meal (CONTRACT.md
+    // "Recipe meal"): the only change to it since; the menus' prompts are unchanged.
+    "config-recipe-2026-11-14.json": "0ac17e2a8534a6579e965d1360fad4be20221b3be7fa56ab65ed958ff9c72dee",
     "config-menu2-2026-11-14.json": "132989b0805678a5b7db02fd52f803d3c4535de2fb5bba7b3f8eada9f2570836",
     "config-menu3-2026-11-14.json": "f842a001090d584c7f6df1b442f49f84b8c46c0fbcfb7e5c036c7a93e02a339f",
     "live-menu-2026-11-14.json": "5b78416e94d29ac95e15dc716c5375f2b61f72524ffd79e3464f7b5f30dd8802",

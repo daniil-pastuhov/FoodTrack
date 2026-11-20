@@ -958,7 +958,9 @@ Only a caller with credits reaches the model, and an answer goes back only to th
    sexual content `BLOCK_LOW_AND_ABOVE`; dangerous content `BLOCK_MEDIUM_AND_ABOVE`, because
    knives, flames, alcohol and raw meat are normal cooking. A blocked prompt or answer is a
    content failure and counts as a rejection. The schema uses enums for `pantryId`, menu dates,
-   `uses` and courses, `minItems`/`maxItems` for ingredients, steps (per detail level), days and
+   `uses`, courses and a single recipe's `meal` (CONTRACT.md "Recipe meal": asked only when the
+   config does not name exactly one meal type, the enum being the config's meal types or all five;
+   the server still corrects it with `mealOf` and a bad label never fails an answer), `minItems`/`maxItems` for ingredients, steps (per detail level), days and
    courses, `minimum`/`maximum` for minutes (the request's `maxMinutes` when set). Vertex enforces
    enums, item counts and numeric bounds during constrained decoding but ignores `minLength` /
    `maxLength` (Google: "not enforced during constrained decoding and are ignored by the server"),
@@ -2562,7 +2564,8 @@ With `EMULATOR_FAKES=true` and a `demo-` project id (both required, besides the 
 decoded without verification (Xcode StoreKit transactions count as sandbox), and the model returns
 a canned recipe after 1.5 s; an ingredient named `fail infra` or `fail content` makes it fail with
 that class, and a request with a taste profile gets a canned tip saying "with your taste profile"
-(so an app can see the profile reached the server). Without `EMULATOR_FAKES` the emulator runs the real adapters with your local Google
+(so an app can see the profile reached the server); a single recipe asked for its `meal` gets the
+config's first meal type, or `dinner` for any meal. Without `EMULATOR_FAKES` the emulator runs the real adapters with your local Google
 credentials, which do call the real Play Developer API and Vertex AI.
 
 In the emulator App Check tokens are decoded but not verified, so any well-formed token works, and

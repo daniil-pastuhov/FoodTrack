@@ -47,6 +47,7 @@ import com.foodtracker.android.ui.design.LarderIcon
 import com.foodtracker.android.ui.design.LarderIconButton
 import com.foodtracker.android.ui.design.LarderIcons
 import com.foodtracker.android.ui.design.LarderTopBar
+import com.foodtracker.android.ui.design.LarderFavouriteButton
 import com.foodtracker.android.ui.design.SectionHeader
 import com.foodtracker.android.ui.theme.LarderRadius
 import com.foodtracker.android.ui.theme.LarderSpace
@@ -192,6 +193,10 @@ fun RecipeResultScreen(
                 onBack = onBack,
                 actions = {
                     if (saved != null) {
+                        LarderFavouriteButton(
+                            favourite = saved.favorite,
+                            onToggle = { stateHolder.setSavedFavorite(savedId, it) }
+                        )
                         LarderIconButton(
                             icon = LarderIcons.Trash2,
                             contentDescription = stringResource(R.string.delete),

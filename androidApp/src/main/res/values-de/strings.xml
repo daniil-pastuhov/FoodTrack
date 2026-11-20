@@ -911,6 +911,14 @@
         <item quantity="other">Gespeicherte Rezepte, %1$d neu</item>
     </plurals>
     <string name="recipe_saved_unread">Neu</string>
+    <string name="recipe_saved_tab_all">Alle</string>
+    <string name="recipe_saved_tab_menus">Menüs</string>
+    <string name="recipe_favourite_add">Zu Favoriten hinzufügen</string>
+    <string name="recipe_favourite_remove">Aus Favoriten entfernen</string>
+    <plurals name="nav_tab_new_recipes">
+        <item quantity="one">%1$d neues Rezept</item>
+        <item quantity="other">%1$d neue Rezepte</item>
+    </plurals>
     <string name="recipe_courses">Gänge pro Tag</string>
     <plurals name="recipe_courses_count">
         <item quantity="one">%1$d Gang</item>
