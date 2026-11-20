@@ -1,0 +1,4 @@
+• Gespeicherte Rezepte haben jetzt Tabs: Alle, einen für jede Mahlzeit (Frühstück, Mittagessen, Abendessen, Snack, Dessert) und Menüs.
+• Markiere jedes gespeicherte Rezept oder Menü mit dem Stern als Favorit.
+• In jedem Tab stehen neue Rezepte zuerst, danach deine Favoriten.
+• Der Tab „Rezept“ zeigt jetzt ein Badge mit der Anzahl neuer Rezepte, die du noch nicht geöffnet hast.

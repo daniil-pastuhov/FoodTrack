@@ -1,0 +1,4 @@
+• Gemte opskrifter har fået faner: Alle, én for hvert måltid (morgenmad, frokost, aftensmad, mellemmåltid, dessert) og Menuer.
+• Markér en gemt opskrift eller menu som favorit med stjernen.
+• Nye opskrifter vises først i hver fane, derefter dine favoritter.
+• Fanen Opskrift viser nu et mærke med antallet af nye opskrifter, du ikke har åbnet endnu.

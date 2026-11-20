@@ -1,0 +1,4 @@
+• Las recetas guardadas ahora tienen pestañas: Todas, una por cada comida (desayuno, almuerzo, cena, refrigerio, postre) y Menús.
+• Marca cualquier receta o menú guardado como favorito con la estrella.
+• En cada pestaña aparecen primero las recetas nuevas y después tus favoritas.
+• La pestaña Receta ahora muestra un indicador con la cantidad de recetas nuevas que aún no abriste.

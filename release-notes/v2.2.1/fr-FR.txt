@@ -1,0 +1,4 @@
+• Les recettes enregistrées ont maintenant des onglets : Toutes, un par repas (petit-déjeuner, déjeuner, dîner, en-cas, dessert) et Menus.
+• Ajoutez une recette ou un menu enregistré à vos favoris avec l'étoile.
+• Dans chaque onglet, les nouvelles recettes s'affichent en premier, puis vos favoris.
+• L'onglet Recette affiche désormais une pastille avec le nombre de nouvelles recettes que vous n'avez pas encore ouvertes.

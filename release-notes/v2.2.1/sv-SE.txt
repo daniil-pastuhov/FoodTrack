@@ -1,0 +1,4 @@
+• Sparade recept har fått flikar: Alla, en för varje måltid (frukost, lunch, middag, mellanmål, efterrätt) och Menyer.
+• Markera ett sparat recept eller en sparad meny som favorit med stjärnan.
+• Nya recept visas först i varje flik, sedan dina favoriter.
+• Fliken Recept visar nu en bricka med antalet nya recept som du inte har öppnat än.

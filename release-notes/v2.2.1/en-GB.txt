@@ -1,0 +1,4 @@
+• Saved recipes now have tabs: All, one for each meal (breakfast, lunch, dinner, snack, dessert) and Menus.
+• Mark any saved recipe or menu as a favourite with the star.
+• New recipes come first in every tab, then your favourites.
+• The Recipe tab now shows a badge with the number of new recipes you haven't opened yet.
