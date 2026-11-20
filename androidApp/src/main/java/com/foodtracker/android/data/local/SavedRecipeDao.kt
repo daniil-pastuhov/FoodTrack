@@ -20,6 +20,9 @@ interface SavedRecipeDao {
     @Query("DELETE FROM saved_recipes WHERE id = :id")
     suspend fun deleteById(id: String)
 
+    @Query("UPDATE saved_recipes SET favorite = :favorite WHERE id = :id")
+    suspend fun setFavorite(id: String, favorite: Boolean)
+
     @Upsert
     suspend fun upsertAll(recipes: List<SavedRecipeEntity>)
 

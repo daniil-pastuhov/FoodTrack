@@ -18,6 +18,11 @@
  * On 2026-11-18 the openai profile moved from gpt-image-1-mini (shut down 2026-12-01) to
  * gpt-image-2.6-flare and gpt-image-1-mini lost its price, so its `cost` row is [0, 0], as for any
  * unpriced model; its request bodies are pinned unchanged.
+ * On 2026-11-20 a single recipe whose config does not name exactly one meal type started being
+ * asked for its `meal` (CONTRACT.md "Recipe meal": one OUTPUT line and one schema property), so
+ * the `prompt`, `sent`, `reservedMicroUsd` and `reservedWithJudge` of the three
+ * config-recipe-2026-11-14 rows were recomputed; the menus' and the taste fixture's (one meal
+ * type) are unchanged.
  */
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";

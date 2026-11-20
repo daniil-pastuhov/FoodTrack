@@ -17,7 +17,7 @@ import com.foodtracker.model.DEFAULT_SHOPPING_SECTION_ID
         SavedRecipeEntity::class,
         StapleEntity::class
     ],
-    version = 15,
+    version = 16,
     exportSchema = false
 )
 abstract class FoodTrackerDatabase : RoomDatabase() {
@@ -406,6 +406,14 @@ abstract class FoodTrackerDatabase : RoomDatabase() {
         val MIGRATION_14_15 = object : Migration(14, 15) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("CREATE TABLE IF NOT EXISTS staples (id TEXT NOT NULL PRIMARY KEY, name TEXT NOT NULL, presetId TEXT, addedAtEpochMillis INTEGER NOT NULL)")
+            }
+        }
+
+        // Adds the favourite flag to saved recipes and menus, off for every existing row. Nothing
+        // else is touched: every row of every table stays as it is.
+        val MIGRATION_15_16 = object : Migration(15, 16) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE saved_recipes ADD COLUMN favorite INTEGER NOT NULL DEFAULT 0")
             }
         }
     }

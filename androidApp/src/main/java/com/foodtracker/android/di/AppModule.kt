@@ -76,7 +76,8 @@ val appModule = module {
                 FoodTrackerDatabase.MIGRATION_11_12,
                 FoodTrackerDatabase.MIGRATION_12_13,
                 FoodTrackerDatabase.MIGRATION_13_14,
-                FoodTrackerDatabase.MIGRATION_14_15
+                FoodTrackerDatabase.MIGRATION_14_15,
+                FoodTrackerDatabase.MIGRATION_15_16
             )
             .build()
     }

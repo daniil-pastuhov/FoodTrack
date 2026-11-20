@@ -35,6 +35,20 @@ extension L10n {
     }
     /// A Saved recipes row not opened yet, for VoiceOver beside its dot.
     static var recipeSavedNew: String { text("recipe_saved_new") }
+    /// Saved recipes' tabs: everything, and the menus alone; the meals use `recipeMealName`.
+    static var recipeSavedTabAll: String { text("recipe_saved_tab_all") }
+    static var recipeSavedTabMenus: String { text("recipe_saved_tab_menus") }
+    static func recipeSavedTabName(_ tab: SavedTab) -> String {
+        switch tab {
+        case .all: return recipeSavedTabAll
+        case .meal(let meal): return recipeMealName(meal)
+        case .menus: return recipeSavedTabMenus
+        }
+    }
+    static var recipeFavouriteAdd: String { text("recipe_favourite_add") }
+    static var recipeFavouriteRemove: String { text("recipe_favourite_remove") }
+    /// Read with a favourite row, as "New" is with an unread one.
+    static var recipeSavedFavourite: String { text("recipe_saved_favourite") }
     static var recipeSettingsButton: String { text("recipe_settings_button") }
     static var recipeCookWith: String { text("recipe_cook_with") }
     static var recipeAddOtherItems: String { text("recipe_add_other_items") }

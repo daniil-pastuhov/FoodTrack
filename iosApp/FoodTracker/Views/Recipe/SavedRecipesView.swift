@@ -1,38 +1,34 @@
 import SwiftUI
 
-/// Everything written in the app, newest first, on this phone only. Prompts shared to other apps
-/// leave nothing here. A swipe deletes, with Undo. Several go at once through Select (the toolbar,
-/// or a row's long-press menu): tap rows, then Delete, with one Undo for all of them.
+/// Everything written in the app, on this phone only: new ones first, then favourites, then the
+/// rest, newest first in each (`SavedList.ordered`). Prompts shared to other apps leave nothing
+/// here. Tabs above the list (All, a tab per meal that has recipes, Menus) show while there is more
+/// than All. A swipe deletes, with Undo; the leading swipe, the star or the long-press menu marks a
+/// favourite. Several go at once through Select (the toolbar, or a row's long-press menu): tap
+/// rows of the current tab, then Delete, with one Undo for all of them.
 struct SavedRecipesView: View {
     @ObservedObject var model: RecipeViewModel
     @Environment(\.showSnackbar) private var showSnackbar
     @State private var isSelecting = false
     /// Pruned to the listed ids wherever it is read (`SavedSelection.pruned`).
     @State private var picked: Set<String> = []
+    /// The tab picked; All again once it is no longer shown (`SavedList.shown`).
+    @State private var pickedTab: SavedTab = .all
 
     var body: some View {
-        let entries = model.savedRecipes
+        let tabs = model.savedTabs
+        let tab = SavedList.shown(pickedTab, tabs: tabs)
+        let entries = model.savedRows(tab: tab)
         let ids = entries.map(\.id)
         let selected = SavedSelection.pruned(picked, savedIDs: ids)
         Group {
             if entries.isEmpty {
                 EmptyState(.clear, title: L10n.recipeSavedEmptyTitle, message: L10n.recipeSavedEmptyMessage)
             } else {
-                List {
-                    ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
-                        let isSelected = isSelecting && selected.contains(entry.id)
-                        row(entry, isSelected: isSelected)
-                            .larderGroupRow(.init(index: index, count: entries.count), isSelected: isSelected)
-                            // Swipe is off while selecting, as on Home.
-                            .larderSwipeActions(trailing: isSelecting ? [] : [
-                                LarderSwipeAction(L10n.swipeDelete, icon: .trash2, tint: .destructive) {
-                                    delete(entry)
-                                },
-                            ])
-                    }
+                VStack(spacing: 0) {
+                    if !tabs.isEmpty { tabRow(tabs, shown: tab) }
+                    list(entries, selected: selected)
                 }
-                .larderList()
-                .padding(.top, LarderSpace.s2)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -63,6 +59,10 @@ struct SavedRecipesView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if isSelecting { selectionActions(selected) }
         }
+        .onChange(of: tabs) { _, tabs in
+            // Its last row deleted: back to All, and an Undo leaves it there.
+            if !tabs.contains(pickedTab) { pickedTab = .all }
+        }
         .onChange(of: ids) { _, ids in
             // One deleted elsewhere (its own page, an Undo) drops out; none left ends the mode.
             picked = SavedSelection.pruned(picked, savedIDs: ids)
@@ -80,7 +80,77 @@ struct SavedRecipesView: View {
         #endif
     }
 
+    private func list(_ entries: [SavedRecipe], selected: Set<String>) -> some View {
+        List {
+            ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
+                let isSelected = isSelecting && selected.contains(entry.id)
+                row(entry, isSelected: isSelected)
+                    .larderGroupRow(.init(index: index, count: entries.count), isSelected: isSelected)
+                    // Swipe is off while selecting, as on Home.
+                    .larderSwipeActions(
+                        leading: isSelecting ? [] : [
+                            LarderSwipeAction(Self.favouriteLabel(entry), icon: entry.isFavorite ? .star : .starFilled, tint: .primary) {
+                                toggleFavourite(entry)
+                            },
+                        ],
+                        trailing: isSelecting ? [] : [
+                            LarderSwipeAction(L10n.swipeDelete, icon: .trash2, tint: .destructive) {
+                                delete(entry)
+                            },
+                        ]
+                    )
+            }
+        }
+        .larderList()
+        .padding(.top, LarderSpace.s2)
+    }
+
+    /// All, the meals that have recipes, Menus: one line of chips that scrolls sideways.
+    private func tabRow(_ tabs: [SavedTab], shown: SavedTab) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: LarderSpace.s2) {
+                ForEach(tabs, id: \.self) { tab in
+                    LarderChip(L10n.recipeSavedTabName(tab), isSelected: tab == shown) {
+                        withAnimation(.easeInOut(duration: 0.2)) { pickedTab = tab }
+                    }
+                }
+            }
+            .padding(.horizontal, LarderSpace.s4)
+            .padding(.vertical, LarderSpace.s2)
+        }
+        .scrollClipDisabled()
+    }
+
+    static func favouriteLabel(_ entry: SavedRecipe) -> String {
+        entry.isFavorite ? L10n.recipeFavouriteRemove : L10n.recipeFavouriteAdd
+    }
+
+    private func toggleFavourite(_ entry: SavedRecipe) {
+        withAnimation(.easeInOut(duration: 0.2)) { model.setFavorite(id: entry.id, !entry.isFavorite) }
+    }
+
     private func row(_ entry: SavedRecipe, isSelected: Bool) -> some View {
+        HStack(spacing: 0) {
+            rowButton(entry, isSelected: isSelected)
+            if !isSelecting {
+                // Its own button beside the row's, so a tap on it never opens the recipe.
+                LarderIconButton(
+                    entry.isFavorite ? .starFilled : .star,
+                    label: Self.favouriteLabel(entry),
+                    color: entry.isFavorite ? LarderColor.primary : LarderColor.onSurfaceVariant
+                ) { toggleFavourite(entry) }
+                LarderIcon(.chevronRight)
+                    .foregroundStyle(LarderColor.onSurfaceVariant)
+                    .padding(.trailing, LarderSpace.s3)
+                    .contentShape(Rectangle())
+                    .onTapGesture { model.path.append(.result(id: entry.id)) }
+                    .accessibilityHidden(true)
+            }
+        }
+        .frame(minHeight: 68)
+    }
+
+    private func rowButton(_ entry: SavedRecipe, isSelected: Bool) -> some View {
         let unread = model.isUnread(entry.id)
         return Button {
             if isSelecting {
@@ -124,12 +194,16 @@ struct SavedRecipesView: View {
                         .frame(width: 8, height: 8)
                         .accessibilityLabel(L10n.recipeSavedNew)
                 }
-                if !isSelecting {
-                    LarderIcon(.chevronRight).foregroundStyle(LarderColor.onSurfaceVariant)
+                if entry.isFavorite && isSelecting {
+                    // The star button is gone while selecting; the row still says it is one.
+                    LarderIcon(.starFilled, size: .small)
+                        .foregroundStyle(LarderColor.primary)
+                        .accessibilityLabel(L10n.recipeSavedFavourite)
                 }
             }
             .padding(.vertical, LarderSpace.s2)
-            .padding(.horizontal, LarderSpace.s3)
+            .padding(.leading, LarderSpace.s3)
+            .padding(.trailing, isSelecting ? LarderSpace.s3 : 0)
             .frame(minHeight: 68)
             .contentShape(Rectangle())
         }
@@ -138,9 +212,11 @@ struct SavedRecipesView: View {
         .accessibilityAddTraits(isSelected ? .isSelected : [])
         // Swipe has a visible equivalent for VoiceOver users.
         .accessibilityAction(named: L10n.swipeDelete) { if !isSelecting { delete(entry) } }
-        // A long press offers Select, the way in besides the toolbar's button.
+        .accessibilityAction(named: Self.favouriteLabel(entry)) { if !isSelecting { toggleFavourite(entry) } }
+        // A long press offers Select, the way in besides the toolbar's button, and the favourite.
         .contextMenu {
             if !isSelecting {
+                Button(Self.favouriteLabel(entry), systemImage: entry.isFavorite ? "star.slash" : "star") { toggleFavourite(entry) }
                 Button(L10n.selectItemsButton, systemImage: "checkmark.circle") { startSelection(with: entry.id) }
             }
         }

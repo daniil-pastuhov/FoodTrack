@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LocalRippleConfiguration
@@ -62,6 +63,7 @@ import com.foodtracker.android.ui.theme.LarderRadius
 import com.foodtracker.android.ui.theme.LarderSize
 import com.foodtracker.android.ui.theme.LarderSpace
 import com.foodtracker.android.ui.theme.LarderTheme
+import androidx.compose.ui.res.painterResource
 
 enum class LarderButtonStyle { Primary, Secondary, Outline, Text, Danger, DangerText }
 
@@ -374,6 +376,30 @@ private fun LarderIconButtonImpl(
         interactionSource = source
     ) {
         LarderIcon(icon, contentDescription)
+    }
+}
+
+/** The favourite star of a saved recipe or menu: outlined when it isn't one, filled in the accent
+ *  when it is; said as "Add to favourites" / "Remove from favourites". */
+@Composable
+fun LarderFavouriteButton(favourite: Boolean, onToggle: (Boolean) -> Unit, modifier: Modifier = Modifier) {
+    val source = remember { MutableInteractionSource() }
+    val focused by source.collectIsFocusedAsState()
+    IconButton(
+        onClick = { onToggle(!favourite) },
+        modifier = modifier
+            .size(LarderSize.touch)
+            .focusRing(focused, LarderTheme.colors.focusRing, CircleShape),
+        colors = IconButtonDefaults.iconButtonColors(
+            contentColor = if (favourite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+        ),
+        interactionSource = source
+    ) {
+        Icon(
+            painter = painterResource(if (favourite) R.drawable.larder_star_filled else LarderIcons.Star.res),
+            contentDescription = stringResource(if (favourite) R.string.recipe_favourite_remove else R.string.recipe_favourite_add),
+            modifier = Modifier.size(LarderIconSize.Default)
+        )
     }
 }
 

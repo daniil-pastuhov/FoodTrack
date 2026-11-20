@@ -1957,7 +1957,8 @@ internal class RecipePaid(
             WireKind.MENU -> reply.menu?.takeIf { it.days.isNotEmpty() }?.let { menu ->
                 val plain = Menu(
                     menu.days.map { day ->
-                        day.copy(courses = day.courses.map { it.copy(recipe = it.recipe.withoutLocalFields().copy(source = RecipeSource.SERVER)) })
+                        // A menu's dishes have no meal: the menu is its own tab in Saved recipes.
+                        day.copy(courses = day.courses.map { it.copy(recipe = it.recipe.withoutLocalFields().copy(source = RecipeSource.SERVER, meal = null)) })
                     },
                     requestId = request.requestId
                 )

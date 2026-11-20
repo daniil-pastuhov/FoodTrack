@@ -88,6 +88,9 @@ struct GeneratedRecipe {
     var steps: [String]
     @Guide(description: "One practical tip for this dish, or an empty string")
     var tip: String
+    /// Checked against the config before it is kept (`RecipeMeal.resolved`).
+    @Guide(description: "The meal this dish suits best", .anyOf(["breakfast", "lunch", "dinner", "snack", "dessert"]))
+    var meal: String
 }
 
 @available(iOS 26.0, *)
@@ -108,7 +111,7 @@ extension GeneratedRecipe {
     func recipe(for request: RecipeRequest) -> Recipe {
         let pantryNames = (request.items + request.otherItems).map(\.name)
         let tip = tip.trimmingCharacters(in: .whitespacesAndNewlines)
-        return Recipe(
+        var recipe = Recipe(
             title: title.trimmingCharacters(in: .whitespacesAndNewlines),
             summary: summary.trimmingCharacters(in: .whitespacesAndNewlines),
             minutes: minutes,
@@ -134,6 +137,8 @@ extension GeneratedRecipe {
             tip: tip.isEmpty ? nil : tip,
             source: .device
         )
+        recipe.meal = RecipeMeal.resolved(label: meal, configured: request.config.mealTypes)
+        return recipe
     }
 }
 

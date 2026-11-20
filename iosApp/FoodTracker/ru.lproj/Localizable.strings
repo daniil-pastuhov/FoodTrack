@@ -664,6 +664,11 @@
 "recipe_intro_packs_message" = "Рецепт составляет наш сервер; он же может спланировать меню на 3 дня. Рецепт стоит %1$@ из пакета, меню — %2$@ при 2 блюдах в день или %3$@ при 3.";
 "recipe_intro_packs_body_sets" = "Рецепт составляет наш сервер; он же может спланировать набор меню. Рецепт стоит %1$@ из пакета, набор меню — от %2$d до %3$d в зависимости от числа дней и блюд в день.";
 "recipe_saved_new" = "Новое";
+"recipe_saved_tab_all" = "Все";
+"recipe_saved_tab_menus" = "Меню";
+"recipe_favourite_add" = "Добавить в избранное";
+"recipe_favourite_remove" = "Убрать из избранного";
+"recipe_saved_favourite" = "В избранном";
 "recipe_courses_label" = "Блюд в день";
 "recipe_generate_recipe" = "Составить рецепт";
 "recipe_generate_menu" = "Составить меню";

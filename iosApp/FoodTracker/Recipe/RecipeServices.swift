@@ -242,6 +242,8 @@ protocol SavedRecipeStore {
     func pictures(id: String) -> SavedRecipePictures?
     /// The same, read off the main actor (opening a saved recipe).
     func loadPictures(id: String) async -> SavedRecipePictures?
+    /// Marks `id` a favourite or not, with one save; nothing for an id not saved.
+    func setFavorite(id: String, _ isFavorite: Bool)
 }
 
 /// Saved recipes in the shared SwiftData store, as `SavedRecipeRecord` rows.
@@ -275,6 +277,8 @@ final class SwiftDataSavedRecipeStore: SavedRecipeStore {
                 record.stepImages = old.stepImages
                 record.thumbnail = record.thumbnail ?? old.thumbnail
             }
+            // Saved again (not through `setFavorite`): a favourite stays one.
+            if let old = existing.first, old.isFavorite { record.isFavorite = true }
             existing.forEach(context.delete)
             context.insert(record)
         }
@@ -283,6 +287,13 @@ final class SwiftDataSavedRecipeStore: SavedRecipeStore {
 
     func delete(id: String) {
         try? context.delete(model: SavedRecipeRecord.self, where: #Predicate { $0.id == id })
+        try? context.save()
+    }
+
+    func setFavorite(id: String, _ isFavorite: Bool) {
+        let records = (try? context.fetch(FetchDescriptor<SavedRecipeRecord>(predicate: #Predicate { $0.id == id }))) ?? []
+        guard !records.isEmpty else { return }
+        records.forEach { $0.isFavorite = isFavorite }
         try? context.save()
     }
 
@@ -309,7 +320,7 @@ final class SwiftDataSavedRecipeStore: SavedRecipeStore {
         case nil:
             return nil
         }
-        return SavedRecipe(id: record.id, createdAt: record.createdAt, content: content, thumbnail: record.thumbnail)
+        return SavedRecipe(id: record.id, createdAt: record.createdAt, content: content, thumbnail: record.thumbnail, isFavorite: record.isFavorite)
     }
 
     func pictures(id: String) -> SavedRecipePictures? {
@@ -364,6 +375,7 @@ final class SwiftDataSavedRecipeStore: SavedRecipeStore {
             source: entry.source.rawValue
         )
         record.thumbnail = entry.thumbnail
+        record.isFavorite = entry.isFavorite
         if let pictures = entry.pictures {
             record.dishImage = pictures.dish
             record.stepImages = encodedSteps(pictures.steps)

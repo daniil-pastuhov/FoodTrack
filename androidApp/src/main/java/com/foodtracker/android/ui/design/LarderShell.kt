@@ -158,14 +158,16 @@ private data class NavEntry(val tab: LarderTab, val icon: LarderIcons, val label
 /**
  * The floating pill, on every device: sized to its tabs, content scrolling beneath it, the page
  * showing at its sides. [shoppingCount] is the number of shopping-list entries, shown as a badge
- * above zero. Place it with the [ShellClearance] gap; it doesn't pad for the navigation bar.
+ * above zero; [newRecipes] the saved recipes and menus not opened yet ([RecipeUiState.unreadCount]),
+ * on the Recipe tab the same way. Place it with the [ShellClearance] gap; it doesn't pad for the navigation bar.
  */
 @Composable
 fun FloatingNav(
     selectedTab: LarderTab,
     onTabSelected: (LarderTab) -> Unit,
     modifier: Modifier = Modifier,
-    shoppingCount: Int = 0
+    shoppingCount: Int = 0,
+    newRecipes: Int = 0
 ) {
     val entries = listOf(
         NavEntry(LarderTab.Home, LarderIcons.House, stringResource(R.string.nav_label_home)),
@@ -187,7 +189,11 @@ fun FloatingNav(
             NavTab(
                 entry = entry,
                 selected = entry.tab == selectedTab,
-                badgeCount = if (entry.tab == LarderTab.Shopping) shoppingCount else 0,
+                badgeCount = when (entry.tab) {
+                    LarderTab.Shopping -> shoppingCount
+                    LarderTab.Recipe -> newRecipes
+                    else -> 0
+                },
                 onClick = { onTabSelected(entry.tab) }
             )
         }
@@ -240,7 +246,11 @@ private fun NavTab(entry: NavEntry, selected: Boolean, badgeCount: Int, onClick:
             LarderIcon(entry.icon, contentDescription = null, tint = color)
             if (badgeCount > 0) {
                 // Spoken as the real number, which the badge caps at 99+.
-                val countDescription = pluralStringResource(R.plurals.nav_tab_item_count, badgeCount, badgeCount)
+                val countDescription = pluralStringResource(
+                    if (entry.tab == LarderTab.Recipe) R.plurals.nav_tab_new_recipes else R.plurals.nav_tab_item_count,
+                    badgeCount,
+                    badgeCount
+                )
                 LarderBadge(
                     count = badgeCount,
                     compact = true,
@@ -295,7 +305,7 @@ fun ScanFab(
 @Composable
 internal fun FloatingNavPreview() = LarderPreview {
     FloatingNav(LarderTab.Home, {}, shoppingCount = 5)
-    FloatingNav(LarderTab.Shopping, {}, shoppingCount = 120)
+    FloatingNav(LarderTab.Shopping, {}, shoppingCount = 120, newRecipes = 2)
     FloatingNav(LarderTab.Settings, {})
 }
 

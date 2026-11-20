@@ -310,4 +310,35 @@ class OnDeviceRecipePromptTest {
         assertEquals(listOf(null, "Salt", "Olive oil", null, null), recipe.ingredients.map { it.stapleName })
         assertTrue(recipe.ingredients.none { it.stapleName != null && it.fromPantry })
     }
+
+    @Test
+    fun theMealIsAskedOnlyWhenTheConfigLeavesAChoice() {
+        val items = listOf(RecipePromptItem("Bread", 1))
+        val one = buildOnDeviceRecipePrompt(items, config.copy(mealTypes = setOf(RecipeMealType.DINNER)), "en", emptyList())
+        assertFalse(one.contains("\"meal\""), one)
+        val several = buildOnDeviceRecipePrompt(items, config.copy(mealTypes = setOf(RecipeMealType.SNACK, RecipeMealType.BREAKFAST)), "en", emptyList())
+        assertTrue(several.contains("\"meal\":\"\""), several)
+        assertTrue(several.contains("Set meal to the one of breakfast, snack that the dish suits best."), several)
+        val any = buildOnDeviceRecipePrompt(items, config, "en", emptyList())
+        assertTrue(any.contains("Set meal to the one of breakfast, lunch, dinner, snack, dessert that the dish suits best."), any)
+    }
+
+    @Test
+    fun aReplysMealIsKeptToTheMealsAskedFor() {
+        fun reply(meal: String?) = """{"title":"Toast",""" + (meal?.let { "\"meal\":\"$it\"," } ?: "") +
+            """"ingredients":[{"amount":"2","name":"Bread","fromPantry":true}],"steps":["Toast."]}"""
+        fun mealOf(meal: String?, asked: Set<RecipeMealType>) =
+            assertNotNull(parseRecipeReply(reply(meal), RecipeSource.DEVICE, config.copy(mealTypes = asked), listOf("Bread"))).meal
+        val breakfast = setOf(RecipeMealType.BREAKFAST)
+        val two = setOf(RecipeMealType.DINNER, RecipeMealType.LUNCH)
+        assertEquals(RecipeMealType.BREAKFAST, mealOf(null, breakfast), "one meal asked for is that meal")
+        assertEquals(RecipeMealType.BREAKFAST, mealOf("dessert", breakfast))
+        assertEquals(RecipeMealType.DINNER, mealOf("Dinner ", two), "a label among those asked for")
+        assertEquals(RecipeMealType.LUNCH, mealOf("snack", two), "else the first asked for, in the form's order")
+        assertEquals(RecipeMealType.LUNCH, mealOf(null, two))
+        assertEquals(RecipeMealType.SNACK, mealOf("snack", emptySet()), "with Any, the model's label")
+        assertNull(mealOf("brunch", emptySet()), "an unknown label is none")
+        assertNull(mealOf("any", emptySet()))
+        assertNull(mealOf(null, emptySet()))
+    }
 }

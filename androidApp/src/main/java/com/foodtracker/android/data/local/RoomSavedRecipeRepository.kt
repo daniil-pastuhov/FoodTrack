@@ -23,6 +23,8 @@ class RoomSavedRecipeRepository(private val dao: SavedRecipeDao) : SavedRecipeRe
 
     override suspend fun delete(ids: Collection<String>) = dao.deleteByIds(ids.toList())
 
+    override suspend fun setFavorite(id: String, favorite: Boolean) = dao.setFavorite(id, favorite)
+
     override suspend fun saveAll(recipes: List<SavedRecipe>) = dao.upsertAll(recipes.map { it.toEntity() })
 
     override suspend fun clearAll() = dao.clear()

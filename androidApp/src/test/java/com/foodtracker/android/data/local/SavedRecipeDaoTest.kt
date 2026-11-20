@@ -9,6 +9,7 @@ import com.foodtracker.recipe.MenuDay
 import com.foodtracker.recipe.Recipe
 import com.foodtracker.recipe.RecipeDifficulty
 import com.foodtracker.recipe.RecipeIngredient
+import com.foodtracker.recipe.RecipeMealType
 import com.foodtracker.recipe.RecipeSource
 import com.foodtracker.recipe.SavedRecipe
 import kotlinx.coroutines.flow.first
@@ -144,5 +145,29 @@ class SavedRecipeDaoTest {
         db.savedRecipeDao().upsert(SavedRecipe.of("r", recipe, 1L).toEntity().copy(source = "elsewhere"))
 
         assertEquals(RecipeSource.DEVICE, repo.getAllFlow().first().single().source)
+    }
+
+    @Test
+    fun aFavouriteAndAMealAreKeptAndSurviveDeleteAndUndo() = runTest {
+        repo.save(SavedRecipe.of("r1", recipe.copy(meal = RecipeMealType.BREAKFAST), 1L))
+        repo.save(SavedRecipe.of("r2", recipe.copy(title = "Other"), 2L))
+
+        repo.setFavorite("r1", true)
+        repo.setFavorite("missing", true)
+        val favourite = repo.getAllFlow().first().single { it.id == "r1" }
+        assertTrue(favourite.favorite)
+        assertEquals(RecipeMealType.BREAKFAST, favourite.meal)
+        assertEquals(false, repo.getAllFlow().first().single { it.id == "r2" }.favorite)
+
+        // Undo of a delete puts back the row it was handed, favourite and all.
+        repo.delete("r1")
+        repo.save(favourite)
+        assertEquals(favourite, repo.getAllFlow().first().single { it.id == "r1" })
+        repo.delete(listOf("r1"))
+        repo.saveAll(listOf(favourite))
+        assertEquals(favourite, repo.getAllFlow().first().single { it.id == "r1" })
+
+        repo.setFavorite("r1", false)
+        assertEquals(false, repo.getAllFlow().first().single { it.id == "r1" }.favorite)
     }
 }

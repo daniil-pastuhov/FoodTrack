@@ -66,6 +66,9 @@ private class PaidSavedRepository : SavedRecipeRepository {
     override suspend fun delete(id: String) {
         rows.value = rows.value.filterNot { it.id == id }
     }
+    override suspend fun setFavorite(id: String, favorite: Boolean) {
+        rows.value = rows.value.map { if (it.id == id) it.copy(favorite = favorite) else it }
+    }
     override suspend fun clearAll() {
         rows.value = emptyList()
     }
@@ -1344,6 +1347,27 @@ class RecipePaidTest {
         holder.generateOnServer()
         // Bread was a day past its date on the day it was asked for; the model's text plays no part.
         assertEquals(listOf(PastDateItem("Bread", 1)), saved.rows.value.single().recipe?.pastDate)
+    }
+
+    @Test
+    fun aServerRecipesMealIsSavedWithIt() = runUnconfined {
+        withBalance(5)
+        val holder = holder()
+        backend.generateReplies += ServerResult.Ok(GenerateReply(GenerateStatus.DONE, recipe = sampleRecipe.copy(meal = RecipeMealType.DINNER), balance = 4, charged = true))
+        holder.generateOnServer()
+        assertEquals(RecipeMealType.DINNER, saved.rows.value.single().meal)
+    }
+
+    @Test
+    fun aRepliesMealIsReadAndAnUnknownOneIsNone() {
+        fun meal(value: String) = RecipeJson.decodeFromString(
+            GenerateReply.serializer(),
+            """{"status":"DONE","balance":4,"charged":true,"recipe":{"title":"Soup","steps":["Cook."],"meal":$value}}"""
+        ).recipe?.meal
+        assertEquals(RecipeMealType.LUNCH, meal("\"lunch\""))
+        assertNull(meal("\"elevenses\""))
+        assertNull(meal("\"any\""))
+        assertNull(meal("null"))
     }
 
     @Test

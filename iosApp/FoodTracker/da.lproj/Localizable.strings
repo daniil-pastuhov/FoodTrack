@@ -664,6 +664,11 @@
 "recipe_intro_packs_message" = "Vores server skriver opskriften og kan også planlægge en menu for 3 dage. En opskrift bruger %1$@ fra en pakke; en menu bruger %2$@ med 2 retter om dagen eller %3$@ med 3.";
 "recipe_intro_packs_body_sets" = "Vores server skriver opskriften og kan også planlægge et menusæt. En opskrift bruger %1$@ fra en pakke; et menusæt bruger %2$d til %3$d, afhængigt af dage og retter om dagen.";
 "recipe_saved_new" = "Ny";
+"recipe_saved_tab_all" = "Alle";
+"recipe_saved_tab_menus" = "Menuer";
+"recipe_favourite_add" = "Føj til favoritter";
+"recipe_favourite_remove" = "Fjern fra favoritter";
+"recipe_saved_favourite" = "Favorit";
 "recipe_courses_label" = "Retter om dagen";
 "recipe_generate_recipe" = "Lav opskrift";
 "recipe_generate_menu" = "Lav menu";

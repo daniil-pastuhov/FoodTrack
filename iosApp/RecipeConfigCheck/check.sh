@@ -11,7 +11,9 @@
 # the shopping list's exclusion, the backup field, onboarding's Staples step), recipe pictures (the
 # Pictures row's levels, what is sent with a short pack, the picture prices in costs, the request's
 # image, the flag, the reply's pictures read leniently, the lines) and "Report this recipe" (the
-# reasons, the note's cut, when the action shows, what is remembered and sent):
+# reasons, the note's cut, when the action shows, what is remembered and sent), a recipe's meal
+# (read from a reply, the phone's label checked against the config) and Saved recipes' tabs and
+# order (`SavedList`):
 #   iosApp/RecipeConfigCheck/check.sh
 # Compiles RecipeModels.swift, RecipeWire.swift, TasteProfile.swift, WelcomeRecipes.swift and Staple.swift (with a stub of the pantry item)
 # outside the Xcode project and runs main.swift, the same cases as Android's

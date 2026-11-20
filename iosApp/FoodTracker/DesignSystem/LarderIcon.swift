@@ -81,6 +81,8 @@ enum LarderIconName: String, CaseIterable {
     case snowflake
     case sparkles
     case star
+    /// `star` filled: a favourite that is on. Not a Lucide icon of its own.
+    case starFilled = "star-filled"
     case store
     case ticket
     case timer

@@ -664,6 +664,11 @@
 "recipe_intro_packs_message" = "Unser Server erstellt das Rezept und kann auch ein Menü für 3 Tage planen. Ein Rezept kostet %1$@ aus einem Paket; ein Menü kostet %2$@ mit 2 Gängen pro Tag oder %3$@ mit 3.";
 "recipe_intro_packs_body_sets" = "Unser Server erstellt das Rezept und kann auch ein Menü-Set planen. Ein Rezept kostet %1$@ aus einem Paket; ein Menü-Set kostet %2$d bis %3$d, je nach Tagen und Gängen pro Tag.";
 "recipe_saved_new" = "Neu";
+"recipe_saved_tab_all" = "Alle";
+"recipe_saved_tab_menus" = "Menüs";
+"recipe_favourite_add" = "Zu Favoriten hinzufügen";
+"recipe_favourite_remove" = "Aus Favoriten entfernen";
+"recipe_saved_favourite" = "Favorit";
 "recipe_courses_label" = "Gänge pro Tag";
 "recipe_generate_recipe" = "Rezept erstellen";
 "recipe_generate_menu" = "Menü erstellen";

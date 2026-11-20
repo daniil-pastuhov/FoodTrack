@@ -911,6 +911,14 @@
         <item quantity="other">Sparade recept, %1$d nya</item>
     </plurals>
     <string name="recipe_saved_unread">Ny</string>
+    <string name="recipe_saved_tab_all">Alla</string>
+    <string name="recipe_saved_tab_menus">Menyer</string>
+    <string name="recipe_favourite_add">Lägg till i favoriter</string>
+    <string name="recipe_favourite_remove">Ta bort från favoriter</string>
+    <plurals name="nav_tab_new_recipes">
+        <item quantity="one">%1$d nytt recept</item>
+        <item quantity="other">%1$d nya recept</item>
+    </plurals>
     <string name="recipe_courses">Rätter per dag</string>
     <plurals name="recipe_courses_count">
         <item quantity="one">%1$d rätt</item>

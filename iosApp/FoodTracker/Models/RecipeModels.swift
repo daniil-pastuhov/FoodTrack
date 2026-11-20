@@ -351,6 +351,10 @@ public struct Recipe: Codable, Equatable, Sendable {
     public var picture: RecipePictureSize? = nil
     /// Local only: the step pictures kept with it, in step order. Android: `Recipe.stepPictures`.
     public var stepPictures: [RecipeStepPictureSize] = []
+    /// Which meal the dish is (never `.any`): from the server's reply for a single recipe, or set
+    /// on the phone (`RecipeMeal.resolved`). Nil for a menu's dishes, in rows saved before it and
+    /// for an absent or unknown value. What Saved recipes' meal tabs sort by. Android: `Recipe.meal`.
+    public var meal: RecipeMealType? = nil
 
     public init(
         title: String,
@@ -376,7 +380,7 @@ public struct Recipe: Codable, Equatable, Sendable {
 
     private enum CodingKeys: String, CodingKey {
         case title, summary, minutes, servings, difficulty, ingredients, steps, tip, source, pastDate
-        case requestId, picture, stepPictures
+        case requestId, picture, stepPictures, meal
     }
 
     public init(from decoder: Decoder) throws {
@@ -395,6 +399,7 @@ public struct Recipe: Codable, Equatable, Sendable {
         requestId = (try? c.decodeIfPresent(String.self, forKey: .requestId)).flatMap { $0 }
         picture = (try? c.decodeIfPresent(RecipePictureSize.self, forKey: .picture)).flatMap { $0 }
         stepPictures = (try? c.decodeIfPresent([RecipeStepPictureSize].self, forKey: .stepPictures)).flatMap { $0 } ?? []
+        meal = RecipeMeal.parsed((try? c.decodeIfPresent(String.self, forKey: .meal)).flatMap { $0 })
     }
 
     /// The same recipe with nothing local a reply or a model's text could have carried: no request
@@ -579,14 +584,21 @@ public struct SavedRecipe: Identifiable, Equatable, Sendable {
     /// The pictures' bytes, only where they are in hand (just arrived, or read back for Undo):
     /// saving an entry with nil keeps what the store already holds for its id.
     public var pictures: SavedRecipePictures? = nil
+    /// Marked a favourite (Saved recipes' star): kept with the row (`SavedRecipeRecord.isFavorite`),
+    /// so it comes back with an Undo of a delete. Never in a backup.
+    public var isFavorite: Bool = false
 
-    public init(id: String = UUID().uuidString, createdAt: Date = Date(), content: Content, thumbnail: Data? = nil, pictures: SavedRecipePictures? = nil) {
+    public init(id: String = UUID().uuidString, createdAt: Date = Date(), content: Content, thumbnail: Data? = nil, pictures: SavedRecipePictures? = nil, isFavorite: Bool = false) {
         self.id = id
         self.createdAt = createdAt
         self.content = content
         self.thumbnail = thumbnail
         self.pictures = pictures
+        self.isFavorite = isFavorite
     }
+
+    /// A single recipe's meal; nil for a menu and for a recipe without one.
+    public var meal: RecipeMealType? { recipe?.meal }
 
     /// The generation's request id, for a result our server wrote and saved since it was kept.
     public var requestId: String? {

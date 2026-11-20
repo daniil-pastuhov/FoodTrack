@@ -1,5 +1,6 @@
 package com.foodtracker.android.data.local
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -23,7 +24,10 @@ data class SavedRecipeEntity(
     val payload: String,
     val createdAtEpochMillis: Long,
     /** "server" or "device". */
-    val source: String
+    val source: String,
+    /** Marked a favourite in Saved recipes (since version 16). */
+    @ColumnInfo(defaultValue = "0")
+    val favorite: Boolean = false
 )
 
 fun SavedRecipe.toEntity(): SavedRecipeEntity = SavedRecipeEntity(
@@ -32,14 +36,15 @@ fun SavedRecipe.toEntity(): SavedRecipeEntity = SavedRecipeEntity(
     title = title,
     payload = payloadJson(),
     createdAtEpochMillis = createdAtEpochMillis,
-    source = source.wireName
+    source = source.wireName,
+    favorite = favorite
 )
 
 /** Null for a row this version can't read, so one bad row can't hide the rest. */
 fun SavedRecipeEntity.toDomain(): SavedRecipe? {
     val kind = SavedRecipeKind.entries.firstOrNull { it.wireName == kind } ?: return null
     val source = RecipeSource.entries.firstOrNull { it.wireName == source } ?: RecipeSource.DEVICE
-    return savedRecipeFromPayload(id, kind, title, createdAtEpochMillis, source, payload)
+    return savedRecipeFromPayload(id, kind, title, createdAtEpochMillis, source, payload, favorite)
 }
 
 private val SavedRecipeKind.wireName: String

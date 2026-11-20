@@ -26,6 +26,8 @@ final class SavedRecipeRecord {
     @Attribute(.externalStorage) var stepImages: Data? = nil
     /// The dish picture cropped small for the Saved row. Nil without a picture.
     var thumbnail: Data? = nil
+    /// Marked a favourite in Saved recipes. False in rows from before favourites came.
+    var isFavorite: Bool = false
 
     init(id: String, kind: String, payload: Data, title: String, createdAt: Date, source: String) {
         self.id = id

@@ -731,7 +731,7 @@ final class RecipeViewModel: ObservableObject {
     /// Reads the saved list again, for changes made outside this view model.
     func reloadSaved() {
         let current = savedStore.all()
-        if current.map(\.id) != saved.map(\.id) { saved = current }
+        if current != saved { saved = current }
         pruneUnread()
     }
 
@@ -1475,6 +1475,21 @@ final class RecipeViewModel: ObservableObject {
     /// What Saved recipes lists: recipes and menus, newest first.
     var savedRecipes: [SavedRecipe] { saved }
 
+    /// Saved recipes' tabs now (`SavedList.tabs`): empty while only All would show.
+    var savedTabs: [SavedTab] { SavedList.tabs(saved) }
+
+    /// The rows `tab` lists, new ones first, then favourites, then the rest (`SavedList`).
+    func savedRows(tab: SavedTab) -> [SavedRecipe] {
+        SavedList.rows(SavedList.ordered(saved, unread: options.unreadSaved), tab: tab)
+    }
+
+    /// Marks a saved recipe or menu a favourite, or not.
+    func setFavorite(id: String, _ isFavorite: Bool) {
+        guard savedRecipe(id: id)?.isFavorite != isFavorite else { return }
+        savedStore.setFavorite(id: id, isFavorite)
+        saved = savedStore.all()
+    }
+
     func savedRecipe(id: String) -> SavedRecipe? {
         saved.first { $0.id == id }
     }
@@ -1718,6 +1733,42 @@ final class RecipeViewModel: ObservableObject {
     func showDemoUnread() {
         let ids = [saveDemoRecipe(), saveDemoMenu()]
         updateOptions { $0.unreadSaved.formUnion(ids) }
+    }
+
+    /// `-demoSavedTabs YES`: Saved recipes with its tabs and favourites to look at: recipes for
+    /// breakfast and dinner, one from before meals came, a menu, a favourite dinner and an unread
+    /// breakfast, the newest saved last.
+    func showDemoSavedTabs() {
+        func recipe(_ title: String, _ minutes: Int, _ meal: RecipeMealType?) -> Recipe {
+            var recipe = Recipe(
+                title: title,
+                summary: "",
+                minutes: minutes,
+                servings: config.servings,
+                difficulty: .easy,
+                ingredients: [RecipeIngredient(amount: "100 g", name: "Baby spinach", fromPantry: true)],
+                steps: ["Prepare and serve."],
+                source: .server
+            )
+            recipe.meal = meal
+            return recipe
+        }
+        let now = Date()
+        let rows: [(Recipe, Bool)] = [
+            (recipe("Leftover vegetable frittata", 25, nil), false),
+            (recipe("Creamy salmon pasta", 30, .dinner), true),
+            (recipe("Chicken and rice traybake", 45, .dinner), false),
+            (recipe("Overnight oats with berries", 5, .breakfast), false),
+        ]
+        var ids: [String] = []
+        for (offset, row) in rows.enumerated() {
+            let entry = SavedRecipe(createdAt: now.addingTimeInterval(Double(offset - rows.count) * 3600), content: .recipe(row.0), isFavorite: row.1)
+            savedStore.save(entry)
+            ids.append(entry.id)
+        }
+        _ = saveDemoMenu()
+        saved = savedStore.all()
+        if let newest = ids.last { updateOptions { $0.unreadSaved.insert(newest) } }
     }
 
     /// `-demoRoute recipeResult`: a recipe as the phone's model would write one, saved so the

@@ -956,6 +956,15 @@
         <item quantity="other">Recetas guardadas, %1$d nuevas</item>
     </plurals>
     <string name="recipe_saved_unread">Nueva</string>
+    <string name="recipe_saved_tab_all">Todas</string>
+    <string name="recipe_saved_tab_menus">Menús</string>
+    <string name="recipe_favourite_add">Añadir a favoritos</string>
+    <string name="recipe_favourite_remove">Quitar de favoritos</string>
+    <plurals name="nav_tab_new_recipes">
+        <item quantity="one">%1$d receta nueva</item>
+        <item quantity="many">%1$d recetas nuevas</item>
+        <item quantity="other">%1$d recetas nuevas</item>
+    </plurals>
     <string name="recipe_courses">Platos al día</string>
     <plurals name="recipe_courses_count">
         <item quantity="one">%1$d plato</item>

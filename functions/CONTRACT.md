@@ -603,7 +603,8 @@ sha256 of the validated request, and no inputs); it is not logged either (`llm_c
                   { "amount": "", "name": "pepper", "fromPantry": false, "staple": true },
                   { "amount": "1 tsp", "name": "salt", "fromPantry": false, "stapleIndex": 0, "staple": true }],
   "steps": ["string", "..."],
-  "tip": "string (optional, absent when none)"
+  "tip": "string (optional, absent when none)",
+  "meal": "breakfast | lunch | dinner | snack | dessert (optional, single recipes only)"
 }
 ```
 
@@ -640,6 +641,24 @@ title 100, summary 400, amount 40, ingredient name 80, step 600, tip 300 charact
 ingredients; steps 1–7 (`brief`), 2–10 (`standard`), 2–18 (`stepByStep`). No line breaks, control
 or bidirectional characters, links, e-mail addresses, phone numbers, HTML or markdown. Clients
 still render every field as plain text (never as markdown or HTML).
+
+#### Recipe meal
+
+`meal` (optional) says which meal a single recipe is, one of `breakfast`, `lunch`, `dinner`,
+`snack`, `dessert` (the `mealTypes` choices): the apps sort saved recipes by it. No capability
+flag: clients ignore it until they read it, and read an absent or unknown value as no meal. It
+is on the `recipe` of every `DONE` reply to `kind: "recipe"` that has one, and on every
+`getGeneration` or same-id retry of it (stored with the generation); never on a menu's dishes,
+and absent on answers generated before it. The server decides it from the config's meal types
+(`mealTypes`, or the legacy `mealType`) and the model's label, which is asked as an enum of the
+response schema (never free text) only when the config does not name exactly one meal type:
+
+- exactly one meal type: always that one (the model is not asked);
+- several: the model's label when it is one of them, otherwise the first of them in the order
+  above (the dish was asked to suit one of them);
+- any meal (`[]` / `"any"`): the model's label when it is one of the five, otherwise absent.
+
+A label never makes a generation fail and is never charged for on its own.
 
 ### Recipe picture (response)
 

@@ -16,7 +16,7 @@
  * what was requested. Everything else that is wrong makes the whole answer invalid (an
  * OutputRule), which generation settles as a content failure.
  */
-import { coursesFor, menuDates, menuDaysOf, type Course, type GenerateRequest, type Menu, type MenuDay, type Recipe, type RecipeIngredient, type StapleInput } from "../contract";
+import { MEAL_CHOICES, coursesFor, menuDates, menuDaysOf, type Course, type MealChoice, type RecipeConfig, type GenerateRequest, type Menu, type MenuDay, type Recipe, type RecipeIngredient, type StapleInput } from "../contract";
 import {
   ALLERGEN_ALIASES,
   ALLERGEN_GROUPS,
@@ -728,7 +728,25 @@ function run<T>(ctx: OutputContext, f: (ch: Checker) => T): OutputCheck<T> {
 }
 
 export function checkRecipeOutput(raw: unknown, ctx: OutputContext): OutputCheck<Recipe> {
-  return run(ctx, (ch) => recipe(ch, raw));
+  return run(ctx, (ch) => {
+    const r = recipe(ch, raw);
+    const meal = mealOf((raw as Record<string, unknown>).meal, ctx.req.config);
+    return meal ? { ...r, meal } : r;
+  });
+}
+
+/**
+ * A single recipe's `meal` (CONTRACT.md "Recipe meal"), from the model's label `raw` (an enum of
+ * the schema, adapters/prompt.ts mealLabelChoices; anything else counts as none) and the config:
+ * a config naming exactly one meal type gets that one whatever the label; one naming several gets
+ * the label when it is one of them, else the first of them (MEAL_CHOICES order: the dish was asked
+ * to suit one of them); "any meal" gets the label when it is one of MEAL_CHOICES, else none. A
+ * label never fails an answer: it only sorts the person's saved recipes.
+ */
+export function mealOf(raw: unknown, config: RecipeConfig): MealChoice | undefined {
+  const label = (MEAL_CHOICES as readonly unknown[]).includes(raw) ? (raw as MealChoice) : undefined;
+  if (config.mealTypes.length === 0) return label;
+  return label && config.mealTypes.includes(label) ? label : config.mealTypes[0];
 }
 
 /** A menu must have exactly the requested days (menuDates), each with exactly the requested courses, in order. */
