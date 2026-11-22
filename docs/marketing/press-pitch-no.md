@@ -17,7 +17,7 @@ tipssiden sin (listen nederst). Ingen vedlegg; lenk til appsiden med skjermbilde
 > den påtrykte datoen, enten det står «best før» eller «siste forbruksdag», og gir en påminnelse
 > før noe går ut. I den nye versjonen lager Oppskrift-fanen en oppskrift av det som går ut først:
 > gratis via en ferdig ledetekst til en KI-app man allerede bruker, gratis på selve telefonen der
-> den støtter det, eller fra valgfrie oppskriftspakker uten abonnement, som også kan sette opp et
+> den støtter det, eller fra valgfrie gnistpakker uten abonnement, som også kan sette opp et
 > menysett for én til fire dager. Pakkene starter på USD 2,99 for ti oppskrifter, omregnet av
 > butikkene.
 >
@@ -53,7 +53,7 @@ Gratis app for å holde oversikt over holdbarheten på maten hjemme.
   ikke offentlig ennå.
 - **Språk:** norsk, engelsk, russisk, spansk, tysk, fransk, svensk og dansk (appen);
   oppskriftene kan skrives på elleve språk.
-- **Pris:** gratis, uten reklame og uten abonnement. Valgfrie oppskriftspakker som engangskjøp i
+- **Pris:** gratis, uten reklame og uten abonnement. Valgfrie gnistpakker som engangskjøp i
   appen: 10, 50 eller 100 oppskrifter, fra USD 2,99 for 10 (prisen i kroner settes av App Store og
   Google Play).
 - **Personvern:** ingen konto; matvarene lagres bare på telefonen; ingen sporing (appen sender
@@ -77,7 +77,7 @@ Gratis app for å holde oversikt over holdbarheten på maten hjemme.
 - Gratis: del en ferdig ledetekst med en KI-app man allerede bruker.
 - Gratis på selve telefonen der den støtter det: Apple Intelligence på nyere iPhoner (iOS 26 eller
   nyere; norsk fra iOS 26.1), Gemini Nano på noen Android-telefoner (foreløpig bare på engelsk).
-- Valgfritt: oppskriftspakker skrevet av appens server, engangskjøp. Menysett kommer fra en pakke:
+- Valgfritt: gnistpakker skrevet av appens server, engangskjøp. Menysett kommer fra en pakke:
   én til fire dager, én til tre retter om dagen; en oppskrift bruker én fra pakken, et menysett
   flere etter størrelsen (appen viser hvor mange før man bestiller).
 - Det som mangler til en oppskrift, legges på handlelisten med ett trykk, og en oppskrift som

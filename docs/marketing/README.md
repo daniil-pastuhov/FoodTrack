@@ -28,7 +28,8 @@ the drafts here link to it.
   writes no Russian, and Norwegian, Swedish and Danish only from iOS 26.1) or a supported Android
   phone with Gemini Nano (English recipes only for now); recipe packs are optional one-off
   purchases, from USD 2.99 for 10 recipes (converted by the stores); the paid unit is called a
-  "recipe". The app is in eight languages; recipes can be written in eleven.
+  "spark" in the app since 2026-11-22 (one spark is one recipe from the server), so "10 recipes"
+  in the English drafts stays true. The app is in eight languages; recipes can be written in eleven.
 - No user counts, savings figures, superlatives or competitor names have been added.
 
 ## Suggested order and timing

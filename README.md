@@ -18,7 +18,7 @@ Scan your groceries, see what to use first, get a reminder before food goes off,
 - Lists what expires first in the fridge, freezer and pantry, and reminds you a few days before, at a time you choose.
 - Shopping list: essentials you use up go onto it; share it as text or a QR code.
 - Home screen widgets for expiring items, the shopping list and an overview.
-- Recipe tab: picks the items closest to their date and writes a recipe in one of three ways: a prompt to copy into an AI app you already use (free), the phone's own model where it has one (free), or the server, with optional one-off recipe packs (in-app purchase) that also plan menu sets: 1 to 4 days, up to three courses a day. A written recipe's missing ingredients go onto the shopping list in one tap.
+- Recipe tab: picks the items closest to their date and writes a recipe in one of three ways: a prompt to copy into an AI app you already use (free), the phone's own model where it has one (free), or the server, with optional one-off packs of sparks (in-app purchase; one spark is one recipe from the server) that also plan menu sets: 1 to 4 days, up to three courses a day. A written recipe's missing ingredients go onto the shopping list in one tap.
 - The pantry stays on your device, and you don't need an account. Only a recipe from a pack sends anything to the project's server.
 - English, Russian, Norwegian, Spanish, German, French, Swedish and Danish. Open source under the Apache License 2.0.
 
@@ -44,7 +44,7 @@ The project is called FoodTracker in the code; the app is published as BestBefor
 - 🍳 **Recipes from what's expiring**: the Recipe tab picks the items closest to their date and writes a recipe in one of three ways:
   - **Shared prompt** (free): the prompt is copied or shared to an AI app the user already has. Nothing comes back to the app.
   - **On this phone** (free): Gemini Nano through ML Kit's Prompt API on supported Android phones, Apple Foundation Models on iOS 26 and later. Nothing is sent.
-  - **From a pack** (paid): packs of 10, 50 or 100 recipes are in-app purchases. The project's Cloud Functions write the recipe with Gemini on Vertex AI. A menu set (1 to 4 days, 1 to 3 courses a day, the main course first) is server-only and takes several recipes (by default days + courses − 1, so 1 to 6). What each takes is set by the server, not the app. A single recipe from a pack can come with pictures made by AI (the dish, or the dish and the steps that are hard to follow from words), for a few more recipes; the picture model gets only a short description of the dish that the recipe model writes and the server checks, with nothing the person typed copied into it. A recipe or menu from a pack can be reported from its result ("Report this recipe").
+  - **From a pack** (paid): packs of 10, 50 or 100 sparks are in-app purchases (the app calls the paid unit a spark: one spark is one recipe written by the server). The project's Cloud Functions write the recipe with Gemini on Vertex AI. A menu set (1 to 4 days, 1 to 3 courses a day, the main course first) is server-only and takes several sparks (by default days + courses − 1, so 1 to 6). What each takes is set by the server, not the app. A single recipe from a pack can come with pictures made by AI (the dish, or the dish and the steps that are hard to follow from words), for a few more sparks; the picture model gets only a short description of the dish that the recipe model writes and the server checks, with nothing the person typed copied into it. A recipe or menu from a pack can be reported from its result ("Report this recipe").
 
 ## Project Structure
 
@@ -155,7 +155,7 @@ python3 -m unittest discover -s scripts/tests     # the sync's tests, offline
 The App Store commands compare with the version in preparation; while none is (between a
 release's submission and the next merge), they compare with the newest version and say so.
 
-**Changing a pack's price**: the recipe packs' USD base prices are one table,
+**Changing a pack's price**: the spark packs' USD base prices are one table,
 `scripts/pack_prices.py`, which both stores are set from (Play converts the USD price to every
 region; on the App Store the United States is the base territory and Apple's equalisation sets the
 other storefronts). Edit it, then compare with what the stores charge; the dry runs print old and

@@ -19,7 +19,7 @@ Les reglene i et fellesskap før du legger ut noe der.
 > 4. Behold appen og bli i testen i minst tre uker.
 >
 > Det er gratis, og du trenger ingen konto. Matlista di blir liggende på telefonen. I
-> Oppskrift-fanen kan man kjøpe oppskriftspakker: det er ekte kjøp, så ikke kjøp noe med mindre
+> Oppskrift-fanen kan man kjøpe gnistpakker: det er ekte kjøp, så ikke kjøp noe med mindre
 > du vil. Har du lyst til å prøve et kjøp gratis, si fra, så legger jeg deg til som testkjøper.
 >
 > Alle tilbakemeldinger er velkomne, her eller via {{FEEDBACK}}. Tusen takk!
@@ -34,7 +34,7 @@ Les reglene i et fellesskap før du legger ut noe der.
 > oppslag i Open Food Facts), leser trykte holdbarhetsdatoer med OCR på enheten, sender
 > påminnelser og skriver oppskrifter med det som går ut først: som en ferdig prompt til din egen
 > KI-app, med Gemini Nano på støttede telefoner (foreløpig bare på engelsk), eller på en server
-> gjennom valgfrie oppskriftspakker, som også kan sette opp menysett for én til fire dager. Appen
+> gjennom valgfrie gnistpakker, som også kan sette opp menysett for én til fire dager. Appen
 > finnes på norsk, engelsk, russisk, spansk, tysk, fransk, svensk og dansk.
 >
 > Play-kontoen min er ny, så Google krever 12 testere som er påmeldt i 14 dager på rad før jeg
@@ -45,7 +45,7 @@ Les reglene i et fellesskap før du legger ut noe der.
 > 3. Bli værende i minst 14 dager (tre uker er tryggere).
 >
 > Gratis, uten reklame og uten konto; matlageret lagres bare på enheten (Room), og
-> krasjrapporter går til Crashlytics. For vanlige testere er oppskriftspakkene ekte kjøp i Play,
+> krasjrapporter går til Crashlytics. For vanlige testere er gnistpakkene ekte kjøp i Play,
 > så ikke kjøp med mindre du mener det. Noen få kan jeg legge til som lisenstestere for gratis
 > testkjøp. Feil og tanker om brukeropplevelsen: {{FEEDBACK}}.
 
@@ -66,7 +66,7 @@ Les reglene i et fellesskap før du legger ut noe der.
 > 3. Bruk den med dine egne innkjøp i minst to–tre uker.
 >
 > Den er gratis, uten reklame og uten konto; matlista blir værende på telefonen. Valgfrie
-> oppskriftspakker i appen koster ekte penger, og du trenger ikke kjøpe noe for å hjelpe. Jeg
+> gnistpakker i appen koster ekte penger, og du trenger ikke kjøpe noe for å hjelpe. Jeg
 > vil gjerne høre hva som fungerer og hva som ikke gjør det: {{FEEDBACK}}.
 
 ## Slik blir du med (én side for testere)
@@ -91,9 +91,9 @@ Greit å vite:
 
 - Det er gratis. Ingen reklame, og du trenger ikke lage konto.
 - Matlista lagres bare på telefonen. Krasjrapporter sendes, så jeg kan rette feil. Bare hvis du
-  bruker en oppskriftspakke, sendes varene du velger (med oppskriftsinnstillingene og
+  bruker en gnistpakke, sendes varene du velger (med oppskriftsinnstillingene og
   allergiene dine) til serveren som skriver oppskriften.
-- I Oppskrift-fanen selges oppskriftspakker. Som tester betaler du ekte penger for dem, så ikke
+- I Oppskrift-fanen selges gnistpakker. Som tester betaler du ekte penger for dem, så ikke
   kjøp med mindre du vil. Vil du prøve et kjøp uten å betale, be om å bli lagt til som
   testkjøper.
 - Tilbakemeldinger: {{FEEDBACK}}, eller i Play Butikk på appens side (privat tilbakemelding til
