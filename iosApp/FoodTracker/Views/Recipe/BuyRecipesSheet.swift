@@ -3,7 +3,7 @@ import GoogleSignInSwift
 import StoreKit
 import SwiftUI
 
-/// "Buy recipes": the three packs at the store's prices, then, the first time only, where the
+/// "Buy sparks": the three packs at the store's prices, then, the first time only, where the
 /// recipes should live. Payment itself is the store's own sheet.
 struct BuyRecipesSheet: View {
     @ObservedObject var model: RecipeViewModel
@@ -222,7 +222,7 @@ struct BuyRecipesSheet: View {
     }
 }
 
-/// "Where should your recipes live?": asked once, before the first purchase, with both
+/// "Where should your sparks live?": asked once, before the first purchase, with both
 /// consequences spelled out before any money moves.
 private struct RecipePurchaseChoice: View {
     @ObservedObject var model: RecipeViewModel

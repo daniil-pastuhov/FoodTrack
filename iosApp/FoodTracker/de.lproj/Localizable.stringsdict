@@ -573,9 +573,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d Rezept</string>
+            <string>%d Funke</string>
             <key>other</key>
-            <string>%d Rezepte</string>
+            <string>%d Funken</string>
         </dict>
     </dict>
     <key>recipe_courses_count</key>
@@ -621,9 +621,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Noch %d Rezept</string>
+            <string>Noch %d Funke</string>
             <key>other</key>
-            <string>Noch %d Rezepte</string>
+            <string>Noch %d Funken</string>
         </dict>
     </dict>
     <key>recipe_earlier_refused</key>
@@ -637,9 +637,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Ein Rezept, das du vorhin angefragt hast, ließ sich nicht erstellen. Dafür wurde %d Rezept verbraucht, weil der Versuch uns trotzdem etwas gekostet hat.</string>
+            <string>Ein Rezept, das du vorhin angefragt hast, ließ sich nicht erstellen. Dafür wurde %d Funke verbraucht, weil der Versuch uns trotzdem etwas gekostet hat.</string>
             <key>other</key>
-            <string>Ein Rezept, das du vorhin angefragt hast, ließ sich nicht erstellen. Dafür wurden %d Rezepte verbraucht, weil der Versuch uns trotzdem etwas gekostet hat.</string>
+            <string>Ein Rezept, das du vorhin angefragt hast, ließ sich nicht erstellen. Dafür wurden %d Funken verbraucht, weil der Versuch uns trotzdem etwas gekostet hat.</string>
         </dict>
     </dict>
     <key>recipe_other_account_message</key>
@@ -653,9 +653,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d Rezept auf diesem {device} wurde mit einem anderen Konto gekauft. Melde dich mit dem Konto an, mit dem du es gekauft hast, um es hinzuzufügen.</string>
+            <string>%d Funke auf diesem {device} wurde mit einem anderen Konto gekauft. Melde dich mit dem Konto an, mit dem du ihn gekauft hast, um ihn hinzuzufügen.</string>
             <key>other</key>
-            <string>%d Rezepte auf diesem {device} wurden mit einem anderen Konto gekauft. Melde dich mit dem Konto an, mit dem du sie gekauft hast, um sie hinzuzufügen.</string>
+            <string>%d Funken auf diesem {device} wurden mit einem anderen Konto gekauft. Melde dich mit dem Konto an, mit dem du sie gekauft hast, um sie hinzuzufügen.</string>
         </dict>
     </dict>
     <key>recipe_menu_short_message</key>
@@ -685,9 +685,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Gespeichert. Noch %d Rezept</string>
+            <string>Gespeichert. Noch %d Funke</string>
             <key>other</key>
-            <string>Gespeichert. Noch %d Rezepte</string>
+            <string>Gespeichert. Noch %d Funken</string>
         </dict>
     </dict>
     <key>recipe_added</key>
@@ -701,9 +701,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d Rezept hinzugefügt</string>
+            <string>%d Funke hinzugefügt</string>
             <key>other</key>
-            <string>%d Rezepte hinzugefügt</string>
+            <string>%d Funken hinzugefügt</string>
         </dict>
     </dict>
     <key>recipe_paused_message</key>
@@ -717,9 +717,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Dein %d Rezept bleibt erhalten. Die kostenlosen Wege unten funktionieren weiterhin.</string>
+            <string>Dein %d Funke bleibt erhalten. Die kostenlosen Wege unten funktionieren weiterhin.</string>
             <key>other</key>
-            <string>Deine %d Rezepte bleiben erhalten. Die kostenlosen Wege unten funktionieren weiterhin.</string>
+            <string>Deine %d Funken bleiben erhalten. Die kostenlosen Wege unten funktionieren weiterhin.</string>
         </dict>
     </dict>
     <key>recipe_unconfirmed_message</key>
@@ -733,9 +733,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Du hast %d Rezept bezahlt, es wurde aber noch nicht hinzugefügt. Wir versuchen es weiter; du musst nicht noch einmal kaufen.</string>
+            <string>Du hast %d Funken bezahlt, er wurde aber noch nicht hinzugefügt. Wir versuchen es weiter; du musst nicht noch einmal kaufen.</string>
             <key>other</key>
-            <string>Du hast %d Rezepte bezahlt, sie wurden aber noch nicht hinzugefügt. Wir versuchen es weiter; du musst nicht noch einmal kaufen.</string>
+            <string>Du hast %d Funken bezahlt, sie wurden aber noch nicht hinzugefügt. Wir versuchen es weiter; du musst nicht noch einmal kaufen.</string>
         </dict>
     </dict>
     <key>recipe_on_phone_label</key>
@@ -749,9 +749,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Rezept auf diesem {device}</string>
+            <string>Funke auf diesem {device}</string>
             <key>other</key>
-            <string>Rezepte auf diesem {device}</string>
+            <string>Funken auf diesem {device}</string>
         </dict>
     </dict>
     <key>recipe_in_account_label</key>
@@ -765,9 +765,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Rezept in deinem Konto</string>
+            <string>Funke in deinem Konto</string>
             <key>other</key>
-            <string>Rezepte in deinem Konto</string>
+            <string>Funken in deinem Konto</string>
         </dict>
     </dict>
     <key>recipe_sign_out_message</key>
@@ -781,9 +781,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Dein %d Rezept bleibt in deinem Konto. Melde dich wieder an, um es zu nutzen. Gespeicherte Rezepte bleiben auf diesem {device}.</string>
+            <string>Dein %d Funke bleibt in deinem Konto. Melde dich wieder an, um ihn zu nutzen. Gespeicherte Rezepte bleiben auf diesem {device}.</string>
             <key>other</key>
-            <string>Deine %d Rezepte bleiben in deinem Konto. Melde dich wieder an, um sie zu nutzen. Gespeicherte Rezepte bleiben auf diesem {device}.</string>
+            <string>Deine %d Funken bleiben in deinem Konto. Melde dich wieder an, um sie zu nutzen. Gespeicherte Rezepte bleiben auf diesem {device}.</string>
         </dict>
     </dict>
     <key>recipe_delete_message</key>
@@ -797,9 +797,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Dein %d nicht verwendetes Rezept geht verloren und kann weder erstattet noch wiederhergestellt werden. Deine Anmeldung und E-Mail-Adresse werden von unserem Server gelöscht; ein Nachweis der Käufe bleibt erhalten, aber nicht mehr mit dir verknüpft. Eventuelle Meldungen von dir bleiben eine begrenzte Zeit erhalten, ebenfalls nicht mehr mit dir verknüpft. Gespeicherte Rezepte und dein Vorrat bleiben auf diesem {device}.</string>
+            <string>Dein %d nicht verwendeter Funke geht verloren und kann weder erstattet noch wiederhergestellt werden. Deine Anmeldung und E-Mail-Adresse werden von unserem Server gelöscht; ein Nachweis der Käufe bleibt erhalten, aber nicht mehr mit dir verknüpft. Eventuelle Meldungen von dir bleiben eine begrenzte Zeit erhalten, ebenfalls nicht mehr mit dir verknüpft. Gespeicherte Rezepte und dein Vorrat bleiben auf diesem {device}.</string>
             <key>other</key>
-            <string>Deine %d nicht verwendeten Rezepte gehen verloren und können weder erstattet noch wiederhergestellt werden. Deine Anmeldung und E-Mail-Adresse werden von unserem Server gelöscht; ein Nachweis der Käufe bleibt erhalten, aber nicht mehr mit dir verknüpft. Eventuelle Meldungen von dir bleiben eine begrenzte Zeit erhalten, ebenfalls nicht mehr mit dir verknüpft. Gespeicherte Rezepte und dein Vorrat bleiben auf diesem {device}.</string>
+            <string>Deine %d nicht verwendeten Funken gehen verloren und können weder erstattet noch wiederhergestellt werden. Deine Anmeldung und E-Mail-Adresse werden von unserem Server gelöscht; ein Nachweis der Käufe bleibt erhalten, aber nicht mehr mit dir verknüpft. Eventuelle Meldungen von dir bleiben eine begrenzte Zeit erhalten, ebenfalls nicht mehr mit dir verknüpft. Gespeicherte Rezepte und dein Vorrat bleiben auf diesem {device}.</string>
         </dict>
     </dict>
     <key>recipe_delete_device_message</key>
@@ -813,9 +813,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Dein %d nicht verwendetes Rezept geht verloren und kann weder erstattet noch wiederhergestellt werden. Die anonyme Anmeldung, die dieses {device} nutzt, wird von unserem Server gelöscht; ein Nachweis der Käufe bleibt erhalten, aber nicht mehr mit dir verknüpft. Eventuelle Meldungen von dir bleiben eine begrenzte Zeit erhalten, ebenfalls nicht mehr mit dir verknüpft. Gespeicherte Rezepte und dein Vorrat bleiben auf diesem {device}.</string>
+            <string>Dein %d nicht verwendeter Funke geht verloren und kann weder erstattet noch wiederhergestellt werden. Die anonyme Anmeldung, die dieses {device} nutzt, wird von unserem Server gelöscht; ein Nachweis der Käufe bleibt erhalten, aber nicht mehr mit dir verknüpft. Eventuelle Meldungen von dir bleiben eine begrenzte Zeit erhalten, ebenfalls nicht mehr mit dir verknüpft. Gespeicherte Rezepte und dein Vorrat bleiben auf diesem {device}.</string>
             <key>other</key>
-            <string>Deine %d nicht verwendeten Rezepte gehen verloren und können weder erstattet noch wiederhergestellt werden. Die anonyme Anmeldung, die dieses {device} nutzt, wird von unserem Server gelöscht; ein Nachweis der Käufe bleibt erhalten, aber nicht mehr mit dir verknüpft. Eventuelle Meldungen von dir bleiben eine begrenzte Zeit erhalten, ebenfalls nicht mehr mit dir verknüpft. Gespeicherte Rezepte und dein Vorrat bleiben auf diesem {device}.</string>
+            <string>Deine %d nicht verwendeten Funken gehen verloren und können weder erstattet noch wiederhergestellt werden. Die anonyme Anmeldung, die dieses {device} nutzt, wird von unserem Server gelöscht; ein Nachweis der Käufe bleibt erhalten, aber nicht mehr mit dir verknüpft. Eventuelle Meldungen von dir bleiben eine begrenzte Zeit erhalten, ebenfalls nicht mehr mit dir verknüpft. Gespeicherte Rezepte und dein Vorrat bleiben auf diesem {device}.</string>
         </dict>
     </dict>
     <key>recipe_server_refused</key>
@@ -829,9 +829,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Aus diesen Artikeln ließ sich kein Rezept machen. Dafür wurde %d Rezept verbraucht, weil der Versuch uns trotzdem etwas gekostet hat. Versuch es mit weniger oder anderen Artikeln.</string>
+            <string>Aus diesen Artikeln ließ sich kein Rezept machen. Dafür wurde %d Funke verbraucht, weil der Versuch uns trotzdem etwas gekostet hat. Versuch es mit weniger oder anderen Artikeln.</string>
             <key>other</key>
-            <string>Aus diesen Artikeln ließ sich kein Rezept machen. Dafür wurden %d Rezepte verbraucht, weil der Versuch uns trotzdem etwas gekostet hat. Versuch es mit weniger oder anderen Artikeln.</string>
+            <string>Aus diesen Artikeln ließ sich kein Rezept machen. Dafür wurden %d Funken verbraucht, weil der Versuch uns trotzdem etwas gekostet hat. Versuch es mit weniger oder anderen Artikeln.</string>
         </dict>
     </dict>
     <key>recipe_server_refused_menu</key>
@@ -845,9 +845,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Aus diesen Artikeln ließ sich kein Menü machen. Dafür wurde %d Rezept verbraucht, weil der Versuch uns trotzdem etwas gekostet hat. Versuch es mit weniger oder anderen Artikeln.</string>
+            <string>Aus diesen Artikeln ließ sich kein Menü machen. Dafür wurde %d Funke verbraucht, weil der Versuch uns trotzdem etwas gekostet hat. Versuch es mit weniger oder anderen Artikeln.</string>
             <key>other</key>
-            <string>Aus diesen Artikeln ließ sich kein Menü machen. Dafür wurden %d Rezepte verbraucht, weil der Versuch uns trotzdem etwas gekostet hat. Versuch es mit weniger oder anderen Artikeln.</string>
+            <string>Aus diesen Artikeln ließ sich kein Menü machen. Dafür wurden %d Funken verbraucht, weil der Versuch uns trotzdem etwas gekostet hat. Versuch es mit weniger oder anderen Artikeln.</string>
         </dict>
     </dict>
     <key>recipe_server_unknown_taken</key>
@@ -861,9 +861,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Das Rezept konnte gerade nicht erstellt werden. Versuch es später noch einmal. %d Rezept wurde abgezogen.</string>
+            <string>Das Rezept konnte gerade nicht erstellt werden. Versuch es später noch einmal. %d Funke wurde abgezogen.</string>
             <key>other</key>
-            <string>Das Rezept konnte gerade nicht erstellt werden. Versuch es später noch einmal. %d Rezepte wurden abgezogen.</string>
+            <string>Das Rezept konnte gerade nicht erstellt werden. Versuch es später noch einmal. %d Funken wurden abgezogen.</string>
         </dict>
     </dict>
     <key>recipe_server_unknown_taken_menu</key>
@@ -877,9 +877,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Das Menü konnte gerade nicht erstellt werden. Versuch es später noch einmal. %d Rezept wurde abgezogen.</string>
+            <string>Das Menü konnte gerade nicht erstellt werden. Versuch es später noch einmal. %d Funke wurde abgezogen.</string>
             <key>other</key>
-            <string>Das Menü konnte gerade nicht erstellt werden. Versuch es später noch einmal. %d Rezepte wurden abgezogen.</string>
+            <string>Das Menü konnte gerade nicht erstellt werden. Versuch es später noch einmal. %d Funken wurden abgezogen.</string>
         </dict>
     </dict>
     <key>recipe_allergens_too_many</key>
@@ -893,9 +893,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Es wurde nichts erstellt: Ein Rezept kann höchstens %d Allergen berücksichtigen, und es sind mehr festgelegt. Entferne einige in den Einstellungen unter „Allergen-Warnungen“ und versuch es dann noch einmal. Es wurden keine Rezepte abgezogen.</string>
+            <string>Es wurde nichts erstellt: Ein Rezept kann höchstens %d Allergen berücksichtigen, und es sind mehr festgelegt. Entferne einige in den Einstellungen unter „Allergen-Warnungen“ und versuch es dann noch einmal. Es wurden keine Funken abgezogen.</string>
             <key>other</key>
-            <string>Es wurde nichts erstellt: Ein Rezept kann höchstens %d Allergene berücksichtigen, und es sind mehr festgelegt. Entferne einige in den Einstellungen unter „Allergen-Warnungen“ und versuch es dann noch einmal. Es wurden keine Rezepte abgezogen.</string>
+            <string>Es wurde nichts erstellt: Ein Rezept kann höchstens %d Allergene berücksichtigen, und es sind mehr festgelegt. Entferne einige in den Einstellungen unter „Allergen-Warnungen“ und versuch es dann noch einmal. Es wurden keine Funken abgezogen.</string>
         </dict>
     </dict>
     <key>recipe_merged_moved</key>
@@ -909,9 +909,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d Rezept von diesem {device} in dein Konto übertragen</string>
+            <string>%d Funke von diesem {device} in dein Konto übertragen</string>
             <key>other</key>
-            <string>%d Rezepte von diesem {device} in dein Konto übertragen</string>
+            <string>%d Funken von diesem {device} in dein Konto übertragen</string>
         </dict>
     </dict>
     <key>recipe_merged_debt</key>
@@ -925,9 +925,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Dieses {device} schuldete nach einer Store-Erstattung %d Rezept. Es wurde von deinem Konto abgezogen.</string>
+            <string>Dieses {device} schuldete nach einer Store-Erstattung %d Funken. Er wurde von deinem Konto abgezogen.</string>
             <key>other</key>
-            <string>Dieses {device} schuldete nach einer Store-Erstattung %d Rezepte. Sie wurden von deinem Konto abgezogen.</string>
+            <string>Dieses {device} schuldete nach einer Store-Erstattung %d Funken. Sie wurden von deinem Konto abgezogen.</string>
         </dict>
     </dict>
     <key>recipe_menu_few_items</key>
@@ -1117,9 +1117,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Nicht genug für %d Tag. Wähle noch ein paar Artikel aus oder frag nach einem einzelnen Rezept. Es wurden keine Rezepte abgezogen.</string>
+            <string>Nicht genug für %d Tag. Wähle noch ein paar Artikel aus oder frag nach einem einzelnen Rezept. Es wurden keine Funken abgezogen.</string>
             <key>other</key>
-            <string>Nicht genug für %d Tage. Wähle noch ein paar Artikel aus oder frag nach einem einzelnen Rezept. Es wurden keine Rezepte abgezogen.</string>
+            <string>Nicht genug für %d Tage. Wähle noch ein paar Artikel aus oder frag nach einem einzelnen Rezept. Es wurden keine Funken abgezogen.</string>
         </dict>
     </dict>
     <key>recipe_menu_summary</key>
@@ -1165,9 +1165,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Ein Rezept ist ein Gericht, das unser Server erstellt. Ein Menü-Set kostet {min} bis %d Rezept, je nach Tagen und Gängen pro Tag. Sie verfallen nicht.</string>
+            <string>Ein Funke ist ein Rezept, das unser Server erstellt. Ein Menü-Set kostet {min} bis %d Funke, je nach Tagen und Gängen pro Tag. Funken verfallen nicht.</string>
             <key>other</key>
-            <string>Ein Rezept ist ein Gericht, das unser Server erstellt. Ein Menü-Set kostet {min} bis %d Rezepte, je nach Tagen und Gängen pro Tag. Sie verfallen nicht.</string>
+            <string>Ein Funke ist ein Rezept, das unser Server erstellt. Ein Menü-Set kostet {min} bis %d Funken, je nach Tagen und Gängen pro Tag. Funken verfallen nicht.</string>
         </dict>
     </dict>
     <!-- Taste profile: copied from Android's strings.xml -->
@@ -1312,9 +1312,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Melde dich an, und unser Server fügt deinem Konto %d kostenloses Rezept hinzu, damit du ausprobieren kannst, was ein Paket bietet.</string>
+            <string>Melde dich an, und unser Server fügt deinem Konto %d kostenlosen Funken hinzu, genug für ein Rezept, damit du ausprobieren kannst, was ein Paket bietet.</string>
             <key>other</key>
-            <string>Melde dich an, und unser Server fügt deinem Konto %d kostenlose Rezepte hinzu, damit du ausprobieren kannst, was ein Paket bietet.</string>
+            <string>Melde dich an, und unser Server fügt deinem Konto %d kostenlose Funken hinzu, einen für jedes Rezept, damit du ausprobieren kannst, was ein Paket bietet.</string>
         </dict>
     </dict>
     <key>welcome_granted</key>
@@ -1328,9 +1328,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d kostenloses Rezept hinzugefügt</string>
+            <string>%d kostenloser Funke hinzugefügt</string>
             <key>other</key>
-            <string>%d kostenlose Rezepte hinzugefügt</string>
+            <string>%d kostenlose Funken hinzugefügt</string>
         </dict>
     </dict>
     <key>welcome_settings_sign_in</key>

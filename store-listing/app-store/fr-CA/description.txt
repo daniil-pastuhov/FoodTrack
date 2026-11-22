@@ -22,14 +22,14 @@ CUISINEZ CE QUI APPROCHE DE SA DATE
 • L'onglet Recette choisit les produits dont la date est la plus proche; changez la sélection, les portions, le temps, le régime alimentaire et plus encore
 • Gratuit : copiez ou partagez une requête (prompt) toute prête vers l'appli d'IA que vous utilisez déjà
 • Gratuit sur les iPhone compatibles avec Apple Intelligence (iOS 26 ou version ultérieure) : la recette est rédigée sur l'iPhone lui-même
-• Packs de recettes (achat intégré) : des recettes rédigées par notre serveur et enregistrées dans l'appli, et des sets de menus de 1 à 4 jours, jusqu'à trois plats par jour, qui utilisent d'abord ce qui approche de sa date
+• Packs d'étincelles (achat intégré) : une étincelle correspond à une recette rédigée par notre serveur et enregistrée dans l'appli. Les sets de menus planifient de 1 à 4 jours, jusqu'à trois plats par jour, autour de ce qui approche d'abord de sa date, et décomptent quelques étincelles
 • Ajoutez en un geste à votre liste d'épicerie ce qui manque à une recette
 
 VOS DONNÉES
 • Aucune publicité, aucun pistage
-• Aucun abonnement : l'appli est gratuite, et les packs de recettes sont des achats uniques facultatifs
+• Aucun abonnement : l'appli est gratuite, et les packs d'étincelles sont des achats uniques facultatifs
 • Votre garde-manger est stocké sur votre iPhone; exportez une sauvegarde quand vous le voulez
-• Aucun compte requis, pas même pour acheter un pack. Connectez-vous avec Apple ou Google seulement si vous voulez retrouver vos recettes sur d'autres téléphones
+• Aucun compte requis, pas même pour acheter un pack. Connectez-vous avec Apple ou Google seulement si vous voulez retrouver vos étincelles sur d'autres téléphones
 • Une recette d'un pack envoie à notre serveur les produits que vous cochez, vos réglages de recette et vos allergènes. Les options gratuites ne nous envoient rien
 • Disponible en français, anglais, allemand, espagnol, danois, suédois, norvégien et russe
 

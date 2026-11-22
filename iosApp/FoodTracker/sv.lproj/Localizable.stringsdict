@@ -573,9 +573,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d recept</string>
+            <string>%d gnista</string>
             <key>other</key>
-            <string>%d recept</string>
+            <string>%d gnistor</string>
         </dict>
     </dict>
     <key>recipe_courses_count</key>
@@ -621,9 +621,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d recept kvar</string>
+            <string>%d gnista kvar</string>
             <key>other</key>
-            <string>%d recept kvar</string>
+            <string>%d gnistor kvar</string>
         </dict>
     </dict>
     <key>recipe_earlier_refused</key>
@@ -637,9 +637,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Ett recept som du bad om tidigare kunde inte göras. Det drog %d recept, eftersom försöket ändå kostade oss pengar att köra.</string>
+            <string>Ett recept som du bad om tidigare kunde inte göras. Det drog %d gnista, eftersom försöket ändå kostade oss pengar att köra.</string>
             <key>other</key>
-            <string>Ett recept som du bad om tidigare kunde inte göras. Det drog %d recept, eftersom försöket ändå kostade oss pengar att köra.</string>
+            <string>Ett recept som du bad om tidigare kunde inte göras. Det drog %d gnistor, eftersom försöket ändå kostade oss pengar att köra.</string>
         </dict>
     </dict>
     <key>recipe_other_account_message</key>
@@ -653,9 +653,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d recept på din {device} köptes med ett annat konto. Logga in på kontot som du köpte det med för att lägga till det.</string>
+            <string>%d gnista på din {device} köptes med ett annat konto. Logga in på kontot som du köpte den med för att lägga till den.</string>
             <key>other</key>
-            <string>%d recept på din {device} köptes med ett annat konto. Logga in på kontot som du köpte dem med för att lägga till dem.</string>
+            <string>%d gnistor på din {device} köptes med ett annat konto. Logga in på kontot som du köpte dem med för att lägga till dem.</string>
         </dict>
     </dict>
     <key>recipe_menu_short_message</key>
@@ -685,9 +685,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Sparat. %d recept kvar</string>
+            <string>Sparat. %d gnista kvar</string>
             <key>other</key>
-            <string>Sparat. %d recept kvar</string>
+            <string>Sparat. %d gnistor kvar</string>
         </dict>
     </dict>
     <key>recipe_added</key>
@@ -701,9 +701,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d recept har lagts till</string>
+            <string>%d gnista har lagts till</string>
             <key>other</key>
-            <string>%d recept har lagts till</string>
+            <string>%d gnistor har lagts till</string>
         </dict>
     </dict>
     <key>recipe_paused_message</key>
@@ -717,9 +717,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Ditt %d recept finns kvar. De gratis sätten nedan fungerar fortfarande.</string>
+            <string>Din %d gnista finns kvar. De gratis sätten nedan fungerar fortfarande.</string>
             <key>other</key>
-            <string>Dina %d recept finns kvar. De gratis sätten nedan fungerar fortfarande.</string>
+            <string>Dina %d gnistor finns kvar. De gratis sätten nedan fungerar fortfarande.</string>
         </dict>
     </dict>
     <key>recipe_unconfirmed_message</key>
@@ -733,9 +733,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Du har betalat för %d recept och det har inte lagts till än. Vi fortsätter att försöka; du behöver inte köpa igen.</string>
+            <string>Du har betalat för %d gnista och den har inte lagts till än. Vi fortsätter att försöka; du behöver inte köpa igen.</string>
             <key>other</key>
-            <string>Du har betalat för %d recept och de har inte lagts till än. Vi fortsätter att försöka; du behöver inte köpa igen.</string>
+            <string>Du har betalat för %d gnistor och de har inte lagts till än. Vi fortsätter att försöka; du behöver inte köpa igen.</string>
         </dict>
     </dict>
     <key>recipe_on_phone_label</key>
@@ -749,9 +749,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>recept på din {device}</string>
+            <string>gnista på din {device}</string>
             <key>other</key>
-            <string>recept på din {device}</string>
+            <string>gnistor på din {device}</string>
         </dict>
     </dict>
     <key>recipe_in_account_label</key>
@@ -765,9 +765,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>recept i ditt konto</string>
+            <string>gnista i ditt konto</string>
             <key>other</key>
-            <string>recept i ditt konto</string>
+            <string>gnistor i ditt konto</string>
         </dict>
     </dict>
     <key>recipe_sign_out_message</key>
@@ -781,9 +781,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Ditt %d recept finns kvar i ditt konto. Logga in igen för att använda det. Sparade recept finns kvar på din {device}.</string>
+            <string>Din %d gnista finns kvar i ditt konto. Logga in igen för att använda den. Sparade recept finns kvar på din {device}.</string>
             <key>other</key>
-            <string>Dina %d recept finns kvar i ditt konto. Logga in igen för att använda dem. Sparade recept finns kvar på din {device}.</string>
+            <string>Dina %d gnistor finns kvar i ditt konto. Logga in igen för att använda dem. Sparade recept finns kvar på din {device}.</string>
         </dict>
     </dict>
     <key>recipe_delete_message</key>
@@ -797,9 +797,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Ditt %d oanvända recept går förlorat och kan inte återbetalas eller återställas. Din inloggning och e-postadress raderas från vår server; en uppgift om köpen finns kvar, inte längre kopplad till dig. Eventuella rapporter du har skickat sparas en begränsad tid, även de utan koppling till dig. Sparade recept och ditt skafferi finns kvar på din {device}.</string>
+            <string>Din %d oanvända gnista går förlorad och kan inte återbetalas eller återställas. Din inloggning och e-postadress raderas från vår server; en uppgift om köpen finns kvar, inte längre kopplad till dig. Eventuella rapporter du har skickat sparas en begränsad tid, även de utan koppling till dig. Sparade recept och ditt skafferi finns kvar på din {device}.</string>
             <key>other</key>
-            <string>Dina %d oanvända recept går förlorade och kan inte återbetalas eller återställas. Din inloggning och e-postadress raderas från vår server; en uppgift om köpen finns kvar, inte längre kopplad till dig. Eventuella rapporter du har skickat sparas en begränsad tid, även de utan koppling till dig. Sparade recept och ditt skafferi finns kvar på din {device}.</string>
+            <string>Dina %d oanvända gnistor går förlorade och kan inte återbetalas eller återställas. Din inloggning och e-postadress raderas från vår server; en uppgift om köpen finns kvar, inte längre kopplad till dig. Eventuella rapporter du har skickat sparas en begränsad tid, även de utan koppling till dig. Sparade recept och ditt skafferi finns kvar på din {device}.</string>
         </dict>
     </dict>
     <key>recipe_delete_device_message</key>
@@ -813,9 +813,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Ditt %d oanvända recept går förlorat och kan inte återbetalas eller återställas. Den anonyma inloggning som din {device} använder raderas från vår server; en uppgift om köpen finns kvar, inte längre kopplad till dig. Eventuella rapporter du har skickat sparas en begränsad tid, även de utan koppling till dig. Sparade recept och ditt skafferi finns kvar på din {device}.</string>
+            <string>Din %d oanvända gnista går förlorad och kan inte återbetalas eller återställas. Den anonyma inloggning som din {device} använder raderas från vår server; en uppgift om köpen finns kvar, inte längre kopplad till dig. Eventuella rapporter du har skickat sparas en begränsad tid, även de utan koppling till dig. Sparade recept och ditt skafferi finns kvar på din {device}.</string>
             <key>other</key>
-            <string>Dina %d oanvända recept går förlorade och kan inte återbetalas eller återställas. Den anonyma inloggning som din {device} använder raderas från vår server; en uppgift om köpen finns kvar, inte längre kopplad till dig. Eventuella rapporter du har skickat sparas en begränsad tid, även de utan koppling till dig. Sparade recept och ditt skafferi finns kvar på din {device}.</string>
+            <string>Dina %d oanvända gnistor går förlorade och kan inte återbetalas eller återställas. Den anonyma inloggning som din {device} använder raderas från vår server; en uppgift om köpen finns kvar, inte längre kopplad till dig. Eventuella rapporter du har skickat sparas en begränsad tid, även de utan koppling till dig. Sparade recept och ditt skafferi finns kvar på din {device}.</string>
         </dict>
     </dict>
     <key>recipe_server_refused</key>
@@ -829,9 +829,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Kunde inte göra ett recept av de här varorna. Det drog %d recept, eftersom försöket ändå kostade oss pengar att köra. Prova färre eller andra varor.</string>
+            <string>Kunde inte göra ett recept av de här varorna. Det drog %d gnista, eftersom försöket ändå kostade oss pengar att köra. Prova färre eller andra varor.</string>
             <key>other</key>
-            <string>Kunde inte göra ett recept av de här varorna. Det drog %d recept, eftersom försöket ändå kostade oss pengar att köra. Prova färre eller andra varor.</string>
+            <string>Kunde inte göra ett recept av de här varorna. Det drog %d gnistor, eftersom försöket ändå kostade oss pengar att köra. Prova färre eller andra varor.</string>
         </dict>
     </dict>
     <key>recipe_server_refused_menu</key>
@@ -845,9 +845,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Kunde inte göra en meny av de här varorna. Det drog %d recept, eftersom försöket ändå kostade oss pengar att köra. Prova färre eller andra varor.</string>
+            <string>Kunde inte göra en meny av de här varorna. Det drog %d gnista, eftersom försöket ändå kostade oss pengar att köra. Prova färre eller andra varor.</string>
             <key>other</key>
-            <string>Kunde inte göra en meny av de här varorna. Det drog %d recept, eftersom försöket ändå kostade oss pengar att köra. Prova färre eller andra varor.</string>
+            <string>Kunde inte göra en meny av de här varorna. Det drog %d gnistor, eftersom försöket ändå kostade oss pengar att köra. Prova färre eller andra varor.</string>
         </dict>
     </dict>
     <key>recipe_server_unknown_taken</key>
@@ -861,9 +861,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Kunde inte skriva receptet just nu. Försök igen senare. %d recept drogs.</string>
+            <string>Kunde inte skriva receptet just nu. Försök igen senare. %d gnista drogs.</string>
             <key>other</key>
-            <string>Kunde inte skriva receptet just nu. Försök igen senare. %d recept drogs.</string>
+            <string>Kunde inte skriva receptet just nu. Försök igen senare. %d gnistor drogs.</string>
         </dict>
     </dict>
     <key>recipe_server_unknown_taken_menu</key>
@@ -877,9 +877,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Kunde inte skriva menyn just nu. Försök igen senare. %d recept drogs.</string>
+            <string>Kunde inte skriva menyn just nu. Försök igen senare. %d gnista drogs.</string>
             <key>other</key>
-            <string>Kunde inte skriva menyn just nu. Försök igen senare. %d recept drogs.</string>
+            <string>Kunde inte skriva menyn just nu. Försök igen senare. %d gnistor drogs.</string>
         </dict>
     </dict>
     <key>recipe_allergens_too_many</key>
@@ -893,9 +893,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Inget skrevs: ett recept kan ta med högst %d allergen, och fler är angivna. Ta bort några under Allergenvarningar i Inställningar och försök sedan igen. Inga recept drogs.</string>
+            <string>Inget skrevs: ett recept kan ta med högst %d allergen, och fler är angivna. Ta bort några under Allergenvarningar i Inställningar och försök sedan igen. Inga gnistor drogs.</string>
             <key>other</key>
-            <string>Inget skrevs: ett recept kan ta med högst %d allergener, och fler är angivna. Ta bort några under Allergenvarningar i Inställningar och försök sedan igen. Inga recept drogs.</string>
+            <string>Inget skrevs: ett recept kan ta med högst %d allergener, och fler är angivna. Ta bort några under Allergenvarningar i Inställningar och försök sedan igen. Inga gnistor drogs.</string>
         </dict>
     </dict>
     <key>recipe_merged_moved</key>
@@ -909,9 +909,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d recept flyttades från din {device} till ditt konto</string>
+            <string>%d gnista flyttades från din {device} till ditt konto</string>
             <key>other</key>
-            <string>%d recept flyttades från din {device} till ditt konto</string>
+            <string>%d gnistor flyttades från din {device} till ditt konto</string>
         </dict>
     </dict>
     <key>recipe_merged_debt</key>
@@ -925,9 +925,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Din {device} var skyldig %d recept efter en återbetalning från butiken. Det drogs från ditt konto.</string>
+            <string>Din {device} var skyldig %d gnista efter en återbetalning från butiken. Den drogs från ditt konto.</string>
             <key>other</key>
-            <string>Din {device} var skyldig %d recept efter en återbetalning från butiken. De drogs från ditt konto.</string>
+            <string>Din {device} var skyldig %d gnistor efter en återbetalning från butiken. De drogs från ditt konto.</string>
         </dict>
     </dict>
     <key>recipe_menu_few_items</key>
@@ -1117,9 +1117,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Det räcker inte till %d dag. Kryssa i några varor till, eller be om ett enskilt recept. Inga recept drogs.</string>
+            <string>Det räcker inte till %d dag. Kryssa i några varor till, eller be om ett enskilt recept. Inga gnistor drogs.</string>
             <key>other</key>
-            <string>Det räcker inte till %d dagar. Kryssa i några varor till, eller be om ett enskilt recept. Inga recept drogs.</string>
+            <string>Det räcker inte till %d dagar. Kryssa i några varor till, eller be om ett enskilt recept. Inga gnistor drogs.</string>
         </dict>
     </dict>
     <key>recipe_menu_summary</key>
@@ -1165,9 +1165,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Ett recept är en rätt som skrivs av vår server. Ett menyset kräver {min} till %d recept, beroende på dagar och rätter per dag. De går inte ut.</string>
+            <string>En gnista är ett recept som skrivs av vår server. Ett menyset kräver {min} till %d gnista, beroende på dagar och rätter per dag. De går inte ut.</string>
             <key>other</key>
-            <string>Ett recept är en rätt som skrivs av vår server. Ett menyset kräver {min} till %d recept, beroende på dagar och rätter per dag. De går inte ut.</string>
+            <string>En gnista är ett recept som skrivs av vår server. Ett menyset kräver {min} till %d gnistor, beroende på dagar och rätter per dag. De går inte ut.</string>
         </dict>
     </dict>
     <!-- Taste profile: copied from Android's strings.xml -->
@@ -1312,9 +1312,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Logga in, så lägger vår server till %d gratis recept i ditt konto, så att du kan prova vad ett paket ger.</string>
+            <string>Logga in, så lägger vår server till %d gratis gnista i ditt konto, som räcker till ett recept, så att du kan prova vad ett paket ger.</string>
             <key>other</key>
-            <string>Logga in, så lägger vår server till %d gratis recept i ditt konto, så att du kan prova vad ett paket ger.</string>
+            <string>Logga in, så lägger vår server till %d gratis gnistor i ditt konto, en för varje recept, så att du kan prova vad ett paket ger.</string>
         </dict>
     </dict>
     <key>welcome_granted</key>
@@ -1328,9 +1328,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d gratis recept tillagt</string>
+            <string>%d gratis gnista tillagd</string>
             <key>other</key>
-            <string>%d gratis recept tillagda</string>
+            <string>%d gratis gnistor tillagda</string>
         </dict>
     </dict>
     <key>welcome_settings_sign_in</key>

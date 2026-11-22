@@ -368,7 +368,7 @@ enum class TasteEntry {
     /** The quiz opens (and asks the server for its definition). */
     QUIZ,
 
-    /** The sheet that says what it does, with See recipe packs and Cancel. Calls nothing. */
+    /** The sheet that says what it does, with See spark packs and Cancel. Calls nothing. */
     PROMO
 }
 
@@ -377,7 +377,7 @@ enum class TasteEntry {
  * and the server said `acceptsTaste` ([serverTakesTaste]: the quiz can't be fetched otherwise).
  * The quiz opens with recipes in a pack (a known [balance] above zero) or a profile already saved,
  * else the promo sheet; but when the server won't sell to the account ([purchasesBlocked]) the
- * promo's See recipe packs would lead nowhere, so then there is no row. Deciding calls nothing.
+ * promo's See spark packs would lead nowhere, so then there is no row. Deciding calls nothing.
  */
 fun tasteEntry(
     paidRouteAvailable: Boolean,

@@ -804,14 +804,14 @@
     <string name="recipe_time_guide_hint">El tiempo máximo es un límite; el mínimo, solo orientativo.</string>
     <string name="recipe_prompt_min_minutes">Idealmente unos %1$d minutos o más</string>
     <string name="recipe_prompt_meals">Apta para cualquiera de estas comidas: %1$s</string>
-    <string name="recipe_not_enough_items">No queda suficiente para cocinar al excluir tu dieta y tus alérgenos. Marca algunos productos más. No se ha descontado ninguna receta.</string>
+    <string name="recipe_not_enough_items">No queda suficiente para cocinar al excluir tu dieta y tus alérgenos. Marca algunos productos más. No se ha descontado ninguna chispa.</string>
     <plurals name="recipe_not_enough_items_menu">
-        <item quantity="one">No hay suficiente para un día. Marca algunos productos más o pide una sola receta. No se ha descontado ninguna receta.</item>
-        <item quantity="many">No hay suficiente para %1$d días. Marca algunos productos más o pide una sola receta. No se ha descontado ninguna receta.</item>
-        <item quantity="other">No hay suficiente para %1$d días. Marca algunos productos más o pide una sola receta. No se ha descontado ninguna receta.</item>
+        <item quantity="one">No hay suficiente para un día. Marca algunos productos más o pide una sola receta. No se ha descontado ninguna chispa.</item>
+        <item quantity="many">No hay suficiente para %1$d días. Marca algunos productos más o pide una sola receta. No se ha descontado ninguna chispa.</item>
+        <item quantity="other">No hay suficiente para %1$d días. Marca algunos productos más o pide una sola receta. No se ha descontado ninguna chispa.</item>
     </plurals>
-    <string name="recipe_diets_need_update">Las recetas de paquetes aún no pueden combinar sin gluten con otra dieta. Deja solo una en Ajustes de recetas, o usa el modelo de este dispositivo o el prompt compartido. No se ha descontado ninguna receta.</string>
-    <string name="recipe_language_needs_update">Las recetas de paquetes aún no se pueden escribir en danés. Elige otro idioma de recetas en Ajustes de recetas, o usa el modelo de este dispositivo o el prompt compartido. No se ha descontado ninguna receta.</string>
+    <string name="recipe_diets_need_update">Las recetas de paquetes aún no pueden combinar sin gluten con otra dieta. Deja solo una en Ajustes de recetas, o usa el modelo de este dispositivo o el prompt compartido. No se ha descontado ninguna chispa.</string>
+    <string name="recipe_language_needs_update">Las recetas de paquetes aún no se pueden escribir en danés. Elige otro idioma de recetas en Ajustes de recetas, o usa el modelo de este dispositivo o el prompt compartido. No se ha descontado ninguna chispa.</string>
     <string name="recipe_not_from_pantry_hint">Los ingredientes sin la marca “En tu despensa” no son de tu despensa: son básicos o algunas cosas que quizá tengas que comprar.</string>
     <!-- Add to shopping list -->
     <string name="recipe_shopping_add">Añadir a la lista de compras</string>
@@ -933,8 +933,8 @@
     </plurals>
 
     <!-- Recipe tab, paid route: packs, the server, the account. The unit is a "recipe", never a credit. -->
-    <string name="recipe_balance_description">Recetas restantes: %1$d. Comprar más</string>
-    <string name="recipe_balance_only_description">Recetas restantes: %1$d</string>
+    <string name="recipe_balance_description">Chispas restantes: %1$d. Comprar más</string>
+    <string name="recipe_balance_only_description">Chispas restantes: %1$d</string>
     <string name="recipe_mode_label">Qué preparar</string>
     <string name="recipe_mode_recipe">Receta</string>
     <string name="recipe_mode_menu">Set de menús</string>
@@ -945,11 +945,11 @@
         <item quantity="other">%1$d días</item>
     </plurals>
     <plurals name="recipe_packs_body_sets">
-        <item quantity="one">Una receta es un plato escrito por nuestro servidor. Un set de menús cuesta de %1$d a %2$d receta, según los días y los platos al día. Las recetas no caducan.</item>
-        <item quantity="many">Una receta es un plato escrito por nuestro servidor. Un set de menús cuesta de %1$d a %2$d recetas, según los días y los platos al día. Las recetas no caducan.</item>
-        <item quantity="other">Una receta es un plato escrito por nuestro servidor. Un set de menús cuesta de %1$d a %2$d recetas, según los días y los platos al día. Las recetas no caducan.</item>
+        <item quantity="one">Una chispa es una receta escrita por nuestro servidor. Un set de menús cuesta de %1$d a %2$d chispa, según los días y los platos al día. Las chispas no caducan.</item>
+        <item quantity="many">Una chispa es una receta escrita por nuestro servidor. Un set de menús cuesta de %1$d a %2$d chispas, según los días y los platos al día. Las chispas no caducan.</item>
+        <item quantity="other">Una chispa es una receta escrita por nuestro servidor. Un set de menús cuesta de %1$d a %2$d chispas, según los días y los platos al día. Las chispas no caducan.</item>
     </plurals>
-    <string name="recipe_intro_packs_body_sets">Nuestro servidor escribe la receta y también puede planificar un set de menús. Una receta descuenta %1$s de un paquete; un set de menús, de %2$d a %3$d, según los días y los platos al día.</string>
+    <string name="recipe_intro_packs_body_sets">Nuestro servidor escribe la receta y también puede planificar un set de menús. Los paquetes contienen chispas: una receta descuenta %1$s; un set de menús, de %2$d a %3$d, según los días y los platos al día.</string>
     <plurals name="recipe_saved_unread_action">
         <item quantity="one">Recetas guardadas, %1$d nueva</item>
         <item quantity="many">Recetas guardadas, %1$d nuevas</item>
@@ -974,11 +974,11 @@
     <string name="recipe_generate">Crear receta</string>
     <string name="recipe_generate_menu">Crear menú</string>
     <plurals name="recipe_cost_recipes">
-        <item quantity="one">%1$d receta</item>
-        <item quantity="many">%1$d recetas</item>
-        <item quantity="other">%1$d recetas</item>
+        <item quantity="one">%1$d chispa</item>
+        <item quantity="many">%1$d chispas</item>
+        <item quantity="other">%1$d chispas</item>
     </plurals>
-    <string name="recipe_buy">Comprar recetas</string>
+    <string name="recipe_buy">Comprar chispas</string>
     <string name="recipe_on_device_weak">El modelo de este dispositivo aún flojea en la cocina, así que comprueba que la receta tenga sentido.</string>
     <plurals name="recipe_menu_few_items">
         <item quantity="one">Solo %1$d producto para %2$d platos. Habrá que comprar casi todo para este menú.</item>
@@ -992,11 +992,11 @@
         <item quantity="other">Te quedan %1$d. Una sola receta sí es posible.</item>
     </plurals>
     <plurals name="recipe_balance_left">
-        <item quantity="one">Te queda %1$d receta</item>
-        <item quantity="many">Te quedan %1$d recetas</item>
-        <item quantity="other">Te quedan %1$d recetas</item>
+        <item quantity="one">Te queda %1$d chispa</item>
+        <item quantity="many">Te quedan %1$d chispas</item>
+        <item quantity="other">Te quedan %1$d chispas</item>
     </plurals>
-    <string name="recipe_menu_short_none">No te quedan recetas.</string>
+    <string name="recipe_menu_short_none">No te quedan chispas.</string>
     <string name="recipe_writing_server_title">Escribiendo tu receta</string>
     <string name="recipe_writing_server_body">Unos segundos. Puedes salir de esta pantalla; la receta estará en Recetas guardadas.</string>
     <plurals name="recipe_writing_menu_title">
@@ -1007,93 +1007,93 @@
     <string name="recipe_writing_menu_body">Puede tardar hasta dos minutos. Puedes salir de esta pantalla; el menú estará en Recetas guardadas.</string>
     <string name="recipe_offline_title">Sin conexión</string>
     <string name="recipe_offline_body">Las recetas de tu paquete necesitan internet. Las opciones gratuitas de abajo siguen funcionando.</string>
-    <string name="recipe_failed_server">No se ha podido escribir la receta. No se ha descontado ninguna receta.</string>
-    <string name="recipe_failed_server_menu">No se ha podido escribir el menú. No se ha descontado ninguna receta.</string>
-    <string name="recipe_failed_limit_today">Has llegado al límite de hoy. Vuelve a intentarlo mañana. No se ha descontado ninguna receta.</string>
-    <string name="recipe_failed_trouble_today">Ahora mismo tenemos problemas para escribir recetas. Vuelve a intentarlo mañana. No se ha descontado ninguna receta.</string>
-    <string name="recipe_failed_server_later">Ahora mismo no se ha podido escribir. Vuelve a intentarlo más tarde. No se ha descontado ninguna receta.</string>
-    <string name="recipe_failed_server_busy">Todavía se está escribiendo otra receta. Vuelve a intentarlo en un minuto. No se ha descontado ninguna receta.</string>
-    <string name="recipe_failed_rate_limited">Demasiadas recetas en poco tiempo. Vuelve a intentarlo en un minuto. No se ha descontado ninguna receta.</string>
+    <string name="recipe_failed_server">No se ha podido escribir la receta. No se ha descontado ninguna chispa.</string>
+    <string name="recipe_failed_server_menu">No se ha podido escribir el menú. No se ha descontado ninguna chispa.</string>
+    <string name="recipe_failed_limit_today">Has llegado al límite de hoy. Vuelve a intentarlo mañana. No se ha descontado ninguna chispa.</string>
+    <string name="recipe_failed_trouble_today">Ahora mismo tenemos problemas para escribir recetas. Vuelve a intentarlo mañana. No se ha descontado ninguna chispa.</string>
+    <string name="recipe_failed_server_later">Ahora mismo no se ha podido escribir. Vuelve a intentarlo más tarde. No se ha descontado ninguna chispa.</string>
+    <string name="recipe_failed_server_busy">Todavía se está escribiendo otra receta. Vuelve a intentarlo en un minuto. No se ha descontado ninguna chispa.</string>
+    <string name="recipe_failed_rate_limited">Demasiadas recetas en poco tiempo. Vuelve a intentarlo en un minuto. No se ha descontado ninguna chispa.</string>
     <string name="recipe_left_out">Se ha omitido “%1$s”: ese nombre no se pudo enviar.</string>
-    <string name="recipe_ingredient_not_sent">No se ha podido enviar “%1$s”. Desmarca ese producto o cámbiale el nombre y vuelve a intentarlo. No se ha descontado ninguna receta.</string>
-    <string name="recipe_allergen_not_sent">No se ha podido enviar tu alérgeno “%1$s”, así que no se ha escrito nada: una receta sin él podría no ser segura. Cámbiale el nombre en Avisos de alérgenos, en Ajustes, y vuelve a intentarlo. No se ha descontado ninguna receta.</string>
+    <string name="recipe_ingredient_not_sent">No se ha podido enviar “%1$s”. Desmarca ese producto o cámbiale el nombre y vuelve a intentarlo. No se ha descontado ninguna chispa.</string>
+    <string name="recipe_allergen_not_sent">No se ha podido enviar tu alérgeno “%1$s”, así que no se ha escrito nada: una receta sin él podría no ser segura. Cámbiale el nombre en Avisos de alérgenos, en Ajustes, y vuelve a intentarlo. No se ha descontado ninguna chispa.</string>
     <plurals name="recipe_allergens_too_many">
-        <item quantity="one">No se ha escrito nada: una receta admite como máximo %1$d alérgeno y tienes más. Quita alguno en Avisos de alérgenos, en Ajustes, y vuelve a intentarlo. No se ha descontado ninguna receta.</item>
-        <item quantity="many">No se ha escrito nada: una receta admite como máximo %1$d alérgenos y tienes más. Quita algunos en Avisos de alérgenos, en Ajustes, y vuelve a intentarlo. No se ha descontado ninguna receta.</item>
-        <item quantity="other">No se ha escrito nada: una receta admite como máximo %1$d alérgenos y tienes más. Quita algunos en Avisos de alérgenos, en Ajustes, y vuelve a intentarlo. No se ha descontado ninguna receta.</item>
+        <item quantity="one">No se ha escrito nada: una receta admite como máximo %1$d alérgeno y tienes más. Quita alguno en Avisos de alérgenos, en Ajustes, y vuelve a intentarlo. No se ha descontado ninguna chispa.</item>
+        <item quantity="many">No se ha escrito nada: una receta admite como máximo %1$d alérgenos y tienes más. Quita algunos en Avisos de alérgenos, en Ajustes, y vuelve a intentarlo. No se ha descontado ninguna chispa.</item>
+        <item quantity="other">No se ha escrito nada: una receta admite como máximo %1$d alérgenos y tienes más. Quita algunos en Avisos de alérgenos, en Ajustes, y vuelve a intentarlo. No se ha descontado ninguna chispa.</item>
     </plurals>
     <plurals name="recipe_refused">
-        <item quantity="one">No se ha podido crear una receta con estos productos. Se ha descontado %1$d receta, porque el intento nos costó igualmente. Prueba con menos productos o con otros.</item>
-        <item quantity="many">No se ha podido crear una receta con estos productos. Se han descontado %1$d recetas, porque el intento nos costó igualmente. Prueba con menos productos o con otros.</item>
-        <item quantity="other">No se ha podido crear una receta con estos productos. Se han descontado %1$d recetas, porque el intento nos costó igualmente. Prueba con menos productos o con otros.</item>
+        <item quantity="one">No se ha podido crear una receta con estos productos. Se ha descontado %1$d chispa, porque el intento nos costó igualmente. Prueba con menos productos o con otros.</item>
+        <item quantity="many">No se ha podido crear una receta con estos productos. Se han descontado %1$d chispas, porque el intento nos costó igualmente. Prueba con menos productos o con otros.</item>
+        <item quantity="other">No se ha podido crear una receta con estos productos. Se han descontado %1$d chispas, porque el intento nos costó igualmente. Prueba con menos productos o con otros.</item>
     </plurals>
     <plurals name="recipe_refused_menu">
-        <item quantity="one">No se ha podido crear un menú con estos productos. Se ha descontado %1$d receta, porque el intento nos costó igualmente. Prueba con menos productos o con otros.</item>
-        <item quantity="many">No se ha podido crear un menú con estos productos. Se han descontado %1$d recetas, porque el intento nos costó igualmente. Prueba con menos productos o con otros.</item>
-        <item quantity="other">No se ha podido crear un menú con estos productos. Se han descontado %1$d recetas, porque el intento nos costó igualmente. Prueba con menos productos o con otros.</item>
+        <item quantity="one">No se ha podido crear un menú con estos productos. Se ha descontado %1$d chispa, porque el intento nos costó igualmente. Prueba con menos productos o con otros.</item>
+        <item quantity="many">No se ha podido crear un menú con estos productos. Se han descontado %1$d chispas, porque el intento nos costó igualmente. Prueba con menos productos o con otros.</item>
+        <item quantity="other">No se ha podido crear un menú con estos productos. Se han descontado %1$d chispas, porque el intento nos costó igualmente. Prueba con menos productos o con otros.</item>
     </plurals>
     <string name="recipe_paused_title">Las recetas de paquetes están en pausa</string>
     <plurals name="recipe_paused_body">
-        <item quantity="one">Tu %1$d receta está a salvo. Las opciones gratuitas de abajo siguen funcionando.</item>
-        <item quantity="many">Tus %1$d recetas están a salvo. Las opciones gratuitas de abajo siguen funcionando.</item>
-        <item quantity="other">Tus %1$d recetas están a salvo. Las opciones gratuitas de abajo siguen funcionando.</item>
+        <item quantity="one">Tu %1$d chispa está a salvo. Las opciones gratuitas de abajo siguen funcionando.</item>
+        <item quantity="many">Tus %1$d chispas están a salvo. Las opciones gratuitas de abajo siguen funcionando.</item>
+        <item quantity="other">Tus %1$d chispas están a salvo. Las opciones gratuitas de abajo siguen funcionando.</item>
     </plurals>
     <string name="recipe_paused_body_none">Las opciones gratuitas de abajo siguen funcionando.</string>
     <plurals name="recipe_added">
-        <item quantity="one">%1$d receta añadida</item>
-        <item quantity="many">%1$d recetas añadidas</item>
-        <item quantity="other">%1$d recetas añadidas</item>
+        <item quantity="one">%1$d chispa añadida</item>
+        <item quantity="many">%1$d chispas añadidas</item>
+        <item quantity="other">%1$d chispas añadidas</item>
     </plurals>
     <plurals name="recipe_saved_left">
-        <item quantity="one">Guardada. Te queda %1$d receta</item>
-        <item quantity="many">Guardada. Te quedan %1$d recetas</item>
-        <item quantity="other">Guardada. Te quedan %1$d recetas</item>
+        <item quantity="one">Guardada. Te queda %1$d chispa</item>
+        <item quantity="many">Guardada. Te quedan %1$d chispas</item>
+        <item quantity="other">Guardada. Te quedan %1$d chispas</item>
     </plurals>
     <string name="recipe_unconfirmed_title">Estamos confirmando tu compra</string>
     <plurals name="recipe_unconfirmed_body">
-        <item quantity="one">Has pagado %1$d receta y aún no se ha añadido. Seguimos intentándolo; no hace falta que vuelvas a comprar.</item>
-        <item quantity="many">Has pagado %1$d recetas y aún no se han añadido. Seguimos intentándolo; no hace falta que vuelvas a comprar.</item>
-        <item quantity="other">Has pagado %1$d recetas y aún no se han añadido. Seguimos intentándolo; no hace falta que vuelvas a comprar.</item>
+        <item quantity="one">Has pagado %1$d chispa y aún no se ha añadido. Seguimos intentándolo; no hace falta que vuelvas a comprar.</item>
+        <item quantity="many">Has pagado %1$d chispas y aún no se han añadido. Seguimos intentándolo; no hace falta que vuelvas a comprar.</item>
+        <item quantity="other">Has pagado %1$d chispas y aún no se han añadido. Seguimos intentándolo; no hace falta que vuelvas a comprar.</item>
     </plurals>
     <string name="recipe_try_now">Intentar ahora</string>
     <string name="recipe_pending_title">Esperando el pago</string>
-    <string name="recipe_pending_body">Tus recetas se añadirán cuando la tienda confirme el pago. Puede tardar un poco.</string>
-    <string name="recipe_packs_body">Una receta es un plato escrito por nuestro servidor. Un menú de 3 días cuesta %1$s con dos platos al día y %2$s con tres. Las recetas no caducan.</string>
+    <string name="recipe_pending_body">Tus chispas se añadirán cuando la tienda confirme el pago. Puede tardar un poco.</string>
+    <string name="recipe_packs_body">Una chispa es una receta escrita por nuestro servidor. Un menú de 3 días cuesta %1$s con dos platos al día y %2$s con tres. Las chispas no caducan.</string>
     <plurals name="recipe_pack_name">
-        <item quantity="one">%1$d receta</item>
-        <item quantity="many">%1$d recetas</item>
-        <item quantity="other">%1$d recetas</item>
+        <item quantity="one">%1$d chispa</item>
+        <item quantity="many">%1$d chispas</item>
+        <item quantity="other">%1$d chispas</item>
     </plurals>
     <string name="recipe_pack_each">%1$s cada una</string>
-    <string name="recipe_pack_saving_a11y">%1$d %% menos por receta</string>
+    <string name="recipe_pack_saving_a11y">%1$d %% menos por chispa</string>
     <string name="recipe_cancel">Cancelar</string>
     <string name="recipe_back">Atrás</string>
     <string name="recipe_close">Cerrar</string>
     <string name="recipe_ok">Aceptar</string>
-    <string name="recipe_choice_title">¿Dónde guardamos tus recetas?</string>
+    <string name="recipe_choice_title">¿Dónde guardamos tus chispas?</string>
     <string name="recipe_choice_body">Solo se elige una vez. Puedes iniciar sesión más tarde en Ajustes de recetas.</string>
     <string name="recipe_choice_phone_title">En este dispositivo, sin cuenta</string>
-    <string name="recipe_choice_phone_body">No hay que iniciar sesión. Las recetas se quedan en esta instalación de la app: si borras la app o cambias de dispositivo, se pierden las que no hayas usado.</string>
+    <string name="recipe_choice_phone_body">No hay que iniciar sesión. Las chispas se quedan en esta instalación de la app: si borras la app o cambias de dispositivo, se pierden las que no hayas usado.</string>
     <string name="recipe_choice_account_title">En una cuenta</string>
-    <string name="recipe_choice_account_body">Inicia sesión con Google. Tus recetas te siguen a un teléfono nuevo, Android o iPhone, donde inicies sesión con Google. Guardamos el ID de tu cuenta y tu correo electrónico.</string>
+    <string name="recipe_choice_account_body">Inicia sesión con Google. Tus chispas te siguen a un teléfono nuevo, Android o iPhone, donde inicies sesión con Google. Guardamos el ID de tu cuenta y tu correo electrónico.</string>
     <string name="recipe_sign_in_google">Iniciar sesión con Google</string>
-    <string name="recipe_apple_on_iphone_hint">¿Iniciaste sesión con Apple en un iPhone? Añade allí el inicio de sesión con Google, en Ajustes de recetas, para usar tus recetas en este dispositivo.</string>
-    <string name="recipe_have_account_hint">¿Ya tienes recetas en una cuenta? Inicia sesión para usarlas aquí.</string>
+    <string name="recipe_apple_on_iphone_hint">¿Iniciaste sesión con Apple en un iPhone? Añade allí el inicio de sesión con Google, en Ajustes de recetas, para usar tus chispas en este dispositivo.</string>
+    <string name="recipe_have_account_hint">¿Ya tienes chispas en una cuenta? Inicia sesión para usarlas aquí.</string>
     <string name="recipe_store_error_title">No se puede conectar con la tienda</string>
     <string name="recipe_store_error_body">Revisa tu conexión y vuelve a intentarlo. No se ha cobrado nada.</string>
     <string name="recipe_rejected_title">No se ha podido añadir esta compra</string>
-    <string name="recipe_rejected_body">La tienda indica que se ha reembolsado o que ya se usó. Si te han cobrado y no tienes recetas, pide un reembolso a la tienda.</string>
-    <string name="recipe_your_recipes">Tus recetas</string>
+    <string name="recipe_rejected_body">La tienda indica que se ha reembolsado o que ya se usó. Si te han cobrado y no tienes chispas, pide un reembolso a la tienda.</string>
+    <string name="recipe_your_recipes">Tus chispas</string>
     <plurals name="recipe_on_phone_label">
-        <item quantity="one">receta en este dispositivo</item>
-        <item quantity="many">recetas en este dispositivo</item>
-        <item quantity="other">recetas en este dispositivo</item>
+        <item quantity="one">chispa en este dispositivo</item>
+        <item quantity="many">chispas en este dispositivo</item>
+        <item quantity="other">chispas en este dispositivo</item>
     </plurals>
     <string name="recipe_on_phone_body">Se quedan en esta instalación de la app. Si borras la app o cambias de dispositivo, se pierden las que no hayas usado. Inicia sesión para guardarlas en una cuenta; se pasan al momento.</string>
     <plurals name="recipe_in_account_label">
-        <item quantity="one">receta en tu cuenta</item>
-        <item quantity="many">recetas en tu cuenta</item>
-        <item quantity="other">recetas en tu cuenta</item>
+        <item quantity="one">chispa en tu cuenta</item>
+        <item quantity="many">chispas en tu cuenta</item>
+        <item quantity="other">chispas en tu cuenta</item>
     </plurals>
     <string name="recipe_signed_in_with">Sesión iniciada con %1$s</string>
     <string name="recipe_signed_in_add_google">El inicio de sesión con Apple solo funciona en la app de iPhone. Añade aquí el inicio de sesión con Google para seguir usándolas en Android.</string>
@@ -1104,13 +1104,13 @@
     <string name="recipe_delete_account">Eliminar cuenta</string>
     <string name="recipe_sign_out_title">¿Cerrar sesión?</string>
     <plurals name="recipe_sign_out_body">
-        <item quantity="one">Tu %1$d receta se queda en tu cuenta. Vuelve a iniciar sesión para usarla. Las recetas guardadas se quedan en este dispositivo.</item>
-        <item quantity="many">Tus %1$d recetas se quedan en tu cuenta. Vuelve a iniciar sesión para usarlas. Las recetas guardadas se quedan en este dispositivo.</item>
-        <item quantity="other">Tus %1$d recetas se quedan en tu cuenta. Vuelve a iniciar sesión para usarlas. Las recetas guardadas se quedan en este dispositivo.</item>
+        <item quantity="one">Tu %1$d chispa se queda en tu cuenta. Vuelve a iniciar sesión para usarla. Las recetas guardadas se quedan en este dispositivo.</item>
+        <item quantity="many">Tus %1$d chispas se quedan en tu cuenta. Vuelve a iniciar sesión para usarlas. Las recetas guardadas se quedan en este dispositivo.</item>
+        <item quantity="other">Tus %1$d chispas se quedan en tu cuenta. Vuelve a iniciar sesión para usarlas. Las recetas guardadas se quedan en este dispositivo.</item>
     </plurals>
     <string name="recipe_delete_title">¿Eliminar tu cuenta?</string>
     <string name="recipe_apple_link_left_title">El vínculo con Apple no se ha quitado</string>
-    <string name="recipe_apple_link_left_body">Tu cuenta y sus recetas se han eliminado, pero tu cuenta de Apple sigue vinculada a esta app. Para quitar también el vínculo, desactiva Iniciar sesión con Apple para esta app en los ajustes de tu cuenta de Apple.</string>
+    <string name="recipe_apple_link_left_body">Tu cuenta y sus chispas se han eliminado, pero tu cuenta de Apple sigue vinculada a esta app. Para quitar también el vínculo, desactiva Iniciar sesión con Apple para esta app en los ajustes de tu cuenta de Apple.</string>
     <!-- The allergen consent step (ALLERGEN_CONSENT_VERSION in shared AllergenConsent.kt: raise it when this wording changes; iOS has the same text). -->
     <string name="recipe_allergen_consent_title">¿Enviar tus alérgenos a nuestro servidor?</string>
     <string name="recipe_allergen_consent_body">Para escribir esto, tu lista de alérgenos (%1$s) se envía junto con los productos marcados y tus preferencias a nuestro servidor y al modelo de IA de Google, para que la receta evite esos alimentos. Google puede tratarla fuera de la UE. La usamos solo para esta solicitud y no la conservamos después. Google la trata para escribir la receta y puede registrar las solicitudes para detectar abusos. Puedes retirar este consentimiento en Ajustes de recetas.\n\nLas opciones gratuitas, el modelo propio de este dispositivo y el prompt compartido, no nos la envían.</string>
@@ -1121,30 +1121,30 @@
     <string name="recipe_allergen_consent_setting_on">Lo aceptaste el %1$s. Desactívalo para retirar el consentimiento: nuestro servidor no escribirá recetas mientras tengas alérgenos configurados.</string>
     <string name="recipe_allergen_consent_setting_off">Necesario para las recetas de nuestro servidor mientras tengas alérgenos configurados. Los usamos solo para la solicitud y no los conservamos.</string>
     <plurals name="recipe_delete_body">
-        <item quantity="one">Tu %1$d receta sin usar se perderá y no se podrá reembolsar ni recuperar. Tu inicio de sesión y tu correo electrónico se eliminan de nuestro servidor; se conserva un registro de las compras, ya sin vínculo contigo. Las denuncias que hayas enviado se conservan durante un tiempo limitado, también sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este dispositivo.</item>
-        <item quantity="many">Tus %1$d recetas sin usar se perderán y no se podrán reembolsar ni recuperar. Tu inicio de sesión y tu correo electrónico se eliminan de nuestro servidor; se conserva un registro de las compras, ya sin vínculo contigo. Las denuncias que hayas enviado se conservan durante un tiempo limitado, también sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este dispositivo.</item>
-        <item quantity="other">Tus %1$d recetas sin usar se perderán y no se podrán reembolsar ni recuperar. Tu inicio de sesión y tu correo electrónico se eliminan de nuestro servidor; se conserva un registro de las compras, ya sin vínculo contigo. Las denuncias que hayas enviado se conservan durante un tiempo limitado, también sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este dispositivo.</item>
+        <item quantity="one">Tu %1$d chispa sin usar se perderá y no se podrá reembolsar ni recuperar. Tu inicio de sesión y tu correo electrónico se eliminan de nuestro servidor; se conserva un registro de las compras, ya sin vínculo contigo. Las denuncias que hayas enviado se conservan durante un tiempo limitado, también sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este dispositivo.</item>
+        <item quantity="many">Tus %1$d chispas sin usar se perderán y no se podrán reembolsar ni recuperar. Tu inicio de sesión y tu correo electrónico se eliminan de nuestro servidor; se conserva un registro de las compras, ya sin vínculo contigo. Las denuncias que hayas enviado se conservan durante un tiempo limitado, también sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este dispositivo.</item>
+        <item quantity="other">Tus %1$d chispas sin usar se perderán y no se podrán reembolsar ni recuperar. Tu inicio de sesión y tu correo electrónico se eliminan de nuestro servidor; se conserva un registro de las compras, ya sin vínculo contigo. Las denuncias que hayas enviado se conservan durante un tiempo limitado, también sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este dispositivo.</item>
     </plurals>
     <!-- Deleting what our server holds for recipes kept on this device (an anonymous account). -->
     <string name="recipe_delete_device_data">Eliminar mis datos de nuestro servidor</string>
     <string name="recipe_delete_device_title">¿Eliminar tus datos de nuestro servidor?</string>
     <plurals name="recipe_delete_device_body">
-        <item quantity="one">Tu %1$d receta sin usar se perderá y no se podrá reembolsar ni recuperar. El inicio de sesión anónimo que usa este dispositivo se elimina de nuestro servidor; se conserva un registro de las compras, ya sin vínculo contigo. Las denuncias que hayas enviado se conservan durante un tiempo limitado, también sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este dispositivo.</item>
-        <item quantity="many">Tus %1$d recetas sin usar se perderán y no se podrán reembolsar ni recuperar. El inicio de sesión anónimo que usa este dispositivo se elimina de nuestro servidor; se conserva un registro de las compras, ya sin vínculo contigo. Las denuncias que hayas enviado se conservan durante un tiempo limitado, también sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este dispositivo.</item>
-        <item quantity="other">Tus %1$d recetas sin usar se perderán y no se podrán reembolsar ni recuperar. El inicio de sesión anónimo que usa este dispositivo se elimina de nuestro servidor; se conserva un registro de las compras, ya sin vínculo contigo. Las denuncias que hayas enviado se conservan durante un tiempo limitado, también sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este dispositivo.</item>
+        <item quantity="one">Tu %1$d chispa sin usar se perderá y no se podrá reembolsar ni recuperar. El inicio de sesión anónimo que usa este dispositivo se elimina de nuestro servidor; se conserva un registro de las compras, ya sin vínculo contigo. Las denuncias que hayas enviado se conservan durante un tiempo limitado, también sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este dispositivo.</item>
+        <item quantity="many">Tus %1$d chispas sin usar se perderán y no se podrán reembolsar ni recuperar. El inicio de sesión anónimo que usa este dispositivo se elimina de nuestro servidor; se conserva un registro de las compras, ya sin vínculo contigo. Las denuncias que hayas enviado se conservan durante un tiempo limitado, también sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este dispositivo.</item>
+        <item quantity="other">Tus %1$d chispas sin usar se perderán y no se podrán reembolsar ni recuperar. El inicio de sesión anónimo que usa este dispositivo se elimina de nuestro servidor; se conserva un registro de las compras, ya sin vínculo contigo. Las denuncias que hayas enviado se conservan durante un tiempo limitado, también sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este dispositivo.</item>
     </plurals>
     <string name="recipe_delete_device_body_none">El inicio de sesión anónimo que usa este dispositivo se elimina de nuestro servidor; se conserva un registro de cualquier compra, ya sin vínculo contigo. Las denuncias que hayas enviado se conservan durante un tiempo limitado, también sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este dispositivo.</string>
     <string name="recipe_delete_device_confirm">Eliminar datos</string>
     <string name="recipe_device_data_deleted">Tus datos se han eliminado de nuestro servidor</string>
     <string name="recipe_delete_waits_for_purchase">Todavía se está completando una compra. Podrás hacerlo cuando termine.</string>
-    <string name="recipe_merge_title">¿Añadir a tu cuenta las recetas de este dispositivo?</string>
-    <string name="recipe_merge_body">Tu cuenta ya tiene %1$d recetas. Se le añadirán las %2$d de este dispositivo, y en total serán %3$d. No se puede deshacer.</string>
-    <string name="recipe_merge_body_unknown">Las %1$d recetas de este dispositivo se añadirán a tu cuenta. No se puede deshacer.</string>
+    <string name="recipe_merge_title">¿Añadir a tu cuenta las chispas de este dispositivo?</string>
+    <string name="recipe_merge_body">Tu cuenta ya tiene %1$d chispas. Se le añadirán las %2$d de este dispositivo, y en total serán %3$d. No se puede deshacer.</string>
+    <string name="recipe_merge_body_unknown">Las %1$d chispas de este dispositivo se añadirán a tu cuenta. No se puede deshacer.</string>
     <string name="recipe_merge_confirm">Añadir e iniciar sesión</string>
-    <string name="recipe_sign_in_failed">No se ha podido iniciar sesión. Tus recetas no han cambiado.</string>
-    <string name="recipe_sign_in_in_use">Ese inicio de sesión ya pertenece a otra cuenta. Tus recetas no han cambiado.</string>
+    <string name="recipe_sign_in_failed">No se ha podido iniciar sesión. Tus chispas no han cambiado.</string>
+    <string name="recipe_sign_in_in_use">Ese inicio de sesión ya pertenece a otra cuenta. Tus chispas no han cambiado.</string>
     <string name="recipe_account_deleted">Cuenta eliminada</string>
-    <string name="recipe_purchases_blocked">No se pueden comprar recetas con esta cuenta porque se reembolsaron compras anteriores después de usar las recetas.</string>
+    <string name="recipe_purchases_blocked">No se pueden comprar chispas con esta cuenta porque se reembolsaron compras anteriores después de usar las chispas.</string>
     <string name="recipe_account_busy">Todavía se está escribiendo una receta. Vuelve a intentarlo en un momento.</string>
     <string name="recipe_account_action_failed">No se ha podido conectar con nuestro servidor. No se ha cambiado nada.</string>
     <string name="recipe_writing_busy_title">Nuestro servidor está saturado</string>
@@ -1153,27 +1153,27 @@
     <string name="recipe_busy_body">Tu solicitud se conserva y aún puede escribirse. Vuelve a intentarlo en un minuto para recibirla. Las opciones gratuitas de abajo siguen funcionando.</string>
     <string name="recipe_elsewhere_title">Una compra pertenece a otra cuenta</string>
     <plurals name="recipe_elsewhere_body">
-        <item quantity="one">%1$d receta de este dispositivo se compró con otra cuenta. Inicia sesión en la cuenta con la que la compraste para añadirla.</item>
-        <item quantity="many">%1$d recetas de este dispositivo se compraron con otra cuenta. Inicia sesión en la cuenta con la que las compraste para añadirlas.</item>
-        <item quantity="other">%1$d recetas de este dispositivo se compraron con otra cuenta. Inicia sesión en la cuenta con la que las compraste para añadirlas.</item>
+        <item quantity="one">%1$d chispa de este dispositivo se compró con otra cuenta. Inicia sesión en la cuenta con la que la compraste para añadirla.</item>
+        <item quantity="many">%1$d chispas de este dispositivo se compraron con otra cuenta. Inicia sesión en la cuenta con la que las compraste para añadirlas.</item>
+        <item quantity="other">%1$d chispas de este dispositivo se compraron con otra cuenta. Inicia sesión en la cuenta con la que las compraste para añadirlas.</item>
     </plurals>
-    <string name="recipe_rejected_build_body">Esta copia de la app está configurada para otra tienda, así que no puede añadir compras de Google Play. La compra no se ha añadido a tus recetas. Normalmente, Google Play reembolsa una compra que no se añade en tres días. Para comprar recetas, instala la app desde Google Play.</string>
+    <string name="recipe_rejected_build_body">Esta copia de la app está configurada para otra tienda, así que no puede añadir compras de Google Play. La compra no se ha añadido a tus chispas. Normalmente, Google Play reembolsa una compra que no se añade en tres días. Para comprar chispas, instala la app desde Google Play.</string>
     <plurals name="recipe_merged_moved">
-        <item quantity="one">%1$d receta pasada de este dispositivo a tu cuenta</item>
-        <item quantity="many">%1$d recetas pasadas de este dispositivo a tu cuenta</item>
-        <item quantity="other">%1$d recetas pasadas de este dispositivo a tu cuenta</item>
+        <item quantity="one">%1$d chispa pasada de este dispositivo a tu cuenta</item>
+        <item quantity="many">%1$d chispas pasadas de este dispositivo a tu cuenta</item>
+        <item quantity="other">%1$d chispas pasadas de este dispositivo a tu cuenta</item>
     </plurals>
     <plurals name="recipe_merged_debt">
-        <item quantity="one">Este dispositivo debía %1$d receta tras un reembolso de la tienda. Se ha descontado de tu cuenta.</item>
-        <item quantity="many">Este dispositivo debía %1$d recetas tras un reembolso de la tienda. Se han descontado de tu cuenta.</item>
-        <item quantity="other">Este dispositivo debía %1$d recetas tras un reembolso de la tienda. Se han descontado de tu cuenta.</item>
+        <item quantity="one">Este dispositivo debía %1$d chispa tras un reembolso de la tienda. Se ha descontado de tu cuenta.</item>
+        <item quantity="many">Este dispositivo debía %1$d chispas tras un reembolso de la tienda. Se han descontado de tu cuenta.</item>
+        <item quantity="other">Este dispositivo debía %1$d chispas tras un reembolso de la tienda. Se han descontado de tu cuenta.</item>
     </plurals>
     <string name="recipe_earlier_recipe_saved">Una receta que pediste antes ya está lista. Está en Recetas guardadas.</string>
     <string name="recipe_earlier_menu_saved">Un menú que pediste antes ya está listo. Está en Recetas guardadas.</string>
     <plurals name="recipe_earlier_refused">
-        <item quantity="one">No se ha podido crear una receta que pediste antes. Se ha descontado %1$d receta, porque el intento nos costó igualmente.</item>
-        <item quantity="many">No se ha podido crear una receta que pediste antes. Se han descontado %1$d recetas, porque el intento nos costó igualmente.</item>
-        <item quantity="other">No se ha podido crear una receta que pediste antes. Se han descontado %1$d recetas, porque el intento nos costó igualmente.</item>
+        <item quantity="one">No se ha podido crear una receta que pediste antes. Se ha descontado %1$d chispa, porque el intento nos costó igualmente.</item>
+        <item quantity="many">No se ha podido crear una receta que pediste antes. Se han descontado %1$d chispas, porque el intento nos costó igualmente.</item>
+        <item quantity="other">No se ha podido crear una receta que pediste antes. Se han descontado %1$d chispas, porque el intento nos costó igualmente.</item>
     </plurals>
     <string name="recipe_menu_bar_title">Menú</string>
     <plurals name="recipe_menu_title">
@@ -1212,13 +1212,13 @@
     <string name="recipe_intro_prompt_body">Comparte o copia un prompt ya preparado en la app de IA que ya usas.</string>
     <string name="recipe_intro_device_title">Gratis, en este dispositivo</string>
     <string name="recipe_intro_device_body">Este dispositivo escribe la receta por sí mismo y no se envía nada a ningún sitio.</string>
-    <string name="recipe_intro_packs_title">Con un paquete de recetas</string>
-    <string name="recipe_intro_packs_body">Nuestro servidor escribe la receta y también puede planificar un menú de 3 días. Una receta descuenta %1$s de un paquete; un menú, %2$s con 2 platos al día o %3$s con 3.</string>
+    <string name="recipe_intro_packs_title">Con un paquete de chispas</string>
+    <string name="recipe_intro_packs_body">Nuestro servidor escribe la receta y también puede planificar un menú de 3 días. Los paquetes contienen chispas: una receta descuenta %1$s; un menú, %2$s con 2 platos al día o %3$s con 3.</string>
     <string name="recipe_intro_packs_price">Paquetes desde %1$s.</string>
     <string name="recipe_intro_free_stays">Las opciones gratuitas siguen ahí aunque tengas un paquete.</string>
     <string name="recipe_intro_again">Puedes volver a abrir esto en Ajustes de recetas.</string>
     <string name="recipe_intro_start">Entendido</string>
-    <string name="recipe_intro_packs_action">Ver paquetes de recetas</string>
+    <string name="recipe_intro_packs_action">Ver paquetes de chispas</string>
     <string name="recipe_intro_settings_supporting">Las formas de conseguir una receta</string>
     <string name="recipe_not_available_title">Las recetas de paquetes no están disponibles en esta instalación</string>
     <string name="recipe_not_available_body">No se ha cobrado nada. Las opciones gratuitas siguen funcionando: comparte el prompt con una app de IA o escribe la receta en este dispositivo, si es compatible.</string>
@@ -1304,21 +1304,21 @@
     <string name="welcome_intro_account_one">Esta cuenta puede conseguir una receta gratis para probarlo.</string>
     <string name="welcome_buy_sign_in_one">O inicia sesión y consigue una receta gratis</string>
     <string name="welcome_buy_get_one">O consigue una receta gratis</string>
-    <string name="welcome_sheet_lede_one">Inicia sesión y nuestro servidor añade una receta gratis a tu cuenta, para que pruebes lo que da un paquete.</string>
+    <string name="welcome_sheet_lede_one">Inicia sesión y nuestro servidor añade una chispa gratis a tu cuenta, suficiente para una receta, para que pruebes lo que da un paquete.</string>
     <string name="welcome_sheet_server_title">Escritas por nuestro servidor</string>
-    <string name="welcome_sheet_server_body">Funcionan como las recetas de un paquete: una receta suelta, o un menú si hay suficientes.</string>
+    <string name="welcome_sheet_server_body">Funcionan como las chispas de un paquete: una receta suelta, o un menú si hay suficientes.</string>
     <string name="welcome_sheet_account_title">Guardadas en tu cuenta</string>
-    <string name="welcome_sheet_account_body">Ellas, y cualquier receta que compres después, te siguen a un teléfono nuevo donde inicies sesión con Google.</string>
+    <string name="welcome_sheet_account_body">Ellas, y cualquier chispa que compres después, te siguen a un teléfono nuevo donde inicies sesión con Google.</string>
     <string name="welcome_sheet_privacy_title">Una cuenta en nuestro servidor</string>
     <string name="welcome_sheet_privacy_body">Guardamos el ID de tu cuenta y tu correo electrónico. Iniciar sesión no envía nada de tu despensa, y puedes eliminar la cuenta en Ajustes de recetas.</string>
     <string name="welcome_once">Las recetas gratis se dan una vez por cuenta de Google.</string>
     <string name="welcome_not_now">Ahora no</string>
-    <string name="welcome_adding">Añadiendo tus recetas gratis…</string>
+    <string name="welcome_adding">Añadiendo tus chispas gratis…</string>
     <string name="welcome_already_title">Esta cuenta ya recibió sus recetas gratis</string>
-    <string name="welcome_already_body">Las recetas gratis se dan una vez por cuenta de Apple o Google. Has iniciado sesión, y las recetas que compres se guardan en esta cuenta.</string>
+    <string name="welcome_already_body">Las recetas gratis se dan una vez por cuenta de Apple o Google. Has iniciado sesión, y las chispas que compres se guardan en esta cuenta.</string>
     <string name="welcome_off_signed_in_now">Las recetas gratis no están disponibles ahora mismo. Has iniciado sesión; nada más ha cambiado.</string>
     <string name="welcome_off">Las recetas gratis no están disponibles ahora mismo. No ha cambiado nada.</string>
-    <string name="welcome_claim_failed">Has iniciado sesión, pero aún no se han podido añadir tus recetas gratis.</string>
+    <string name="welcome_claim_failed">Has iniciado sesión, pero aún no se han podido añadir tus chispas gratis.</string>
     <string name="welcome_settings_sign_in_one">Inicia sesión y consigue una receta gratis de nuestro servidor, una vez por cuenta de Google.</string>
     <string name="welcome_settings_account_one">Esta cuenta puede conseguir una receta gratis de nuestro servidor.</string>
     <string name="welcome_settings_on_phone_one">Al iniciar sesión también consigues una receta gratis.</string>
@@ -1357,14 +1357,14 @@
         <item quantity="other">O consigue %1$d recetas gratis</item>
     </plurals>
     <plurals name="welcome_sheet_lede">
-        <item quantity="one">Inicia sesión y nuestro servidor añade %1$d receta gratis a tu cuenta, para que pruebes lo que da un paquete.</item>
-        <item quantity="many">Inicia sesión y nuestro servidor añade %1$d recetas gratis a tu cuenta, para que pruebes lo que da un paquete.</item>
-        <item quantity="other">Inicia sesión y nuestro servidor añade %1$d recetas gratis a tu cuenta, para que pruebes lo que da un paquete.</item>
+        <item quantity="one">Inicia sesión y nuestro servidor añade %1$d chispa gratis a tu cuenta, suficiente para una receta, para que pruebes lo que da un paquete.</item>
+        <item quantity="many">Inicia sesión y nuestro servidor añade %1$d chispas gratis a tu cuenta, una por receta, para que pruebes lo que da un paquete.</item>
+        <item quantity="other">Inicia sesión y nuestro servidor añade %1$d chispas gratis a tu cuenta, una por receta, para que pruebes lo que da un paquete.</item>
     </plurals>
     <plurals name="welcome_granted">
-        <item quantity="one">%1$d receta gratis añadida</item>
-        <item quantity="many">%1$d recetas gratis añadidas</item>
-        <item quantity="other">%1$d recetas gratis añadidas</item>
+        <item quantity="one">%1$d chispa gratis añadida</item>
+        <item quantity="many">%1$d chispas gratis añadidas</item>
+        <item quantity="other">%1$d chispas gratis añadidas</item>
     </plurals>
     <plurals name="welcome_settings_sign_in">
         <item quantity="one">Inicia sesión y consigue %1$d receta gratis de nuestro servidor, una vez por cuenta de Google.</item>
@@ -1463,6 +1463,6 @@
     <string name="recipe_report_done">Ya lo has denunciado</string>
     <string name="recipe_report_limit">Has llegado al límite de denuncias de hoy. Vuelve a intentarlo mañana.</string>
     <string name="recipe_report_unknown">Esta receta ya no se puede denunciar.</string>
-    <string name="recipe_image_unavailable">Ahora mismo no se pueden hacer imágenes. No se ha descontado ninguna receta.</string>
+    <string name="recipe_image_unavailable">Ahora mismo no se pueden hacer imágenes. No se ha descontado ninguna chispa.</string>
     <!-- /Recipe: pictures and reports -->
 </resources>

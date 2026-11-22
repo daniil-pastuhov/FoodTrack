@@ -430,7 +430,7 @@ struct RecipeView: View {
         }
     }
 
-    /// Where Buy recipes would be, the line saying why this account can't buy.
+    /// Where Buy sparks would be, the line saying why this account can't buy.
     @ViewBuilder
     private var purchasesBlockedLine: some View {
         if !credits.canBuy && credits.showsPurchasesBlocked {
@@ -737,7 +737,7 @@ struct RecipeView: View {
     }
 
     /// The other routes, in this order: the free recipes' offer (not beside the server, as
-    /// before), the phone's model, Share prompt, Buy recipes. The ones that need ticked items stay,
+    /// before), the phone's model, Share prompt, Buy sparks. The ones that need ticked items stay,
     /// dimmed, while nothing is ticked. No card without a row.
     @ViewBuilder
     private var otherWays: some View {

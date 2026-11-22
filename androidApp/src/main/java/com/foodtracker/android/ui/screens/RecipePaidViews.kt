@@ -77,7 +77,7 @@ internal fun signInProviderName(provider: SignInProvider): String = when (provid
     SignInProvider.APPLE -> "Apple"
 }
 
-/** "N recipes", with the language's plural. */
+/** "N sparks", with the language's plural. */
 internal fun recipeCount(resources: Resources, count: Int): String =
     resources.getQuantityString(R.plurals.recipe_cost_recipes, count, count)
 
@@ -90,7 +90,7 @@ internal fun recipePacksBody(resources: Resources, costs: RecipeCosts): String =
         } ?: resources.getString(R.string.recipe_packs_body, recipeCount(resources, costs.menu2), recipeCount(resources, costs.menu3))
     ) + recipePictureCostLines(resources, costs)
 
-/** " A recipe with a picture of the dish, made by AI, takes 2 recipes. With pictures of tricky
+/** " A recipe with a picture of the dish, made by AI, takes 2 sparks. With pictures of tricky
  *  steps too, it takes 3 recipes.": one sentence per level the server prices, nothing without a
  *  price (How recipes work and the Buy sheet). Starts with a space when not empty. */
 internal fun recipePictureCostLines(resources: Resources, costs: RecipeCosts): String = buildString {
@@ -422,7 +422,7 @@ private fun PackRow(name: String, each: String?, price: String, saving: Int?, se
     }
 }
 
-/** "−26%": a small outlined pill, quiet beside the price; read aloud as "26% less per recipe". */
+/** "−26%": a small outlined pill, quiet beside the price; read aloud as "26% less per spark". */
 @Composable
 private fun PackSavingBadge(percent: Int, selected: Boolean) {
     val color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary

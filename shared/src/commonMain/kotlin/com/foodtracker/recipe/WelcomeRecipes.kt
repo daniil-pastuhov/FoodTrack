@@ -205,7 +205,7 @@ data class WelcomeSheet(val recipes: Int, val signingIn: Boolean = false, val ad
 sealed interface WelcomeOutcome {
     data class Granted(val count: Int) : WelcomeOutcome
 
-    /** This Google or Apple account has had its free recipes: the dialog with See recipe packs. */
+    /** This Google or Apple account has had its free recipes: the dialog with See spark packs. */
     data object Already : WelcomeOutcome
 
     /** Off, or today's grants used up. [signedInNow]: the sign-in for it happened just now, which

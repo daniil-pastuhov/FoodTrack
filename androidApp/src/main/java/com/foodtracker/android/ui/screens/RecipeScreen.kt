@@ -121,7 +121,7 @@ import com.foodtracker.viewmodel.PantryRow
 import kotlinx.datetime.LocalDate
 
 /** What the form's primary action does, worked out from the state. The server leads when there are
- *  recipes left and nothing stands in its way, as its recipes are the most reliable; then the
+ *  sparks left and nothing stands in its way, as its recipes are the most reliable; then the
  *  phone's own model; then the shared prompt. A menu has only the server. */
 internal enum class RecipePrimary { Server, OnDevice, Share, None }
 

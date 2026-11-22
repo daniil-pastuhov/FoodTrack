@@ -643,11 +643,11 @@
 			<key>NSStringFormatValueTypeKey</key>
 			<string>d</string>
 			<key>one</key>
-			<string>%d receta</string>
+			<string>%d chispa</string>
 			<key>many</key>
-			<string>%d recetas</string>
+			<string>%d chispas</string>
 			<key>other</key>
-			<string>%d recetas</string>
+			<string>%d chispas</string>
 		</dict>
 	</dict>
 	<key>recipe_courses_count</key>
@@ -697,11 +697,11 @@
 			<key>NSStringFormatValueTypeKey</key>
 			<string>d</string>
 			<key>one</key>
-			<string>Te queda %d receta</string>
+			<string>Te queda %d chispa</string>
 			<key>many</key>
-			<string>Te quedan %d recetas</string>
+			<string>Te quedan %d chispas</string>
 			<key>other</key>
-			<string>Te quedan %d recetas</string>
+			<string>Te quedan %d chispas</string>
 		</dict>
 	</dict>
 	<key>recipe_earlier_refused</key>
@@ -715,11 +715,11 @@
 			<key>NSStringFormatValueTypeKey</key>
 			<string>d</string>
 			<key>one</key>
-			<string>No se ha podido crear una receta que pediste antes. Se ha descontado %d receta, porque el intento nos costó igualmente.</string>
+			<string>No se ha podido crear una receta que pediste antes. Se ha descontado %d chispa, porque el intento nos costó igualmente.</string>
 			<key>many</key>
-			<string>No se ha podido crear una receta que pediste antes. Se han descontado %d recetas, porque el intento nos costó igualmente.</string>
+			<string>No se ha podido crear una receta que pediste antes. Se han descontado %d chispas, porque el intento nos costó igualmente.</string>
 			<key>other</key>
-			<string>No se ha podido crear una receta que pediste antes. Se han descontado %d recetas, porque el intento nos costó igualmente.</string>
+			<string>No se ha podido crear una receta que pediste antes. Se han descontado %d chispas, porque el intento nos costó igualmente.</string>
 		</dict>
 	</dict>
 	<key>recipe_other_account_message</key>
@@ -733,11 +733,11 @@
 			<key>NSStringFormatValueTypeKey</key>
 			<string>d</string>
 			<key>one</key>
-			<string>%d receta de este {device} se compró con otra cuenta. Inicia sesión en la cuenta con la que la compraste para añadirla.</string>
+			<string>%d chispa de este {device} se compró con otra cuenta. Inicia sesión en la cuenta con la que la compraste para añadirla.</string>
 			<key>many</key>
-			<string>%d recetas de este {device} se compraron con otra cuenta. Inicia sesión en la cuenta con la que las compraste para añadirlas.</string>
+			<string>%d chispas de este {device} se compraron con otra cuenta. Inicia sesión en la cuenta con la que las compraste para añadirlas.</string>
 			<key>other</key>
-			<string>%d recetas de este {device} se compraron con otra cuenta. Inicia sesión en la cuenta con la que las compraste para añadirlas.</string>
+			<string>%d chispas de este {device} se compraron con otra cuenta. Inicia sesión en la cuenta con la que las compraste para añadirlas.</string>
 		</dict>
 	</dict>
 	<key>recipe_menu_short_message</key>
@@ -769,11 +769,11 @@
 			<key>NSStringFormatValueTypeKey</key>
 			<string>d</string>
 			<key>one</key>
-			<string>Guardada. Te queda %d receta</string>
+			<string>Guardada. Te queda %d chispa</string>
 			<key>many</key>
-			<string>Guardada. Te quedan %d recetas</string>
+			<string>Guardada. Te quedan %d chispas</string>
 			<key>other</key>
-			<string>Guardada. Te quedan %d recetas</string>
+			<string>Guardada. Te quedan %d chispas</string>
 		</dict>
 	</dict>
 	<key>recipe_added</key>
@@ -787,11 +787,11 @@
 			<key>NSStringFormatValueTypeKey</key>
 			<string>d</string>
 			<key>one</key>
-			<string>%d receta añadida</string>
+			<string>%d chispa añadida</string>
 			<key>many</key>
-			<string>%d recetas añadidas</string>
+			<string>%d chispas añadidas</string>
 			<key>other</key>
-			<string>%d recetas añadidas</string>
+			<string>%d chispas añadidas</string>
 		</dict>
 	</dict>
 	<key>recipe_paused_message</key>
@@ -805,11 +805,11 @@
 			<key>NSStringFormatValueTypeKey</key>
 			<string>d</string>
 			<key>one</key>
-			<string>Tu %d receta está a salvo. Las opciones gratuitas de abajo siguen funcionando.</string>
+			<string>Tu %d chispa está a salvo. Las opciones gratuitas de abajo siguen funcionando.</string>
 			<key>many</key>
-			<string>Tus %d recetas están a salvo. Las opciones gratuitas de abajo siguen funcionando.</string>
+			<string>Tus %d chispas están a salvo. Las opciones gratuitas de abajo siguen funcionando.</string>
 			<key>other</key>
-			<string>Tus %d recetas están a salvo. Las opciones gratuitas de abajo siguen funcionando.</string>
+			<string>Tus %d chispas están a salvo. Las opciones gratuitas de abajo siguen funcionando.</string>
 		</dict>
 	</dict>
 	<key>recipe_unconfirmed_message</key>
@@ -823,11 +823,11 @@
 			<key>NSStringFormatValueTypeKey</key>
 			<string>d</string>
 			<key>one</key>
-			<string>Has pagado %d receta y aún no se ha añadido. Seguimos intentándolo; no hace falta que vuelvas a comprar.</string>
+			<string>Has pagado %d chispa y aún no se ha añadido. Seguimos intentándolo; no hace falta que vuelvas a comprar.</string>
 			<key>many</key>
-			<string>Has pagado %d recetas y aún no se han añadido. Seguimos intentándolo; no hace falta que vuelvas a comprar.</string>
+			<string>Has pagado %d chispas y aún no se han añadido. Seguimos intentándolo; no hace falta que vuelvas a comprar.</string>
 			<key>other</key>
-			<string>Has pagado %d recetas y aún no se han añadido. Seguimos intentándolo; no hace falta que vuelvas a comprar.</string>
+			<string>Has pagado %d chispas y aún no se han añadido. Seguimos intentándolo; no hace falta que vuelvas a comprar.</string>
 		</dict>
 	</dict>
 	<key>recipe_on_phone_label</key>
@@ -841,11 +841,11 @@
 			<key>NSStringFormatValueTypeKey</key>
 			<string>d</string>
 			<key>one</key>
-			<string>receta en este {device}</string>
+			<string>chispa en este {device}</string>
 			<key>many</key>
-			<string>recetas en este {device}</string>
+			<string>chispas en este {device}</string>
 			<key>other</key>
-			<string>recetas en este {device}</string>
+			<string>chispas en este {device}</string>
 		</dict>
 	</dict>
 	<key>recipe_in_account_label</key>
@@ -859,11 +859,11 @@
 			<key>NSStringFormatValueTypeKey</key>
 			<string>d</string>
 			<key>one</key>
-			<string>receta en tu cuenta</string>
+			<string>chispa en tu cuenta</string>
 			<key>many</key>
-			<string>recetas en tu cuenta</string>
+			<string>chispas en tu cuenta</string>
 			<key>other</key>
-			<string>recetas en tu cuenta</string>
+			<string>chispas en tu cuenta</string>
 		</dict>
 	</dict>
 	<key>recipe_sign_out_message</key>
@@ -877,11 +877,11 @@
 			<key>NSStringFormatValueTypeKey</key>
 			<string>d</string>
 			<key>one</key>
-			<string>Tu %d receta se queda en tu cuenta. Vuelve a iniciar sesión para usarla. Las recetas guardadas se quedan en este {device}.</string>
+			<string>Tu %d chispa se queda en tu cuenta. Vuelve a iniciar sesión para usarla. Las recetas guardadas se quedan en este {device}.</string>
 			<key>many</key>
-			<string>Tus %d recetas se quedan en tu cuenta. Vuelve a iniciar sesión para usarlas. Las recetas guardadas se quedan en este {device}.</string>
+			<string>Tus %d chispas se quedan en tu cuenta. Vuelve a iniciar sesión para usarlas. Las recetas guardadas se quedan en este {device}.</string>
 			<key>other</key>
-			<string>Tus %d recetas se quedan en tu cuenta. Vuelve a iniciar sesión para usarlas. Las recetas guardadas se quedan en este {device}.</string>
+			<string>Tus %d chispas se quedan en tu cuenta. Vuelve a iniciar sesión para usarlas. Las recetas guardadas se quedan en este {device}.</string>
 		</dict>
 	</dict>
 	<key>recipe_delete_message</key>
@@ -895,11 +895,11 @@
 			<key>NSStringFormatValueTypeKey</key>
 			<string>d</string>
 			<key>one</key>
-			<string>Tu %d receta sin usar se perderá y no se podrá reembolsar ni recuperar. Tu inicio de sesión y tu correo electrónico se eliminan de nuestro servidor; se conserva un registro de las compras, ya sin vínculo contigo. Las denuncias que hayas enviado se conservan durante un tiempo limitado, también sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este {device}.</string>
+			<string>Tu %d chispa sin usar se perderá y no se podrá reembolsar ni recuperar. Tu inicio de sesión y tu correo electrónico se eliminan de nuestro servidor; se conserva un registro de las compras, ya sin vínculo contigo. Las denuncias que hayas enviado se conservan durante un tiempo limitado, también sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este {device}.</string>
 			<key>many</key>
-			<string>Tus %d recetas sin usar se perderán y no se podrán reembolsar ni recuperar. Tu inicio de sesión y tu correo electrónico se eliminan de nuestro servidor; se conserva un registro de las compras, ya sin vínculo contigo. Las denuncias que hayas enviado se conservan durante un tiempo limitado, también sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este {device}.</string>
+			<string>Tus %d chispas sin usar se perderán y no se podrán reembolsar ni recuperar. Tu inicio de sesión y tu correo electrónico se eliminan de nuestro servidor; se conserva un registro de las compras, ya sin vínculo contigo. Las denuncias que hayas enviado se conservan durante un tiempo limitado, también sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este {device}.</string>
 			<key>other</key>
-			<string>Tus %d recetas sin usar se perderán y no se podrán reembolsar ni recuperar. Tu inicio de sesión y tu correo electrónico se eliminan de nuestro servidor; se conserva un registro de las compras, ya sin vínculo contigo. Las denuncias que hayas enviado se conservan durante un tiempo limitado, también sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este {device}.</string>
+			<string>Tus %d chispas sin usar se perderán y no se podrán reembolsar ni recuperar. Tu inicio de sesión y tu correo electrónico se eliminan de nuestro servidor; se conserva un registro de las compras, ya sin vínculo contigo. Las denuncias que hayas enviado se conservan durante un tiempo limitado, también sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este {device}.</string>
 		</dict>
 	</dict>
 	<key>recipe_delete_device_message</key>
@@ -913,11 +913,11 @@
 			<key>NSStringFormatValueTypeKey</key>
 			<string>d</string>
 			<key>one</key>
-			<string>Tu %d receta sin usar se perderá y no se podrá reembolsar ni recuperar. El inicio de sesión anónimo que usa este {device} se elimina de nuestro servidor; se conserva un registro de las compras, ya sin vínculo contigo. Las denuncias que hayas enviado se conservan durante un tiempo limitado, también sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este {device}.</string>
+			<string>Tu %d chispa sin usar se perderá y no se podrá reembolsar ni recuperar. El inicio de sesión anónimo que usa este {device} se elimina de nuestro servidor; se conserva un registro de las compras, ya sin vínculo contigo. Las denuncias que hayas enviado se conservan durante un tiempo limitado, también sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este {device}.</string>
 			<key>many</key>
-			<string>Tus %d recetas sin usar se perderán y no se podrán reembolsar ni recuperar. El inicio de sesión anónimo que usa este {device} se elimina de nuestro servidor; se conserva un registro de las compras, ya sin vínculo contigo. Las denuncias que hayas enviado se conservan durante un tiempo limitado, también sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este {device}.</string>
+			<string>Tus %d chispas sin usar se perderán y no se podrán reembolsar ni recuperar. El inicio de sesión anónimo que usa este {device} se elimina de nuestro servidor; se conserva un registro de las compras, ya sin vínculo contigo. Las denuncias que hayas enviado se conservan durante un tiempo limitado, también sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este {device}.</string>
 			<key>other</key>
-			<string>Tus %d recetas sin usar se perderán y no se podrán reembolsar ni recuperar. El inicio de sesión anónimo que usa este {device} se elimina de nuestro servidor; se conserva un registro de las compras, ya sin vínculo contigo. Las denuncias que hayas enviado se conservan durante un tiempo limitado, también sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este {device}.</string>
+			<string>Tus %d chispas sin usar se perderán y no se podrán reembolsar ni recuperar. El inicio de sesión anónimo que usa este {device} se elimina de nuestro servidor; se conserva un registro de las compras, ya sin vínculo contigo. Las denuncias que hayas enviado se conservan durante un tiempo limitado, también sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este {device}.</string>
 		</dict>
 	</dict>
 	<key>recipe_server_refused</key>
@@ -931,11 +931,11 @@
 			<key>NSStringFormatValueTypeKey</key>
 			<string>d</string>
 			<key>one</key>
-			<string>No se ha podido crear una receta con estos productos. Se ha descontado %d receta, porque el intento nos costó igualmente. Prueba con menos productos o con otros.</string>
+			<string>No se ha podido crear una receta con estos productos. Se ha descontado %d chispa, porque el intento nos costó igualmente. Prueba con menos productos o con otros.</string>
 			<key>many</key>
-			<string>No se ha podido crear una receta con estos productos. Se han descontado %d recetas, porque el intento nos costó igualmente. Prueba con menos productos o con otros.</string>
+			<string>No se ha podido crear una receta con estos productos. Se han descontado %d chispas, porque el intento nos costó igualmente. Prueba con menos productos o con otros.</string>
 			<key>other</key>
-			<string>No se ha podido crear una receta con estos productos. Se han descontado %d recetas, porque el intento nos costó igualmente. Prueba con menos productos o con otros.</string>
+			<string>No se ha podido crear una receta con estos productos. Se han descontado %d chispas, porque el intento nos costó igualmente. Prueba con menos productos o con otros.</string>
 		</dict>
 	</dict>
 	<key>recipe_server_refused_menu</key>
@@ -949,11 +949,11 @@
 			<key>NSStringFormatValueTypeKey</key>
 			<string>d</string>
 			<key>one</key>
-			<string>No se ha podido crear un menú con estos productos. Se ha descontado %d receta, porque el intento nos costó igualmente. Prueba con menos productos o con otros.</string>
+			<string>No se ha podido crear un menú con estos productos. Se ha descontado %d chispa, porque el intento nos costó igualmente. Prueba con menos productos o con otros.</string>
 			<key>many</key>
-			<string>No se ha podido crear un menú con estos productos. Se han descontado %d recetas, porque el intento nos costó igualmente. Prueba con menos productos o con otros.</string>
+			<string>No se ha podido crear un menú con estos productos. Se han descontado %d chispas, porque el intento nos costó igualmente. Prueba con menos productos o con otros.</string>
 			<key>other</key>
-			<string>No se ha podido crear un menú con estos productos. Se han descontado %d recetas, porque el intento nos costó igualmente. Prueba con menos productos o con otros.</string>
+			<string>No se ha podido crear un menú con estos productos. Se han descontado %d chispas, porque el intento nos costó igualmente. Prueba con menos productos o con otros.</string>
 		</dict>
 	</dict>
 	<key>recipe_server_unknown_taken</key>
@@ -967,11 +967,11 @@
 			<key>NSStringFormatValueTypeKey</key>
 			<string>d</string>
 			<key>one</key>
-			<string>Ahora mismo no se ha podido escribir la receta. Vuelve a intentarlo más tarde. Se ha descontado %d receta.</string>
+			<string>Ahora mismo no se ha podido escribir la receta. Vuelve a intentarlo más tarde. Se ha descontado %d chispa.</string>
 			<key>many</key>
-			<string>Ahora mismo no se ha podido escribir la receta. Vuelve a intentarlo más tarde. Se han descontado %d recetas.</string>
+			<string>Ahora mismo no se ha podido escribir la receta. Vuelve a intentarlo más tarde. Se han descontado %d chispas.</string>
 			<key>other</key>
-			<string>Ahora mismo no se ha podido escribir la receta. Vuelve a intentarlo más tarde. Se han descontado %d recetas.</string>
+			<string>Ahora mismo no se ha podido escribir la receta. Vuelve a intentarlo más tarde. Se han descontado %d chispas.</string>
 		</dict>
 	</dict>
 	<key>recipe_server_unknown_taken_menu</key>
@@ -985,11 +985,11 @@
 			<key>NSStringFormatValueTypeKey</key>
 			<string>d</string>
 			<key>one</key>
-			<string>Ahora mismo no se ha podido escribir el menú. Vuelve a intentarlo más tarde. Se ha descontado %d receta.</string>
+			<string>Ahora mismo no se ha podido escribir el menú. Vuelve a intentarlo más tarde. Se ha descontado %d chispa.</string>
 			<key>many</key>
-			<string>Ahora mismo no se ha podido escribir el menú. Vuelve a intentarlo más tarde. Se han descontado %d recetas.</string>
+			<string>Ahora mismo no se ha podido escribir el menú. Vuelve a intentarlo más tarde. Se han descontado %d chispas.</string>
 			<key>other</key>
-			<string>Ahora mismo no se ha podido escribir el menú. Vuelve a intentarlo más tarde. Se han descontado %d recetas.</string>
+			<string>Ahora mismo no se ha podido escribir el menú. Vuelve a intentarlo más tarde. Se han descontado %d chispas.</string>
 		</dict>
 	</dict>
 	<key>recipe_allergens_too_many</key>
@@ -1003,11 +1003,11 @@
 			<key>NSStringFormatValueTypeKey</key>
 			<string>d</string>
 			<key>one</key>
-			<string>No se ha escrito nada: una receta admite como máximo %d alérgeno y tienes más. Quita alguno en Avisos de alérgenos, en Ajustes, y vuelve a intentarlo. No se ha descontado ninguna receta.</string>
+			<string>No se ha escrito nada: una receta admite como máximo %d alérgeno y tienes más. Quita alguno en Avisos de alérgenos, en Ajustes, y vuelve a intentarlo. No se ha descontado ninguna chispa.</string>
 			<key>many</key>
-			<string>No se ha escrito nada: una receta admite como máximo %d alérgenos y tienes más. Quita algunos en Avisos de alérgenos, en Ajustes, y vuelve a intentarlo. No se ha descontado ninguna receta.</string>
+			<string>No se ha escrito nada: una receta admite como máximo %d alérgenos y tienes más. Quita algunos en Avisos de alérgenos, en Ajustes, y vuelve a intentarlo. No se ha descontado ninguna chispa.</string>
 			<key>other</key>
-			<string>No se ha escrito nada: una receta admite como máximo %d alérgenos y tienes más. Quita algunos en Avisos de alérgenos, en Ajustes, y vuelve a intentarlo. No se ha descontado ninguna receta.</string>
+			<string>No se ha escrito nada: una receta admite como máximo %d alérgenos y tienes más. Quita algunos en Avisos de alérgenos, en Ajustes, y vuelve a intentarlo. No se ha descontado ninguna chispa.</string>
 		</dict>
 	</dict>
 	<key>recipe_merged_moved</key>
@@ -1021,11 +1021,11 @@
 			<key>NSStringFormatValueTypeKey</key>
 			<string>d</string>
 			<key>one</key>
-			<string>%d receta pasada de este {device} a tu cuenta</string>
+			<string>%d chispa pasada de este {device} a tu cuenta</string>
 			<key>many</key>
-			<string>%d recetas pasadas de este {device} a tu cuenta</string>
+			<string>%d chispas pasadas de este {device} a tu cuenta</string>
 			<key>other</key>
-			<string>%d recetas pasadas de este {device} a tu cuenta</string>
+			<string>%d chispas pasadas de este {device} a tu cuenta</string>
 		</dict>
 	</dict>
 	<key>recipe_merged_debt</key>
@@ -1039,11 +1039,11 @@
 			<key>NSStringFormatValueTypeKey</key>
 			<string>d</string>
 			<key>one</key>
-			<string>Este {device} debía %d receta tras un reembolso de la tienda. Se ha descontado de tu cuenta.</string>
+			<string>Este {device} debía %d chispa tras un reembolso de la tienda. Se ha descontado de tu cuenta.</string>
 			<key>many</key>
-			<string>Este {device} debía %d recetas tras un reembolso de la tienda. Se han descontado de tu cuenta.</string>
+			<string>Este {device} debía %d chispas tras un reembolso de la tienda. Se han descontado de tu cuenta.</string>
 			<key>other</key>
-			<string>Este {device} debía %d recetas tras un reembolso de la tienda. Se han descontado de tu cuenta.</string>
+			<string>Este {device} debía %d chispas tras un reembolso de la tienda. Se han descontado de tu cuenta.</string>
 		</dict>
 	</dict>
 	<key>recipe_menu_few_items</key>
@@ -1255,11 +1255,11 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>No hay suficiente para %d día. Marca algunos productos más o pide una sola receta. No se ha descontado ninguna receta.</string>
+            <string>No hay suficiente para %d día. Marca algunos productos más o pide una sola receta. No se ha descontado ninguna chispa.</string>
             <key>many</key>
-            <string>No hay suficiente para %d días. Marca algunos productos más o pide una sola receta. No se ha descontado ninguna receta.</string>
+            <string>No hay suficiente para %d días. Marca algunos productos más o pide una sola receta. No se ha descontado ninguna chispa.</string>
             <key>other</key>
-            <string>No hay suficiente para %d días. Marca algunos productos más o pide una sola receta. No se ha descontado ninguna receta.</string>
+            <string>No hay suficiente para %d días. Marca algunos productos más o pide una sola receta. No se ha descontado ninguna chispa.</string>
         </dict>
     </dict>
     <key>recipe_menu_summary</key>
@@ -1309,11 +1309,11 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Una receta es un plato escrito por nuestro servidor. Un set de menús cuesta de {min} a %d receta, según los días y los platos al día. Las recetas no caducan.</string>
+            <string>Una chispa es una receta escrita por nuestro servidor. Un set de menús cuesta de {min} a %d chispa, según los días y los platos al día. Las chispas no caducan.</string>
             <key>many</key>
-            <string>Una receta es un plato escrito por nuestro servidor. Un set de menús cuesta de {min} a %d recetas, según los días y los platos al día. Las recetas no caducan.</string>
+            <string>Una chispa es una receta escrita por nuestro servidor. Un set de menús cuesta de {min} a %d chispas, según los días y los platos al día. Las chispas no caducan.</string>
             <key>other</key>
-            <string>Una receta es un plato escrito por nuestro servidor. Un set de menús cuesta de {min} a %d recetas, según los días y los platos al día. Las recetas no caducan.</string>
+            <string>Una chispa es una receta escrita por nuestro servidor. Un set de menús cuesta de {min} a %d chispas, según los días y los platos al día. Las chispas no caducan.</string>
         </dict>
     </dict>
     <!-- Taste profile: copied from Android's strings.xml -->
@@ -1470,11 +1470,11 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Inicia sesión y nuestro servidor añade %d receta gratis a tu cuenta, para que pruebes lo que da un paquete.</string>
+            <string>Inicia sesión y nuestro servidor añade %d chispa gratis a tu cuenta, suficiente para una receta, para que pruebes lo que da un paquete.</string>
             <key>many</key>
-            <string>Inicia sesión y nuestro servidor añade %d recetas gratis a tu cuenta, para que pruebes lo que da un paquete.</string>
+            <string>Inicia sesión y nuestro servidor añade %d chispas gratis a tu cuenta, una por receta, para que pruebes lo que da un paquete.</string>
             <key>other</key>
-            <string>Inicia sesión y nuestro servidor añade %d recetas gratis a tu cuenta, para que pruebes lo que da un paquete.</string>
+            <string>Inicia sesión y nuestro servidor añade %d chispas gratis a tu cuenta, una por receta, para que pruebes lo que da un paquete.</string>
         </dict>
     </dict>
     <key>welcome_granted</key>
@@ -1488,11 +1488,11 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d receta gratis añadida</string>
+            <string>%d chispa gratis añadida</string>
             <key>many</key>
-            <string>%d recetas gratis añadidas</string>
+            <string>%d chispas gratis añadidas</string>
             <key>other</key>
-            <string>%d recetas gratis añadidas</string>
+            <string>%d chispas gratis añadidas</string>
         </dict>
     </dict>
     <key>welcome_settings_sign_in</key>

@@ -769,13 +769,13 @@
     <string name="recipe_time_guide_hint">Die längste Zeit ist eine Grenze, die kürzeste nur ein Richtwert.</string>
     <string name="recipe_prompt_min_minutes">Am besten etwa %1$d Minuten oder länger</string>
     <string name="recipe_prompt_meals">Passend zu einer dieser Mahlzeiten: %1$s</string>
-    <string name="recipe_not_enough_items">Nicht genug zum Kochen, wenn deine Ernährungsform und Allergene berücksichtigt werden. Wähle noch ein paar Artikel aus. Es wurde kein Rezept abgezogen.</string>
+    <string name="recipe_not_enough_items">Nicht genug zum Kochen, wenn deine Ernährungsform und Allergene berücksichtigt werden. Wähle noch ein paar Artikel aus. Es wurden keine Funken abgezogen.</string>
     <plurals name="recipe_not_enough_items_menu">
-        <item quantity="one">Nicht genug für einen Tag. Wähle noch ein paar Artikel aus oder frag nach einem einzelnen Rezept. Es wurden keine Rezepte abgezogen.</item>
-        <item quantity="other">Nicht genug für %1$d Tage. Wähle noch ein paar Artikel aus oder frag nach einem einzelnen Rezept. Es wurden keine Rezepte abgezogen.</item>
+        <item quantity="one">Nicht genug für einen Tag. Wähle noch ein paar Artikel aus oder frag nach einem einzelnen Rezept. Es wurden keine Funken abgezogen.</item>
+        <item quantity="other">Nicht genug für %1$d Tage. Wähle noch ein paar Artikel aus oder frag nach einem einzelnen Rezept. Es wurden keine Funken abgezogen.</item>
     </plurals>
-    <string name="recipe_diets_need_update">Rezepte aus Paketen können „Glutenfrei“ noch nicht mit einer anderen Ernährungsform kombinieren. Behalte in den Rezepteinstellungen nur eine davon oder nutze das Modell dieses Geräts oder den geteilten Prompt. Es wurden keine Rezepte abgezogen.</string>
-    <string name="recipe_language_needs_update">Rezepte aus Paketen können noch nicht auf Dänisch erstellt werden. Wähle in den Rezepteinstellungen eine andere Rezeptsprache oder nutze das Modell dieses Geräts oder den geteilten Prompt. Es wurden keine Rezepte abgezogen.</string>
+    <string name="recipe_diets_need_update">Rezepte aus Paketen können „Glutenfrei“ noch nicht mit einer anderen Ernährungsform kombinieren. Behalte in den Rezepteinstellungen nur eine davon oder nutze das Modell dieses Geräts oder den geteilten Prompt. Es wurden keine Funken abgezogen.</string>
+    <string name="recipe_language_needs_update">Rezepte aus Paketen können noch nicht auf Dänisch erstellt werden. Wähle in den Rezepteinstellungen eine andere Rezeptsprache oder nutze das Modell dieses Geräts oder den geteilten Prompt. Es wurden keine Funken abgezogen.</string>
     <string name="recipe_not_from_pantry_hint">Zutaten ohne die Markierung „Im Vorrat“ stammen nicht aus deinem Vorrat: Grundzutaten oder ein paar Dinge, die du vielleicht kaufen musst.</string>
     <!-- Add to shopping list -->
     <string name="recipe_shopping_add">Auf die Einkaufsliste</string>
@@ -891,8 +891,8 @@
     </plurals>
 
     <!-- Recipe tab, paid route: packs, the server, the account. The unit is a "recipe", never a credit. -->
-    <string name="recipe_balance_description">Verbleibende Rezepte: %1$d. Mehr kaufen</string>
-    <string name="recipe_balance_only_description">Verbleibende Rezepte: %1$d</string>
+    <string name="recipe_balance_description">Verbleibende Funken: %1$d. Mehr kaufen</string>
+    <string name="recipe_balance_only_description">Verbleibende Funken: %1$d</string>
     <string name="recipe_mode_label">Was soll es sein?</string>
     <string name="recipe_mode_recipe">Rezept</string>
     <string name="recipe_mode_menu">Menü-Set</string>
@@ -902,10 +902,10 @@
         <item quantity="other">%1$d Tage</item>
     </plurals>
     <plurals name="recipe_packs_body_sets">
-        <item quantity="one">Ein Rezept ist ein Gericht, das unser Server erstellt. Ein Menü-Set kostet %1$d bis %2$d Rezept, je nach Tagen und Gängen pro Tag. Sie verfallen nicht.</item>
-        <item quantity="other">Ein Rezept ist ein Gericht, das unser Server erstellt. Ein Menü-Set kostet %1$d bis %2$d Rezepte, je nach Tagen und Gängen pro Tag. Sie verfallen nicht.</item>
+        <item quantity="one">Ein Funke ist ein Rezept, das unser Server erstellt. Ein Menü-Set kostet %1$d bis %2$d Funke, je nach Tagen und Gängen pro Tag. Funken verfallen nicht.</item>
+        <item quantity="other">Ein Funke ist ein Rezept, das unser Server erstellt. Ein Menü-Set kostet %1$d bis %2$d Funken, je nach Tagen und Gängen pro Tag. Funken verfallen nicht.</item>
     </plurals>
-    <string name="recipe_intro_packs_body_sets">Unser Server erstellt das Rezept und kann auch ein Menü-Set planen. Ein Rezept kostet %1$s aus einem Paket; ein Menü-Set kostet %2$d bis %3$d, je nach Tagen und Gängen pro Tag.</string>
+    <string name="recipe_intro_packs_body_sets">Unser Server erstellt das Rezept und kann auch ein Menü-Set planen. Pakete enthalten Funken: Ein Rezept kostet %1$s, ein Menü-Set %2$d bis %3$d, je nach Tagen und Gängen pro Tag.</string>
     <plurals name="recipe_saved_unread_action">
         <item quantity="one">Gespeicherte Rezepte, %1$d neu</item>
         <item quantity="other">Gespeicherte Rezepte, %1$d neu</item>
@@ -927,10 +927,10 @@
     <string name="recipe_generate">Rezept erstellen</string>
     <string name="recipe_generate_menu">Menü erstellen</string>
     <plurals name="recipe_cost_recipes">
-        <item quantity="one">%1$d Rezept</item>
-        <item quantity="other">%1$d Rezepte</item>
+        <item quantity="one">%1$d Funke</item>
+        <item quantity="other">%1$d Funken</item>
     </plurals>
-    <string name="recipe_buy">Rezepte kaufen</string>
+    <string name="recipe_buy">Funken kaufen</string>
     <string name="recipe_on_device_weak">Das Modell auf diesem Gerät kann noch nicht gut kochen, also prüfe, ob das Rezept Sinn ergibt.</string>
     <plurals name="recipe_menu_few_items">
         <item quantity="one">Nur %1$d Artikel für %2$d Gerichte. Für dieses Menü musst du das meiste einkaufen.</item>
@@ -942,10 +942,10 @@
         <item quantity="other">Du hast noch %1$d. Ein einzelnes Rezept geht trotzdem.</item>
     </plurals>
     <plurals name="recipe_balance_left">
-        <item quantity="one">Noch %1$d Rezept</item>
-        <item quantity="other">Noch %1$d Rezepte</item>
+        <item quantity="one">Noch %1$d Funke</item>
+        <item quantity="other">Noch %1$d Funken</item>
     </plurals>
-    <string name="recipe_menu_short_none">Du hast keine Rezepte mehr.</string>
+    <string name="recipe_menu_short_none">Du hast keine Funken mehr.</string>
     <string name="recipe_writing_server_title">Dein Rezept wird erstellt</string>
     <string name="recipe_writing_server_body">Ein paar Sekunden. Du kannst diesen Bildschirm verlassen; das Rezept landet in „Gespeicherte Rezepte“.</string>
     <plurals name="recipe_writing_menu_title">
@@ -955,83 +955,83 @@
     <string name="recipe_writing_menu_body">Das kann bis zu zwei Minuten dauern. Du kannst diesen Bildschirm verlassen; das Menü landet in „Gespeicherte Rezepte“.</string>
     <string name="recipe_offline_title">Keine Verbindung</string>
     <string name="recipe_offline_body">Rezepte aus deinem Paket brauchen Internet. Die kostenlosen Wege unten funktionieren weiterhin.</string>
-    <string name="recipe_failed_server">Das Rezept konnte nicht erstellt werden. Es wurde kein Rezept abgezogen.</string>
-    <string name="recipe_failed_server_menu">Das Menü konnte nicht erstellt werden. Es wurden keine Rezepte abgezogen.</string>
-    <string name="recipe_failed_limit_today">Für heute ist das Limit erreicht. Versuch es morgen wieder. Es wurden keine Rezepte abgezogen.</string>
-    <string name="recipe_failed_trouble_today">Wir haben gerade Probleme beim Erstellen von Rezepten. Versuch es morgen wieder. Es wurden keine Rezepte abgezogen.</string>
-    <string name="recipe_failed_server_later">Das hat gerade nicht geklappt. Versuch es später noch einmal. Es wurden keine Rezepte abgezogen.</string>
-    <string name="recipe_failed_server_busy">Ein anderes Rezept wird noch erstellt. Versuch es in einer Minute noch einmal. Es wurden keine Rezepte abgezogen.</string>
-    <string name="recipe_failed_rate_limited">Zu viele Rezepte in kurzer Zeit. Versuch es in einer Minute noch einmal. Es wurden keine Rezepte abgezogen.</string>
+    <string name="recipe_failed_server">Das Rezept konnte nicht erstellt werden. Es wurden keine Funken abgezogen.</string>
+    <string name="recipe_failed_server_menu">Das Menü konnte nicht erstellt werden. Es wurden keine Funken abgezogen.</string>
+    <string name="recipe_failed_limit_today">Für heute ist das Limit erreicht. Versuch es morgen wieder. Es wurden keine Funken abgezogen.</string>
+    <string name="recipe_failed_trouble_today">Wir haben gerade Probleme beim Erstellen von Rezepten. Versuch es morgen wieder. Es wurden keine Funken abgezogen.</string>
+    <string name="recipe_failed_server_later">Das hat gerade nicht geklappt. Versuch es später noch einmal. Es wurden keine Funken abgezogen.</string>
+    <string name="recipe_failed_server_busy">Ein anderes Rezept wird noch erstellt. Versuch es in einer Minute noch einmal. Es wurden keine Funken abgezogen.</string>
+    <string name="recipe_failed_rate_limited">Zu viele Rezepte in kurzer Zeit. Versuch es in einer Minute noch einmal. Es wurden keine Funken abgezogen.</string>
     <string name="recipe_left_out">„%1$s“ wurde weggelassen: Dieser Name konnte nicht gesendet werden.</string>
-    <string name="recipe_ingredient_not_sent">„%1$s“ konnte nicht gesendet werden. Wähle den Artikel ab oder benenne ihn um und versuch es dann noch einmal. Es wurden keine Rezepte abgezogen.</string>
-    <string name="recipe_allergen_not_sent">Dein Allergen „%1$s“ konnte nicht gesendet werden, daher wurde nichts erstellt: Ein Rezept ohne diese Angabe wäre vielleicht nicht sicher. Benenne es in den Einstellungen unter „Allergen-Warnungen“ um und versuch es dann noch einmal. Es wurden keine Rezepte abgezogen.</string>
+    <string name="recipe_ingredient_not_sent">„%1$s“ konnte nicht gesendet werden. Wähle den Artikel ab oder benenne ihn um und versuch es dann noch einmal. Es wurden keine Funken abgezogen.</string>
+    <string name="recipe_allergen_not_sent">Dein Allergen „%1$s“ konnte nicht gesendet werden, daher wurde nichts erstellt: Ein Rezept ohne diese Angabe wäre vielleicht nicht sicher. Benenne es in den Einstellungen unter „Allergen-Warnungen“ um und versuch es dann noch einmal. Es wurden keine Funken abgezogen.</string>
     <plurals name="recipe_allergens_too_many">
-        <item quantity="one">Es wurde nichts erstellt: Ein Rezept kann höchstens %1$d Allergen berücksichtigen, und es sind mehr festgelegt. Entferne einige in den Einstellungen unter „Allergen-Warnungen“ und versuch es dann noch einmal. Es wurden keine Rezepte abgezogen.</item>
-        <item quantity="other">Es wurde nichts erstellt: Ein Rezept kann höchstens %1$d Allergene berücksichtigen, und es sind mehr festgelegt. Entferne einige in den Einstellungen unter „Allergen-Warnungen“ und versuch es dann noch einmal. Es wurden keine Rezepte abgezogen.</item>
+        <item quantity="one">Es wurde nichts erstellt: Ein Rezept kann höchstens %1$d Allergen berücksichtigen, und es sind mehr festgelegt. Entferne einige in den Einstellungen unter „Allergen-Warnungen“ und versuch es dann noch einmal. Es wurden keine Funken abgezogen.</item>
+        <item quantity="other">Es wurde nichts erstellt: Ein Rezept kann höchstens %1$d Allergene berücksichtigen, und es sind mehr festgelegt. Entferne einige in den Einstellungen unter „Allergen-Warnungen“ und versuch es dann noch einmal. Es wurden keine Funken abgezogen.</item>
     </plurals>
     <plurals name="recipe_refused">
-        <item quantity="one">Aus diesen Artikeln ließ sich kein Rezept machen. Dafür wurde %1$d Rezept verbraucht, weil der Versuch uns trotzdem etwas gekostet hat. Versuch es mit weniger oder anderen Artikeln.</item>
-        <item quantity="other">Aus diesen Artikeln ließ sich kein Rezept machen. Dafür wurden %1$d Rezepte verbraucht, weil der Versuch uns trotzdem etwas gekostet hat. Versuch es mit weniger oder anderen Artikeln.</item>
+        <item quantity="one">Aus diesen Artikeln ließ sich kein Rezept machen. Dafür wurde %1$d Funke verbraucht, weil der Versuch uns trotzdem etwas gekostet hat. Versuch es mit weniger oder anderen Artikeln.</item>
+        <item quantity="other">Aus diesen Artikeln ließ sich kein Rezept machen. Dafür wurden %1$d Funken verbraucht, weil der Versuch uns trotzdem etwas gekostet hat. Versuch es mit weniger oder anderen Artikeln.</item>
     </plurals>
     <plurals name="recipe_refused_menu">
-        <item quantity="one">Aus diesen Artikeln ließ sich kein Menü machen. Dafür wurde %1$d Rezept verbraucht, weil der Versuch uns trotzdem etwas gekostet hat. Versuch es mit weniger oder anderen Artikeln.</item>
-        <item quantity="other">Aus diesen Artikeln ließ sich kein Menü machen. Dafür wurden %1$d Rezepte verbraucht, weil der Versuch uns trotzdem etwas gekostet hat. Versuch es mit weniger oder anderen Artikeln.</item>
+        <item quantity="one">Aus diesen Artikeln ließ sich kein Menü machen. Dafür wurde %1$d Funke verbraucht, weil der Versuch uns trotzdem etwas gekostet hat. Versuch es mit weniger oder anderen Artikeln.</item>
+        <item quantity="other">Aus diesen Artikeln ließ sich kein Menü machen. Dafür wurden %1$d Funken verbraucht, weil der Versuch uns trotzdem etwas gekostet hat. Versuch es mit weniger oder anderen Artikeln.</item>
     </plurals>
     <string name="recipe_paused_title">Rezepte aus Paketen sind pausiert</string>
     <plurals name="recipe_paused_body">
-        <item quantity="one">Dein %1$d Rezept bleibt erhalten. Die kostenlosen Wege unten funktionieren weiterhin.</item>
-        <item quantity="other">Deine %1$d Rezepte bleiben erhalten. Die kostenlosen Wege unten funktionieren weiterhin.</item>
+        <item quantity="one">Dein %1$d Funke bleibt erhalten. Die kostenlosen Wege unten funktionieren weiterhin.</item>
+        <item quantity="other">Deine %1$d Funken bleiben erhalten. Die kostenlosen Wege unten funktionieren weiterhin.</item>
     </plurals>
     <string name="recipe_paused_body_none">Die kostenlosen Wege unten funktionieren weiterhin.</string>
     <plurals name="recipe_added">
-        <item quantity="one">%1$d Rezept hinzugefügt</item>
-        <item quantity="other">%1$d Rezepte hinzugefügt</item>
+        <item quantity="one">%1$d Funke hinzugefügt</item>
+        <item quantity="other">%1$d Funken hinzugefügt</item>
     </plurals>
     <plurals name="recipe_saved_left">
-        <item quantity="one">Gespeichert. Noch %1$d Rezept</item>
-        <item quantity="other">Gespeichert. Noch %1$d Rezepte</item>
+        <item quantity="one">Gespeichert. Noch %1$d Funke</item>
+        <item quantity="other">Gespeichert. Noch %1$d Funken</item>
     </plurals>
     <string name="recipe_unconfirmed_title">Dein Kauf wird bestätigt</string>
     <plurals name="recipe_unconfirmed_body">
-        <item quantity="one">Du hast %1$d Rezept bezahlt, es wurde aber noch nicht hinzugefügt. Wir versuchen es weiter; du musst nicht noch einmal kaufen.</item>
-        <item quantity="other">Du hast %1$d Rezepte bezahlt, sie wurden aber noch nicht hinzugefügt. Wir versuchen es weiter; du musst nicht noch einmal kaufen.</item>
+        <item quantity="one">Du hast %1$d Funken bezahlt, er wurde aber noch nicht hinzugefügt. Wir versuchen es weiter; du musst nicht noch einmal kaufen.</item>
+        <item quantity="other">Du hast %1$d Funken bezahlt, sie wurden aber noch nicht hinzugefügt. Wir versuchen es weiter; du musst nicht noch einmal kaufen.</item>
     </plurals>
     <string name="recipe_try_now">Jetzt versuchen</string>
     <string name="recipe_pending_title">Warten auf Zahlung</string>
-    <string name="recipe_pending_body">Deine Rezepte werden hinzugefügt, sobald der Store die Zahlung bestätigt. Das kann eine Weile dauern.</string>
-    <string name="recipe_packs_body">Ein Rezept ist ein Gericht, das unser Server erstellt. Ein Menü für 3 Tage kostet %1$s mit zwei Gängen pro Tag, %2$s mit drei. Sie verfallen nicht.</string>
+    <string name="recipe_pending_body">Deine Funken werden hinzugefügt, sobald der Store die Zahlung bestätigt. Das kann eine Weile dauern.</string>
+    <string name="recipe_packs_body">Ein Funke ist ein Rezept, das unser Server erstellt. Ein Menü für 3 Tage kostet %1$s mit zwei Gängen pro Tag, %2$s mit drei. Funken verfallen nicht.</string>
     <plurals name="recipe_pack_name">
-        <item quantity="one">%1$d Rezept</item>
-        <item quantity="other">%1$d Rezepte</item>
+        <item quantity="one">%1$d Funke</item>
+        <item quantity="other">%1$d Funken</item>
     </plurals>
     <string name="recipe_pack_each">je %1$s</string>
-    <string name="recipe_pack_saving_a11y">%1$d %% günstiger pro Rezept</string>
+    <string name="recipe_pack_saving_a11y">%1$d %% günstiger pro Funke</string>
     <string name="recipe_cancel">Abbrechen</string>
     <string name="recipe_back">Zurück</string>
     <string name="recipe_close">Schließen</string>
     <string name="recipe_ok">OK</string>
-    <string name="recipe_choice_title">Wo sollen deine Rezepte liegen?</string>
+    <string name="recipe_choice_title">Wo sollen deine Funken liegen?</string>
     <string name="recipe_choice_body">Du entscheidest einmal. Anmelden kannst du dich später in den Rezepteinstellungen.</string>
     <string name="recipe_choice_phone_title">Auf diesem Gerät, ohne Konto</string>
-    <string name="recipe_choice_phone_body">Keine Anmeldung nötig. Die Rezepte bleiben bei dieser Installation der App: Wenn du die App löschst oder das Gerät wechselst, gehen die nicht verwendeten verloren.</string>
+    <string name="recipe_choice_phone_body">Keine Anmeldung nötig. Die Funken bleiben bei dieser Installation der App: Wenn du die App löschst oder das Gerät wechselst, gehen die nicht verwendeten verloren.</string>
     <string name="recipe_choice_account_title">In einem Konto</string>
-    <string name="recipe_choice_account_body">Melde dich mit Google an. Deine Rezepte ziehen mit auf ein neues Handy, ob Android oder iPhone, wo immer du dich mit Google anmeldest. Wir speichern deine Konto-ID und deine E-Mail-Adresse.</string>
+    <string name="recipe_choice_account_body">Melde dich mit Google an. Deine Funken ziehen mit auf ein neues Handy, ob Android oder iPhone, wo immer du dich mit Google anmeldest. Wir speichern deine Konto-ID und deine E-Mail-Adresse.</string>
     <string name="recipe_sign_in_google">Über Google anmelden</string>
-    <string name="recipe_apple_on_iphone_hint">Auf einem iPhone mit Apple angemeldet? Füge dort in den Rezepteinstellungen die Google-Anmeldung hinzu, um deine Rezepte auf diesem Gerät zu nutzen.</string>
-    <string name="recipe_have_account_hint">Hast du schon Rezepte in einem Konto? Melde dich an, um sie hier zu nutzen.</string>
+    <string name="recipe_apple_on_iphone_hint">Auf einem iPhone mit Apple angemeldet? Füge dort in den Rezepteinstellungen die Google-Anmeldung hinzu, um deine Funken auf diesem Gerät zu nutzen.</string>
+    <string name="recipe_have_account_hint">Hast du schon Funken in einem Konto? Melde dich an, um sie hier zu nutzen.</string>
     <string name="recipe_store_error_title">Store nicht erreichbar</string>
     <string name="recipe_store_error_body">Prüfe deine Verbindung und versuch es noch einmal. Es wurde nichts berechnet.</string>
     <string name="recipe_rejected_title">Dieser Kauf konnte nicht hinzugefügt werden</string>
-    <string name="recipe_rejected_body">Laut Store wurde er erstattet oder schon verwendet. Wenn dir etwas berechnet wurde und du keine Rezepte hast, wende dich für eine Erstattung an den Store.</string>
-    <string name="recipe_your_recipes">Deine Rezepte</string>
+    <string name="recipe_rejected_body">Laut Store wurde er erstattet oder schon verwendet. Wenn dir etwas berechnet wurde und du keine Funken hast, wende dich für eine Erstattung an den Store.</string>
+    <string name="recipe_your_recipes">Deine Funken</string>
     <plurals name="recipe_on_phone_label">
-        <item quantity="one">Rezept auf diesem Gerät</item>
-        <item quantity="other">Rezepte auf diesem Gerät</item>
+        <item quantity="one">Funke auf diesem Gerät</item>
+        <item quantity="other">Funken auf diesem Gerät</item>
     </plurals>
     <string name="recipe_on_phone_body">Sie bleiben bei dieser Installation der App. Wenn du die App löschst oder das Gerät wechselst, gehen die nicht verwendeten verloren. Melde dich an, um sie stattdessen in einem Konto zu behalten; sie werden sofort übertragen.</string>
     <plurals name="recipe_in_account_label">
-        <item quantity="one">Rezept in deinem Konto</item>
-        <item quantity="other">Rezepte in deinem Konto</item>
+        <item quantity="one">Funke in deinem Konto</item>
+        <item quantity="other">Funken in deinem Konto</item>
     </plurals>
     <string name="recipe_signed_in_with">Angemeldet mit %1$s</string>
     <string name="recipe_signed_in_add_google">Die Apple-Anmeldung funktioniert nur in der iPhone-App. Füge hier die Google-Anmeldung hinzu, um sie weiter auf Android zu nutzen.</string>
@@ -1042,12 +1042,12 @@
     <string name="recipe_delete_account">Konto löschen</string>
     <string name="recipe_sign_out_title">Abmelden?</string>
     <plurals name="recipe_sign_out_body">
-        <item quantity="one">Dein %1$d Rezept bleibt in deinem Konto. Melde dich wieder an, um es zu nutzen. Gespeicherte Rezepte bleiben auf diesem Gerät.</item>
-        <item quantity="other">Deine %1$d Rezepte bleiben in deinem Konto. Melde dich wieder an, um sie zu nutzen. Gespeicherte Rezepte bleiben auf diesem Gerät.</item>
+        <item quantity="one">Dein %1$d Funke bleibt in deinem Konto. Melde dich wieder an, um ihn zu nutzen. Gespeicherte Rezepte bleiben auf diesem Gerät.</item>
+        <item quantity="other">Deine %1$d Funken bleiben in deinem Konto. Melde dich wieder an, um sie zu nutzen. Gespeicherte Rezepte bleiben auf diesem Gerät.</item>
     </plurals>
     <string name="recipe_delete_title">Dein Konto löschen?</string>
     <string name="recipe_apple_link_left_title">Apple-Verknüpfung nicht entfernt</string>
-    <string name="recipe_apple_link_left_body">Dein Konto und seine Rezepte sind gelöscht, aber dein Apple Account ist noch mit dieser App verknüpft. Um auch die Verknüpfung zu entfernen, schalte in den Einstellungen deines Apple Accounts „Mit Apple anmelden“ für diese App aus.</string>
+    <string name="recipe_apple_link_left_body">Dein Konto und seine Funken sind gelöscht, aber dein Apple Account ist noch mit dieser App verknüpft. Um auch die Verknüpfung zu entfernen, schalte in den Einstellungen deines Apple Accounts „Mit Apple anmelden“ für diese App aus.</string>
     <!-- The allergen consent step (ALLERGEN_CONSENT_VERSION in shared AllergenConsent.kt: raise it when this wording changes; iOS has the same text). -->
     <string name="recipe_allergen_consent_title">Deine Allergene an unseren Server senden?</string>
     <string name="recipe_allergen_consent_body">Dafür wird deine Allergenliste (%1$s) zusammen mit den ausgewählten Artikeln und deinen Einstellungen an unseren Server und an das KI-Modell von Google gesendet, damit das Rezept diese Lebensmittel vermeidet. Google kann sie außerhalb der EU verarbeiten. Wir verwenden sie nur für diese Anfrage und speichern sie danach nicht. Google verarbeitet sie, um das Rezept zu schreiben, und kann Anfragen protokollieren, um Missbrauch zu erkennen. Du kannst diese Einwilligung in den Rezepteinstellungen widerrufen.\n\nDie kostenlosen Wege, das eigene Modell dieses Geräts und der geteilte Prompt, senden sie nicht an uns.</string>
@@ -1058,28 +1058,28 @@
     <string name="recipe_allergen_consent_setting_on">Du hast am %1$s zugestimmt. Zum Widerrufen ausschalten: Unser Server erstellt dann keine Rezepte, solange Allergene festgelegt sind.</string>
     <string name="recipe_allergen_consent_setting_off">Nötig für Rezepte von unserem Server, solange Allergene festgelegt sind. Wir verwenden sie nur für die Anfrage und speichern sie nicht.</string>
     <plurals name="recipe_delete_body">
-        <item quantity="one">Dein %1$d nicht verwendetes Rezept geht verloren und kann weder erstattet noch wiederhergestellt werden. Deine Anmeldung und E-Mail-Adresse werden von unserem Server gelöscht; ein Nachweis der Käufe bleibt erhalten, aber nicht mehr mit dir verknüpft. Eventuelle Meldungen von dir bleiben eine begrenzte Zeit erhalten, ebenfalls nicht mehr mit dir verknüpft. Gespeicherte Rezepte und dein Vorrat bleiben auf diesem Gerät.</item>
-        <item quantity="other">Deine %1$d nicht verwendeten Rezepte gehen verloren und können weder erstattet noch wiederhergestellt werden. Deine Anmeldung und E-Mail-Adresse werden von unserem Server gelöscht; ein Nachweis der Käufe bleibt erhalten, aber nicht mehr mit dir verknüpft. Eventuelle Meldungen von dir bleiben eine begrenzte Zeit erhalten, ebenfalls nicht mehr mit dir verknüpft. Gespeicherte Rezepte und dein Vorrat bleiben auf diesem Gerät.</item>
+        <item quantity="one">Dein %1$d nicht verwendeter Funke geht verloren und kann weder erstattet noch wiederhergestellt werden. Deine Anmeldung und E-Mail-Adresse werden von unserem Server gelöscht; ein Nachweis der Käufe bleibt erhalten, aber nicht mehr mit dir verknüpft. Eventuelle Meldungen von dir bleiben eine begrenzte Zeit erhalten, ebenfalls nicht mehr mit dir verknüpft. Gespeicherte Rezepte und dein Vorrat bleiben auf diesem Gerät.</item>
+        <item quantity="other">Deine %1$d nicht verwendeten Funken gehen verloren und können weder erstattet noch wiederhergestellt werden. Deine Anmeldung und E-Mail-Adresse werden von unserem Server gelöscht; ein Nachweis der Käufe bleibt erhalten, aber nicht mehr mit dir verknüpft. Eventuelle Meldungen von dir bleiben eine begrenzte Zeit erhalten, ebenfalls nicht mehr mit dir verknüpft. Gespeicherte Rezepte und dein Vorrat bleiben auf diesem Gerät.</item>
     </plurals>
     <!-- Deleting what our server holds for recipes kept on this device (an anonymous account). -->
     <string name="recipe_delete_device_data">Meine Daten von unserem Server löschen</string>
     <string name="recipe_delete_device_title">Deine Daten von unserem Server löschen?</string>
     <plurals name="recipe_delete_device_body">
-        <item quantity="one">Dein %1$d nicht verwendetes Rezept geht verloren und kann weder erstattet noch wiederhergestellt werden. Die anonyme Anmeldung, die dieses Gerät nutzt, wird von unserem Server gelöscht; ein Nachweis der Käufe bleibt erhalten, aber nicht mehr mit dir verknüpft. Eventuelle Meldungen von dir bleiben eine begrenzte Zeit erhalten, ebenfalls nicht mehr mit dir verknüpft. Gespeicherte Rezepte und dein Vorrat bleiben auf diesem Gerät.</item>
-        <item quantity="other">Deine %1$d nicht verwendeten Rezepte gehen verloren und können weder erstattet noch wiederhergestellt werden. Die anonyme Anmeldung, die dieses Gerät nutzt, wird von unserem Server gelöscht; ein Nachweis der Käufe bleibt erhalten, aber nicht mehr mit dir verknüpft. Eventuelle Meldungen von dir bleiben eine begrenzte Zeit erhalten, ebenfalls nicht mehr mit dir verknüpft. Gespeicherte Rezepte und dein Vorrat bleiben auf diesem Gerät.</item>
+        <item quantity="one">Dein %1$d nicht verwendeter Funke geht verloren und kann weder erstattet noch wiederhergestellt werden. Die anonyme Anmeldung, die dieses Gerät nutzt, wird von unserem Server gelöscht; ein Nachweis der Käufe bleibt erhalten, aber nicht mehr mit dir verknüpft. Eventuelle Meldungen von dir bleiben eine begrenzte Zeit erhalten, ebenfalls nicht mehr mit dir verknüpft. Gespeicherte Rezepte und dein Vorrat bleiben auf diesem Gerät.</item>
+        <item quantity="other">Deine %1$d nicht verwendeten Funken gehen verloren und können weder erstattet noch wiederhergestellt werden. Die anonyme Anmeldung, die dieses Gerät nutzt, wird von unserem Server gelöscht; ein Nachweis der Käufe bleibt erhalten, aber nicht mehr mit dir verknüpft. Eventuelle Meldungen von dir bleiben eine begrenzte Zeit erhalten, ebenfalls nicht mehr mit dir verknüpft. Gespeicherte Rezepte und dein Vorrat bleiben auf diesem Gerät.</item>
     </plurals>
     <string name="recipe_delete_device_body_none">Die anonyme Anmeldung, die dieses Gerät nutzt, wird von unserem Server gelöscht; ein Nachweis eventueller Käufe bleibt erhalten, aber nicht mehr mit dir verknüpft. Eventuelle Meldungen von dir bleiben eine begrenzte Zeit erhalten, ebenfalls nicht mehr mit dir verknüpft. Gespeicherte Rezepte und dein Vorrat bleiben auf diesem Gerät.</string>
     <string name="recipe_delete_device_confirm">Daten löschen</string>
     <string name="recipe_device_data_deleted">Deine Daten sind von unserem Server gelöscht</string>
     <string name="recipe_delete_waits_for_purchase">Ein Kauf wird noch abgeschlossen. Du kannst löschen, sobald er fertig ist.</string>
-    <string name="recipe_merge_title">Die Rezepte dieses Geräts zu deinem Konto hinzufügen?</string>
-    <string name="recipe_merge_body">Dein Konto hat schon %1$d Rezepte. Die %2$d auf diesem Gerät werden hinzugefügt, insgesamt also %3$d. Das lässt sich nicht rückgängig machen.</string>
-    <string name="recipe_merge_body_unknown">Die %1$d Rezepte auf diesem Gerät werden zu deinem Konto hinzugefügt. Das lässt sich nicht rückgängig machen.</string>
+    <string name="recipe_merge_title">Die Funken dieses Geräts zu deinem Konto hinzufügen?</string>
+    <string name="recipe_merge_body">Dein Konto hat schon %1$d Funken. Die %2$d auf diesem Gerät werden hinzugefügt, insgesamt also %3$d. Das lässt sich nicht rückgängig machen.</string>
+    <string name="recipe_merge_body_unknown">Die %1$d Funken auf diesem Gerät werden zu deinem Konto hinzugefügt. Das lässt sich nicht rückgängig machen.</string>
     <string name="recipe_merge_confirm">Hinzufügen und anmelden</string>
-    <string name="recipe_sign_in_failed">Anmeldung fehlgeschlagen. Deine Rezepte sind unverändert.</string>
-    <string name="recipe_sign_in_in_use">Diese Anmeldung gehört schon zu einem anderen Konto. Deine Rezepte sind unverändert.</string>
+    <string name="recipe_sign_in_failed">Anmeldung fehlgeschlagen. Deine Funken sind unverändert.</string>
+    <string name="recipe_sign_in_in_use">Diese Anmeldung gehört schon zu einem anderen Konto. Deine Funken sind unverändert.</string>
     <string name="recipe_account_deleted">Konto gelöscht</string>
-    <string name="recipe_purchases_blocked">Rezepte kaufen ist für dieses Konto nicht möglich, weil frühere Käufe erstattet wurden, nachdem die Rezepte verwendet worden waren.</string>
+    <string name="recipe_purchases_blocked">Funken kaufen ist für dieses Konto nicht möglich, weil frühere Käufe erstattet wurden, nachdem die Funken verwendet worden waren.</string>
     <string name="recipe_account_busy">Ein Rezept wird noch erstellt. Versuch es gleich noch einmal.</string>
     <string name="recipe_account_action_failed">Unser Server ist nicht erreichbar. Es wurde nichts geändert.</string>
     <string name="recipe_writing_busy_title">Unser Server ist ausgelastet</string>
@@ -1088,23 +1088,23 @@
     <string name="recipe_busy_body">Deine Anfrage bleibt bestehen und wird vielleicht noch erstellt. Versuch es in einer Minute noch einmal, um sie abzurufen. Die kostenlosen Wege unten funktionieren weiterhin.</string>
     <string name="recipe_elsewhere_title">Ein Kauf gehört zu einem anderen Konto</string>
     <plurals name="recipe_elsewhere_body">
-        <item quantity="one">%1$d Rezept auf diesem Gerät wurde mit einem anderen Konto gekauft. Melde dich mit dem Konto an, mit dem du es gekauft hast, um es hinzuzufügen.</item>
-        <item quantity="other">%1$d Rezepte auf diesem Gerät wurden mit einem anderen Konto gekauft. Melde dich mit dem Konto an, mit dem du sie gekauft hast, um sie hinzuzufügen.</item>
+        <item quantity="one">%1$d Funke auf diesem Gerät wurde mit einem anderen Konto gekauft. Melde dich mit dem Konto an, mit dem du ihn gekauft hast, um ihn hinzuzufügen.</item>
+        <item quantity="other">%1$d Funken auf diesem Gerät wurden mit einem anderen Konto gekauft. Melde dich mit dem Konto an, mit dem du sie gekauft hast, um sie hinzuzufügen.</item>
     </plurals>
-    <string name="recipe_rejected_build_body">Diese Version der App ist für einen anderen Store eingerichtet und kann daher keine Google-Play-Käufe hinzufügen. Der Kauf wurde deinen Rezepten nicht hinzugefügt. Google Play erstattet einen Kauf normalerweise, wenn er nicht innerhalb von drei Tagen hinzugefügt wird. Um Rezepte zu kaufen, installiere die App über Google Play.</string>
+    <string name="recipe_rejected_build_body">Diese Version der App ist für einen anderen Store eingerichtet und kann daher keine Google-Play-Käufe hinzufügen. Der Kauf wurde deinen Funken nicht hinzugefügt. Google Play erstattet einen Kauf normalerweise, wenn er nicht innerhalb von drei Tagen hinzugefügt wird. Um Funken zu kaufen, installiere die App über Google Play.</string>
     <plurals name="recipe_merged_moved">
-        <item quantity="one">%1$d Rezept von diesem Gerät in dein Konto übertragen</item>
-        <item quantity="other">%1$d Rezepte von diesem Gerät in dein Konto übertragen</item>
+        <item quantity="one">%1$d Funke von diesem Gerät in dein Konto übertragen</item>
+        <item quantity="other">%1$d Funken von diesem Gerät in dein Konto übertragen</item>
     </plurals>
     <plurals name="recipe_merged_debt">
-        <item quantity="one">Dieses Gerät schuldete nach einer Store-Erstattung %1$d Rezept. Es wurde von deinem Konto abgezogen.</item>
-        <item quantity="other">Dieses Gerät schuldete nach einer Store-Erstattung %1$d Rezepte. Sie wurden von deinem Konto abgezogen.</item>
+        <item quantity="one">Dieses Gerät schuldete nach einer Store-Erstattung %1$d Funken. Er wurde von deinem Konto abgezogen.</item>
+        <item quantity="other">Dieses Gerät schuldete nach einer Store-Erstattung %1$d Funken. Sie wurden von deinem Konto abgezogen.</item>
     </plurals>
     <string name="recipe_earlier_recipe_saved">Ein Rezept, das du vorhin angefragt hast, ist fertig. Es liegt in „Gespeicherte Rezepte“.</string>
     <string name="recipe_earlier_menu_saved">Ein Menü, das du vorhin angefragt hast, ist fertig. Es liegt in „Gespeicherte Rezepte“.</string>
     <plurals name="recipe_earlier_refused">
-        <item quantity="one">Ein Rezept, das du vorhin angefragt hast, ließ sich nicht erstellen. Dafür wurde %1$d Rezept verbraucht, weil der Versuch uns trotzdem etwas gekostet hat.</item>
-        <item quantity="other">Ein Rezept, das du vorhin angefragt hast, ließ sich nicht erstellen. Dafür wurden %1$d Rezepte verbraucht, weil der Versuch uns trotzdem etwas gekostet hat.</item>
+        <item quantity="one">Ein Rezept, das du vorhin angefragt hast, ließ sich nicht erstellen. Dafür wurde %1$d Funke verbraucht, weil der Versuch uns trotzdem etwas gekostet hat.</item>
+        <item quantity="other">Ein Rezept, das du vorhin angefragt hast, ließ sich nicht erstellen. Dafür wurden %1$d Funken verbraucht, weil der Versuch uns trotzdem etwas gekostet hat.</item>
     </plurals>
     <string name="recipe_menu_bar_title">Menü</string>
     <plurals name="recipe_menu_title">
@@ -1139,13 +1139,13 @@
     <string name="recipe_intro_prompt_body">Teile oder kopiere einen fertigen Prompt in die KI-App, die du schon nutzt.</string>
     <string name="recipe_intro_device_title">Kostenlos, auf diesem Gerät</string>
     <string name="recipe_intro_device_body">Dieses Gerät erstellt das Rezept selbst, und es wird nichts gesendet.</string>
-    <string name="recipe_intro_packs_title">Aus einem Rezeptpaket</string>
-    <string name="recipe_intro_packs_body">Unser Server erstellt das Rezept und kann auch ein Menü für 3 Tage planen. Ein Rezept kostet %1$s aus einem Paket; ein Menü kostet %2$s mit 2 Gängen pro Tag oder %3$s mit 3.</string>
+    <string name="recipe_intro_packs_title">Aus einem Funkenpaket</string>
+    <string name="recipe_intro_packs_body">Unser Server erstellt das Rezept und kann auch ein Menü für 3 Tage planen. Pakete enthalten Funken: Ein Rezept kostet %1$s; ein Menü kostet %2$s mit 2 Gängen pro Tag oder %3$s mit 3.</string>
     <string name="recipe_intro_packs_price">Pakete ab %1$s.</string>
     <string name="recipe_intro_free_stays">Die kostenlosen Wege bleiben, auch wenn du ein Paket hast.</string>
     <string name="recipe_intro_again">Du kannst das in den Rezepteinstellungen wieder öffnen.</string>
     <string name="recipe_intro_start">Verstanden</string>
-    <string name="recipe_intro_packs_action">Rezeptpakete ansehen</string>
+    <string name="recipe_intro_packs_action">Funkenpakete ansehen</string>
     <string name="recipe_intro_settings_supporting">Die Wege zu einem Rezept</string>
     <string name="recipe_not_available_title">Rezepte aus Paketen sind in dieser Installation nicht verfügbar</string>
     <string name="recipe_not_available_body">Es wurde nichts berechnet. Die kostenlosen Wege funktionieren weiterhin: Teile den Prompt mit einer KI-App oder erstelle das Rezept auf diesem Gerät, wo es das kann.</string>
@@ -1228,21 +1228,21 @@
     <string name="welcome_intro_account_one">Dieses Konto kann ein kostenloses Rezept bekommen, um es auszuprobieren.</string>
     <string name="welcome_buy_sign_in_one">Oder melde dich an und erhalte ein kostenloses Rezept</string>
     <string name="welcome_buy_get_one">Oder hol dir ein kostenloses Rezept</string>
-    <string name="welcome_sheet_lede_one">Melde dich an, und unser Server fügt deinem Konto ein kostenloses Rezept hinzu, damit du ausprobieren kannst, was ein Paket bietet.</string>
+    <string name="welcome_sheet_lede_one">Melde dich an, und unser Server fügt deinem Konto einen kostenlosen Funken hinzu, genug für ein Rezept, damit du ausprobieren kannst, was ein Paket bietet.</string>
     <string name="welcome_sheet_server_title">Von unserem Server geschrieben</string>
-    <string name="welcome_sheet_server_body">Sie funktionieren wie Rezepte aus einem Paket: ein einzelnes Rezept oder ein Menü, wenn es genug sind.</string>
+    <string name="welcome_sheet_server_body">Sie funktionieren wie Funken aus einem Paket: ein einzelnes Rezept oder ein Menü, wenn es genug sind.</string>
     <string name="welcome_sheet_account_title">In deinem Konto gespeichert</string>
-    <string name="welcome_sheet_account_body">Sie und alle Rezepte, die du später kaufst, ziehen mit auf ein neues Handy, wo immer du dich mit Google anmeldest.</string>
+    <string name="welcome_sheet_account_body">Sie und alle Funken, die du später kaufst, ziehen mit auf ein neues Handy, wo immer du dich mit Google anmeldest.</string>
     <string name="welcome_sheet_privacy_title">Ein Konto auf unserem Server</string>
     <string name="welcome_sheet_privacy_body">Wir speichern deine Konto-ID und deine E-Mail-Adresse. Die Anmeldung sendet nichts aus deinem Vorrat, und du kannst das Konto in den Rezepteinstellungen löschen.</string>
     <string name="welcome_once">Kostenlose Rezepte gibt es einmal pro Google-Konto.</string>
     <string name="welcome_not_now">Nicht jetzt</string>
-    <string name="welcome_adding">Deine kostenlosen Rezepte werden hinzugefügt…</string>
+    <string name="welcome_adding">Deine kostenlosen Funken werden hinzugefügt…</string>
     <string name="welcome_already_title">Dieses Konto hatte seine kostenlosen Rezepte schon</string>
-    <string name="welcome_already_body">Kostenlose Rezepte gibt es einmal pro Apple- oder Google-Konto. Du bist angemeldet, und Rezepte, die du kaufst, bleiben in diesem Konto.</string>
+    <string name="welcome_already_body">Kostenlose Rezepte gibt es einmal pro Apple- oder Google-Konto. Du bist angemeldet, und Funken, die du kaufst, bleiben in diesem Konto.</string>
     <string name="welcome_off_signed_in_now">Kostenlose Rezepte sind gerade nicht verfügbar. Du bist angemeldet; sonst hat sich nichts geändert.</string>
     <string name="welcome_off">Kostenlose Rezepte sind gerade nicht verfügbar. Es hat sich nichts geändert.</string>
-    <string name="welcome_claim_failed">Angemeldet, aber deine kostenlosen Rezepte konnten noch nicht hinzugefügt werden.</string>
+    <string name="welcome_claim_failed">Angemeldet, aber deine kostenlosen Funken konnten noch nicht hinzugefügt werden.</string>
     <string name="welcome_settings_sign_in_one">Melde dich an und erhalte ein kostenloses Rezept von unserem Server, einmal pro Google-Konto.</string>
     <string name="welcome_settings_account_one">Dieses Konto kann ein kostenloses Rezept von unserem Server bekommen.</string>
     <string name="welcome_settings_on_phone_one">Mit der Anmeldung bekommst du außerdem ein kostenloses Rezept.</string>
@@ -1275,12 +1275,12 @@
         <item quantity="other">Oder hol dir %1$d kostenlose Rezepte</item>
     </plurals>
     <plurals name="welcome_sheet_lede">
-        <item quantity="one">Melde dich an, und unser Server fügt deinem Konto %1$d kostenloses Rezept hinzu, damit du ausprobieren kannst, was ein Paket bietet.</item>
-        <item quantity="other">Melde dich an, und unser Server fügt deinem Konto %1$d kostenlose Rezepte hinzu, damit du ausprobieren kannst, was ein Paket bietet.</item>
+        <item quantity="one">Melde dich an, und unser Server fügt deinem Konto %1$d kostenlosen Funken hinzu, genug für ein Rezept, damit du ausprobieren kannst, was ein Paket bietet.</item>
+        <item quantity="other">Melde dich an, und unser Server fügt deinem Konto %1$d kostenlose Funken hinzu, einen für jedes Rezept, damit du ausprobieren kannst, was ein Paket bietet.</item>
     </plurals>
     <plurals name="welcome_granted">
-        <item quantity="one">%1$d kostenloses Rezept hinzugefügt</item>
-        <item quantity="other">%1$d kostenlose Rezepte hinzugefügt</item>
+        <item quantity="one">%1$d kostenloser Funke hinzugefügt</item>
+        <item quantity="other">%1$d kostenlose Funken hinzugefügt</item>
     </plurals>
     <plurals name="welcome_settings_sign_in">
         <item quantity="one">Melde dich an und erhalte %1$d kostenloses Rezept von unserem Server, einmal pro Google-Konto.</item>
@@ -1374,6 +1374,6 @@
     <string name="recipe_report_done">Du hast das gemeldet</string>
     <string name="recipe_report_limit">Für heute ist das Limit für Meldungen erreicht. Versuch es morgen wieder.</string>
     <string name="recipe_report_unknown">Dieses Rezept kann nicht mehr gemeldet werden.</string>
-    <string name="recipe_image_unavailable">Bilder können gerade nicht erstellt werden. Es wurde kein Rezept abgezogen.</string>
+    <string name="recipe_image_unavailable">Bilder können gerade nicht erstellt werden. Es wurden keine Funken abgezogen.</string>
     <!-- /Recipe: pictures and reports -->
 </resources>

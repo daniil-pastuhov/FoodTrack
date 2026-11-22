@@ -22,14 +22,14 @@ COOK WHAT'S EXPIRING
 • The Recipe tab picks the items closest to their date; change the selection, servings, time, diet and more
 • Free: copy or share a ready-made prompt to the AI app you already use
 • Free on iPhones with Apple Intelligence (iOS 26 or later): the recipe is written on the phone itself
-• Recipe packs (in-app purchase): recipes written by our server and saved in the app, plus menu sets that plan 1 to 4 days, up to three courses a day, around what expires first
+• Packs of sparks (in-app purchase): one spark is one recipe written by our server and saved in the app. Menu sets plan 1 to 4 days, up to three courses a day, around what expires first, and take a few sparks
 • Add what a recipe still needs to your shopping list in one tap
 
 YOUR DATA
 • No ads, no tracking
-• No subscription: the app is free, and recipe packs are optional one-time purchases
+• No subscription: the app is free, and packs of sparks are optional one-time purchases
 • Your pantry is stored on your iPhone; export a backup whenever you like
-• No account needed, not even to buy a pack. Sign in with Apple or Google only if you want your recipes on other phones
+• No account needed, not even to buy a pack. Sign in with Apple or Google only if you want your sparks on other phones
 • A recipe from a pack sends the items you tick, your recipe settings and your allergens to our server. The free ways send nothing to us
 • Available in English, Russian, Norwegian, Spanish, German, French, Swedish and Danish
 

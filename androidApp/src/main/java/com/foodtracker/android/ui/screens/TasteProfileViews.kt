@@ -230,7 +230,7 @@ internal object TasteDemo {
 
 // --- Promo sheet ------------------------------------------------------------------------------
 
-/** For someone with no recipes in a pack and no profile: what it does, See recipe packs (the Buy
+/** For someone with no recipes in a pack and no profile: what it does, See spark packs (the Buy
  *  sheet) and Cancel. Showing it calls nothing and creates no account. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

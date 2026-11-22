@@ -573,9 +573,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d opskrift</string>
+            <string>%d gnist</string>
             <key>other</key>
-            <string>%d opskrifter</string>
+            <string>%d gnister</string>
         </dict>
     </dict>
     <key>recipe_courses_count</key>
@@ -621,9 +621,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d opskrift tilbage</string>
+            <string>%d gnist tilbage</string>
             <key>other</key>
-            <string>%d opskrifter tilbage</string>
+            <string>%d gnister tilbage</string>
         </dict>
     </dict>
     <key>recipe_earlier_refused</key>
@@ -637,9 +637,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>En opskrift, du bad om tidligere, kunne ikke laves. Den brugte %d opskrift, da forsøget alligevel kostede os penge at køre.</string>
+            <string>En opskrift, du bad om tidligere, kunne ikke laves. Den brugte %d gnist, da forsøget alligevel kostede os penge at køre.</string>
             <key>other</key>
-            <string>En opskrift, du bad om tidligere, kunne ikke laves. Den brugte %d opskrifter, da forsøget alligevel kostede os penge at køre.</string>
+            <string>En opskrift, du bad om tidligere, kunne ikke laves. Den brugte %d gnister, da forsøget alligevel kostede os penge at køre.</string>
         </dict>
     </dict>
     <key>recipe_other_account_message</key>
@@ -653,9 +653,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d opskrift på denne {device} blev købt med en anden konto. Log ind på den konto, du købte den med, for at tilføje den.</string>
+            <string>%d gnist på denne {device} blev købt med en anden konto. Log ind på den konto, du købte den med, for at tilføje den.</string>
             <key>other</key>
-            <string>%d opskrifter på denne {device} blev købt med en anden konto. Log ind på den konto, du købte dem med, for at tilføje dem.</string>
+            <string>%d gnister på denne {device} blev købt med en anden konto. Log ind på den konto, du købte dem med, for at tilføje dem.</string>
         </dict>
     </dict>
     <key>recipe_menu_short_message</key>
@@ -685,9 +685,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Gemt. %d opskrift tilbage</string>
+            <string>Gemt. %d gnist tilbage</string>
             <key>other</key>
-            <string>Gemt. %d opskrifter tilbage</string>
+            <string>Gemt. %d gnister tilbage</string>
         </dict>
     </dict>
     <key>recipe_added</key>
@@ -701,9 +701,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d opskrift tilføjet</string>
+            <string>%d gnist tilføjet</string>
             <key>other</key>
-            <string>%d opskrifter tilføjet</string>
+            <string>%d gnister tilføjet</string>
         </dict>
     </dict>
     <key>recipe_paused_message</key>
@@ -717,9 +717,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Din %d opskrift er i sikkerhed. De gratis muligheder nedenfor virker stadig.</string>
+            <string>Din %d gnist er i sikkerhed. De gratis muligheder nedenfor virker stadig.</string>
             <key>other</key>
-            <string>Dine %d opskrifter er i sikkerhed. De gratis muligheder nedenfor virker stadig.</string>
+            <string>Dine %d gnister er i sikkerhed. De gratis muligheder nedenfor virker stadig.</string>
         </dict>
     </dict>
     <key>recipe_unconfirmed_message</key>
@@ -733,9 +733,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Du har betalt for %d opskrift, og den er ikke tilføjet endnu. Vi bliver ved med at prøve; du behøver ikke at købe igen.</string>
+            <string>Du har betalt for %d gnist, og den er ikke tilføjet endnu. Vi bliver ved med at prøve; du behøver ikke at købe igen.</string>
             <key>other</key>
-            <string>Du har betalt for %d opskrifter, og de er ikke tilføjet endnu. Vi bliver ved med at prøve; du behøver ikke at købe igen.</string>
+            <string>Du har betalt for %d gnister, og de er ikke tilføjet endnu. Vi bliver ved med at prøve; du behøver ikke at købe igen.</string>
         </dict>
     </dict>
     <key>recipe_on_phone_label</key>
@@ -749,9 +749,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>opskrift på denne {device}</string>
+            <string>gnist på denne {device}</string>
             <key>other</key>
-            <string>opskrifter på denne {device}</string>
+            <string>gnister på denne {device}</string>
         </dict>
     </dict>
     <key>recipe_in_account_label</key>
@@ -765,9 +765,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>opskrift på din konto</string>
+            <string>gnist på din konto</string>
             <key>other</key>
-            <string>opskrifter på din konto</string>
+            <string>gnister på din konto</string>
         </dict>
     </dict>
     <key>recipe_sign_out_message</key>
@@ -781,9 +781,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Din %d opskrift bliver på din konto. Log ind igen for at bruge den. Gemte opskrifter bliver på denne {device}.</string>
+            <string>Din %d gnist bliver på din konto. Log ind igen for at bruge den. Gemte opskrifter bliver på denne {device}.</string>
             <key>other</key>
-            <string>Dine %d opskrifter bliver på din konto. Log ind igen for at bruge dem. Gemte opskrifter bliver på denne {device}.</string>
+            <string>Dine %d gnister bliver på din konto. Log ind igen for at bruge dem. Gemte opskrifter bliver på denne {device}.</string>
         </dict>
     </dict>
     <key>recipe_delete_message</key>
@@ -797,9 +797,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Din %d ubrugte opskrift går tabt og kan hverken refunderes eller gendannes. Dit login og din e-mailadresse slettes fra vores server; en registrering af købene bliver gemt, men er ikke længere knyttet til dig. Eventuelle rapporter, du har sendt, bliver gemt i en begrænset periode og er heller ikke længere knyttet til dig. Gemte opskrifter og dit forråd bliver på denne {device}.</string>
+            <string>Din %d ubrugte gnist går tabt og kan hverken refunderes eller gendannes. Dit login og din e-mailadresse slettes fra vores server; en registrering af købene bliver gemt, men er ikke længere knyttet til dig. Eventuelle rapporter, du har sendt, bliver gemt i en begrænset periode og er heller ikke længere knyttet til dig. Gemte opskrifter og dit forråd bliver på denne {device}.</string>
             <key>other</key>
-            <string>Dine %d ubrugte opskrifter går tabt og kan hverken refunderes eller gendannes. Dit login og din e-mailadresse slettes fra vores server; en registrering af købene bliver gemt, men er ikke længere knyttet til dig. Eventuelle rapporter, du har sendt, bliver gemt i en begrænset periode og er heller ikke længere knyttet til dig. Gemte opskrifter og dit forråd bliver på denne {device}.</string>
+            <string>Dine %d ubrugte gnister går tabt og kan hverken refunderes eller gendannes. Dit login og din e-mailadresse slettes fra vores server; en registrering af købene bliver gemt, men er ikke længere knyttet til dig. Eventuelle rapporter, du har sendt, bliver gemt i en begrænset periode og er heller ikke længere knyttet til dig. Gemte opskrifter og dit forråd bliver på denne {device}.</string>
         </dict>
     </dict>
     <key>recipe_delete_device_message</key>
@@ -813,9 +813,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Din %d ubrugte opskrift går tabt og kan hverken refunderes eller gendannes. Det anonyme login, som denne {device} bruger, slettes fra vores server; en registrering af købene bliver gemt, men er ikke længere knyttet til dig. Eventuelle rapporter, du har sendt, bliver gemt i en begrænset periode og er heller ikke længere knyttet til dig. Gemte opskrifter og dit forråd bliver på denne {device}.</string>
+            <string>Din %d ubrugte gnist går tabt og kan hverken refunderes eller gendannes. Det anonyme login, som denne {device} bruger, slettes fra vores server; en registrering af købene bliver gemt, men er ikke længere knyttet til dig. Eventuelle rapporter, du har sendt, bliver gemt i en begrænset periode og er heller ikke længere knyttet til dig. Gemte opskrifter og dit forråd bliver på denne {device}.</string>
             <key>other</key>
-            <string>Dine %d ubrugte opskrifter går tabt og kan hverken refunderes eller gendannes. Det anonyme login, som denne {device} bruger, slettes fra vores server; en registrering af købene bliver gemt, men er ikke længere knyttet til dig. Eventuelle rapporter, du har sendt, bliver gemt i en begrænset periode og er heller ikke længere knyttet til dig. Gemte opskrifter og dit forråd bliver på denne {device}.</string>
+            <string>Dine %d ubrugte gnister går tabt og kan hverken refunderes eller gendannes. Det anonyme login, som denne {device} bruger, slettes fra vores server; en registrering af købene bliver gemt, men er ikke længere knyttet til dig. Eventuelle rapporter, du har sendt, bliver gemt i en begrænset periode og er heller ikke længere knyttet til dig. Gemte opskrifter og dit forråd bliver på denne {device}.</string>
         </dict>
     </dict>
     <key>recipe_server_refused</key>
@@ -829,9 +829,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Der kunne ikke laves en opskrift af disse varer. Det brugte %d opskrift, da forsøget alligevel kostede os penge at køre. Prøv med færre eller andre varer.</string>
+            <string>Der kunne ikke laves en opskrift af disse varer. Det brugte %d gnist, da forsøget alligevel kostede os penge at køre. Prøv med færre eller andre varer.</string>
             <key>other</key>
-            <string>Der kunne ikke laves en opskrift af disse varer. Det brugte %d opskrifter, da forsøget alligevel kostede os penge at køre. Prøv med færre eller andre varer.</string>
+            <string>Der kunne ikke laves en opskrift af disse varer. Det brugte %d gnister, da forsøget alligevel kostede os penge at køre. Prøv med færre eller andre varer.</string>
         </dict>
     </dict>
     <key>recipe_server_refused_menu</key>
@@ -845,9 +845,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Der kunne ikke laves en menu af disse varer. Det brugte %d opskrift, da forsøget alligevel kostede os penge at køre. Prøv med færre eller andre varer.</string>
+            <string>Der kunne ikke laves en menu af disse varer. Det brugte %d gnist, da forsøget alligevel kostede os penge at køre. Prøv med færre eller andre varer.</string>
             <key>other</key>
-            <string>Der kunne ikke laves en menu af disse varer. Det brugte %d opskrifter, da forsøget alligevel kostede os penge at køre. Prøv med færre eller andre varer.</string>
+            <string>Der kunne ikke laves en menu af disse varer. Det brugte %d gnister, da forsøget alligevel kostede os penge at køre. Prøv med færre eller andre varer.</string>
         </dict>
     </dict>
     <key>recipe_server_unknown_taken</key>
@@ -861,9 +861,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Opskriften kunne ikke skrives lige nu. Prøv igen senere. Der er trukket %d opskrift.</string>
+            <string>Opskriften kunne ikke skrives lige nu. Prøv igen senere. Der er trukket %d gnist.</string>
             <key>other</key>
-            <string>Opskriften kunne ikke skrives lige nu. Prøv igen senere. Der er trukket %d opskrifter.</string>
+            <string>Opskriften kunne ikke skrives lige nu. Prøv igen senere. Der er trukket %d gnister.</string>
         </dict>
     </dict>
     <key>recipe_server_unknown_taken_menu</key>
@@ -877,9 +877,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Menuen kunne ikke skrives lige nu. Prøv igen senere. Der er trukket %d opskrift.</string>
+            <string>Menuen kunne ikke skrives lige nu. Prøv igen senere. Der er trukket %d gnist.</string>
             <key>other</key>
-            <string>Menuen kunne ikke skrives lige nu. Prøv igen senere. Der er trukket %d opskrifter.</string>
+            <string>Menuen kunne ikke skrives lige nu. Prøv igen senere. Der er trukket %d gnister.</string>
         </dict>
     </dict>
     <key>recipe_allergens_too_many</key>
@@ -893,9 +893,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Der blev ikke skrevet noget: en opskrift kan højst tage hensyn til %d allergen, og der er angivet flere. Fjern nogle under Allergenadvarsler i Indstillinger, og prøv så igen. Der er ikke trukket nogen opskrifter.</string>
+            <string>Der blev ikke skrevet noget: en opskrift kan højst tage hensyn til %d allergen, og der er angivet flere. Fjern nogle under Allergenadvarsler i Indstillinger, og prøv så igen. Der er ikke trukket nogen gnister.</string>
             <key>other</key>
-            <string>Der blev ikke skrevet noget: en opskrift kan højst tage hensyn til %d allergener, og der er angivet flere. Fjern nogle under Allergenadvarsler i Indstillinger, og prøv så igen. Der er ikke trukket nogen opskrifter.</string>
+            <string>Der blev ikke skrevet noget: en opskrift kan højst tage hensyn til %d allergener, og der er angivet flere. Fjern nogle under Allergenadvarsler i Indstillinger, og prøv så igen. Der er ikke trukket nogen gnister.</string>
         </dict>
     </dict>
     <key>recipe_merged_moved</key>
@@ -909,9 +909,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d opskrift er flyttet fra denne {device} til din konto</string>
+            <string>%d gnist er flyttet fra denne {device} til din konto</string>
             <key>other</key>
-            <string>%d opskrifter er flyttet fra denne {device} til din konto</string>
+            <string>%d gnister er flyttet fra denne {device} til din konto</string>
         </dict>
     </dict>
     <key>recipe_merged_debt</key>
@@ -925,9 +925,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Denne {device} skyldte %d opskrift efter en refundering fra butikken. Den er trukket fra din konto.</string>
+            <string>Denne {device} skyldte %d gnist efter en refundering fra butikken. Den er trukket fra din konto.</string>
             <key>other</key>
-            <string>Denne {device} skyldte %d opskrifter efter en refundering fra butikken. De er trukket fra din konto.</string>
+            <string>Denne {device} skyldte %d gnister efter en refundering fra butikken. De er trukket fra din konto.</string>
         </dict>
     </dict>
     <key>recipe_menu_few_items</key>
@@ -1117,9 +1117,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Der er ikke nok til %d dag. Sæt kryds ved nogle flere varer, eller bed om en enkelt opskrift. Der er ikke trukket nogen opskrifter.</string>
+            <string>Der er ikke nok til %d dag. Sæt kryds ved nogle flere varer, eller bed om en enkelt opskrift. Der er ikke trukket nogen gnister.</string>
             <key>other</key>
-            <string>Der er ikke nok til %d dage. Sæt kryds ved nogle flere varer, eller bed om en enkelt opskrift. Der er ikke trukket nogen opskrifter.</string>
+            <string>Der er ikke nok til %d dage. Sæt kryds ved nogle flere varer, eller bed om en enkelt opskrift. Der er ikke trukket nogen gnister.</string>
         </dict>
     </dict>
     <key>recipe_menu_summary</key>
@@ -1165,9 +1165,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Én opskrift er én ret skrevet af vores server. Et menusæt bruger {min} til %d opskrift, afhængigt af dage og retter om dagen. De udløber ikke.</string>
+            <string>Én gnist er én opskrift skrevet af vores server. Et menusæt bruger {min} til %d gnist, afhængigt af dage og retter om dagen. De udløber ikke.</string>
             <key>other</key>
-            <string>Én opskrift er én ret skrevet af vores server. Et menusæt bruger {min} til %d opskrifter, afhængigt af dage og retter om dagen. De udløber ikke.</string>
+            <string>Én gnist er én opskrift skrevet af vores server. Et menusæt bruger {min} til %d gnister, afhængigt af dage og retter om dagen. De udløber ikke.</string>
         </dict>
     </dict>
     <!-- Taste profile: copied from Android's strings.xml -->
@@ -1312,9 +1312,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Log ind, så lægger vores server %d gratis opskrift på din konto, så du kan prøve, hvad en pakke giver.</string>
+            <string>Log ind, så lægger vores server %d gratis gnist på din konto, nok til én opskrift, så du kan prøve, hvad en pakke giver.</string>
             <key>other</key>
-            <string>Log ind, så lægger vores server %d gratis opskrifter på din konto, så du kan prøve, hvad en pakke giver.</string>
+            <string>Log ind, så lægger vores server %d gratis gnister på din konto, én til hver opskrift, så du kan prøve, hvad en pakke giver.</string>
         </dict>
     </dict>
     <key>welcome_granted</key>
@@ -1328,9 +1328,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d gratis opskrift tilføjet</string>
+            <string>%d gratis gnist tilføjet</string>
             <key>other</key>
-            <string>%d gratis opskrifter tilføjet</string>
+            <string>%d gratis gnister tilføjet</string>
         </dict>
     </dict>
     <key>welcome_settings_sign_in</key>

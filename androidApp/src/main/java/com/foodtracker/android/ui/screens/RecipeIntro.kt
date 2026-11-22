@@ -36,7 +36,7 @@ internal data class RecipeIntroContent(
     val onDevice: Boolean,
     /** The paid route exists in this build and on this device. */
     val packs: Boolean,
-    /** "See recipe packs": only where buying is offered right now. */
+    /** "See spark packs": only where buying is offered right now. */
     val canBuy: Boolean,
     /** The store's own formatted price of the cheapest pack, when it has answered. */
     val lowestPrice: String?,
@@ -135,7 +135,7 @@ internal fun RecipeIntroBody(content: RecipeIntroContent, paid: PaidUiState, onD
         ) {
             LarderButton(text = stringResource(R.string.recipe_intro_start), onClick = onDismiss, modifier = Modifier.fillMaxWidth())
             // With an offer, its second action is the offer (packs stay a tap away from the count
-            // and Buy); without one, See recipe packs where buying is offered.
+            // and Buy); without one, See spark packs where buying is offered.
             val welcome = content.welcome
             if (welcome != null) {
                 LarderButton(

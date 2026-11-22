@@ -805,14 +805,14 @@
     <string name="recipe_time_guide_hint">La durée maximale est une limite ; la durée minimale n\'est qu\'une indication.</string>
     <string name="recipe_prompt_min_minutes">Idéalement environ %1$d minutes ou plus</string>
     <string name="recipe_prompt_meals">Adaptée à l\'un de ces repas : %1$s</string>
-    <string name="recipe_not_enough_items">Pas assez de produits une fois votre régime et vos allergènes exclus. Cochez quelques produits de plus. Aucune recette n\'a été décomptée.</string>
+    <string name="recipe_not_enough_items">Pas assez de produits une fois votre régime et vos allergènes exclus. Cochez quelques produits de plus. Aucune étincelle n\'a été décomptée.</string>
     <plurals name="recipe_not_enough_items_menu">
-        <item quantity="one">Pas assez pour un jour. Cochez quelques produits de plus, ou demandez une seule recette. Aucune recette n\'a été décomptée.</item>
-        <item quantity="many">Pas assez pour %1$d jours. Cochez quelques produits de plus, ou demandez une seule recette. Aucune recette n\'a été décomptée.</item>
-        <item quantity="other">Pas assez pour %1$d jours. Cochez quelques produits de plus, ou demandez une seule recette. Aucune recette n\'a été décomptée.</item>
+        <item quantity="one">Pas assez pour un jour. Cochez quelques produits de plus, ou demandez une seule recette. Aucune étincelle n\'a été décomptée.</item>
+        <item quantity="many">Pas assez pour %1$d jours. Cochez quelques produits de plus, ou demandez une seule recette. Aucune étincelle n\'a été décomptée.</item>
+        <item quantity="other">Pas assez pour %1$d jours. Cochez quelques produits de plus, ou demandez une seule recette. Aucune étincelle n\'a été décomptée.</item>
     </plurals>
-    <string name="recipe_diets_need_update">Les recettes des packs ne peuvent pas encore combiner « sans gluten » avec un autre régime. Gardez-en un seul dans les Réglages des recettes, ou utilisez le modèle de cet appareil ou le prompt à partager. Aucune recette n\'a été décomptée.</string>
-    <string name="recipe_language_needs_update">Les recettes des packs ne peuvent pas encore être rédigées en danois. Choisissez une autre langue des recettes dans les Réglages des recettes, ou utilisez le modèle de cet appareil ou le prompt à partager. Aucune recette n\'a été décomptée.</string>
+    <string name="recipe_diets_need_update">Les recettes des packs ne peuvent pas encore combiner « sans gluten » avec un autre régime. Gardez-en un seul dans les Réglages des recettes, ou utilisez le modèle de cet appareil ou le prompt à partager. Aucune étincelle n\'a été décomptée.</string>
+    <string name="recipe_language_needs_update">Les recettes des packs ne peuvent pas encore être rédigées en danois. Choisissez une autre langue des recettes dans les Réglages des recettes, ou utilisez le modèle de cet appareil ou le prompt à partager. Aucune étincelle n\'a été décomptée.</string>
     <string name="recipe_not_from_pantry_hint">Les ingrédients sans la mention « Chez vous » ne viennent pas de votre garde-manger : ce sont des produits de base, ou quelques articles que vous devrez peut-être acheter.</string>
     <!-- Add to shopping list -->
     <string name="recipe_shopping_add">Ajouter à la liste de courses</string>
@@ -934,8 +934,8 @@
     </plurals>
 
     <!-- Recipe tab, paid route: packs, the server, the account. The unit is a "recipe", never a credit. -->
-    <string name="recipe_balance_description">Recettes restantes : %1$d. En acheter</string>
-    <string name="recipe_balance_only_description">Recettes restantes : %1$d</string>
+    <string name="recipe_balance_description">Étincelles restantes : %1$d. En acheter</string>
+    <string name="recipe_balance_only_description">Étincelles restantes : %1$d</string>
     <string name="recipe_mode_label">Que préparer</string>
     <string name="recipe_mode_recipe">Recette</string>
     <string name="recipe_mode_menu">Set de menus</string>
@@ -946,11 +946,11 @@
         <item quantity="other">%1$d jours</item>
     </plurals>
     <plurals name="recipe_packs_body_sets">
-        <item quantity="one">Une recette, c\'est un plat rédigé par notre serveur. Un set de menus décompte de %1$d à %2$d recette, selon les jours et les plats par jour. Elles n\'expirent pas.</item>
-        <item quantity="many">Une recette, c\'est un plat rédigé par notre serveur. Un set de menus décompte de %1$d à %2$d recettes, selon les jours et les plats par jour. Elles n\'expirent pas.</item>
-        <item quantity="other">Une recette, c\'est un plat rédigé par notre serveur. Un set de menus décompte de %1$d à %2$d recettes, selon les jours et les plats par jour. Elles n\'expirent pas.</item>
+        <item quantity="one">Une étincelle, c\'est une recette rédigée par notre serveur. Un set de menus décompte de %1$d à %2$d étincelle, selon les jours et les plats par jour. Les étincelles n\'expirent pas.</item>
+        <item quantity="many">Une étincelle, c\'est une recette rédigée par notre serveur. Un set de menus décompte de %1$d à %2$d étincelles, selon les jours et les plats par jour. Les étincelles n\'expirent pas.</item>
+        <item quantity="other">Une étincelle, c\'est une recette rédigée par notre serveur. Un set de menus décompte de %1$d à %2$d étincelles, selon les jours et les plats par jour. Les étincelles n\'expirent pas.</item>
     </plurals>
-    <string name="recipe_intro_packs_body_sets">Notre serveur rédige la recette et peut aussi planifier un set de menus. Une recette décompte %1$s d\'un pack ; un set de menus, de %2$d à %3$d, selon les jours et les plats par jour.</string>
+    <string name="recipe_intro_packs_body_sets">Notre serveur rédige la recette et peut aussi planifier un set de menus. Les packs contiennent des étincelles : une recette décompte %1$s ; un set de menus, de %2$d à %3$d, selon les jours et les plats par jour.</string>
     <plurals name="recipe_saved_unread_action">
         <item quantity="one">Recettes enregistrées, %1$d nouvelle</item>
         <item quantity="many">Recettes enregistrées, %1$d nouvelles</item>
@@ -975,11 +975,11 @@
     <string name="recipe_generate">Générer la recette</string>
     <string name="recipe_generate_menu">Générer le menu</string>
     <plurals name="recipe_cost_recipes">
-        <item quantity="one">%1$d recette</item>
-        <item quantity="many">%1$d recettes</item>
-        <item quantity="other">%1$d recettes</item>
+        <item quantity="one">%1$d étincelle</item>
+        <item quantity="many">%1$d étincelles</item>
+        <item quantity="other">%1$d étincelles</item>
     </plurals>
-    <string name="recipe_buy">Acheter des recettes</string>
+    <string name="recipe_buy">Acheter des étincelles</string>
     <string name="recipe_on_device_weak">Le modèle de cet appareil est encore faible en cuisine, alors vérifiez que la recette tient la route.</string>
     <plurals name="recipe_menu_few_items">
         <item quantity="one">Seulement %1$d produit pour %2$d plats. Il faudra acheter presque tout pour ce menu.</item>
@@ -993,11 +993,11 @@
         <item quantity="other">Il vous en reste %1$d. Une recette seule reste possible.</item>
     </plurals>
     <plurals name="recipe_balance_left">
-        <item quantity="one">%1$d recette restante</item>
-        <item quantity="many">%1$d recettes restantes</item>
-        <item quantity="other">%1$d recettes restantes</item>
+        <item quantity="one">%1$d étincelle restante</item>
+        <item quantity="many">%1$d étincelles restantes</item>
+        <item quantity="other">%1$d étincelles restantes</item>
     </plurals>
-    <string name="recipe_menu_short_none">Il ne vous reste aucune recette.</string>
+    <string name="recipe_menu_short_none">Il ne vous reste aucune étincelle.</string>
     <string name="recipe_writing_server_title">Rédaction de votre recette</string>
     <string name="recipe_writing_server_body">Quelques secondes. Vous pouvez quitter cet écran ; la recette sera dans Recettes enregistrées.</string>
     <plurals name="recipe_writing_menu_title">
@@ -1008,93 +1008,93 @@
     <string name="recipe_writing_menu_body">Cela peut prendre jusqu\'à deux minutes. Vous pouvez quitter cet écran ; le menu sera dans Recettes enregistrées.</string>
     <string name="recipe_offline_title">Pas de connexion</string>
     <string name="recipe_offline_body">Les recettes de votre pack nécessitent Internet. Les options gratuites ci-dessous fonctionnent toujours.</string>
-    <string name="recipe_failed_server">Impossible de rédiger la recette. Aucune recette n\'a été décomptée.</string>
-    <string name="recipe_failed_server_menu">Impossible de rédiger le menu. Aucune recette n\'a été décomptée.</string>
-    <string name="recipe_failed_limit_today">C\'est la limite pour aujourd\'hui. Réessayez demain. Aucune recette n\'a été décomptée.</string>
-    <string name="recipe_failed_trouble_today">Nous avons du mal à rédiger des recettes en ce moment. Réessayez demain. Aucune recette n\'a été décomptée.</string>
-    <string name="recipe_failed_server_later">Impossible de la rédiger pour le moment. Réessayez plus tard. Aucune recette n\'a été décomptée.</string>
-    <string name="recipe_failed_server_busy">Une autre recette est encore en cours de rédaction. Réessayez dans une minute. Aucune recette n\'a été décomptée.</string>
-    <string name="recipe_failed_rate_limited">Trop de recettes en peu de temps. Réessayez dans une minute. Aucune recette n\'a été décomptée.</string>
+    <string name="recipe_failed_server">Impossible de rédiger la recette. Aucune étincelle n\'a été décomptée.</string>
+    <string name="recipe_failed_server_menu">Impossible de rédiger le menu. Aucune étincelle n\'a été décomptée.</string>
+    <string name="recipe_failed_limit_today">C\'est la limite pour aujourd\'hui. Réessayez demain. Aucune étincelle n\'a été décomptée.</string>
+    <string name="recipe_failed_trouble_today">Nous avons du mal à rédiger des recettes en ce moment. Réessayez demain. Aucune étincelle n\'a été décomptée.</string>
+    <string name="recipe_failed_server_later">Impossible de la rédiger pour le moment. Réessayez plus tard. Aucune étincelle n\'a été décomptée.</string>
+    <string name="recipe_failed_server_busy">Une autre recette est encore en cours de rédaction. Réessayez dans une minute. Aucune étincelle n\'a été décomptée.</string>
+    <string name="recipe_failed_rate_limited">Trop de recettes en peu de temps. Réessayez dans une minute. Aucune étincelle n\'a été décomptée.</string>
     <string name="recipe_left_out">Nous avons laissé de côté « %1$s » : ce nom n\'a pas pu être envoyé.</string>
-    <string name="recipe_ingredient_not_sent">Le nom « %1$s » n\'a pas pu être envoyé. Décochez ce produit ou renommez-le, puis réessayez. Aucune recette n\'a été décomptée.</string>
-    <string name="recipe_allergen_not_sent">Votre allergène « %1$s » n\'a pas pu être envoyé, donc rien n\'a été rédigé : une recette qui n\'en tiendrait pas compte pourrait être dangereuse. Renommez-le dans Alertes allergènes des Réglages, puis réessayez. Aucune recette n\'a été décomptée.</string>
+    <string name="recipe_ingredient_not_sent">Le nom « %1$s » n\'a pas pu être envoyé. Décochez ce produit ou renommez-le, puis réessayez. Aucune étincelle n\'a été décomptée.</string>
+    <string name="recipe_allergen_not_sent">Votre allergène « %1$s » n\'a pas pu être envoyé, donc rien n\'a été rédigé : une recette qui n\'en tiendrait pas compte pourrait être dangereuse. Renommez-le dans Alertes allergènes des Réglages, puis réessayez. Aucune étincelle n\'a été décomptée.</string>
     <plurals name="recipe_allergens_too_many">
-        <item quantity="one">Rien n\'a été rédigé : une recette accepte au plus %1$d allergène, et vous en avez défini davantage. Retirez-en dans Alertes allergènes des Réglages, puis réessayez. Aucune recette n\'a été décomptée.</item>
-        <item quantity="many">Rien n\'a été rédigé : une recette accepte au plus %1$d allergènes, et vous en avez défini davantage. Retirez-en dans Alertes allergènes des Réglages, puis réessayez. Aucune recette n\'a été décomptée.</item>
-        <item quantity="other">Rien n\'a été rédigé : une recette accepte au plus %1$d allergènes, et vous en avez défini davantage. Retirez-en dans Alertes allergènes des Réglages, puis réessayez. Aucune recette n\'a été décomptée.</item>
+        <item quantity="one">Rien n\'a été rédigé : une recette accepte au plus %1$d allergène, et vous en avez défini davantage. Retirez-en dans Alertes allergènes des Réglages, puis réessayez. Aucune étincelle n\'a été décomptée.</item>
+        <item quantity="many">Rien n\'a été rédigé : une recette accepte au plus %1$d allergènes, et vous en avez défini davantage. Retirez-en dans Alertes allergènes des Réglages, puis réessayez. Aucune étincelle n\'a été décomptée.</item>
+        <item quantity="other">Rien n\'a été rédigé : une recette accepte au plus %1$d allergènes, et vous en avez défini davantage. Retirez-en dans Alertes allergènes des Réglages, puis réessayez. Aucune étincelle n\'a été décomptée.</item>
     </plurals>
     <plurals name="recipe_refused">
-        <item quantity="one">Impossible de faire une recette avec ces produits. %1$d recette a été décomptée, car la tentative nous a quand même coûté. Essayez avec moins de produits, ou d\'autres.</item>
-        <item quantity="many">Impossible de faire une recette avec ces produits. %1$d recettes ont été décomptées, car la tentative nous a quand même coûté. Essayez avec moins de produits, ou d\'autres.</item>
-        <item quantity="other">Impossible de faire une recette avec ces produits. %1$d recettes ont été décomptées, car la tentative nous a quand même coûté. Essayez avec moins de produits, ou d\'autres.</item>
+        <item quantity="one">Impossible de faire une recette avec ces produits. %1$d étincelle a été décomptée, car la tentative nous a quand même coûté. Essayez avec moins de produits, ou d\'autres.</item>
+        <item quantity="many">Impossible de faire une recette avec ces produits. %1$d étincelles ont été décomptées, car la tentative nous a quand même coûté. Essayez avec moins de produits, ou d\'autres.</item>
+        <item quantity="other">Impossible de faire une recette avec ces produits. %1$d étincelles ont été décomptées, car la tentative nous a quand même coûté. Essayez avec moins de produits, ou d\'autres.</item>
     </plurals>
     <plurals name="recipe_refused_menu">
-        <item quantity="one">Impossible de faire un menu avec ces produits. %1$d recette a été décomptée, car la tentative nous a quand même coûté. Essayez avec moins de produits, ou d\'autres.</item>
-        <item quantity="many">Impossible de faire un menu avec ces produits. %1$d recettes ont été décomptées, car la tentative nous a quand même coûté. Essayez avec moins de produits, ou d\'autres.</item>
-        <item quantity="other">Impossible de faire un menu avec ces produits. %1$d recettes ont été décomptées, car la tentative nous a quand même coûté. Essayez avec moins de produits, ou d\'autres.</item>
+        <item quantity="one">Impossible de faire un menu avec ces produits. %1$d étincelle a été décomptée, car la tentative nous a quand même coûté. Essayez avec moins de produits, ou d\'autres.</item>
+        <item quantity="many">Impossible de faire un menu avec ces produits. %1$d étincelles ont été décomptées, car la tentative nous a quand même coûté. Essayez avec moins de produits, ou d\'autres.</item>
+        <item quantity="other">Impossible de faire un menu avec ces produits. %1$d étincelles ont été décomptées, car la tentative nous a quand même coûté. Essayez avec moins de produits, ou d\'autres.</item>
     </plurals>
     <string name="recipe_paused_title">Les recettes des packs sont en pause</string>
     <plurals name="recipe_paused_body">
-        <item quantity="one">Votre %1$d recette est en sécurité. Les options gratuites ci-dessous fonctionnent toujours.</item>
-        <item quantity="many">Vos %1$d recettes sont en sécurité. Les options gratuites ci-dessous fonctionnent toujours.</item>
-        <item quantity="other">Vos %1$d recettes sont en sécurité. Les options gratuites ci-dessous fonctionnent toujours.</item>
+        <item quantity="one">Votre %1$d étincelle est en sécurité. Les options gratuites ci-dessous fonctionnent toujours.</item>
+        <item quantity="many">Vos %1$d étincelles sont en sécurité. Les options gratuites ci-dessous fonctionnent toujours.</item>
+        <item quantity="other">Vos %1$d étincelles sont en sécurité. Les options gratuites ci-dessous fonctionnent toujours.</item>
     </plurals>
     <string name="recipe_paused_body_none">Les options gratuites ci-dessous fonctionnent toujours.</string>
     <plurals name="recipe_added">
-        <item quantity="one">%1$d recette ajoutée</item>
-        <item quantity="many">%1$d recettes ajoutées</item>
-        <item quantity="other">%1$d recettes ajoutées</item>
+        <item quantity="one">%1$d étincelle ajoutée</item>
+        <item quantity="many">%1$d étincelles ajoutées</item>
+        <item quantity="other">%1$d étincelles ajoutées</item>
     </plurals>
     <plurals name="recipe_saved_left">
-        <item quantity="one">Enregistrée. %1$d recette restante</item>
-        <item quantity="many">Enregistrée. %1$d recettes restantes</item>
-        <item quantity="other">Enregistrée. %1$d recettes restantes</item>
+        <item quantity="one">Enregistrée. %1$d étincelle restante</item>
+        <item quantity="many">Enregistrée. %1$d étincelles restantes</item>
+        <item quantity="other">Enregistrée. %1$d étincelles restantes</item>
     </plurals>
     <string name="recipe_unconfirmed_title">Votre achat est en cours de confirmation</string>
     <plurals name="recipe_unconfirmed_body">
-        <item quantity="one">Vous avez payé %1$d recette, qui n\'est pas encore ajoutée. Nous réessayons ; inutile d\'acheter à nouveau.</item>
-        <item quantity="many">Vous avez payé %1$d recettes, qui ne sont pas encore ajoutées. Nous réessayons ; inutile d\'acheter à nouveau.</item>
-        <item quantity="other">Vous avez payé %1$d recettes, qui ne sont pas encore ajoutées. Nous réessayons ; inutile d\'acheter à nouveau.</item>
+        <item quantity="one">Vous avez payé %1$d étincelle, qui n\'est pas encore ajoutée. Nous réessayons ; inutile d\'acheter à nouveau.</item>
+        <item quantity="many">Vous avez payé %1$d étincelles, qui ne sont pas encore ajoutées. Nous réessayons ; inutile d\'acheter à nouveau.</item>
+        <item quantity="other">Vous avez payé %1$d étincelles, qui ne sont pas encore ajoutées. Nous réessayons ; inutile d\'acheter à nouveau.</item>
     </plurals>
     <string name="recipe_try_now">Réessayer maintenant</string>
     <string name="recipe_pending_title">En attente du paiement</string>
-    <string name="recipe_pending_body">Vos recettes seront ajoutées quand la boutique aura confirmé le paiement. Cela peut prendre un moment.</string>
-    <string name="recipe_packs_body">Une recette, c\'est un plat rédigé par notre serveur. Un menu sur 3 jours décompte %1$s avec deux plats par jour, %2$s avec trois. Elles n\'expirent pas.</string>
+    <string name="recipe_pending_body">Vos étincelles seront ajoutées quand la boutique aura confirmé le paiement. Cela peut prendre un moment.</string>
+    <string name="recipe_packs_body">Une étincelle, c\'est une recette rédigée par notre serveur. Un menu sur 3 jours décompte %1$s avec deux plats par jour, %2$s avec trois. Les étincelles n\'expirent pas.</string>
     <plurals name="recipe_pack_name">
-        <item quantity="one">%1$d recette</item>
-        <item quantity="many">%1$d recettes</item>
-        <item quantity="other">%1$d recettes</item>
+        <item quantity="one">%1$d étincelle</item>
+        <item quantity="many">%1$d étincelles</item>
+        <item quantity="other">%1$d étincelles</item>
     </plurals>
-    <string name="recipe_pack_each">%1$s la recette</string>
-    <string name="recipe_pack_saving_a11y">%1$d %% de moins par recette</string>
+    <string name="recipe_pack_each">%1$s l\'étincelle</string>
+    <string name="recipe_pack_saving_a11y">%1$d %% de moins par étincelle</string>
     <string name="recipe_cancel">Annuler</string>
     <string name="recipe_back">Retour</string>
     <string name="recipe_close">Fermer</string>
     <string name="recipe_ok">OK</string>
-    <string name="recipe_choice_title">Où conserver vos recettes ?</string>
+    <string name="recipe_choice_title">Où conserver vos étincelles ?</string>
     <string name="recipe_choice_body">Vous choisissez une fois. Vous pourrez vous connecter plus tard dans les Réglages des recettes.</string>
     <string name="recipe_choice_phone_title">Sur cet appareil, sans compte</string>
-    <string name="recipe_choice_phone_body">Aucune connexion. Les recettes restent liées à cette installation de l\'appli : si vous supprimez l\'appli ou changez d\'appareil, celles que vous n\'avez pas utilisées sont perdues.</string>
+    <string name="recipe_choice_phone_body">Aucune connexion. Les étincelles restent liées à cette installation de l\'appli : si vous supprimez l\'appli ou changez d\'appareil, celles que vous n\'avez pas utilisées sont perdues.</string>
     <string name="recipe_choice_account_title">Dans un compte</string>
-    <string name="recipe_choice_account_body">Connectez-vous avec Google. Vos recettes vous suivent sur un nouveau téléphone, Android ou iPhone, partout où vous vous connectez avec Google. Nous conservons l\'identifiant de votre compte et votre adresse e-mail.</string>
+    <string name="recipe_choice_account_body">Connectez-vous avec Google. Vos étincelles vous suivent sur un nouveau téléphone, Android ou iPhone, partout où vous vous connectez avec Google. Nous conservons l\'identifiant de votre compte et votre adresse e-mail.</string>
     <string name="recipe_sign_in_google">Se connecter avec Google</string>
-    <string name="recipe_apple_on_iphone_hint">Connecté avec Apple sur un iPhone ? Ajoutez-y la connexion Google, dans les Réglages des recettes, pour utiliser vos recettes sur cet appareil.</string>
-    <string name="recipe_have_account_hint">Vous avez déjà des recettes dans un compte ? Connectez-vous pour les utiliser ici.</string>
+    <string name="recipe_apple_on_iphone_hint">Connecté avec Apple sur un iPhone ? Ajoutez-y la connexion Google, dans les Réglages des recettes, pour utiliser vos étincelles sur cet appareil.</string>
+    <string name="recipe_have_account_hint">Vous avez déjà des étincelles dans un compte ? Connectez-vous pour les utiliser ici.</string>
     <string name="recipe_store_error_title">Impossible de joindre la boutique</string>
     <string name="recipe_store_error_body">Vérifiez votre connexion et réessayez. Rien n\'a été facturé.</string>
     <string name="recipe_rejected_title">Cet achat n\'a pas pu être ajouté</string>
-    <string name="recipe_rejected_body">La boutique l\'indique comme remboursé ou déjà utilisé. Si vous avez été débité et n\'avez pas de recettes, demandez un remboursement à la boutique.</string>
-    <string name="recipe_your_recipes">Vos recettes</string>
+    <string name="recipe_rejected_body">La boutique l\'indique comme remboursé ou déjà utilisé. Si vous avez été débité et n\'avez pas d\'étincelles, demandez un remboursement à la boutique.</string>
+    <string name="recipe_your_recipes">Vos étincelles</string>
     <plurals name="recipe_on_phone_label">
-        <item quantity="one">recette sur cet appareil</item>
-        <item quantity="many">recettes sur cet appareil</item>
-        <item quantity="other">recettes sur cet appareil</item>
+        <item quantity="one">étincelle sur cet appareil</item>
+        <item quantity="many">étincelles sur cet appareil</item>
+        <item quantity="other">étincelles sur cet appareil</item>
     </plurals>
     <string name="recipe_on_phone_body">Elles restent liées à cette installation de l\'appli. Si vous supprimez l\'appli ou changez d\'appareil, celles que vous n\'avez pas utilisées sont perdues. Connectez-vous pour les garder plutôt dans un compte ; elles y sont transférées aussitôt.</string>
     <plurals name="recipe_in_account_label">
-        <item quantity="one">recette dans votre compte</item>
-        <item quantity="many">recettes dans votre compte</item>
-        <item quantity="other">recettes dans votre compte</item>
+        <item quantity="one">étincelle dans votre compte</item>
+        <item quantity="many">étincelles dans votre compte</item>
+        <item quantity="other">étincelles dans votre compte</item>
     </plurals>
     <string name="recipe_signed_in_with">Connecté avec %1$s</string>
     <string name="recipe_signed_in_add_google">La connexion Apple ne fonctionne que dans l\'appli iPhone. Ajoutez ici la connexion Google pour continuer à les utiliser sur Android.</string>
@@ -1105,13 +1105,13 @@
     <string name="recipe_delete_account">Supprimer le compte</string>
     <string name="recipe_sign_out_title">Se déconnecter ?</string>
     <plurals name="recipe_sign_out_body">
-        <item quantity="one">Votre %1$d recette reste dans votre compte. Reconnectez-vous pour l\'utiliser. Les recettes enregistrées restent sur cet appareil.</item>
-        <item quantity="many">Vos %1$d recettes restent dans votre compte. Reconnectez-vous pour les utiliser. Les recettes enregistrées restent sur cet appareil.</item>
-        <item quantity="other">Vos %1$d recettes restent dans votre compte. Reconnectez-vous pour les utiliser. Les recettes enregistrées restent sur cet appareil.</item>
+        <item quantity="one">Votre %1$d étincelle reste dans votre compte. Reconnectez-vous pour l\'utiliser. Les recettes enregistrées restent sur cet appareil.</item>
+        <item quantity="many">Vos %1$d étincelles restent dans votre compte. Reconnectez-vous pour les utiliser. Les recettes enregistrées restent sur cet appareil.</item>
+        <item quantity="other">Vos %1$d étincelles restent dans votre compte. Reconnectez-vous pour les utiliser. Les recettes enregistrées restent sur cet appareil.</item>
     </plurals>
     <string name="recipe_delete_title">Supprimer votre compte ?</string>
     <string name="recipe_apple_link_left_title">Lien Apple non supprimé</string>
-    <string name="recipe_apple_link_left_body">Votre compte et ses recettes sont supprimés, mais votre compte Apple est toujours lié à cette appli. Pour supprimer aussi ce lien, désactivez « Se connecter avec Apple » pour cette appli dans les réglages de votre compte Apple.</string>
+    <string name="recipe_apple_link_left_body">Votre compte et ses étincelles sont supprimés, mais votre compte Apple est toujours lié à cette appli. Pour supprimer aussi ce lien, désactivez « Se connecter avec Apple » pour cette appli dans les réglages de votre compte Apple.</string>
     <!-- The allergen consent step (ALLERGEN_CONSENT_VERSION in shared AllergenConsent.kt: raise it when this wording changes; iOS has the same text). -->
     <string name="recipe_allergen_consent_title">Envoyer vos allergènes à notre serveur ?</string>
     <string name="recipe_allergen_consent_body">Pour rédiger ceci, votre liste d\'allergènes (%1$s) est envoyée, avec les produits cochés et vos préférences, à notre serveur et au modèle d\'IA de Google, afin que la recette évite ces aliments. Google peut la traiter en dehors de l\'UE. Nous l\'utilisons uniquement pour cette demande et ne la conservons pas ensuite. Google la traite pour rédiger la recette et peut journaliser les demandes pour détecter les abus. Vous pouvez retirer ce consentement dans les Réglages des recettes.\n\nLes options gratuites, le modèle propre à cet appareil et le prompt à partager, ne nous l\'envoient pas.</string>
@@ -1122,30 +1122,30 @@
     <string name="recipe_allergen_consent_setting_on">Vous avez accepté le %1$s. Désactivez pour retirer votre consentement : notre serveur ne rédigera alors plus de recettes tant que des allergènes sont définis.</string>
     <string name="recipe_allergen_consent_setting_off">Nécessaire pour les recettes de notre serveur tant que des allergènes sont définis. Nous l\'utilisons uniquement pour la demande et ne la conservons pas.</string>
     <plurals name="recipe_delete_body">
-        <item quantity="one">Votre %1$d recette non utilisée sera perdue, sans remboursement ni restauration possible. Votre connexion et votre adresse e-mail sont supprimées de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les éventuels signalements que vous avez envoyés sont conservés pendant une durée limitée, eux aussi sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet appareil.</item>
-        <item quantity="many">Vos %1$d recettes non utilisées seront perdues, sans remboursement ni restauration possible. Votre connexion et votre adresse e-mail sont supprimées de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les éventuels signalements que vous avez envoyés sont conservés pendant une durée limitée, eux aussi sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet appareil.</item>
-        <item quantity="other">Vos %1$d recettes non utilisées seront perdues, sans remboursement ni restauration possible. Votre connexion et votre adresse e-mail sont supprimées de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les éventuels signalements que vous avez envoyés sont conservés pendant une durée limitée, eux aussi sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet appareil.</item>
+        <item quantity="one">Votre %1$d étincelle non utilisée sera perdue, sans remboursement ni restauration possible. Votre connexion et votre adresse e-mail sont supprimées de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les éventuels signalements que vous avez envoyés sont conservés pendant une durée limitée, eux aussi sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet appareil.</item>
+        <item quantity="many">Vos %1$d étincelles non utilisées seront perdues, sans remboursement ni restauration possible. Votre connexion et votre adresse e-mail sont supprimées de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les éventuels signalements que vous avez envoyés sont conservés pendant une durée limitée, eux aussi sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet appareil.</item>
+        <item quantity="other">Vos %1$d étincelles non utilisées seront perdues, sans remboursement ni restauration possible. Votre connexion et votre adresse e-mail sont supprimées de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les éventuels signalements que vous avez envoyés sont conservés pendant une durée limitée, eux aussi sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet appareil.</item>
     </plurals>
     <!-- Deleting what our server holds for recipes kept on this device (an anonymous account). -->
     <string name="recipe_delete_device_data">Supprimer mes données de notre serveur</string>
     <string name="recipe_delete_device_title">Supprimer vos données de notre serveur ?</string>
     <plurals name="recipe_delete_device_body">
-        <item quantity="one">Votre %1$d recette non utilisée sera perdue, sans remboursement ni restauration possible. La connexion anonyme qu\'utilise cet appareil est supprimée de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les éventuels signalements que vous avez envoyés sont conservés pendant une durée limitée, eux aussi sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet appareil.</item>
-        <item quantity="many">Vos %1$d recettes non utilisées seront perdues, sans remboursement ni restauration possible. La connexion anonyme qu\'utilise cet appareil est supprimée de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les éventuels signalements que vous avez envoyés sont conservés pendant une durée limitée, eux aussi sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet appareil.</item>
-        <item quantity="other">Vos %1$d recettes non utilisées seront perdues, sans remboursement ni restauration possible. La connexion anonyme qu\'utilise cet appareil est supprimée de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les éventuels signalements que vous avez envoyés sont conservés pendant une durée limitée, eux aussi sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet appareil.</item>
+        <item quantity="one">Votre %1$d étincelle non utilisée sera perdue, sans remboursement ni restauration possible. La connexion anonyme qu\'utilise cet appareil est supprimée de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les éventuels signalements que vous avez envoyés sont conservés pendant une durée limitée, eux aussi sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet appareil.</item>
+        <item quantity="many">Vos %1$d étincelles non utilisées seront perdues, sans remboursement ni restauration possible. La connexion anonyme qu\'utilise cet appareil est supprimée de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les éventuels signalements que vous avez envoyés sont conservés pendant une durée limitée, eux aussi sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet appareil.</item>
+        <item quantity="other">Vos %1$d étincelles non utilisées seront perdues, sans remboursement ni restauration possible. La connexion anonyme qu\'utilise cet appareil est supprimée de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les éventuels signalements que vous avez envoyés sont conservés pendant une durée limitée, eux aussi sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet appareil.</item>
     </plurals>
     <string name="recipe_delete_device_body_none">La connexion anonyme qu\'utilise cet appareil est supprimée de notre serveur ; une trace des éventuels achats est conservée, sans lien avec vous. Les éventuels signalements que vous avez envoyés sont conservés pendant une durée limitée, eux aussi sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet appareil.</string>
     <string name="recipe_delete_device_confirm">Supprimer les données</string>
     <string name="recipe_device_data_deleted">Vos données sont supprimées de notre serveur</string>
     <string name="recipe_delete_waits_for_purchase">Un achat est encore en cours. Vous pourrez supprimer une fois qu\'il sera terminé.</string>
-    <string name="recipe_merge_title">Ajouter les recettes de cet appareil à votre compte ?</string>
-    <string name="recipe_merge_body">Votre compte contient déjà %1$d recettes. Les %2$d de cet appareil y seront ajoutées, soit %3$d au total. Cette action est irréversible.</string>
-    <string name="recipe_merge_body_unknown">Les %1$d recettes de cet appareil seront ajoutées à votre compte. Cette action est irréversible.</string>
+    <string name="recipe_merge_title">Ajouter les étincelles de cet appareil à votre compte ?</string>
+    <string name="recipe_merge_body">Votre compte contient déjà %1$d étincelles. Les %2$d de cet appareil y seront ajoutées, soit %3$d au total. Cette action est irréversible.</string>
+    <string name="recipe_merge_body_unknown">Les %1$d étincelles de cet appareil seront ajoutées à votre compte. Cette action est irréversible.</string>
     <string name="recipe_merge_confirm">Ajouter et se connecter</string>
-    <string name="recipe_sign_in_failed">Connexion impossible. Vos recettes sont inchangées.</string>
-    <string name="recipe_sign_in_in_use">Cette connexion appartient déjà à un autre compte. Vos recettes sont inchangées.</string>
+    <string name="recipe_sign_in_failed">Connexion impossible. Vos étincelles sont inchangées.</string>
+    <string name="recipe_sign_in_in_use">Cette connexion appartient déjà à un autre compte. Vos étincelles sont inchangées.</string>
     <string name="recipe_account_deleted">Compte supprimé</string>
-    <string name="recipe_purchases_blocked">L\'achat de recettes n\'est pas disponible pour ce compte, car des achats précédents ont été remboursés après utilisation des recettes.</string>
+    <string name="recipe_purchases_blocked">L\'achat d\'étincelles n\'est pas disponible pour ce compte, car des achats précédents ont été remboursés après utilisation des étincelles.</string>
     <string name="recipe_account_busy">Une recette est encore en cours de rédaction. Réessayez dans un instant.</string>
     <string name="recipe_account_action_failed">Impossible de joindre notre serveur. Rien n\'a été modifié.</string>
     <string name="recipe_writing_busy_title">Notre serveur est surchargé</string>
@@ -1154,27 +1154,27 @@
     <string name="recipe_busy_body">Votre demande est conservée et pourra encore être rédigée. Réessayez dans une minute pour la récupérer. Les options gratuites ci-dessous fonctionnent toujours.</string>
     <string name="recipe_elsewhere_title">Un achat appartient à un autre compte</string>
     <plurals name="recipe_elsewhere_body">
-        <item quantity="one">%1$d recette sur cet appareil a été achetée avec un autre compte. Connectez-vous au compte utilisé pour l\'achat afin de l\'ajouter.</item>
-        <item quantity="many">%1$d recettes sur cet appareil ont été achetées avec un autre compte. Connectez-vous au compte utilisé pour l\'achat afin de les ajouter.</item>
-        <item quantity="other">%1$d recettes sur cet appareil ont été achetées avec un autre compte. Connectez-vous au compte utilisé pour l\'achat afin de les ajouter.</item>
+        <item quantity="one">%1$d étincelle sur cet appareil a été achetée avec un autre compte. Connectez-vous au compte utilisé pour l\'achat afin de l\'ajouter.</item>
+        <item quantity="many">%1$d étincelles sur cet appareil ont été achetées avec un autre compte. Connectez-vous au compte utilisé pour l\'achat afin de les ajouter.</item>
+        <item quantity="other">%1$d étincelles sur cet appareil ont été achetées avec un autre compte. Connectez-vous au compte utilisé pour l\'achat afin de les ajouter.</item>
     </plurals>
-    <string name="recipe_rejected_build_body">Cette copie de l\'appli est configurée pour une autre boutique et ne peut donc pas ajouter les achats Google Play. L\'achat n\'a pas été ajouté à vos recettes. Google Play rembourse normalement un achat qui n\'est pas ajouté sous trois jours. Pour acheter des recettes, installez l\'appli depuis Google Play.</string>
+    <string name="recipe_rejected_build_body">Cette copie de l\'appli est configurée pour une autre boutique et ne peut donc pas ajouter les achats Google Play. L\'achat n\'a pas été ajouté à vos étincelles. Google Play rembourse normalement un achat qui n\'est pas ajouté sous trois jours. Pour acheter des étincelles, installez l\'appli depuis Google Play.</string>
     <plurals name="recipe_merged_moved">
-        <item quantity="one">%1$d recette transférée de cet appareil vers votre compte</item>
-        <item quantity="many">%1$d recettes transférées de cet appareil vers votre compte</item>
-        <item quantity="other">%1$d recettes transférées de cet appareil vers votre compte</item>
+        <item quantity="one">%1$d étincelle transférée de cet appareil vers votre compte</item>
+        <item quantity="many">%1$d étincelles transférées de cet appareil vers votre compte</item>
+        <item quantity="other">%1$d étincelles transférées de cet appareil vers votre compte</item>
     </plurals>
     <plurals name="recipe_merged_debt">
-        <item quantity="one">Cet appareil devait %1$d recette après un remboursement de la boutique. Elle a été décomptée de votre compte.</item>
-        <item quantity="many">Cet appareil devait %1$d recettes après un remboursement de la boutique. Elles ont été décomptées de votre compte.</item>
-        <item quantity="other">Cet appareil devait %1$d recettes après un remboursement de la boutique. Elles ont été décomptées de votre compte.</item>
+        <item quantity="one">Cet appareil devait %1$d étincelle après un remboursement de la boutique. Elle a été décomptée de votre compte.</item>
+        <item quantity="many">Cet appareil devait %1$d étincelles après un remboursement de la boutique. Elles ont été décomptées de votre compte.</item>
+        <item quantity="other">Cet appareil devait %1$d étincelles après un remboursement de la boutique. Elles ont été décomptées de votre compte.</item>
     </plurals>
     <string name="recipe_earlier_recipe_saved">Une recette demandée plus tôt est prête. Elle est dans Recettes enregistrées.</string>
     <string name="recipe_earlier_menu_saved">Un menu demandé plus tôt est prêt. Il est dans Recettes enregistrées.</string>
     <plurals name="recipe_earlier_refused">
-        <item quantity="one">Une recette demandée plus tôt n\'a pas pu être faite. %1$d recette a été décomptée, car la tentative nous a quand même coûté.</item>
-        <item quantity="many">Une recette demandée plus tôt n\'a pas pu être faite. %1$d recettes ont été décomptées, car la tentative nous a quand même coûté.</item>
-        <item quantity="other">Une recette demandée plus tôt n\'a pas pu être faite. %1$d recettes ont été décomptées, car la tentative nous a quand même coûté.</item>
+        <item quantity="one">Une recette demandée plus tôt n\'a pas pu être faite. %1$d étincelle a été décomptée, car la tentative nous a quand même coûté.</item>
+        <item quantity="many">Une recette demandée plus tôt n\'a pas pu être faite. %1$d étincelles ont été décomptées, car la tentative nous a quand même coûté.</item>
+        <item quantity="other">Une recette demandée plus tôt n\'a pas pu être faite. %1$d étincelles ont été décomptées, car la tentative nous a quand même coûté.</item>
     </plurals>
     <string name="recipe_menu_bar_title">Menu</string>
     <plurals name="recipe_menu_title">
@@ -1213,13 +1213,13 @@
     <string name="recipe_intro_prompt_body">Partagez ou copiez un prompt prêt à l\'emploi vers l\'appli d\'IA que vous utilisez déjà.</string>
     <string name="recipe_intro_device_title">Gratuit, sur cet appareil</string>
     <string name="recipe_intro_device_body">Cet appareil rédige lui-même la recette, et rien n\'est envoyé nulle part.</string>
-    <string name="recipe_intro_packs_title">Avec un pack de recettes</string>
-    <string name="recipe_intro_packs_body">Notre serveur rédige la recette et peut aussi planifier un menu sur 3 jours. Une recette décompte %1$s d\'un pack ; un menu décompte %2$s avec 2 plats par jour ou %3$s avec 3.</string>
+    <string name="recipe_intro_packs_title">Avec un pack d\'étincelles</string>
+    <string name="recipe_intro_packs_body">Notre serveur rédige la recette et peut aussi planifier un menu sur 3 jours. Les packs contiennent des étincelles : une recette décompte %1$s ; un menu décompte %2$s avec 2 plats par jour ou %3$s avec 3.</string>
     <string name="recipe_intro_packs_price">Packs à partir de %1$s.</string>
     <string name="recipe_intro_free_stays">Les options gratuites restent disponibles quand vous avez un pack.</string>
     <string name="recipe_intro_again">Vous pouvez rouvrir ceci dans les Réglages des recettes.</string>
     <string name="recipe_intro_start">Compris</string>
-    <string name="recipe_intro_packs_action">Voir les packs de recettes</string>
+    <string name="recipe_intro_packs_action">Voir les packs d\'étincelles</string>
     <string name="recipe_intro_settings_supporting">Les façons d\'obtenir une recette</string>
     <string name="recipe_not_available_title">Les recettes des packs ne sont pas disponibles sur cette installation</string>
     <string name="recipe_not_available_body">Rien n\'a été facturé. Les options gratuites fonctionnent toujours : partagez le prompt avec une appli d\'IA, ou rédigez la recette sur cet appareil s\'il le permet.</string>
@@ -1305,21 +1305,21 @@
     <string name="welcome_intro_account_one">Ce compte peut recevoir une recette gratuite pour essayer.</string>
     <string name="welcome_buy_sign_in_one">Ou connectez-vous et recevez une recette gratuite</string>
     <string name="welcome_buy_get_one">Ou recevez une recette gratuite</string>
-    <string name="welcome_sheet_lede_one">Connectez-vous, et notre serveur ajoute une recette gratuite à votre compte, pour essayer ce qu\'offre un pack.</string>
+    <string name="welcome_sheet_lede_one">Connectez-vous, et notre serveur ajoute une étincelle gratuite à votre compte, assez pour une recette, pour essayer ce qu\'offre un pack.</string>
     <string name="welcome_sheet_server_title">Écrites par notre serveur</string>
-    <string name="welcome_sheet_server_body">Elles fonctionnent comme les recettes d\'un pack : une recette seule, ou un menu s\'il y en a assez.</string>
+    <string name="welcome_sheet_server_body">Elles fonctionnent comme les étincelles d\'un pack : une recette seule, ou un menu s\'il y en a assez.</string>
     <string name="welcome_sheet_account_title">Gardées dans votre compte</string>
-    <string name="welcome_sheet_account_body">Elles, et toutes les recettes achetées plus tard, vous suivent sur un nouveau téléphone, partout où vous vous connectez avec Google.</string>
+    <string name="welcome_sheet_account_body">Elles, et toutes les étincelles achetées plus tard, vous suivent sur un nouveau téléphone, partout où vous vous connectez avec Google.</string>
     <string name="welcome_sheet_privacy_title">Un compte sur notre serveur</string>
     <string name="welcome_sheet_privacy_body">Nous conservons l\'identifiant de votre compte et votre adresse e-mail. La connexion n\'envoie rien de votre garde-manger, et vous pouvez supprimer le compte dans les Réglages des recettes.</string>
     <string name="welcome_once">Les recettes gratuites sont offertes une fois par compte Google.</string>
     <string name="welcome_not_now">Plus tard</string>
-    <string name="welcome_adding">Ajout de vos recettes gratuites…</string>
+    <string name="welcome_adding">Ajout de vos étincelles gratuites…</string>
     <string name="welcome_already_title">Ce compte a déjà reçu ses recettes gratuites</string>
-    <string name="welcome_already_body">Les recettes gratuites sont offertes une fois par compte Apple ou Google. Vous êtes connecté, et les recettes que vous achetez sont gardées dans ce compte.</string>
+    <string name="welcome_already_body">Les recettes gratuites sont offertes une fois par compte Apple ou Google. Vous êtes connecté, et les étincelles que vous achetez sont gardées dans ce compte.</string>
     <string name="welcome_off_signed_in_now">Les recettes gratuites ne sont pas disponibles pour le moment. Vous êtes connecté ; rien d\'autre n\'a changé.</string>
     <string name="welcome_off">Les recettes gratuites ne sont pas disponibles pour le moment. Rien n\'a changé.</string>
-    <string name="welcome_claim_failed">Vous êtes connecté, mais vos recettes gratuites n\'ont pas encore pu être ajoutées.</string>
+    <string name="welcome_claim_failed">Vous êtes connecté, mais vos étincelles gratuites n\'ont pas encore pu être ajoutées.</string>
     <string name="welcome_settings_sign_in_one">Connectez-vous et recevez une recette gratuite de notre serveur, une fois par compte Google.</string>
     <string name="welcome_settings_account_one">Ce compte peut recevoir une recette gratuite de notre serveur.</string>
     <string name="welcome_settings_on_phone_one">En vous connectant, vous recevez aussi une recette gratuite.</string>
@@ -1358,14 +1358,14 @@
         <item quantity="other">Ou recevez %1$d recettes gratuites</item>
     </plurals>
     <plurals name="welcome_sheet_lede">
-        <item quantity="one">Connectez-vous, et notre serveur ajoute %1$d recette gratuite à votre compte, pour essayer ce qu\'offre un pack.</item>
-        <item quantity="many">Connectez-vous, et notre serveur ajoute %1$d recettes gratuites à votre compte, pour essayer ce qu\'offre un pack.</item>
-        <item quantity="other">Connectez-vous, et notre serveur ajoute %1$d recettes gratuites à votre compte, pour essayer ce qu\'offre un pack.</item>
+        <item quantity="one">Connectez-vous, et notre serveur ajoute %1$d étincelle gratuite à votre compte, assez pour une recette, pour essayer ce qu\'offre un pack.</item>
+        <item quantity="many">Connectez-vous, et notre serveur ajoute %1$d étincelles gratuites à votre compte, une par recette, pour essayer ce qu\'offre un pack.</item>
+        <item quantity="other">Connectez-vous, et notre serveur ajoute %1$d étincelles gratuites à votre compte, une par recette, pour essayer ce qu\'offre un pack.</item>
     </plurals>
     <plurals name="welcome_granted">
-        <item quantity="one">%1$d recette gratuite ajoutée</item>
-        <item quantity="many">%1$d recettes gratuites ajoutées</item>
-        <item quantity="other">%1$d recettes gratuites ajoutées</item>
+        <item quantity="one">%1$d étincelle gratuite ajoutée</item>
+        <item quantity="many">%1$d étincelles gratuites ajoutées</item>
+        <item quantity="other">%1$d étincelles gratuites ajoutées</item>
     </plurals>
     <plurals name="welcome_settings_sign_in">
         <item quantity="one">Connectez-vous et recevez %1$d recette gratuite de notre serveur, une fois par compte Google.</item>
@@ -1464,6 +1464,6 @@
     <string name="recipe_report_done">Vous l\'avez signalé</string>
     <string name="recipe_report_limit">C\'est la limite de signalements pour aujourd\'hui. Réessayez demain.</string>
     <string name="recipe_report_unknown">Cette recette ne peut plus être signalée.</string>
-    <string name="recipe_image_unavailable">Les images ne peuvent pas être créées pour le moment. Aucune recette n\'a été décomptée.</string>
+    <string name="recipe_image_unavailable">Les images ne peuvent pas être créées pour le moment. Aucune étincelle n\'a été décomptée.</string>
     <!-- /Recipe: pictures and reports -->
 </resources>

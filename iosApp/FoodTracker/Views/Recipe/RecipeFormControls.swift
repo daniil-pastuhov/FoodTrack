@@ -308,7 +308,7 @@ struct RecipeChoiceChips<Option: Hashable>: View {
 }
 
 /// The form's primary action: the first button of its button group, filled and full width like a
-/// primary `LarderButton`, with what it takes in a pill beside the label ("1 recipe", "Free") so
+/// primary `LarderButton`, with what it takes in a pill beside the label ("1 spark", "Free") so
 /// it reads as the cost before it is tapped. `subtitle` is a quieter line inside the button under
 /// the label ("Uses your taste profile"). The label and the subtitle take at most two lines each
 /// beside the icon and the pill, which never wraps or shrinks; when they need more, or the text is
@@ -697,7 +697,7 @@ struct RecipeIntroSheet: View {
             VStack(spacing: LarderSpace.s1) {
                 LarderButton(L10n.recipeIntroStart, fullWidth: true) { model.dismissIntro() }
                 // With an offer, the second action is the offer: the packs stay one tap away from
-                // the count and Buy recipes.
+                // the count and Buy sparks.
                 if let welcomeHint {
                     LarderButton(L10n.welcomeOffer(welcomeHint), icon: .gift, variant: .text, fullWidth: true) {
                         model.introToWelcome()
@@ -726,11 +726,11 @@ private struct FormPreview: View {
                     RecipeTimeField(minMinutes: $minimum, maxMinutes: $minutes)
                 }
                 RecipeGoButton(title: "Generate on this phone", icon: .smartphone, cost: "Free") {}
-                RecipeGoButton(title: "Generate recipe", icon: .sparkles, cost: "1 recipe", subtitle: "Uses your taste profile") {}
+                RecipeGoButton(title: "Generate recipe", icon: .sparkles, cost: "1 spark", subtitle: "Uses your taste profile") {}
                 RecipeGoButton(title: "Share prompt", icon: .share2) {}.disabled(true)
                 RecipeOtherWays { tiles in
                     RecipeWayRow("Generate on this phone", icon: .smartphone, free: "Free", supporting: "Still weak at cooking. Nothing leaves this phone.", showsTile: tiles) {}
-                    RecipeWayRow("Buy recipes", icon: .ticket, chevron: true, showsTile: tiles) {}
+                    RecipeWayRow("Buy sparks", icon: .ticket, chevron: true, showsTile: tiles) {}
                 }
             }
             .padding(LarderSpace.s4)

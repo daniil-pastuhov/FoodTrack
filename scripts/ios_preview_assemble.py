@@ -21,7 +21,7 @@ written from them; the Recipe form choosing a menu set (Days, Courses, Generate 
 four-day menu it writes. Each shot is cut from its clip between two of the moments
 ios_preview.sh wrote to timeline.json, and the shots are joined with short dissolves (Apple asks
 for simple transitions). The captions are the screenshots' own (scripts/frame_screenshots.py's
-CAPTIONS; the menu set's and the menu's add a smaller line saying they need a recipe pack,
+CAPTIONS; the menu set's and the menu's add a smaller line saying they need a spark pack,
 PACK_NOTES),
 in Vollkorn SemiBold, warm white on a Larder green band across the top, over the status
 bar, so no app content and nothing at the bottom of the frame, where the App Store puts its
@@ -64,18 +64,18 @@ SHOTS = [
     ("menuset", ("swipe", -0.8), ("swipe", 5.4), 3),  # Menu set: down to Days, Courses, Generate menu
     ("menu", ("swipe", -0.6), ("swipe", 4.4), 4),     # the four-day menu, down to the fourth day
 ]
-# The captions of what only a recipe pack writes (the menu set and its menu): Apple asks a preview
+# The captions of what only a spark pack writes (the menu set and its menu): Apple asks a preview
 # that shows something needing a purchase to say so, so they get this smaller line under them.
 PAID_CAPTIONS = {3, 4}
 PACK_NOTES = {
-    "en": "Needs a recipe pack",
-    "ru": "Нужен пакет рецептов",
-    "nb": "Krever en oppskriftspakke",
-    "es": "Requiere un paquete de recetas",
-    "de": "Erfordert ein Rezeptpaket",
-    "fr": "Nécessite un pack de recettes",
-    "sv": "Kräver ett receptpaket",
-    "da": "Kræver en opskriftspakke",
+    "en": "Needs a spark pack",
+    "ru": "Нужен пакет искр",
+    "nb": "Krever en gnistpakke",
+    "es": "Requiere un paquete de chispas",
+    "de": "Erfordert ein Funkenpaket",
+    "fr": "Nécessite un pack d'étincelles",
+    "sv": "Kräver ett gnistpaket",
+    "da": "Kræver en gnistpakke",
 }
 POSTER_AT = 5.5  # seconds into the preview: the scan card with the product and its date
 

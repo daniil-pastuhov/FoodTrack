@@ -51,8 +51,8 @@ class RecipePaidWordingTest {
     @Config(sdk = [34], qualifiers = "en")
     fun newEnglishPluralsAgreeWithTheirCount() {
         val r = context.resources
-        assertEquals("1 recipe left", r.getQuantityString(R.plurals.recipe_balance_left, 1, 1))
-        assertEquals("3 recipes left", r.getQuantityString(R.plurals.recipe_balance_left, 3, 3))
+        assertEquals("1 spark left", r.getQuantityString(R.plurals.recipe_balance_left, 1, 1))
+        assertEquals("3 sparks left", r.getQuantityString(R.plurals.recipe_balance_left, 3, 3))
         assert(r.getQuantityString(R.plurals.recipe_allergens_too_many, 1, 1).contains("at most 1 allergen,"))
         assert(r.getQuantityString(R.plurals.recipe_allergens_too_many, 20, 20).contains("at most 20 allergens,"))
         assert(r.getQuantityString(R.plurals.recipe_refused_menu, 4, 4).startsWith("Couldn't make a menu"))
@@ -72,31 +72,31 @@ class RecipePaidWordingTest {
     @Config(sdk = [34], qualifiers = "nb")
     fun norwegianBusyAndRateLimitSayNothingWasTaken() {
         val r = context.resources
-        assertEquals("En annen oppskrift skrives fortsatt. Prøv igjen om et minutt. Ingen oppskrifter ble trukket.", r.getString(R.string.recipe_failed_server_busy))
-        assertEquals("For mange oppskrifter på kort tid. Prøv igjen om et minutt. Ingen oppskrifter ble trukket.", r.getString(R.string.recipe_failed_rate_limited))
+        assertEquals("En annen oppskrift skrives fortsatt. Prøv igjen om et minutt. Ingen gnister ble trukket.", r.getString(R.string.recipe_failed_server_busy))
+        assertEquals("For mange oppskrifter på kort tid. Prøv igjen om et minutt. Ingen gnister ble trukket.", r.getString(R.string.recipe_failed_rate_limited))
     }
 
     @Test
     @Config(sdk = [34], qualifiers = "en")
     fun aJoinSaysWhatMovedOrWhatWasOwed() {
         val resources = context.resources
-        assertEquals("12 recipes moved from this device to your account", recipeMergedMessage(resources, 12))
-        assertEquals("1 recipe moved from this device to your account", recipeMergedMessage(resources, 1))
-        assertEquals("0 recipes moved from this device to your account", recipeMergedMessage(resources, 0))
-        assertEquals("This device owed 1 recipe after a store refund. It was taken from your account.", recipeMergedMessage(resources, -1))
-        assertEquals("This device owed 3 recipes after a store refund. They were taken from your account.", recipeMergedMessage(resources, -3))
+        assertEquals("12 sparks moved from this device to your account", recipeMergedMessage(resources, 12))
+        assertEquals("1 spark moved from this device to your account", recipeMergedMessage(resources, 1))
+        assertEquals("0 sparks moved from this device to your account", recipeMergedMessage(resources, 0))
+        assertEquals("This device owed 1 spark after a store refund. It was taken from your account.", recipeMergedMessage(resources, -1))
+        assertEquals("This device owed 3 sparks after a store refund. They were taken from your account.", recipeMergedMessage(resources, -3))
     }
 
     @Test
     @Config(sdk = [34], qualifiers = "ru")
     fun aRussianJoinUsesTheirPlurals() {
         val resources = context.resources
-        assertEquals("После возврата денег в магазине это устройство было должно 3 рецепта. Они списаны с вашего аккаунта.", recipeMergedMessage(resources, -3))
-        assertEquals("5 рецептов перенесены с этого устройства в ваш аккаунт", recipeMergedMessage(resources, 5))
-        assertEquals("1 рецепт перенесён с этого устройства в ваш аккаунт", recipeMergedMessage(resources, 1))
-        assertEquals("2 рецепта перенесены с этого устройства в ваш аккаунт", recipeMergedMessage(resources, 2))
+        assertEquals("После возврата денег в магазине это устройство было должно 3 искры. Они списаны с вашего аккаунта.", recipeMergedMessage(resources, -3))
+        assertEquals("5 искр перенесены с этого устройства в ваш аккаунт", recipeMergedMessage(resources, 5))
+        assertEquals("1 искра перенесена с этого устройства в ваш аккаунт", recipeMergedMessage(resources, 1))
+        assertEquals("2 искры перенесены с этого устройства в ваш аккаунт", recipeMergedMessage(resources, 2))
         assertEquals(
-            "2 рецепта на этом устройстве куплены в другом аккаунте. Войдите в аккаунт, с которым покупали, чтобы их добавить.",
+            "2 искры на этом устройстве куплены в другом аккаунте. Войдите в аккаунт, с которым покупали, чтобы их добавить.",
             resources.getQuantityString(R.plurals.recipe_elsewhere_body, 2, 2)
         )
     }
@@ -105,22 +105,22 @@ class RecipePaidWordingTest {
     @Config(sdk = [34], qualifiers = "nb")
     fun theNorwegianBusyStateIsCalm() {
         assertEquals("Serveren vår er opptatt", context.getString(R.string.recipe_writing_busy_title))
-        assertEquals("Denne enheten skyldte 2 oppskrifter etter en refusjon i butikken. De ble trukket fra kontoen din.", recipeMergedMessage(context.resources, -2))
+        assertEquals("Denne enheten skyldte 2 gnister etter en refusjon i butikken. De ble trukket fra kontoen din.", recipeMergedMessage(context.resources, -2))
     }
 
     @Test
     @Config(sdk = [34], qualifiers = "en")
     fun busyAndRateLimitedSayWhyAndThatNothingWasTaken() {
         assertEquals(
-            "Another recipe is still being written. Try again in a minute. No recipes were taken.",
+            "Another recipe is still being written. Try again in a minute. No sparks were taken.",
             context.getString(R.string.recipe_failed_server_busy)
         )
         assertEquals(
-            "Too many recipes in a short time. Try again in a minute. No recipes were taken.",
+            "Too many recipes in a short time. Try again in a minute. No sparks were taken.",
             context.getString(R.string.recipe_failed_rate_limited)
         )
         assertEquals(
-            "Nothing was written: a recipe can take at most 20 allergens, and more are set. Remove some under Allergen warnings in Settings, then try again. No recipes were taken.",
+            "Nothing was written: a recipe can take at most 20 allergens, and more are set. Remove some under Allergen warnings in Settings, then try again. No sparks were taken.",
             context.resources.getQuantityString(R.plurals.recipe_allergens_too_many, 20, 20)
         )
     }
@@ -129,30 +129,30 @@ class RecipePaidWordingTest {
     @Config(sdk = [34], qualifiers = "ru")
     fun tooManyAllergensInRussian() {
         assertEquals(
-            "Ничего не составлено: рецепт может учесть не больше 20 аллергенов, а задано больше. Уберите лишние в настройках, в разделе «Предупреждения об аллергенах», и попробуйте снова. Рецепты не списаны.",
+            "Ничего не составлено: рецепт может учесть не больше 20 аллергенов, а задано больше. Уберите лишние в настройках, в разделе «Предупреждения об аллергенах», и попробуйте снова. Искры не списаны.",
             context.resources.getQuantityString(R.plurals.recipe_allergens_too_many, 20, 20)
         )
-        assertEquals("Другой рецепт ещё составляется. Попробуйте через минуту. Рецепты не списаны.", context.getString(R.string.recipe_failed_server_busy))
+        assertEquals("Другой рецепт ещё составляется. Попробуйте через минуту. Искры не списаны.", context.getString(R.string.recipe_failed_server_busy))
     }
 
     @Test
     @Config(sdk = [34], qualifiers = "nb")
     fun tooManyAllergensInNorwegian() {
         assertEquals(
-            "Ingenting ble skrevet: en oppskrift kan ta hensyn til høyst 20 allergener, og flere er lagt inn. Fjern noen under Allergivarsler i Innstillinger, og prøv igjen. Ingen oppskrifter ble trukket.",
+            "Ingenting ble skrevet: en oppskrift kan ta hensyn til høyst 20 allergener, og flere er lagt inn. Fjern noen under Allergivarsler i Innstillinger, og prøv igjen. Ingen gnister ble trukket.",
             context.resources.getQuantityString(R.plurals.recipe_allergens_too_many, 20, 20)
         )
-        assertEquals("For mange oppskrifter på kort tid. Prøv igjen om et minutt. Ingen oppskrifter ble trukket.", context.getString(R.string.recipe_failed_rate_limited))
+        assertEquals("For mange oppskrifter på kort tid. Prøv igjen om et minutt. Ingen gnister ble trukket.", context.getString(R.string.recipe_failed_rate_limited))
     }
 
     @Test
     @Config(sdk = [34], qualifiers = "ru")
     fun russianCountsUseTheirOwnPlurals() {
         val resources = context.resources
-        assertEquals("Добавлено 50 рецептов", resources.getQuantityString(com.foodtracker.android.R.plurals.recipe_added, 50, 50))
-        assertEquals("Сохранено. Осталось 11 рецептов", resources.getQuantityString(com.foodtracker.android.R.plurals.recipe_saved_left, 11, 11))
-        assertEquals("1 рецепт", resources.getQuantityString(com.foodtracker.android.R.plurals.recipe_cost_recipes, 1, 1))
-        assertEquals("3 рецепта", resources.getQuantityString(com.foodtracker.android.R.plurals.recipe_cost_recipes, 3, 3))
+        assertEquals("Добавлено 50 искр", resources.getQuantityString(com.foodtracker.android.R.plurals.recipe_added, 50, 50))
+        assertEquals("Сохранено. Осталось 11 искр", resources.getQuantityString(com.foodtracker.android.R.plurals.recipe_saved_left, 11, 11))
+        assertEquals("1 искра", resources.getQuantityString(com.foodtracker.android.R.plurals.recipe_cost_recipes, 1, 1))
+        assertEquals("3 искры", resources.getQuantityString(com.foodtracker.android.R.plurals.recipe_cost_recipes, 3, 3))
     }
 
     @Test
@@ -161,10 +161,10 @@ class RecipePaidWordingTest {
         val resources = context.resources
         val costs = RecipeCosts(1, 4, 5)
         assertEquals(
-            "One recipe is one dish written by our server. A menu for 3 days takes 4 recipes with two courses a day, 5 recipes with three. They don't expire.",
+            "One spark is one recipe written by our server. A menu for 3 days takes 4 sparks with two courses a day, 5 sparks with three. They don't expire.",
             recipePacksBody(resources, costs)
         )
-        assertEquals("A menu takes 5 recipes", resources.getString(R.string.recipe_menu_short_title, recipeCount(resources, costs.menu3)))
+        assertEquals("A menu takes 5 sparks", resources.getString(R.string.recipe_menu_short_title, recipeCount(resources, costs.menu3)))
     }
 
     @Test
@@ -172,7 +172,7 @@ class RecipePaidWordingTest {
     fun withAMenuSetTableThePacksTextGivesItsCheapestAndDearest() {
         val table = mapOf(1 to mapOf(1 to 1, 2 to 2), 4 to mapOf(3 to 6))
         assertEquals(
-            "One recipe is one dish written by our server. A menu set takes 1 to 6 recipes, depending on its days and courses a day. They don't expire.",
+            "One spark is one recipe written by our server. A menu set takes 1 to 6 sparks, depending on its days and courses a day. They don't expire.",
             recipePacksBody(context.resources, RecipeCosts(1, 4, 5, menuSets = table))
         )
     }
@@ -188,10 +188,10 @@ class RecipePaidWordingTest {
     fun theMenuCostsTakeRussianPlurals() {
         val resources = context.resources
         assertEquals(
-            "Один рецепт — одно блюдо от нашего сервера. Меню на 3 дня стоит 4 рецепта при двух блюдах в день и 5 рецептов при трёх. Срок у рецептов не ограничен.",
+            "Одна искра — один рецепт от нашего сервера. Меню на 3 дня: 4 искры при двух блюдах в день и 5 искр при трёх. Искры не сгорают.",
             recipePacksBody(resources, RecipeCosts(1, 4, 5))
         )
-        assertEquals("Для меню нужно 21 рецепт", resources.getString(R.string.recipe_menu_short_title, recipeCount(resources, 21)))
+        assertEquals("Стоимость меню: 21 искра", resources.getString(R.string.recipe_menu_short_title, recipeCount(resources, 21)))
     }
 
     @Test
@@ -199,15 +199,15 @@ class RecipePaidWordingTest {
     fun theMenuCostsInNorwegian() {
         val resources = context.resources
         assertEquals(
-            "Én oppskrift er én rett skrevet av serveren vår. En meny for 3 dager bruker 4 oppskrifter med to retter om dagen, 5 oppskrifter med tre. De utløper ikke.",
+            "Én gnist er én oppskrift skrevet av serveren vår. En meny for 3 dager bruker 4 gnister med to retter om dagen, 5 gnister med tre. De utløper ikke.",
             recipePacksBody(resources, RecipeCosts(1, 4, 5))
         )
-        assertEquals("En meny bruker 1 oppskrift", resources.getString(R.string.recipe_menu_short_title, recipeCount(resources, 1)))
+        assertEquals("En meny bruker 1 gnist", resources.getString(R.string.recipe_menu_short_title, recipeCount(resources, 1)))
     }
 
     @Test
     fun theBlockedBuyerLineInEveryLanguage() {
-        val keys = listOf("en" to "Buying recipes isn't available for this account", "ru" to "Покупка рецептов недоступна", "nb" to "Kjøp av oppskrifter er ikke tilgjengelig")
+        val keys = listOf("en" to "Buying sparks isn't available for this account", "ru" to "Покупка искр недоступна", "nb" to "Kjøp av gnister er ikke tilgjengelig")
         for ((language, start) in keys) {
             val configuration = android.content.res.Configuration(context.resources.configuration).apply { setLocale(java.util.Locale.forLanguageTag(language)) }
             val text = context.createConfigurationContext(configuration).getString(R.string.recipe_purchases_blocked)
@@ -219,7 +219,7 @@ class RecipePaidWordingTest {
     @Config(sdk = [34], qualifiers = "en")
     fun theDeleteDialogSaysWhatTheServerKeeps() {
         assertEquals(
-            "Your 5 unused recipes will be lost and can't be refunded or restored. Your sign-in and email address are deleted from our server; " +
+            "Your 5 unused sparks will be lost and can't be refunded or restored. Your sign-in and email address are deleted from our server; " +
                 "a record of the purchases stays, no longer linked to you. Any reports you sent are kept for a limited time, also no longer linked to you. " +
                 "Saved recipes and your pantry stay on this device.",
             context.resources.getQuantityString(R.plurals.recipe_delete_body, 5, 5)
@@ -254,9 +254,9 @@ class RecipePaidWordingTest {
     fun deletingThisDevicesDataSaysWhatIsLostAndKeptInEveryLanguage() {
         // Each: the count, that the purchases' record stays, and that the pantry stays.
         val expected = mapOf(
-            "en" to listOf("Your 5 unused recipes will be lost", "a record of the purchases stays", "your pantry stay on this device"),
-            "ru" to listOf("Ваши 5 неиспользованных рецептов пропадут", "запись о покупках останется", "запасы останутся на устройстве"),
-            "nb" to listOf("De 5 ubrukte oppskriftene dine går tapt", "en oversikt over kjøpene blir liggende", "matlageret blir på denne enheten")
+            "en" to listOf("Your 5 unused sparks will be lost", "a record of the purchases stays", "your pantry stay on this device"),
+            "ru" to listOf("Ваши 5 неиспользованных искр пропадут", "запись о покупках останется", "запасы останутся на устройстве"),
+            "nb" to listOf("De 5 ubrukte gnistene dine går tapt", "en oversikt over kjøpene blir liggende", "matlageret blir på denne enheten")
         )
         for ((language, parts) in expected) {
             val configuration = android.content.res.Configuration(context.resources.configuration).apply { setLocale(java.util.Locale.forLanguageTag(language)) }
@@ -289,7 +289,7 @@ class RecipePaidWordingTest {
         assertEquals(listOf("1 dish"), savedRecipeDetails(context.resources, oneDay))
         assertEquals("One course a day for 2, using what expires first.", context.resources.getQuantityString(R.plurals.recipe_menu_summary, 1, 1, 2))
         assertEquals(
-            "Not enough for one day. Tick a few more items, or ask for a single recipe. No recipes were taken.",
+            "Not enough for one day. Tick a few more items, or ask for a single recipe. No sparks were taken.",
             context.resources.getQuantityString(R.plurals.recipe_not_enough_items_menu, 1, 1)
         )
         assertEquals(true, context.resources.getQuantityString(R.plurals.recipe_not_enough_items_menu, 4, 4).startsWith("Not enough for 4 days."))

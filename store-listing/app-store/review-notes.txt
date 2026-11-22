@@ -1,5 +1,5 @@
 1. NEW IN THIS VERSION
-The Calendar tab is replaced by a Recipe tab. It adds the app's first in-app purchases (three consumable recipe packs, submitted with this version) and an optional sign-in. Everything else works as before, with no account.
+The Calendar tab is replaced by a Recipe tab. It adds the app's first in-app purchases (three consumable packs of sparks, submitted with this version) and an optional sign-in. Everything else works as before, with no account.
 
 2. PURPOSE AND AUDIENCE
 BestBefore helps households waste less food. It lists the food at home with expiry dates, reminds the user a few days before something expires and suggests a recipe for what needs using first. Audience: adults managing a household. The app is free, with no ads or tracking; the pantry stays on the device.
@@ -10,15 +10,15 @@ No login, demo account or sample files are needed.
 - Home: all food, sorted by expiry.
 - Shopping List: essentials move here when used up.
 - Settings: reminders, and optional "Remind me near a shop" (with "Always" location access, the shopping list shows on arrival at a saved shop; location never leaves the device).
-- Recipe: writes a recipe from the items closest to their date. Free: "Share prompt" hands a text prompt to any app; with Apple Intelligence (iOS 26 or later) "Generate on this iPhone" writes it on device. Paid: packs of 10, 50 or 100 recipes; one recipe is one dish from our server. "Menu set" (1 to 4 days, 1 to 3 courses a day) is server-only and takes several recipes, as the form shows. "Add to shopping list" adds its missing ingredients. "Pictures" (single pack recipes): the dish, or also tricky steps, labelled as made by AI, for the extra recipes shown. "Report this recipe" ends every result from our server (reason, optional note).
+- Recipe: writes a recipe from the items closest to their date. Free: "Share prompt" hands a text prompt to any app; with Apple Intelligence (iOS 26 or later) "Generate on this iPhone" writes it on device. Paid: packs of 10, 50 or 100 sparks; one spark is one recipe from our server. "Menu set" (1 to 4 days, 1 to 3 courses a day) is server-only and takes several sparks, as the form shows. "Add to shopping list" adds its missing ingredients. "Pictures" (single pack recipes): the dish, or also tricky steps, labelled as made by AI, for the extra sparks shown. "Report this recipe" ends every result from our server (reason, optional note).
 
 TO TEST THE PURCHASE (sandbox purchases work during review, within a daily limit shared by all sandbox testers):
 1. Add an item or two.
-2. Open the Recipe tab and tap "Buy recipes".
+2. Open the Recipe tab and tap "Buy sparks".
 3. Choose "On this iPhone, no account", or sign in with Apple or Google.
-4. Buy the 10-recipe pack. The sheet says that on a refund request we tell Apple how many recipes were used. The balance shows 10. If it says the purchase is being confirmed, tap "Try now".
+4. Buy the 10-spark pack. The sheet says that on a refund request we tell Apple how many sparks were used. The balance shows 10. If it says the purchase is being confirmed, tap "Try now".
 5. Tap "Generate recipe". If allergens are set in Settings, the app first asks consent to send them. The recipe appears in seconds; the balance drops to 9.
-Deletion: Recipe tab > Recipe settings > Account > Delete account (signed in), or Your recipes > "Delete my data from our server" (bought without an account).
+Deletion: Recipe tab > Recipe settings > Account > Delete account (signed in), or Your sparks > "Delete my data from our server" (bought without an account).
 
 4. EXTERNAL SERVICES
 - Open Food Facts (https://world.openfoodfacts.org): on a barcode scan the app fetches the product's name, picture and nutrition data, sending only the barcode number.

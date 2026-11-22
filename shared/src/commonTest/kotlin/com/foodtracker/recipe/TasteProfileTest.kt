@@ -392,7 +392,7 @@ class TasteProfileTest {
         assertEquals(TasteEntry.QUIZ, tasteEntry(true, -3, true))
         assertEquals(TasteEntry.PROMO, tasteEntry(true, null, false))
         assertEquals(TasteEntry.PROMO, tasteEntry(true, 0, false))
-        assertEquals(TasteEntry.HIDDEN, tasteEntry(true, 0, false, purchasesBlocked = true), "See recipe packs would lead nowhere")
+        assertEquals(TasteEntry.HIDDEN, tasteEntry(true, 0, false, purchasesBlocked = true), "See spark packs would lead nowhere")
         assertEquals(TasteEntry.QUIZ, tasteEntry(true, 3, false, purchasesBlocked = true))
         assertEquals(TasteEntry.QUIZ, tasteEntry(true, 0, true, purchasesBlocked = true))
     }

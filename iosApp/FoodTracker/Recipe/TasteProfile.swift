@@ -488,7 +488,7 @@ struct TasteProfile: Codable, Equatable, Sendable {
     static func entry(paidRouteAvailable: Bool, serverTakesTaste: Bool, purchasesBlocked: Bool, balance: Int?, hasSavedProfile: Bool) -> Entry {
         guard paidRouteAvailable, serverTakesTaste else { return .hidden }
         if (balance ?? 0) > 0 || hasSavedProfile { return .quiz }
-        // The promo's "See recipe packs" would lead nowhere.
+        // The promo's "See spark packs" would lead nowhere.
         return purchasesBlocked ? .hidden : .promo
     }
 }

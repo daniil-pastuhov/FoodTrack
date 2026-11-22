@@ -242,7 +242,7 @@ final class RecipeViewModel: ObservableObject {
     /// arriving then, with nothing pushed over the writing screen, is shown and so read.
     private var tabOnScreen = false
     private var sceneActive = true
-    /// Opens the pack sheet: Buy recipes, the count in the bar, or a generation that found the
+    /// Opens the pack sheet: Buy sparks, the count in the bar, or a generation that found the
     /// pack empty.
     @Published var showsBuySheet = false
     /// The sign-in sheet of the free recipes, with the number it opened with: it never changes
@@ -498,7 +498,7 @@ final class RecipeViewModel: ObservableObject {
         }
     }
 
-    /// "See recipe packs" on the promo: the Buy sheet once the promo has gone.
+    /// "See spark packs" on the promo: the Buy sheet once the promo has gone.
     func tastePromoToPacks() {
         showsTastePromo = false
         guard credits.canBuy else { return }
@@ -643,7 +643,7 @@ final class RecipeViewModel: ObservableObject {
         updateOptions { $0.introSeen = true }
     }
 
-    /// "See recipe packs": closed, then the pack sheet, once the closing sheet has gone (SwiftUI
+    /// "See spark packs": closed, then the pack sheet, once the closing sheet has gone (SwiftUI
     /// won't present a second sheet from the same view while the first is still dismissing).
     func introToPacks() {
         dismissIntro()
@@ -706,7 +706,7 @@ final class RecipeViewModel: ObservableObject {
         afterSheetCloses { $0.credits.welcomeAlready = true }
     }
 
-    /// "See recipe packs" from the "already had them" dialog.
+    /// "See spark packs" from the "already had them" dialog.
     func welcomeToPacks() {
         credits.welcomeAlready = false
         guard credits.canBuy else { return }

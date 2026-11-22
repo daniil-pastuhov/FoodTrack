@@ -22,14 +22,14 @@ LAGA MAT AV DET SOM SNART GÅR UT
 • Fliken Recept kryssar i varorna som är närmast sitt datum; ändra urvalet, antal portioner, tid, kost med mera
 • Gratis: kopiera eller dela en färdig prompt till AI-appen du redan använder
 • Gratis på iPhone med Apple Intelligence (iOS 26 eller senare, på svenska från iOS 26.1): receptet skrivs på själva telefonen
-• Receptpaket (köp i appen): recept som skrivs av vår server och sparas i appen, och menyset för 1 till 4 dagar, med upp till tre rätter om dagen, som använder det som går ut först
+• Paket med gnistor (köp i appen): en gnista är ett recept som skrivs av vår server och sparas i appen. Menyset planerar 1 till 4 dagar, med upp till tre rätter om dagen, kring det som går ut först, och kräver några gnistor
 • Lägg det som fattas i ett recept på inköpslistan med ett tryck
 
 DINA DATA
 • Ingen reklam, ingen spårning
-• Ingen prenumeration: appen är gratis, och receptpaketen är valfria engångsköp
+• Ingen prenumeration: appen är gratis, och paketen med gnistor är valfria engångsköp
 • Ditt skafferi sparas på din iPhone; exportera en säkerhetskopia när du vill
-• Inget konto behövs, inte ens för att köpa ett paket. Logga in med Apple eller Google bara om du vill ha dina recept på andra telefoner
+• Inget konto behövs, inte ens för att köpa ett paket. Logga in med Apple eller Google bara om du vill ha dina gnistor på andra telefoner
 • Ett recept från ett paket skickar varorna du kryssar i, dina receptinställningar och dina allergener till vår server. De gratis sätten skickar inget till oss
 • Finns på svenska, engelska, ryska, norska, spanska, tyska, franska och danska
 

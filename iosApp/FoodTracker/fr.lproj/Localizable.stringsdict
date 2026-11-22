@@ -643,11 +643,11 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d recette</string>
+            <string>%d étincelle</string>
             <key>many</key>
-            <string>%d recettes</string>
+            <string>%d étincelles</string>
             <key>other</key>
-            <string>%d recettes</string>
+            <string>%d étincelles</string>
         </dict>
     </dict>
     <key>recipe_courses_count</key>
@@ -697,11 +697,11 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d recette restante</string>
+            <string>%d étincelle restante</string>
             <key>many</key>
-            <string>%d recettes restantes</string>
+            <string>%d étincelles restantes</string>
             <key>other</key>
-            <string>%d recettes restantes</string>
+            <string>%d étincelles restantes</string>
         </dict>
     </dict>
     <key>recipe_earlier_refused</key>
@@ -715,11 +715,11 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Une recette demandée plus tôt n'a pas pu être faite. %d recette a été décomptée, car la tentative nous a quand même coûté.</string>
+            <string>Une recette demandée plus tôt n'a pas pu être faite. %d étincelle a été décomptée, car la tentative nous a quand même coûté.</string>
             <key>many</key>
-            <string>Une recette demandée plus tôt n'a pas pu être faite. %d recettes ont été décomptées, car la tentative nous a quand même coûté.</string>
+            <string>Une recette demandée plus tôt n'a pas pu être faite. %d étincelles ont été décomptées, car la tentative nous a quand même coûté.</string>
             <key>other</key>
-            <string>Une recette demandée plus tôt n'a pas pu être faite. %d recettes ont été décomptées, car la tentative nous a quand même coûté.</string>
+            <string>Une recette demandée plus tôt n'a pas pu être faite. %d étincelles ont été décomptées, car la tentative nous a quand même coûté.</string>
         </dict>
     </dict>
     <key>recipe_other_account_message</key>
@@ -733,11 +733,11 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d recette sur cet {device} a été achetée avec un autre compte. Connectez-vous au compte utilisé pour l'achat afin de l'ajouter.</string>
+            <string>%d étincelle sur cet {device} a été achetée avec un autre compte. Connectez-vous au compte utilisé pour l'achat afin de l'ajouter.</string>
             <key>many</key>
-            <string>%d recettes sur cet {device} ont été achetées avec un autre compte. Connectez-vous au compte utilisé pour l'achat afin de les ajouter.</string>
+            <string>%d étincelles sur cet {device} ont été achetées avec un autre compte. Connectez-vous au compte utilisé pour l'achat afin de les ajouter.</string>
             <key>other</key>
-            <string>%d recettes sur cet {device} ont été achetées avec un autre compte. Connectez-vous au compte utilisé pour l'achat afin de les ajouter.</string>
+            <string>%d étincelles sur cet {device} ont été achetées avec un autre compte. Connectez-vous au compte utilisé pour l'achat afin de les ajouter.</string>
         </dict>
     </dict>
     <key>recipe_menu_short_message</key>
@@ -769,11 +769,11 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Enregistrée. %d recette restante</string>
+            <string>Enregistrée. %d étincelle restante</string>
             <key>many</key>
-            <string>Enregistrée. %d recettes restantes</string>
+            <string>Enregistrée. %d étincelles restantes</string>
             <key>other</key>
-            <string>Enregistrée. %d recettes restantes</string>
+            <string>Enregistrée. %d étincelles restantes</string>
         </dict>
     </dict>
     <key>recipe_added</key>
@@ -787,11 +787,11 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d recette ajoutée</string>
+            <string>%d étincelle ajoutée</string>
             <key>many</key>
-            <string>%d recettes ajoutées</string>
+            <string>%d étincelles ajoutées</string>
             <key>other</key>
-            <string>%d recettes ajoutées</string>
+            <string>%d étincelles ajoutées</string>
         </dict>
     </dict>
     <key>recipe_paused_message</key>
@@ -805,11 +805,11 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Votre %d recette est en sécurité. Les options gratuites ci-dessous fonctionnent toujours.</string>
+            <string>Votre %d étincelle est en sécurité. Les options gratuites ci-dessous fonctionnent toujours.</string>
             <key>many</key>
-            <string>Vos %d recettes sont en sécurité. Les options gratuites ci-dessous fonctionnent toujours.</string>
+            <string>Vos %d étincelles sont en sécurité. Les options gratuites ci-dessous fonctionnent toujours.</string>
             <key>other</key>
-            <string>Vos %d recettes sont en sécurité. Les options gratuites ci-dessous fonctionnent toujours.</string>
+            <string>Vos %d étincelles sont en sécurité. Les options gratuites ci-dessous fonctionnent toujours.</string>
         </dict>
     </dict>
     <key>recipe_unconfirmed_message</key>
@@ -823,11 +823,11 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Vous avez payé %d recette, qui n'est pas encore ajoutée. Nous réessayons ; inutile d'acheter à nouveau.</string>
+            <string>Vous avez payé %d étincelle, qui n'est pas encore ajoutée. Nous réessayons ; inutile d'acheter à nouveau.</string>
             <key>many</key>
-            <string>Vous avez payé %d recettes, qui ne sont pas encore ajoutées. Nous réessayons ; inutile d'acheter à nouveau.</string>
+            <string>Vous avez payé %d étincelles, qui ne sont pas encore ajoutées. Nous réessayons ; inutile d'acheter à nouveau.</string>
             <key>other</key>
-            <string>Vous avez payé %d recettes, qui ne sont pas encore ajoutées. Nous réessayons ; inutile d'acheter à nouveau.</string>
+            <string>Vous avez payé %d étincelles, qui ne sont pas encore ajoutées. Nous réessayons ; inutile d'acheter à nouveau.</string>
         </dict>
     </dict>
     <key>recipe_on_phone_label</key>
@@ -841,11 +841,11 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>recette sur cet {device}</string>
+            <string>étincelle sur cet {device}</string>
             <key>many</key>
-            <string>recettes sur cet {device}</string>
+            <string>étincelles sur cet {device}</string>
             <key>other</key>
-            <string>recettes sur cet {device}</string>
+            <string>étincelles sur cet {device}</string>
         </dict>
     </dict>
     <key>recipe_in_account_label</key>
@@ -859,11 +859,11 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>recette dans votre compte</string>
+            <string>étincelle dans votre compte</string>
             <key>many</key>
-            <string>recettes dans votre compte</string>
+            <string>étincelles dans votre compte</string>
             <key>other</key>
-            <string>recettes dans votre compte</string>
+            <string>étincelles dans votre compte</string>
         </dict>
     </dict>
     <key>recipe_sign_out_message</key>
@@ -877,11 +877,11 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Votre %d recette reste dans votre compte. Reconnectez-vous pour l'utiliser. Les recettes enregistrées restent sur cet {device}.</string>
+            <string>Votre %d étincelle reste dans votre compte. Reconnectez-vous pour l'utiliser. Les recettes enregistrées restent sur cet {device}.</string>
             <key>many</key>
-            <string>Vos %d recettes restent dans votre compte. Reconnectez-vous pour les utiliser. Les recettes enregistrées restent sur cet {device}.</string>
+            <string>Vos %d étincelles restent dans votre compte. Reconnectez-vous pour les utiliser. Les recettes enregistrées restent sur cet {device}.</string>
             <key>other</key>
-            <string>Vos %d recettes restent dans votre compte. Reconnectez-vous pour les utiliser. Les recettes enregistrées restent sur cet {device}.</string>
+            <string>Vos %d étincelles restent dans votre compte. Reconnectez-vous pour les utiliser. Les recettes enregistrées restent sur cet {device}.</string>
         </dict>
     </dict>
     <key>recipe_delete_message</key>
@@ -895,11 +895,11 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Votre %d recette non utilisée sera perdue, sans remboursement ni restauration possible. Votre connexion et votre adresse e-mail sont supprimées de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les éventuels signalements que vous avez envoyés sont conservés pendant une durée limitée, eux aussi sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet {device}.</string>
+            <string>Votre %d étincelle non utilisée sera perdue, sans remboursement ni restauration possible. Votre connexion et votre adresse e-mail sont supprimées de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les éventuels signalements que vous avez envoyés sont conservés pendant une durée limitée, eux aussi sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet {device}.</string>
             <key>many</key>
-            <string>Vos %d recettes non utilisées seront perdues, sans remboursement ni restauration possible. Votre connexion et votre adresse e-mail sont supprimées de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les éventuels signalements que vous avez envoyés sont conservés pendant une durée limitée, eux aussi sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet {device}.</string>
+            <string>Vos %d étincelles non utilisées seront perdues, sans remboursement ni restauration possible. Votre connexion et votre adresse e-mail sont supprimées de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les éventuels signalements que vous avez envoyés sont conservés pendant une durée limitée, eux aussi sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet {device}.</string>
             <key>other</key>
-            <string>Vos %d recettes non utilisées seront perdues, sans remboursement ni restauration possible. Votre connexion et votre adresse e-mail sont supprimées de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les éventuels signalements que vous avez envoyés sont conservés pendant une durée limitée, eux aussi sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet {device}.</string>
+            <string>Vos %d étincelles non utilisées seront perdues, sans remboursement ni restauration possible. Votre connexion et votre adresse e-mail sont supprimées de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les éventuels signalements que vous avez envoyés sont conservés pendant une durée limitée, eux aussi sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet {device}.</string>
         </dict>
     </dict>
     <key>recipe_delete_device_message</key>
@@ -913,11 +913,11 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Votre %d recette non utilisée sera perdue, sans remboursement ni restauration possible. La connexion anonyme qu'utilise cet {device} est supprimée de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les éventuels signalements que vous avez envoyés sont conservés pendant une durée limitée, eux aussi sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet {device}.</string>
+            <string>Votre %d étincelle non utilisée sera perdue, sans remboursement ni restauration possible. La connexion anonyme qu'utilise cet {device} est supprimée de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les éventuels signalements que vous avez envoyés sont conservés pendant une durée limitée, eux aussi sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet {device}.</string>
             <key>many</key>
-            <string>Vos %d recettes non utilisées seront perdues, sans remboursement ni restauration possible. La connexion anonyme qu'utilise cet {device} est supprimée de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les éventuels signalements que vous avez envoyés sont conservés pendant une durée limitée, eux aussi sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet {device}.</string>
+            <string>Vos %d étincelles non utilisées seront perdues, sans remboursement ni restauration possible. La connexion anonyme qu'utilise cet {device} est supprimée de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les éventuels signalements que vous avez envoyés sont conservés pendant une durée limitée, eux aussi sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet {device}.</string>
             <key>other</key>
-            <string>Vos %d recettes non utilisées seront perdues, sans remboursement ni restauration possible. La connexion anonyme qu'utilise cet {device} est supprimée de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les éventuels signalements que vous avez envoyés sont conservés pendant une durée limitée, eux aussi sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet {device}.</string>
+            <string>Vos %d étincelles non utilisées seront perdues, sans remboursement ni restauration possible. La connexion anonyme qu'utilise cet {device} est supprimée de notre serveur ; une trace des achats est conservée, sans lien avec vous. Les éventuels signalements que vous avez envoyés sont conservés pendant une durée limitée, eux aussi sans lien avec vous. Les recettes enregistrées et votre garde-manger restent sur cet {device}.</string>
         </dict>
     </dict>
     <key>recipe_server_refused</key>
@@ -931,11 +931,11 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Impossible de faire une recette avec ces produits. %d recette a été décomptée, car la tentative nous a quand même coûté. Essayez avec moins de produits, ou d'autres.</string>
+            <string>Impossible de faire une recette avec ces produits. %d étincelle a été décomptée, car la tentative nous a quand même coûté. Essayez avec moins de produits, ou d'autres.</string>
             <key>many</key>
-            <string>Impossible de faire une recette avec ces produits. %d recettes ont été décomptées, car la tentative nous a quand même coûté. Essayez avec moins de produits, ou d'autres.</string>
+            <string>Impossible de faire une recette avec ces produits. %d étincelles ont été décomptées, car la tentative nous a quand même coûté. Essayez avec moins de produits, ou d'autres.</string>
             <key>other</key>
-            <string>Impossible de faire une recette avec ces produits. %d recettes ont été décomptées, car la tentative nous a quand même coûté. Essayez avec moins de produits, ou d'autres.</string>
+            <string>Impossible de faire une recette avec ces produits. %d étincelles ont été décomptées, car la tentative nous a quand même coûté. Essayez avec moins de produits, ou d'autres.</string>
         </dict>
     </dict>
     <key>recipe_server_refused_menu</key>
@@ -949,11 +949,11 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Impossible de faire un menu avec ces produits. %d recette a été décomptée, car la tentative nous a quand même coûté. Essayez avec moins de produits, ou d'autres.</string>
+            <string>Impossible de faire un menu avec ces produits. %d étincelle a été décomptée, car la tentative nous a quand même coûté. Essayez avec moins de produits, ou d'autres.</string>
             <key>many</key>
-            <string>Impossible de faire un menu avec ces produits. %d recettes ont été décomptées, car la tentative nous a quand même coûté. Essayez avec moins de produits, ou d'autres.</string>
+            <string>Impossible de faire un menu avec ces produits. %d étincelles ont été décomptées, car la tentative nous a quand même coûté. Essayez avec moins de produits, ou d'autres.</string>
             <key>other</key>
-            <string>Impossible de faire un menu avec ces produits. %d recettes ont été décomptées, car la tentative nous a quand même coûté. Essayez avec moins de produits, ou d'autres.</string>
+            <string>Impossible de faire un menu avec ces produits. %d étincelles ont été décomptées, car la tentative nous a quand même coûté. Essayez avec moins de produits, ou d'autres.</string>
         </dict>
     </dict>
     <key>recipe_server_unknown_taken</key>
@@ -967,11 +967,11 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Impossible de rédiger la recette pour le moment. Réessayez plus tard. %d recette a été décomptée.</string>
+            <string>Impossible de rédiger la recette pour le moment. Réessayez plus tard. %d étincelle a été décomptée.</string>
             <key>many</key>
-            <string>Impossible de rédiger la recette pour le moment. Réessayez plus tard. %d recettes ont été décomptées.</string>
+            <string>Impossible de rédiger la recette pour le moment. Réessayez plus tard. %d étincelles ont été décomptées.</string>
             <key>other</key>
-            <string>Impossible de rédiger la recette pour le moment. Réessayez plus tard. %d recettes ont été décomptées.</string>
+            <string>Impossible de rédiger la recette pour le moment. Réessayez plus tard. %d étincelles ont été décomptées.</string>
         </dict>
     </dict>
     <key>recipe_server_unknown_taken_menu</key>
@@ -985,11 +985,11 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Impossible de rédiger le menu pour le moment. Réessayez plus tard. %d recette a été décomptée.</string>
+            <string>Impossible de rédiger le menu pour le moment. Réessayez plus tard. %d étincelle a été décomptée.</string>
             <key>many</key>
-            <string>Impossible de rédiger le menu pour le moment. Réessayez plus tard. %d recettes ont été décomptées.</string>
+            <string>Impossible de rédiger le menu pour le moment. Réessayez plus tard. %d étincelles ont été décomptées.</string>
             <key>other</key>
-            <string>Impossible de rédiger le menu pour le moment. Réessayez plus tard. %d recettes ont été décomptées.</string>
+            <string>Impossible de rédiger le menu pour le moment. Réessayez plus tard. %d étincelles ont été décomptées.</string>
         </dict>
     </dict>
     <key>recipe_allergens_too_many</key>
@@ -1003,11 +1003,11 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Rien n'a été rédigé : une recette accepte au plus %d allergène, et vous en avez défini davantage. Retirez-en dans Alertes allergènes des Réglages, puis réessayez. Aucune recette n'a été décomptée.</string>
+            <string>Rien n'a été rédigé : une recette accepte au plus %d allergène, et vous en avez défini davantage. Retirez-en dans Alertes allergènes des Réglages, puis réessayez. Aucune étincelle n'a été décomptée.</string>
             <key>many</key>
-            <string>Rien n'a été rédigé : une recette accepte au plus %d allergènes, et vous en avez défini davantage. Retirez-en dans Alertes allergènes des Réglages, puis réessayez. Aucune recette n'a été décomptée.</string>
+            <string>Rien n'a été rédigé : une recette accepte au plus %d allergènes, et vous en avez défini davantage. Retirez-en dans Alertes allergènes des Réglages, puis réessayez. Aucune étincelle n'a été décomptée.</string>
             <key>other</key>
-            <string>Rien n'a été rédigé : une recette accepte au plus %d allergènes, et vous en avez défini davantage. Retirez-en dans Alertes allergènes des Réglages, puis réessayez. Aucune recette n'a été décomptée.</string>
+            <string>Rien n'a été rédigé : une recette accepte au plus %d allergènes, et vous en avez défini davantage. Retirez-en dans Alertes allergènes des Réglages, puis réessayez. Aucune étincelle n'a été décomptée.</string>
         </dict>
     </dict>
     <key>recipe_merged_moved</key>
@@ -1021,11 +1021,11 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d recette transférée de cet {device} vers votre compte</string>
+            <string>%d étincelle transférée de cet {device} vers votre compte</string>
             <key>many</key>
-            <string>%d recettes transférées de cet {device} vers votre compte</string>
+            <string>%d étincelles transférées de cet {device} vers votre compte</string>
             <key>other</key>
-            <string>%d recettes transférées de cet {device} vers votre compte</string>
+            <string>%d étincelles transférées de cet {device} vers votre compte</string>
         </dict>
     </dict>
     <key>recipe_merged_debt</key>
@@ -1039,11 +1039,11 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Cet {device} devait %d recette après un remboursement de la boutique. Elle a été décomptée de votre compte.</string>
+            <string>Cet {device} devait %d étincelle après un remboursement de la boutique. Elle a été décomptée de votre compte.</string>
             <key>many</key>
-            <string>Cet {device} devait %d recettes après un remboursement de la boutique. Elles ont été décomptées de votre compte.</string>
+            <string>Cet {device} devait %d étincelles après un remboursement de la boutique. Elles ont été décomptées de votre compte.</string>
             <key>other</key>
-            <string>Cet {device} devait %d recettes après un remboursement de la boutique. Elles ont été décomptées de votre compte.</string>
+            <string>Cet {device} devait %d étincelles après un remboursement de la boutique. Elles ont été décomptées de votre compte.</string>
         </dict>
     </dict>
     <key>recipe_menu_few_items</key>
@@ -1255,11 +1255,11 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Pas assez pour %d jour. Cochez quelques produits de plus, ou demandez une seule recette. Aucune recette n'a été décomptée.</string>
+            <string>Pas assez pour %d jour. Cochez quelques produits de plus, ou demandez une seule recette. Aucune étincelle n'a été décomptée.</string>
             <key>many</key>
-            <string>Pas assez pour %d jours. Cochez quelques produits de plus, ou demandez une seule recette. Aucune recette n'a été décomptée.</string>
+            <string>Pas assez pour %d jours. Cochez quelques produits de plus, ou demandez une seule recette. Aucune étincelle n'a été décomptée.</string>
             <key>other</key>
-            <string>Pas assez pour %d jours. Cochez quelques produits de plus, ou demandez une seule recette. Aucune recette n'a été décomptée.</string>
+            <string>Pas assez pour %d jours. Cochez quelques produits de plus, ou demandez une seule recette. Aucune étincelle n'a été décomptée.</string>
         </dict>
     </dict>
     <key>recipe_menu_summary</key>
@@ -1309,11 +1309,11 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Une recette, c'est un plat rédigé par notre serveur. Un set de menus décompte de {min} à %d recette, selon les jours et les plats par jour. Elles n'expirent pas.</string>
+            <string>Une étincelle, c'est une recette rédigée par notre serveur. Un set de menus décompte de {min} à %d étincelle, selon les jours et les plats par jour. Les étincelles n'expirent pas.</string>
             <key>many</key>
-            <string>Une recette, c'est un plat rédigé par notre serveur. Un set de menus décompte de {min} à %d recettes, selon les jours et les plats par jour. Elles n'expirent pas.</string>
+            <string>Une étincelle, c'est une recette rédigée par notre serveur. Un set de menus décompte de {min} à %d étincelles, selon les jours et les plats par jour. Les étincelles n'expirent pas.</string>
             <key>other</key>
-            <string>Une recette, c'est un plat rédigé par notre serveur. Un set de menus décompte de {min} à %d recettes, selon les jours et les plats par jour. Elles n'expirent pas.</string>
+            <string>Une étincelle, c'est une recette rédigée par notre serveur. Un set de menus décompte de {min} à %d étincelles, selon les jours et les plats par jour. Les étincelles n'expirent pas.</string>
         </dict>
     </dict>
     <!-- Taste profile: copied from Android's strings.xml -->
@@ -1470,11 +1470,11 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Connectez-vous, et notre serveur ajoute %d recette gratuite à votre compte, pour essayer ce qu'offre un pack.</string>
+            <string>Connectez-vous, et notre serveur ajoute %d étincelle gratuite à votre compte, assez pour une recette, pour essayer ce qu'offre un pack.</string>
             <key>many</key>
-            <string>Connectez-vous, et notre serveur ajoute %d recettes gratuites à votre compte, pour essayer ce qu'offre un pack.</string>
+            <string>Connectez-vous, et notre serveur ajoute %d étincelles gratuites à votre compte, une par recette, pour essayer ce qu'offre un pack.</string>
             <key>other</key>
-            <string>Connectez-vous, et notre serveur ajoute %d recettes gratuites à votre compte, pour essayer ce qu'offre un pack.</string>
+            <string>Connectez-vous, et notre serveur ajoute %d étincelles gratuites à votre compte, une par recette, pour essayer ce qu'offre un pack.</string>
         </dict>
     </dict>
     <key>welcome_granted</key>
@@ -1488,11 +1488,11 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d recette gratuite ajoutée</string>
+            <string>%d étincelle gratuite ajoutée</string>
             <key>many</key>
-            <string>%d recettes gratuites ajoutées</string>
+            <string>%d étincelles gratuites ajoutées</string>
             <key>other</key>
-            <string>%d recettes gratuites ajoutées</string>
+            <string>%d étincelles gratuites ajoutées</string>
         </dict>
     </dict>
     <key>welcome_settings_sign_in</key>
