@@ -573,9 +573,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d oppskrift</string>
+            <string>%d gnist</string>
             <key>other</key>
-            <string>%d oppskrifter</string>
+            <string>%d gnister</string>
         </dict>
     </dict>
     <key>recipe_courses_count</key>
@@ -621,9 +621,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d oppskrift igjen</string>
+            <string>%d gnist igjen</string>
             <key>other</key>
-            <string>%d oppskrifter igjen</string>
+            <string>%d gnister igjen</string>
         </dict>
     </dict>
     <key>recipe_earlier_refused</key>
@@ -637,9 +637,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>En oppskrift du ba om tidligere, kunne ikke lages. Det brukte %d oppskrift, fordi forsøket likevel kostet oss å kjøre.</string>
+            <string>En oppskrift du ba om tidligere, kunne ikke lages. Det brukte %d gnist, fordi forsøket likevel kostet oss å kjøre.</string>
             <key>other</key>
-            <string>En oppskrift du ba om tidligere, kunne ikke lages. Det brukte %d oppskrifter, fordi forsøket likevel kostet oss å kjøre.</string>
+            <string>En oppskrift du ba om tidligere, kunne ikke lages. Det brukte %d gnister, fordi forsøket likevel kostet oss å kjøre.</string>
         </dict>
     </dict>
     <key>recipe_other_account_message</key>
@@ -653,9 +653,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d oppskrift på denne {the_device} ble kjøpt med en annen konto. Logg inn på kontoen du kjøpte med for å legge den til.</string>
+            <string>%d gnist på denne {the_device} ble kjøpt med en annen konto. Logg inn på kontoen du kjøpte med for å legge den til.</string>
             <key>other</key>
-            <string>%d oppskrifter på denne {the_device} ble kjøpt med en annen konto. Logg inn på kontoen du kjøpte med for å legge dem til.</string>
+            <string>%d gnister på denne {the_device} ble kjøpt med en annen konto. Logg inn på kontoen du kjøpte med for å legge dem til.</string>
         </dict>
     </dict>
     <key>recipe_menu_short_message</key>
@@ -685,9 +685,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Lagret. %d oppskrift igjen</string>
+            <string>Lagret. %d gnist igjen</string>
             <key>other</key>
-            <string>Lagret. %d oppskrifter igjen</string>
+            <string>Lagret. %d gnister igjen</string>
         </dict>
     </dict>
     <key>recipe_added</key>
@@ -701,9 +701,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d oppskrift lagt til</string>
+            <string>%d gnist lagt til</string>
             <key>other</key>
-            <string>%d oppskrifter lagt til</string>
+            <string>%d gnister lagt til</string>
         </dict>
     </dict>
     <key>recipe_paused_message</key>
@@ -717,9 +717,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Den %d oppskriften din er trygg. De gratis valgene nedenfor virker fortsatt.</string>
+            <string>Den %d gnisten din er trygg. De gratis valgene nedenfor virker fortsatt.</string>
             <key>other</key>
-            <string>De %d oppskriftene dine er trygge. De gratis valgene nedenfor virker fortsatt.</string>
+            <string>De %d gnistene dine er trygge. De gratis valgene nedenfor virker fortsatt.</string>
         </dict>
     </dict>
     <key>recipe_unconfirmed_message</key>
@@ -733,9 +733,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Du har betalt for %d oppskrift, og den er ikke lagt til ennå. Vi fortsetter å prøve; du trenger ikke kjøpe igjen.</string>
+            <string>Du har betalt for %d gnist, og den er ikke lagt til ennå. Vi fortsetter å prøve; du trenger ikke kjøpe igjen.</string>
             <key>other</key>
-            <string>Du har betalt for %d oppskrifter, og de er ikke lagt til ennå. Vi fortsetter å prøve; du trenger ikke kjøpe igjen.</string>
+            <string>Du har betalt for %d gnister, og de er ikke lagt til ennå. Vi fortsetter å prøve; du trenger ikke kjøpe igjen.</string>
         </dict>
     </dict>
     <key>recipe_on_phone_label</key>
@@ -749,9 +749,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>oppskrift på denne {the_device}</string>
+            <string>gnist på denne {the_device}</string>
             <key>other</key>
-            <string>oppskrifter på denne {the_device}</string>
+            <string>gnister på denne {the_device}</string>
         </dict>
     </dict>
     <key>recipe_in_account_label</key>
@@ -765,9 +765,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>oppskrift i kontoen din</string>
+            <string>gnist i kontoen din</string>
             <key>other</key>
-            <string>oppskrifter i kontoen din</string>
+            <string>gnister i kontoen din</string>
         </dict>
     </dict>
     <key>recipe_sign_out_message</key>
@@ -781,9 +781,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Den %d oppskriften din blir liggende i kontoen. Logg inn igjen for å bruke den. Lagrede oppskrifter blir på denne {the_device}.</string>
+            <string>Den %d gnisten din blir liggende i kontoen. Logg inn igjen for å bruke den. Lagrede oppskrifter blir på denne {the_device}.</string>
             <key>other</key>
-            <string>De %d oppskriftene dine blir liggende i kontoen. Logg inn igjen for å bruke dem. Lagrede oppskrifter blir på denne {the_device}.</string>
+            <string>De %d gnistene dine blir liggende i kontoen. Logg inn igjen for å bruke dem. Lagrede oppskrifter blir på denne {the_device}.</string>
         </dict>
     </dict>
     <key>recipe_delete_message</key>
@@ -797,9 +797,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Den %d ubrukte oppskriften din går tapt og kan ikke refunderes eller gjenopprettes. Påloggingen og e-postadressen din slettes fra serveren vår; en oversikt over kjøpene blir liggende, uten kobling til deg. Eventuelle rapporter du har sendt, blir liggende en begrenset tid, også uten kobling til deg. Lagrede oppskrifter og matlageret blir på denne {the_device}.</string>
+            <string>Den %d ubrukte gnisten din går tapt og kan ikke refunderes eller gjenopprettes. Påloggingen og e-postadressen din slettes fra serveren vår; en oversikt over kjøpene blir liggende, uten kobling til deg. Eventuelle rapporter du har sendt, blir liggende en begrenset tid, også uten kobling til deg. Lagrede oppskrifter og matlageret blir på denne {the_device}.</string>
             <key>other</key>
-            <string>De %d ubrukte oppskriftene dine går tapt og kan ikke refunderes eller gjenopprettes. Påloggingen og e-postadressen din slettes fra serveren vår; en oversikt over kjøpene blir liggende, uten kobling til deg. Eventuelle rapporter du har sendt, blir liggende en begrenset tid, også uten kobling til deg. Lagrede oppskrifter og matlageret blir på denne {the_device}.</string>
+            <string>De %d ubrukte gnistene dine går tapt og kan ikke refunderes eller gjenopprettes. Påloggingen og e-postadressen din slettes fra serveren vår; en oversikt over kjøpene blir liggende, uten kobling til deg. Eventuelle rapporter du har sendt, blir liggende en begrenset tid, også uten kobling til deg. Lagrede oppskrifter og matlageret blir på denne {the_device}.</string>
         </dict>
     </dict>
     <key>recipe_delete_device_message</key>
@@ -813,9 +813,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Den %d ubrukte oppskriften din går tapt og kan ikke refunderes eller gjenopprettes. Den anonyme påloggingen denne {the_device} bruker, slettes fra serveren vår; en oversikt over kjøpene blir liggende, uten kobling til deg. Eventuelle rapporter du har sendt, blir liggende en begrenset tid, også uten kobling til deg. Lagrede oppskrifter og matlageret blir på denne {the_device}.</string>
+            <string>Den %d ubrukte gnisten din går tapt og kan ikke refunderes eller gjenopprettes. Den anonyme påloggingen denne {the_device} bruker, slettes fra serveren vår; en oversikt over kjøpene blir liggende, uten kobling til deg. Eventuelle rapporter du har sendt, blir liggende en begrenset tid, også uten kobling til deg. Lagrede oppskrifter og matlageret blir på denne {the_device}.</string>
             <key>other</key>
-            <string>De %d ubrukte oppskriftene dine går tapt og kan ikke refunderes eller gjenopprettes. Den anonyme påloggingen denne {the_device} bruker, slettes fra serveren vår; en oversikt over kjøpene blir liggende, uten kobling til deg. Eventuelle rapporter du har sendt, blir liggende en begrenset tid, også uten kobling til deg. Lagrede oppskrifter og matlageret blir på denne {the_device}.</string>
+            <string>De %d ubrukte gnistene dine går tapt og kan ikke refunderes eller gjenopprettes. Den anonyme påloggingen denne {the_device} bruker, slettes fra serveren vår; en oversikt over kjøpene blir liggende, uten kobling til deg. Eventuelle rapporter du har sendt, blir liggende en begrenset tid, også uten kobling til deg. Lagrede oppskrifter og matlageret blir på denne {the_device}.</string>
         </dict>
     </dict>
     <key>recipe_server_refused</key>
@@ -829,9 +829,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Kunne ikke lage en oppskrift av disse varene. Det brukte %d oppskrift, fordi forsøket likevel kostet oss å kjøre. Prøv færre eller andre varer.</string>
+            <string>Kunne ikke lage en oppskrift av disse varene. Det brukte %d gnist, fordi forsøket likevel kostet oss å kjøre. Prøv færre eller andre varer.</string>
             <key>other</key>
-            <string>Kunne ikke lage en oppskrift av disse varene. Det brukte %d oppskrifter, fordi forsøket likevel kostet oss å kjøre. Prøv færre eller andre varer.</string>
+            <string>Kunne ikke lage en oppskrift av disse varene. Det brukte %d gnister, fordi forsøket likevel kostet oss å kjøre. Prøv færre eller andre varer.</string>
         </dict>
     </dict>
     <key>recipe_server_refused_menu</key>
@@ -845,9 +845,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Kunne ikke lage en meny av disse varene. Det brukte %d oppskrift, fordi forsøket likevel kostet oss å kjøre. Prøv færre eller andre varer.</string>
+            <string>Kunne ikke lage en meny av disse varene. Det brukte %d gnist, fordi forsøket likevel kostet oss å kjøre. Prøv færre eller andre varer.</string>
             <key>other</key>
-            <string>Kunne ikke lage en meny av disse varene. Det brukte %d oppskrifter, fordi forsøket likevel kostet oss å kjøre. Prøv færre eller andre varer.</string>
+            <string>Kunne ikke lage en meny av disse varene. Det brukte %d gnister, fordi forsøket likevel kostet oss å kjøre. Prøv færre eller andre varer.</string>
         </dict>
     </dict>
     <key>recipe_server_unknown_taken</key>
@@ -861,9 +861,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Klarte ikke å lage oppskriften nå. Prøv igjen senere. %d oppskrift ble trukket.</string>
+            <string>Klarte ikke å lage oppskriften nå. Prøv igjen senere. %d gnist ble trukket.</string>
             <key>other</key>
-            <string>Klarte ikke å lage oppskriften nå. Prøv igjen senere. %d oppskrifter ble trukket.</string>
+            <string>Klarte ikke å lage oppskriften nå. Prøv igjen senere. %d gnister ble trukket.</string>
         </dict>
     </dict>
     <key>recipe_server_unknown_taken_menu</key>
@@ -877,9 +877,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Klarte ikke å lage menyen nå. Prøv igjen senere. %d oppskrift ble trukket.</string>
+            <string>Klarte ikke å lage menyen nå. Prøv igjen senere. %d gnist ble trukket.</string>
             <key>other</key>
-            <string>Klarte ikke å lage menyen nå. Prøv igjen senere. %d oppskrifter ble trukket.</string>
+            <string>Klarte ikke å lage menyen nå. Prøv igjen senere. %d gnister ble trukket.</string>
         </dict>
     </dict>
     <key>recipe_allergens_too_many</key>
@@ -893,9 +893,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Ingenting ble skrevet: en oppskrift kan ta hensyn til høyst %d allergen, og flere er lagt inn. Fjern noen under Allergivarsler i Innstillinger, og prøv igjen. Ingen oppskrifter ble trukket.</string>
+            <string>Ingenting ble skrevet: en oppskrift kan ta hensyn til høyst %d allergen, og flere er lagt inn. Fjern noen under Allergivarsler i Innstillinger, og prøv igjen. Ingen gnister ble trukket.</string>
             <key>other</key>
-            <string>Ingenting ble skrevet: en oppskrift kan ta hensyn til høyst %d allergener, og flere er lagt inn. Fjern noen under Allergivarsler i Innstillinger, og prøv igjen. Ingen oppskrifter ble trukket.</string>
+            <string>Ingenting ble skrevet: en oppskrift kan ta hensyn til høyst %d allergener, og flere er lagt inn. Fjern noen under Allergivarsler i Innstillinger, og prøv igjen. Ingen gnister ble trukket.</string>
         </dict>
     </dict>
     <key>recipe_merged_moved</key>
@@ -909,9 +909,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d oppskrift flyttet fra denne {the_device} til kontoen din</string>
+            <string>%d gnist flyttet fra denne {the_device} til kontoen din</string>
             <key>other</key>
-            <string>%d oppskrifter flyttet fra denne {the_device} til kontoen din</string>
+            <string>%d gnister flyttet fra denne {the_device} til kontoen din</string>
         </dict>
     </dict>
     <key>recipe_merged_debt</key>
@@ -925,9 +925,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Denne {the_device} skyldte %d oppskrift etter en refusjon i butikken. Den ble trukket fra kontoen din.</string>
+            <string>Denne {the_device} skyldte %d gnist etter en refusjon i butikken. Den ble trukket fra kontoen din.</string>
             <key>other</key>
-            <string>Denne {the_device} skyldte %d oppskrifter etter en refusjon i butikken. De ble trukket fra kontoen din.</string>
+            <string>Denne {the_device} skyldte %d gnister etter en refusjon i butikken. De ble trukket fra kontoen din.</string>
         </dict>
     </dict>
     <key>recipe_menu_few_items</key>
@@ -1117,9 +1117,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Det er ikke nok til %d dag. Kryss av for noen flere varer, eller be om én oppskrift. Ingen oppskrifter ble trukket.</string>
+            <string>Det er ikke nok til %d dag. Kryss av for noen flere varer, eller be om én oppskrift. Ingen gnister ble trukket.</string>
             <key>other</key>
-            <string>Det er ikke nok til %d dager. Kryss av for noen flere varer, eller be om én oppskrift. Ingen oppskrifter ble trukket.</string>
+            <string>Det er ikke nok til %d dager. Kryss av for noen flere varer, eller be om én oppskrift. Ingen gnister ble trukket.</string>
         </dict>
     </dict>
     <key>recipe_menu_summary</key>
@@ -1165,9 +1165,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Én oppskrift er én rett skrevet av serveren vår. Et menysett bruker {min} til %d oppskrift, etter antall dager og retter om dagen. De utløper ikke.</string>
+            <string>Én gnist er én oppskrift skrevet av serveren vår. Et menysett bruker {min} til %d gnist, etter antall dager og retter om dagen. De utløper ikke.</string>
             <key>other</key>
-            <string>Én oppskrift er én rett skrevet av serveren vår. Et menysett bruker {min} til %d oppskrifter, etter antall dager og retter om dagen. De utløper ikke.</string>
+            <string>Én gnist er én oppskrift skrevet av serveren vår. Et menysett bruker {min} til %d gnister, etter antall dager og retter om dagen. De utløper ikke.</string>
         </dict>
     </dict>
     <!-- Taste profile: copied from Android's strings.xml -->
@@ -1312,9 +1312,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Logg inn, så legger serveren vår til %d gratis oppskrift i kontoen din, så du kan prøve hva en pakke gir.</string>
+            <string>Logg inn, så legger serveren vår til %d gratis gnist i kontoen din, nok til én oppskrift, så du kan prøve hva en pakke gir.</string>
             <key>other</key>
-            <string>Logg inn, så legger serveren vår til %d gratis oppskrifter i kontoen din, så du kan prøve hva en pakke gir.</string>
+            <string>Logg inn, så legger serveren vår til %d gratis gnister i kontoen din, én for hver oppskrift, så du kan prøve hva en pakke gir.</string>
         </dict>
     </dict>
     <key>welcome_granted</key>
@@ -1328,9 +1328,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d gratis oppskrift lagt til</string>
+            <string>%d gratis gnist lagt til</string>
             <key>other</key>
-            <string>%d gratis oppskrifter lagt til</string>
+            <string>%d gratis gnister lagt til</string>
         </dict>
     </dict>
     <key>welcome_settings_sign_in</key>

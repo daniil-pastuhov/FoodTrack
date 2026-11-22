@@ -769,13 +769,13 @@
     <string name="recipe_time_guide_hint">Den längsta tiden är en gräns; den kortaste är bara en riktlinje.</string>
     <string name="recipe_prompt_min_minutes">Helst runt %1$d minuter eller mer</string>
     <string name="recipe_prompt_meals">Passar till någon av dessa måltider: %1$s</string>
-    <string name="recipe_not_enough_items">Det finns inte tillräckligt att laga med när din kost och dina allergener har räknats bort. Kryssa i några varor till. Inget recept drogs.</string>
+    <string name="recipe_not_enough_items">Det finns inte tillräckligt att laga med när din kost och dina allergener har räknats bort. Kryssa i några varor till. Inga gnistor drogs.</string>
     <plurals name="recipe_not_enough_items_menu">
-        <item quantity="one">Det räcker inte till en dag. Kryssa i några varor till, eller be om ett enskilt recept. Inga recept drogs.</item>
-        <item quantity="other">Det räcker inte till %1$d dagar. Kryssa i några varor till, eller be om ett enskilt recept. Inga recept drogs.</item>
+        <item quantity="one">Det räcker inte till en dag. Kryssa i några varor till, eller be om ett enskilt recept. Inga gnistor drogs.</item>
+        <item quantity="other">Det räcker inte till %1$d dagar. Kryssa i några varor till, eller be om ett enskilt recept. Inga gnistor drogs.</item>
     </plurals>
-    <string name="recipe_diets_need_update">Recept från paket kan ännu inte kombinera glutenfritt med en annan kost. Behåll en av dem i Receptinställningar, eller använd enhetens modell eller den delade prompten. Inga recept drogs.</string>
-    <string name="recipe_language_needs_update">Recept från paket kan ännu inte skrivas på danska. Välj ett annat receptspråk i Receptinställningar, eller använd enhetens modell eller den delade prompten. Inga recept drogs.</string>
+    <string name="recipe_diets_need_update">Recept från paket kan ännu inte kombinera glutenfritt med en annan kost. Behåll en av dem i Receptinställningar, eller använd enhetens modell eller den delade prompten. Inga gnistor drogs.</string>
+    <string name="recipe_language_needs_update">Recept från paket kan ännu inte skrivas på danska. Välj ett annat receptspråk i Receptinställningar, eller använd enhetens modell eller den delade prompten. Inga gnistor drogs.</string>
     <string name="recipe_not_from_pantry_hint">Ingredienser utan märket ”I ditt skafferi” kommer inte från ditt skafferi: basingredienser, eller några saker du kanske behöver köpa.</string>
     <!-- Add to shopping list -->
     <string name="recipe_shopping_add">Lägg till i inköpslistan</string>
@@ -891,8 +891,8 @@
     </plurals>
 
     <!-- Recipe tab, paid route: packs, the server, the account. The unit is a "recipe", never a credit. -->
-    <string name="recipe_balance_description">Recept kvar: %1$d. Köp fler</string>
-    <string name="recipe_balance_only_description">Recept kvar: %1$d</string>
+    <string name="recipe_balance_description">Gnistor kvar: %1$d. Köp fler</string>
+    <string name="recipe_balance_only_description">Gnistor kvar: %1$d</string>
     <string name="recipe_mode_label">Vad ska det bli?</string>
     <string name="recipe_mode_recipe">Recept</string>
     <string name="recipe_mode_menu">Menyset</string>
@@ -902,10 +902,10 @@
         <item quantity="other">%1$d dagar</item>
     </plurals>
     <plurals name="recipe_packs_body_sets">
-        <item quantity="one">Ett recept är en rätt som skrivs av vår server. Ett menyset kräver %1$d till %2$d recept, beroende på dagar och rätter per dag. De går inte ut.</item>
-        <item quantity="other">Ett recept är en rätt som skrivs av vår server. Ett menyset kräver %1$d till %2$d recept, beroende på dagar och rätter per dag. De går inte ut.</item>
+        <item quantity="one">En gnista är ett recept som skrivs av vår server. Ett menyset kräver %1$d till %2$d gnista, beroende på dagar och rätter per dag. De går inte ut.</item>
+        <item quantity="other">En gnista är ett recept som skrivs av vår server. Ett menyset kräver %1$d till %2$d gnistor, beroende på dagar och rätter per dag. De går inte ut.</item>
     </plurals>
-    <string name="recipe_intro_packs_body_sets">Vår server skriver receptet och kan också planera ett menyset. Ett recept drar %1$s från ett paket; ett menyset drar %2$d till %3$d, beroende på dagar och rätter per dag.</string>
+    <string name="recipe_intro_packs_body_sets">Vår server skriver receptet och kan också planera ett menyset. Paketen innehåller gnistor: ett recept drar %1$s; ett menyset drar %2$d till %3$d, beroende på dagar och rätter per dag.</string>
     <plurals name="recipe_saved_unread_action">
         <item quantity="one">Sparade recept, %1$d nytt</item>
         <item quantity="other">Sparade recept, %1$d nya</item>
@@ -927,10 +927,10 @@
     <string name="recipe_generate">Skapa recept</string>
     <string name="recipe_generate_menu">Skapa meny</string>
     <plurals name="recipe_cost_recipes">
-        <item quantity="one">%1$d recept</item>
-        <item quantity="other">%1$d recept</item>
+        <item quantity="one">%1$d gnista</item>
+        <item quantity="other">%1$d gnistor</item>
     </plurals>
-    <string name="recipe_buy">Köp recept</string>
+    <string name="recipe_buy">Köp gnistor</string>
     <string name="recipe_on_device_weak">Modellen på den här enheten är fortfarande svag på matlagning, så kontrollera att receptet verkar rimligt.</string>
     <plurals name="recipe_menu_few_items">
         <item quantity="one">Bara %1$d vara till %2$d rätter. Det mesta till den här menyn behöver handlas.</item>
@@ -942,10 +942,10 @@
         <item quantity="other">Du har %1$d kvar. Ett enskilt recept fungerar fortfarande.</item>
     </plurals>
     <plurals name="recipe_balance_left">
-        <item quantity="one">%1$d recept kvar</item>
-        <item quantity="other">%1$d recept kvar</item>
+        <item quantity="one">%1$d gnista kvar</item>
+        <item quantity="other">%1$d gnistor kvar</item>
     </plurals>
-    <string name="recipe_menu_short_none">Du har inga recept kvar.</string>
+    <string name="recipe_menu_short_none">Du har inga gnistor kvar.</string>
     <string name="recipe_writing_server_title">Skriver ditt recept</string>
     <string name="recipe_writing_server_body">Några sekunder. Du kan lämna den här skärmen; receptet hamnar i Sparade recept.</string>
     <plurals name="recipe_writing_menu_title">
@@ -955,83 +955,83 @@
     <string name="recipe_writing_menu_body">Det kan ta upp till två minuter. Du kan lämna den här skärmen; menyn hamnar i Sparade recept.</string>
     <string name="recipe_offline_title">Ingen anslutning</string>
     <string name="recipe_offline_body">Recept från ditt paket kräver internet. De gratis sätten nedan fungerar fortfarande.</string>
-    <string name="recipe_failed_server">Kunde inte skriva receptet. Inget recept drogs.</string>
-    <string name="recipe_failed_server_menu">Kunde inte skriva menyn. Inga recept drogs.</string>
-    <string name="recipe_failed_limit_today">Det är gränsen för i dag. Försök igen i morgon. Inga recept drogs.</string>
-    <string name="recipe_failed_trouble_today">Vi har problem med att skriva recept just nu. Försök igen i morgon. Inga recept drogs.</string>
-    <string name="recipe_failed_server_later">Kunde inte skriva det just nu. Försök igen senare. Inga recept drogs.</string>
-    <string name="recipe_failed_server_busy">Ett annat recept skrivs fortfarande. Försök igen om en minut. Inga recept drogs.</string>
-    <string name="recipe_failed_rate_limited">För många recept på kort tid. Försök igen om en minut. Inga recept drogs.</string>
+    <string name="recipe_failed_server">Kunde inte skriva receptet. Inga gnistor drogs.</string>
+    <string name="recipe_failed_server_menu">Kunde inte skriva menyn. Inga gnistor drogs.</string>
+    <string name="recipe_failed_limit_today">Det är gränsen för i dag. Försök igen i morgon. Inga gnistor drogs.</string>
+    <string name="recipe_failed_trouble_today">Vi har problem med att skriva recept just nu. Försök igen i morgon. Inga gnistor drogs.</string>
+    <string name="recipe_failed_server_later">Kunde inte skriva det just nu. Försök igen senare. Inga gnistor drogs.</string>
+    <string name="recipe_failed_server_busy">Ett annat recept skrivs fortfarande. Försök igen om en minut. Inga gnistor drogs.</string>
+    <string name="recipe_failed_rate_limited">För många recept på kort tid. Försök igen om en minut. Inga gnistor drogs.</string>
     <string name="recipe_left_out">”%1$s” utelämnades: namnet kunde inte skickas.</string>
-    <string name="recipe_ingredient_not_sent">”%1$s” kunde inte skickas. Kryssa ur den eller byt namn på den och försök sedan igen. Inga recept drogs.</string>
-    <string name="recipe_allergen_not_sent">Din allergen ”%1$s” kunde inte skickas, så inget skrevs: ett recept utan den kanske inte är säkert. Byt namn på den under Allergenvarningar i Inställningar och försök sedan igen. Inga recept drogs.</string>
+    <string name="recipe_ingredient_not_sent">”%1$s” kunde inte skickas. Kryssa ur den eller byt namn på den och försök sedan igen. Inga gnistor drogs.</string>
+    <string name="recipe_allergen_not_sent">Din allergen ”%1$s” kunde inte skickas, så inget skrevs: ett recept utan den kanske inte är säkert. Byt namn på den under Allergenvarningar i Inställningar och försök sedan igen. Inga gnistor drogs.</string>
     <plurals name="recipe_allergens_too_many">
-        <item quantity="one">Inget skrevs: ett recept kan ta med högst %1$d allergen, och fler är angivna. Ta bort några under Allergenvarningar i Inställningar och försök sedan igen. Inga recept drogs.</item>
-        <item quantity="other">Inget skrevs: ett recept kan ta med högst %1$d allergener, och fler är angivna. Ta bort några under Allergenvarningar i Inställningar och försök sedan igen. Inga recept drogs.</item>
+        <item quantity="one">Inget skrevs: ett recept kan ta med högst %1$d allergen, och fler är angivna. Ta bort några under Allergenvarningar i Inställningar och försök sedan igen. Inga gnistor drogs.</item>
+        <item quantity="other">Inget skrevs: ett recept kan ta med högst %1$d allergener, och fler är angivna. Ta bort några under Allergenvarningar i Inställningar och försök sedan igen. Inga gnistor drogs.</item>
     </plurals>
     <plurals name="recipe_refused">
-        <item quantity="one">Kunde inte göra ett recept av de här varorna. Det drog %1$d recept, eftersom försöket ändå kostade oss pengar att köra. Prova färre eller andra varor.</item>
-        <item quantity="other">Kunde inte göra ett recept av de här varorna. Det drog %1$d recept, eftersom försöket ändå kostade oss pengar att köra. Prova färre eller andra varor.</item>
+        <item quantity="one">Kunde inte göra ett recept av de här varorna. Det drog %1$d gnista, eftersom försöket ändå kostade oss pengar att köra. Prova färre eller andra varor.</item>
+        <item quantity="other">Kunde inte göra ett recept av de här varorna. Det drog %1$d gnistor, eftersom försöket ändå kostade oss pengar att köra. Prova färre eller andra varor.</item>
     </plurals>
     <plurals name="recipe_refused_menu">
-        <item quantity="one">Kunde inte göra en meny av de här varorna. Det drog %1$d recept, eftersom försöket ändå kostade oss pengar att köra. Prova färre eller andra varor.</item>
-        <item quantity="other">Kunde inte göra en meny av de här varorna. Det drog %1$d recept, eftersom försöket ändå kostade oss pengar att köra. Prova färre eller andra varor.</item>
+        <item quantity="one">Kunde inte göra en meny av de här varorna. Det drog %1$d gnista, eftersom försöket ändå kostade oss pengar att köra. Prova färre eller andra varor.</item>
+        <item quantity="other">Kunde inte göra en meny av de här varorna. Det drog %1$d gnistor, eftersom försöket ändå kostade oss pengar att köra. Prova färre eller andra varor.</item>
     </plurals>
     <string name="recipe_paused_title">Recept från paket är pausade</string>
     <plurals name="recipe_paused_body">
-        <item quantity="one">Ditt %1$d recept finns kvar. De gratis sätten nedan fungerar fortfarande.</item>
-        <item quantity="other">Dina %1$d recept finns kvar. De gratis sätten nedan fungerar fortfarande.</item>
+        <item quantity="one">Din %1$d gnista finns kvar. De gratis sätten nedan fungerar fortfarande.</item>
+        <item quantity="other">Dina %1$d gnistor finns kvar. De gratis sätten nedan fungerar fortfarande.</item>
     </plurals>
     <string name="recipe_paused_body_none">De gratis sätten nedan fungerar fortfarande.</string>
     <plurals name="recipe_added">
-        <item quantity="one">%1$d recept har lagts till</item>
-        <item quantity="other">%1$d recept har lagts till</item>
+        <item quantity="one">%1$d gnista har lagts till</item>
+        <item quantity="other">%1$d gnistor har lagts till</item>
     </plurals>
     <plurals name="recipe_saved_left">
-        <item quantity="one">Sparat. %1$d recept kvar</item>
-        <item quantity="other">Sparat. %1$d recept kvar</item>
+        <item quantity="one">Sparat. %1$d gnista kvar</item>
+        <item quantity="other">Sparat. %1$d gnistor kvar</item>
     </plurals>
     <string name="recipe_unconfirmed_title">Ditt köp bekräftas</string>
     <plurals name="recipe_unconfirmed_body">
-        <item quantity="one">Du har betalat för %1$d recept och det har inte lagts till än. Vi fortsätter att försöka; du behöver inte köpa igen.</item>
-        <item quantity="other">Du har betalat för %1$d recept och de har inte lagts till än. Vi fortsätter att försöka; du behöver inte köpa igen.</item>
+        <item quantity="one">Du har betalat för %1$d gnista och den har inte lagts till än. Vi fortsätter att försöka; du behöver inte köpa igen.</item>
+        <item quantity="other">Du har betalat för %1$d gnistor och de har inte lagts till än. Vi fortsätter att försöka; du behöver inte köpa igen.</item>
     </plurals>
     <string name="recipe_try_now">Försök nu</string>
     <string name="recipe_pending_title">Väntar på betalning</string>
-    <string name="recipe_pending_body">Dina recept läggs till när butiken bekräftar betalningen. Det kan ta en stund.</string>
-    <string name="recipe_packs_body">Ett recept är en rätt som skrivs av vår server. En meny för 3 dagar kräver %1$s med två rätter per dag, %2$s med tre. De går inte ut.</string>
+    <string name="recipe_pending_body">Dina gnistor läggs till när butiken bekräftar betalningen. Det kan ta en stund.</string>
+    <string name="recipe_packs_body">En gnista är ett recept som skrivs av vår server. En meny för 3 dagar kräver %1$s med två rätter per dag, %2$s med tre. De går inte ut.</string>
     <plurals name="recipe_pack_name">
-        <item quantity="one">%1$d recept</item>
-        <item quantity="other">%1$d recept</item>
+        <item quantity="one">%1$d gnista</item>
+        <item quantity="other">%1$d gnistor</item>
     </plurals>
     <string name="recipe_pack_each">%1$s per recept</string>
-    <string name="recipe_pack_saving_a11y">%1$d %% billigare per recept</string>
+    <string name="recipe_pack_saving_a11y">%1$d %% billigare per gnista</string>
     <string name="recipe_cancel">Avbryt</string>
     <string name="recipe_back">Tillbaka</string>
     <string name="recipe_close">Stäng</string>
     <string name="recipe_ok">OK</string>
-    <string name="recipe_choice_title">Var ska dina recept finnas?</string>
+    <string name="recipe_choice_title">Var ska dina gnistor finnas?</string>
     <string name="recipe_choice_body">Du väljer en gång. Du kan logga in senare i Receptinställningar.</string>
     <string name="recipe_choice_phone_title">På den här enheten, inget konto</string>
-    <string name="recipe_choice_phone_body">Inget att logga in på. Recepten finns kvar i den här installationen av appen: om du raderar appen eller byter enhet går de som du inte har använt förlorade.</string>
+    <string name="recipe_choice_phone_body">Inget att logga in på. Gnistorna finns kvar i den här installationen av appen: om du raderar appen eller byter enhet går de som du inte har använt förlorade.</string>
     <string name="recipe_choice_account_title">I ett konto</string>
-    <string name="recipe_choice_account_body">Logga in med Google. Dina recept följer med till en ny telefon, Android eller iPhone, var du än loggar in med Google. Vi sparar ditt konto-id och din e-postadress.</string>
+    <string name="recipe_choice_account_body">Logga in med Google. Dina gnistor följer med till en ny telefon, Android eller iPhone, var du än loggar in med Google. Vi sparar ditt konto-id och din e-postadress.</string>
     <string name="recipe_sign_in_google">Logga in med Google</string>
-    <string name="recipe_apple_on_iphone_hint">Inloggad med Apple på en iPhone? Lägg till Google-inloggning där, i Receptinställningar, för att använda dina recept på den här enheten.</string>
-    <string name="recipe_have_account_hint">Har du redan recept i ett konto? Logga in för att använda dem här.</string>
+    <string name="recipe_apple_on_iphone_hint">Inloggad med Apple på en iPhone? Lägg till Google-inloggning där, i Receptinställningar, för att använda dina gnistor på den här enheten.</string>
+    <string name="recipe_have_account_hint">Har du redan gnistor i ett konto? Logga in för att använda dem här.</string>
     <string name="recipe_store_error_title">Når inte butiken</string>
     <string name="recipe_store_error_body">Kontrollera anslutningen och försök igen. Inget debiterades.</string>
     <string name="recipe_rejected_title">Köpet kunde inte läggas till</string>
-    <string name="recipe_rejected_body">Butiken rapporterar det som återbetalt eller redan använt. Om du har debiterats och inte har några recept, kontakta butiken för att få pengarna tillbaka.</string>
-    <string name="recipe_your_recipes">Dina recept</string>
+    <string name="recipe_rejected_body">Butiken rapporterar det som återbetalt eller redan använt. Om du har debiterats och inte har några gnistor, kontakta butiken för att få pengarna tillbaka.</string>
+    <string name="recipe_your_recipes">Dina gnistor</string>
     <plurals name="recipe_on_phone_label">
-        <item quantity="one">recept på den här enheten</item>
-        <item quantity="other">recept på den här enheten</item>
+        <item quantity="one">gnista på den här enheten</item>
+        <item quantity="other">gnistor på den här enheten</item>
     </plurals>
     <string name="recipe_on_phone_body">De finns kvar i den här installationen av appen. Om du raderar appen eller byter enhet går de som du inte har använt förlorade. Logga in för att ha dem i ett konto i stället; de flyttas över direkt.</string>
     <plurals name="recipe_in_account_label">
-        <item quantity="one">recept i ditt konto</item>
-        <item quantity="other">recept i ditt konto</item>
+        <item quantity="one">gnista i ditt konto</item>
+        <item quantity="other">gnistor i ditt konto</item>
     </plurals>
     <string name="recipe_signed_in_with">Inloggad med %1$s</string>
     <string name="recipe_signed_in_add_google">Apple-inloggning fungerar bara i iPhone-appen. Lägg till Google-inloggning här för att fortsätta använda dem på Android.</string>
@@ -1042,12 +1042,12 @@
     <string name="recipe_delete_account">Radera konto</string>
     <string name="recipe_sign_out_title">Logga ut?</string>
     <plurals name="recipe_sign_out_body">
-        <item quantity="one">Ditt %1$d recept finns kvar i ditt konto. Logga in igen för att använda det. Sparade recept finns kvar på den här enheten.</item>
-        <item quantity="other">Dina %1$d recept finns kvar i ditt konto. Logga in igen för att använda dem. Sparade recept finns kvar på den här enheten.</item>
+        <item quantity="one">Din %1$d gnista finns kvar i ditt konto. Logga in igen för att använda den. Sparade recept finns kvar på den här enheten.</item>
+        <item quantity="other">Dina %1$d gnistor finns kvar i ditt konto. Logga in igen för att använda dem. Sparade recept finns kvar på den här enheten.</item>
     </plurals>
     <string name="recipe_delete_title">Radera ditt konto?</string>
     <string name="recipe_apple_link_left_title">Apple-kopplingen togs inte bort</string>
-    <string name="recipe_apple_link_left_body">Ditt konto och dess recept har raderats, men ditt Apple-konto är fortfarande kopplat till appen. Om du vill ta bort kopplingen också stänger du av Logga in med Apple för appen i inställningarna för ditt Apple-konto.</string>
+    <string name="recipe_apple_link_left_body">Ditt konto och dess gnistor har raderats, men ditt Apple-konto är fortfarande kopplat till appen. Om du vill ta bort kopplingen också stänger du av Logga in med Apple för appen i inställningarna för ditt Apple-konto.</string>
     <!-- The allergen consent step (ALLERGEN_CONSENT_VERSION in shared AllergenConsent.kt: raise it when this wording changes; iOS has the same text). -->
     <string name="recipe_allergen_consent_title">Skicka dina allergener till vår server?</string>
     <string name="recipe_allergen_consent_body">För att skriva det här skickas din allergenlista (%1$s) tillsammans med de ikryssade varorna och dina inställningar till vår server och till Googles AI-modell, så att receptet undviker de livsmedlen. Google kan behandla den utanför EU. Vi använder den bara för den här förfrågan och sparar den inte efteråt. Google behandlar den för att skriva receptet och kan logga förfrågningar för att upptäcka missbruk. Du kan återkalla detta i Receptinställningar.\n\nDe gratis sätten, enhetens egen modell och den delade prompten, skickar den inte till oss.</string>
@@ -1058,28 +1058,28 @@
     <string name="recipe_allergen_consent_setting_on">Du godkände den %1$s. Stäng av för att återkalla: vår server skriver då inga recept medan allergener är angivna.</string>
     <string name="recipe_allergen_consent_setting_off">Krävs för recept från vår server medan allergener är angivna. Vi använder dem bara för förfrågan och sparar dem inte.</string>
     <plurals name="recipe_delete_body">
-        <item quantity="one">Ditt %1$d oanvända recept går förlorat och kan inte återbetalas eller återställas. Din inloggning och e-postadress raderas från vår server; en uppgift om köpen finns kvar, inte längre kopplad till dig. Eventuella rapporter du har skickat sparas en begränsad tid, även de utan koppling till dig. Sparade recept och ditt skafferi finns kvar på den här enheten.</item>
-        <item quantity="other">Dina %1$d oanvända recept går förlorade och kan inte återbetalas eller återställas. Din inloggning och e-postadress raderas från vår server; en uppgift om köpen finns kvar, inte längre kopplad till dig. Eventuella rapporter du har skickat sparas en begränsad tid, även de utan koppling till dig. Sparade recept och ditt skafferi finns kvar på den här enheten.</item>
+        <item quantity="one">Din %1$d oanvända gnista går förlorad och kan inte återbetalas eller återställas. Din inloggning och e-postadress raderas från vår server; en uppgift om köpen finns kvar, inte längre kopplad till dig. Eventuella rapporter du har skickat sparas en begränsad tid, även de utan koppling till dig. Sparade recept och ditt skafferi finns kvar på den här enheten.</item>
+        <item quantity="other">Dina %1$d oanvända gnistor går förlorade och kan inte återbetalas eller återställas. Din inloggning och e-postadress raderas från vår server; en uppgift om köpen finns kvar, inte längre kopplad till dig. Eventuella rapporter du har skickat sparas en begränsad tid, även de utan koppling till dig. Sparade recept och ditt skafferi finns kvar på den här enheten.</item>
     </plurals>
     <!-- Deleting what our server holds for recipes kept on this device (an anonymous account). -->
     <string name="recipe_delete_device_data">Radera mina data från vår server</string>
     <string name="recipe_delete_device_title">Radera dina data från vår server?</string>
     <plurals name="recipe_delete_device_body">
-        <item quantity="one">Ditt %1$d oanvända recept går förlorat och kan inte återbetalas eller återställas. Den anonyma inloggning som den här enheten använder raderas från vår server; en uppgift om köpen finns kvar, inte längre kopplad till dig. Eventuella rapporter du har skickat sparas en begränsad tid, även de utan koppling till dig. Sparade recept och ditt skafferi finns kvar på den här enheten.</item>
-        <item quantity="other">Dina %1$d oanvända recept går förlorade och kan inte återbetalas eller återställas. Den anonyma inloggning som den här enheten använder raderas från vår server; en uppgift om köpen finns kvar, inte längre kopplad till dig. Eventuella rapporter du har skickat sparas en begränsad tid, även de utan koppling till dig. Sparade recept och ditt skafferi finns kvar på den här enheten.</item>
+        <item quantity="one">Din %1$d oanvända gnista går förlorad och kan inte återbetalas eller återställas. Den anonyma inloggning som den här enheten använder raderas från vår server; en uppgift om köpen finns kvar, inte längre kopplad till dig. Eventuella rapporter du har skickat sparas en begränsad tid, även de utan koppling till dig. Sparade recept och ditt skafferi finns kvar på den här enheten.</item>
+        <item quantity="other">Dina %1$d oanvända gnistor går förlorade och kan inte återbetalas eller återställas. Den anonyma inloggning som den här enheten använder raderas från vår server; en uppgift om köpen finns kvar, inte längre kopplad till dig. Eventuella rapporter du har skickat sparas en begränsad tid, även de utan koppling till dig. Sparade recept och ditt skafferi finns kvar på den här enheten.</item>
     </plurals>
     <string name="recipe_delete_device_body_none">Den anonyma inloggning som den här enheten använder raderas från vår server; en uppgift om eventuella köp finns kvar, inte längre kopplad till dig. Eventuella rapporter du har skickat sparas en begränsad tid, även de utan koppling till dig. Sparade recept och ditt skafferi finns kvar på den här enheten.</string>
     <string name="recipe_delete_device_confirm">Radera data</string>
     <string name="recipe_device_data_deleted">Dina data har raderats från vår server</string>
     <string name="recipe_delete_waits_for_purchase">Ett köp håller fortfarande på att slutföras. Du kan radera när det är klart.</string>
-    <string name="recipe_merge_title">Lägga till den här enhetens recept i ditt konto?</string>
-    <string name="recipe_merge_body">Ditt konto har redan %1$d recept. De %2$d på den här enheten läggs till, så att det blir %3$d. Det går inte att ångra.</string>
-    <string name="recipe_merge_body_unknown">De %1$d recepten på den här enheten läggs till i ditt konto. Det går inte att ångra.</string>
+    <string name="recipe_merge_title">Lägga till den här enhetens gnistor i ditt konto?</string>
+    <string name="recipe_merge_body">Ditt konto har redan %1$d gnistor. De %2$d på den här enheten läggs till, så att det blir %3$d. Det går inte att ångra.</string>
+    <string name="recipe_merge_body_unknown">De %1$d gnistorna på den här enheten läggs till i ditt konto. Det går inte att ångra.</string>
     <string name="recipe_merge_confirm">Lägg till och logga in</string>
-    <string name="recipe_sign_in_failed">Kunde inte logga in. Dina recept är oförändrade.</string>
-    <string name="recipe_sign_in_in_use">Den inloggningen tillhör redan ett annat konto. Dina recept är oförändrade.</string>
+    <string name="recipe_sign_in_failed">Kunde inte logga in. Dina gnistor är oförändrade.</string>
+    <string name="recipe_sign_in_in_use">Den inloggningen tillhör redan ett annat konto. Dina gnistor är oförändrade.</string>
     <string name="recipe_account_deleted">Kontot raderades</string>
-    <string name="recipe_purchases_blocked">Det går inte att köpa recept med det här kontot eftersom tidigare köp återbetalades efter att recepten hade använts.</string>
+    <string name="recipe_purchases_blocked">Det går inte att köpa gnistor med det här kontot eftersom tidigare köp återbetalades efter att gnistorna hade använts.</string>
     <string name="recipe_account_busy">Ett recept skrivs fortfarande. Försök igen om en stund.</string>
     <string name="recipe_account_action_failed">Kunde inte nå vår server. Inget ändrades.</string>
     <string name="recipe_writing_busy_title">Vår server är upptagen</string>
@@ -1088,23 +1088,23 @@
     <string name="recipe_busy_body">Din förfrågan finns kvar och kan fortfarande bli skriven. Försök igen om en minut för att hämta den. De gratis sätten nedan fungerar fortfarande.</string>
     <string name="recipe_elsewhere_title">Ett köp tillhör ett annat konto</string>
     <plurals name="recipe_elsewhere_body">
-        <item quantity="one">%1$d recept på den här enheten köptes med ett annat konto. Logga in på kontot som du köpte det med för att lägga till det.</item>
-        <item quantity="other">%1$d recept på den här enheten köptes med ett annat konto. Logga in på kontot som du köpte dem med för att lägga till dem.</item>
+        <item quantity="one">%1$d gnista på den här enheten köptes med ett annat konto. Logga in på kontot som du köpte den med för att lägga till den.</item>
+        <item quantity="other">%1$d gnistor på den här enheten köptes med ett annat konto. Logga in på kontot som du köpte dem med för att lägga till dem.</item>
     </plurals>
-    <string name="recipe_rejected_build_body">Den här kopian av appen är gjord för en annan butik, så den kan inte lägga till köp från Google Play. Köpet lades inte till bland dina recept. Google Play återbetalar normalt ett köp som inte läggs till inom tre dagar. Installera appen från Google Play för att köpa recept.</string>
+    <string name="recipe_rejected_build_body">Den här kopian av appen är gjord för en annan butik, så den kan inte lägga till köp från Google Play. Köpet lades inte till bland dina gnistor. Google Play återbetalar normalt ett köp som inte läggs till inom tre dagar. Installera appen från Google Play för att köpa gnistor.</string>
     <plurals name="recipe_merged_moved">
-        <item quantity="one">%1$d recept flyttades från den här enheten till ditt konto</item>
-        <item quantity="other">%1$d recept flyttades från den här enheten till ditt konto</item>
+        <item quantity="one">%1$d gnista flyttades från den här enheten till ditt konto</item>
+        <item quantity="other">%1$d gnistor flyttades från den här enheten till ditt konto</item>
     </plurals>
     <plurals name="recipe_merged_debt">
-        <item quantity="one">Den här enheten var skyldig %1$d recept efter en återbetalning från butiken. Det drogs från ditt konto.</item>
-        <item quantity="other">Den här enheten var skyldig %1$d recept efter en återbetalning från butiken. De drogs från ditt konto.</item>
+        <item quantity="one">Den här enheten var skyldig %1$d gnista efter en återbetalning från butiken. Den drogs från ditt konto.</item>
+        <item quantity="other">Den här enheten var skyldig %1$d gnistor efter en återbetalning från butiken. De drogs från ditt konto.</item>
     </plurals>
     <string name="recipe_earlier_recipe_saved">Ett recept som du bad om tidigare är klart. Det finns i Sparade recept.</string>
     <string name="recipe_earlier_menu_saved">En meny som du bad om tidigare är klar. Den finns i Sparade recept.</string>
     <plurals name="recipe_earlier_refused">
-        <item quantity="one">Ett recept som du bad om tidigare kunde inte göras. Det drog %1$d recept, eftersom försöket ändå kostade oss pengar att köra.</item>
-        <item quantity="other">Ett recept som du bad om tidigare kunde inte göras. Det drog %1$d recept, eftersom försöket ändå kostade oss pengar att köra.</item>
+        <item quantity="one">Ett recept som du bad om tidigare kunde inte göras. Det drog %1$d gnista, eftersom försöket ändå kostade oss pengar att köra.</item>
+        <item quantity="other">Ett recept som du bad om tidigare kunde inte göras. Det drog %1$d gnistor, eftersom försöket ändå kostade oss pengar att köra.</item>
     </plurals>
     <string name="recipe_menu_bar_title">Meny</string>
     <plurals name="recipe_menu_title">
@@ -1139,13 +1139,13 @@
     <string name="recipe_intro_prompt_body">Dela eller kopiera en färdig prompt till AI-appen som du redan använder.</string>
     <string name="recipe_intro_device_title">Gratis, på den här enheten</string>
     <string name="recipe_intro_device_body">Den här enheten skriver receptet själv, och inget skickas någonstans.</string>
-    <string name="recipe_intro_packs_title">Från ett receptpaket</string>
-    <string name="recipe_intro_packs_body">Vår server skriver receptet och kan också planera en meny för 3 dagar. Ett recept drar %1$s från ett paket; en meny drar %2$s med 2 rätter per dag eller %3$s med 3.</string>
+    <string name="recipe_intro_packs_title">Från ett gnistpaket</string>
+    <string name="recipe_intro_packs_body">Vår server skriver receptet och kan också planera en meny för 3 dagar. Paketen innehåller gnistor: ett recept drar %1$s; en meny drar %2$s med 2 rätter per dag eller %3$s med 3.</string>
     <string name="recipe_intro_packs_price">Paket från %1$s.</string>
     <string name="recipe_intro_free_stays">De gratis sätten finns kvar när du har ett paket.</string>
     <string name="recipe_intro_again">Du kan öppna det här igen i Receptinställningar.</string>
     <string name="recipe_intro_start">Uppfattat</string>
-    <string name="recipe_intro_packs_action">Se receptpaket</string>
+    <string name="recipe_intro_packs_action">Se gnistpaket</string>
     <string name="recipe_intro_settings_supporting">Sätten att få ett recept</string>
     <string name="recipe_not_available_title">Recept från paket är inte tillgängliga i den här installationen</string>
     <string name="recipe_not_available_body">Inget debiterades. De gratis sätten fungerar fortfarande: dela prompten med en AI-app, eller skriv receptet på den här enheten där det går.</string>
@@ -1228,21 +1228,21 @@
     <string name="welcome_intro_account_one">Det här kontot kan få ett gratis recept att prova med.</string>
     <string name="welcome_buy_sign_in_one">Eller logga in och få ett gratis recept</string>
     <string name="welcome_buy_get_one">Eller få ett gratis recept</string>
-    <string name="welcome_sheet_lede_one">Logga in, så lägger vår server till ett gratis recept i ditt konto, så att du kan prova vad ett paket ger.</string>
+    <string name="welcome_sheet_lede_one">Logga in, så lägger vår server till en gratis gnista i ditt konto, som räcker till ett recept, så att du kan prova vad ett paket ger.</string>
     <string name="welcome_sheet_server_title">Skrivna av vår server</string>
-    <string name="welcome_sheet_server_body">De fungerar som recept från ett paket: ett enskilt recept, eller en meny om de räcker.</string>
+    <string name="welcome_sheet_server_body">De fungerar som gnistor från ett paket: ett enskilt recept, eller en meny om de räcker.</string>
     <string name="welcome_sheet_account_title">Sparade i ditt konto</string>
-    <string name="welcome_sheet_account_body">De, och alla recept du köper senare, följer med till en ny telefon var du än loggar in med Google.</string>
+    <string name="welcome_sheet_account_body">De, och alla gnistor du köper senare, följer med till en ny telefon var du än loggar in med Google.</string>
     <string name="welcome_sheet_privacy_title">Ett konto på vår server</string>
     <string name="welcome_sheet_privacy_body">Vi sparar ditt konto-id och din e-postadress. Inloggningen skickar inget från ditt skafferi, och du kan radera kontot i Receptinställningar.</string>
     <string name="welcome_once">Gratis recept ges en gång per Google-konto.</string>
     <string name="welcome_not_now">Inte nu</string>
-    <string name="welcome_adding">Lägger till dina gratis recept…</string>
+    <string name="welcome_adding">Lägger till dina gratis gnistor…</string>
     <string name="welcome_already_title">Det här kontot har redan fått sina gratis recept</string>
-    <string name="welcome_already_body">Gratis recept ges en gång per Apple- eller Google-konto. Du är inloggad, och recept du köper sparas i det här kontot.</string>
+    <string name="welcome_already_body">Gratis recept ges en gång per Apple- eller Google-konto. Du är inloggad, och gnistor du köper sparas i det här kontot.</string>
     <string name="welcome_off_signed_in_now">Gratis recept är inte tillgängliga just nu. Du är inloggad; inget annat har ändrats.</string>
     <string name="welcome_off">Gratis recept är inte tillgängliga just nu. Inget har ändrats.</string>
-    <string name="welcome_claim_failed">Inloggad, men dina gratis recept kunde inte läggas till än.</string>
+    <string name="welcome_claim_failed">Inloggad, men dina gratis gnistor kunde inte läggas till än.</string>
     <string name="welcome_settings_sign_in_one">Logga in och få ett gratis recept från vår server, en gång per Google-konto.</string>
     <string name="welcome_settings_account_one">Det här kontot kan få ett gratis recept från vår server.</string>
     <string name="welcome_settings_on_phone_one">När du loggar in får du också ett gratis recept.</string>
@@ -1275,12 +1275,12 @@
         <item quantity="other">Eller få %1$d gratis recept</item>
     </plurals>
     <plurals name="welcome_sheet_lede">
-        <item quantity="one">Logga in, så lägger vår server till %1$d gratis recept i ditt konto, så att du kan prova vad ett paket ger.</item>
-        <item quantity="other">Logga in, så lägger vår server till %1$d gratis recept i ditt konto, så att du kan prova vad ett paket ger.</item>
+        <item quantity="one">Logga in, så lägger vår server till %1$d gratis gnista i ditt konto, som räcker till ett recept, så att du kan prova vad ett paket ger.</item>
+        <item quantity="other">Logga in, så lägger vår server till %1$d gratis gnistor i ditt konto, en för varje recept, så att du kan prova vad ett paket ger.</item>
     </plurals>
     <plurals name="welcome_granted">
-        <item quantity="one">%1$d gratis recept tillagt</item>
-        <item quantity="other">%1$d gratis recept tillagda</item>
+        <item quantity="one">%1$d gratis gnista tillagd</item>
+        <item quantity="other">%1$d gratis gnistor tillagda</item>
     </plurals>
     <plurals name="welcome_settings_sign_in">
         <item quantity="one">Logga in och få %1$d gratis recept från vår server, en gång per Google-konto.</item>
@@ -1374,6 +1374,6 @@
     <string name="recipe_report_done">Du har rapporterat det här</string>
     <string name="recipe_report_limit">Det är gränsen för rapporter i dag. Försök igen i morgon.</string>
     <string name="recipe_report_unknown">Det här receptet kan inte rapporteras längre.</string>
-    <string name="recipe_image_unavailable">Bilder kan inte göras just nu. Inget recept drogs.</string>
+    <string name="recipe_image_unavailable">Bilder kan inte göras just nu. Inga gnistor drogs.</string>
     <!-- /Recipe: pictures and reports -->
 </resources>

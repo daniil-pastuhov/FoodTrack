@@ -20,8 +20,8 @@
       "internalID" : "6D3C1F2B",
       "localizations" : [
         {
-          "description" : "10 recipes written by our server",
-          "displayName" : "10 recipes",
+          "description" : "10 sparks: one recipe each, written by our server",
+          "displayName" : "10 sparks",
           "locale" : "en_US"
         }
       ],
@@ -35,8 +35,8 @@
       "internalID" : "6D3C1F2C",
       "localizations" : [
         {
-          "description" : "50 recipes written by our server",
-          "displayName" : "50 recipes",
+          "description" : "50 sparks: one recipe each, written by our server",
+          "displayName" : "50 sparks",
           "locale" : "en_US"
         }
       ],
@@ -50,8 +50,8 @@
       "internalID" : "6D3C1F2D",
       "localizations" : [
         {
-          "description" : "100 recipes written by our server",
-          "displayName" : "100 recipes",
+          "description" : "100 sparks: one recipe each, written by our server",
+          "displayName" : "100 sparks",
           "locale" : "en_US"
         }
       ],

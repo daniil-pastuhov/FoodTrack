@@ -35,11 +35,11 @@ class WelcomeWordingTest {
         assertEquals("Or sign in and get 3 free recipes", welcomeBuyLabel(r, WelcomeHint(3, WelcomeKind.SIGN_IN)))
         assertEquals("Or get a free recipe", welcomeBuyLabel(r, WelcomeHint(1, WelcomeKind.CLAIM)))
         // A confirmation sits beside the count: always the numeral.
-        assertEquals("1 free recipe added", welcomeOutcomeMessage(r, WelcomeOutcome.Granted(1)))
-        assertEquals("3 free recipes added", welcomeOutcomeMessage(r, WelcomeOutcome.Granted(3)))
+        assertEquals("1 free spark added", welcomeOutcomeMessage(r, WelcomeOutcome.Granted(1)))
+        assertEquals("3 free sparks added", welcomeOutcomeMessage(r, WelcomeOutcome.Granted(3)))
         assertEquals("Free recipes aren't available right now. You're signed in; nothing else has changed.", welcomeOutcomeMessage(r, WelcomeOutcome.Off(true)))
         assertEquals("Free recipes aren't available right now. Nothing has changed.", welcomeOutcomeMessage(r, WelcomeOutcome.Off(false)))
-        assertEquals("Signed in, but your free recipes couldn't be added yet.", welcomeOutcomeMessage(r, WelcomeOutcome.NotReached))
+        assertEquals("Signed in, but your free sparks couldn't be added yet.", welcomeOutcomeMessage(r, WelcomeOutcome.NotReached))
         assertNull(welcomeOutcomeMessage(r, WelcomeOutcome.Already))
     }
 
@@ -66,9 +66,9 @@ class WelcomeWordingTest {
         assertEquals("Войдите и получите бесплатный рецепт", welcomeOfferLabel(r, WelcomeHint(1, WelcomeKind.SIGN_IN)))
         assertEquals("Войдите и получите 3 бесплатных рецепта", welcomeOfferLabel(r, WelcomeHint(3, WelcomeKind.SIGN_IN)))
         assertEquals("Войдите и получите 5 бесплатных рецептов", welcomeOfferLabel(r, WelcomeHint(5, WelcomeKind.SIGN_IN)))
-        assertEquals("Добавлен 1 бесплатный рецепт", welcomeOutcomeMessage(r, WelcomeOutcome.Granted(1)))
-        assertEquals("Добавлено 3 бесплатных рецепта", welcomeOutcomeMessage(r, WelcomeOutcome.Granted(3)))
-        assertEquals("Добавлено 5 бесплатных рецептов", welcomeOutcomeMessage(r, WelcomeOutcome.Granted(5)))
+        assertEquals("Добавлена 1 бесплатная искра", welcomeOutcomeMessage(r, WelcomeOutcome.Granted(1)))
+        assertEquals("Добавлены 3 бесплатные искры", welcomeOutcomeMessage(r, WelcomeOutcome.Granted(3)))
+        assertEquals("Добавлено 5 бесплатных искр", welcomeOutcomeMessage(r, WelcomeOutcome.Granted(5)))
     }
 
     @Test
@@ -77,7 +77,7 @@ class WelcomeWordingTest {
         val r = context.resources
         assertEquals("Melde dich an und erhalte ein kostenloses Rezept", welcomeOfferLabel(r, WelcomeHint(1, WelcomeKind.SIGN_IN)))
         assertEquals("3 kostenlose Rezepte holen", welcomeOfferLabel(r, WelcomeHint(3, WelcomeKind.CLAIM)))
-        assertEquals("1 kostenloses Rezept hinzugefügt", welcomeOutcomeMessage(r, WelcomeOutcome.Granted(1)))
+        assertEquals("1 kostenloser Funke hinzugefügt", welcomeOutcomeMessage(r, WelcomeOutcome.Granted(1)))
     }
 
     @Test

@@ -92,7 +92,7 @@ symbol, other platforms or Apple awards.
 
 Two more images come from the same captures but have no script of their own. `docs/images/`
 (the README's top) is the en-GB `screenshots/` 1, 2, 3 and 6 scaled to 460×1000 JPEG.
-`iap-review/buy-recipes-sheet.png`, the in-app purchases' review screenshot, is the Buy recipes
+`iap-review/buy-recipes-sheet.png`, the in-app purchases' review screenshot, is the Buy sparks
 sheet at US prices on the 6.9" simulator: it needs real StoreKit products, which only an Xcode
 run or test gets, so it is taken by a throwaway UI test (not committed) that launches the Debug
 app with `-demoBackup <file> -demoRecipeCredits 0 -demoRoute buyRecipes` under a scheme whose
@@ -152,9 +152,9 @@ Poster frames can't change after approval without a new preview.
 
 The disclosure: the menu set and menu shots show what only the server writes, from recipe packs,
 and Apple asks for that to be said in the footage or the end frame. So their caption runs carry
-a smaller second line in every language ("Needs a recipe pack", `PACK_NOTES` and `PAID_CAPTIONS`
+a smaller second line in every language ("Needs a spark pack", `PACK_NOTES` and `PAID_CAPTIONS`
 in `ios_preview_assemble.py`); the screenshots' captions don't, as they describe what the routes
-do rather than what they cost. The form's Generate menu button shows its cost in recipes (from
+do rather than what they cost. The form's Generate menu button shows its cost in sparks (from
 the pack), never a price.
 
 ## Changing the listing texts
@@ -336,7 +336,7 @@ From CI, on every push to a `release/v*` branch (see "Releasing" in the top-leve
 | Copyright | `2026 Daniil Pastuhov` |
 | Content rights | Does not contain, show or access third-party content. (Product names and pictures come from Open Food Facts, an open database; if asked, answer yes and that you have the rights under its ODbL/CC BY-SA licences.) |
 | Price | Free, with in-app purchases. Availability: all countries, or pick |
-| In-app purchases | Three consumables, `recipes_10`, `recipes_50`, `recipes_100` (10, 50 and 100 recipes), USD 2.99 / 10.99 / 18.99 as the base price (United States the base territory; `recipes_10` was 3.99 until 2026-11-15), the other storefronts converted by Apple. The prices are `scripts/pack_prices.py`'s, set by `scripts/testflight.py iap-prices` (README.md, "Changing a pack's price"). The first ones have to be submitted for review together with an app version; the release job adds them to the version's review submission ("Changing the listing texts"), and says how to add them by hand if App Store Connect refuses. Each needs a display name, description and review screenshot (the "Buy recipes" sheet, `iap-review/buy-recipes-sheet.png`). Setup: `docs/recipe-setup.md` |
+| In-app purchases | Three consumables, `recipes_10`, `recipes_50`, `recipes_100` (10, 50 and 100 recipes), USD 2.99 / 10.99 / 18.99 as the base price (United States the base territory; `recipes_10` was 3.99 until 2026-11-15), the other storefronts converted by Apple. The prices are `scripts/pack_prices.py`'s, set by `scripts/testflight.py iap-prices` (README.md, "Changing a pack's price"). The first ones have to be submitted for review together with an app version; the release job adds them to the version's review submission ("Changing the listing texts"), and says how to add them by hand if App Store Connect refuses. Each needs a display name, description and review screenshot (the "Buy sparks" sheet, `iap-review/buy-recipes-sheet.png`). Setup: `docs/recipe-setup.md` |
 | Export compliance | Already answered in Info.plist (`ITSAppUsesNonExemptEncryption = NO`) |
 
 ## 4. Age rating
@@ -380,7 +380,7 @@ the file `store-listing/google-play/data-safety.csv`, sent by `scripts/play_data
     the record that stops one purchase being redeemed twice; the buyer's refund-after-use record
     (`buyers/`, under Apple's app transaction ID), which turns buying off after repeated refunds
     of used recipes; and, only for purchases made after the Buy sheet showed the line "If you
-    ask Apple for a refund, we tell Apple how many of these recipes you have used.", the share of
+    ask Apple for a refund, we tell Apple how many of these sparks you have used.", the share of
     the purchase used, sent to Apple when the buyer asks Apple for a refund (consumption
     information: delivered, percentage used, sample content provided; no account or play-time
     data).

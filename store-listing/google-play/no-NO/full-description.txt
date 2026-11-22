@@ -22,14 +22,14 @@ Matvakt holder oversikt over holdbarheten på maten i kjøleskapet, fryseren og 
 • Oppskrift-fanen krysser av varene som går ut først; endre utvalget, antall porsjoner, tid, kosthold og mer
 • Gratis: kopier en ferdig ledetekst, eller del den med KI-appen du allerede bruker
 • Gratis på Android-telefoner som støtter det: oppskriften skrives på selve telefonen, med telefonens egen modell (foreløpig bare på engelsk)
-• Oppskriftspakker (kjøp i appen): oppskrifter skrevet av serveren vår og lagret i appen, og menysett for 1 til 4 dager, med opptil tre retter om dagen, bygd rundt det som går ut først
+• Pakker med gnister (kjøp i appen): én gnist er én oppskrift skrevet av serveren vår og lagret i appen. Menysett planlegger 1 til 4 dager, med opptil tre retter om dagen, rundt det som går ut først, og bruker noen gnister
 • Det som mangler til en oppskrift, legger du på handlelisten med ett trykk
 
 <b>Dine data</b>
 • Ingen reklame, ingen sporing
-• Ingen abonnement: appen er gratis, og oppskriftspakkene er valgfrie engangskjøp
+• Ingen abonnement: appen er gratis, og pakkene med gnister er valgfrie engangskjøp
 • Matvarene lagres på telefonen din; ta sikkerhetskopi når du vil
-• Ingen konto nødvendig, heller ikke for å kjøpe en pakke. Logg inn med Google bare hvis du vil bruke oppskriftene på andre telefoner
+• Ingen konto nødvendig, heller ikke for å kjøpe en pakke. Logg inn med Google bare hvis du vil bruke gnistene på andre telefoner
 • En oppskrift fra en pakke sender varene du krysser av, oppskriftsinnstillingene og allergenene dine til serveren vår. De gratis alternativene sender ingenting til oss
 • Tilgjengelig på norsk, engelsk, russisk, spansk, tysk, fransk, svensk og dansk
 

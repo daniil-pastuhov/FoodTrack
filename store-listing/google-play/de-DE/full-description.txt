@@ -22,14 +22,14 @@ BestBefore behält das Mindesthaltbarkeitsdatum (MHD) und den Vorrat in Kühlsch
 • Der Rezept-Tab wählt die Artikel mit dem nächsten Datum aus; Auswahl, Portionen, Zeit, Ernährung und mehr kannst du ändern
 • Kostenlos: einen fertigen Prompt kopieren oder mit der KI-App teilen, die du schon nutzt
 • Kostenlos auf unterstützten Android-Handys: Das Rezept entsteht direkt auf dem Handy, mit dessen eigenem Modell (vorerst nur auf Englisch)
-• Rezeptpakete (In-App-Kauf): Rezepte von unserem Server, in der App gespeichert, und Menü-Sets für 1 bis 4 Tage mit bis zu drei Gängen pro Tag, die zuerst verwenden, was bald abläuft
+• Funkenpakete (In-App-Kauf): Ein Funke ist ein Rezept von unserem Server, in der App gespeichert. Menü-Sets planen 1 bis 4 Tage mit bis zu drei Gängen pro Tag rund um das, was zuerst abläuft, und kosten ein paar Funken
 • Was einem Rezept noch fehlt, kommt mit einem Tipp auf die Einkaufsliste
 
 <b>Deine Daten</b>
 • Keine Werbung, kein Tracking
-• Kein Abo: Die App ist kostenlos, Rezeptpakete sind optionale Einmalkäufe
+• Kein Abo: Die App ist kostenlos, Funkenpakete sind optionale Einmalkäufe
 • Dein Vorrat wird auf deinem Handy gespeichert; Sicherungen exportierst du, wann du willst
-• Kein Konto nötig, nicht einmal zum Kauf eines Pakets. Melde dich nur mit Google an, wenn du deine Rezepte auf anderen Handys nutzen möchtest
+• Kein Konto nötig, nicht einmal zum Kauf eines Pakets. Melde dich nur mit Google an, wenn du deine Funken auf anderen Handys nutzen möchtest
 • Ein Rezept aus einem Paket sendet die ausgewählten Artikel, deine Rezepteinstellungen und deine Allergene an unseren Server. Die kostenlosen Wege senden nichts an uns
 • Verfügbar auf Deutsch, Englisch, Russisch, Norwegisch, Spanisch, Französisch, Schwedisch und Dänisch
 

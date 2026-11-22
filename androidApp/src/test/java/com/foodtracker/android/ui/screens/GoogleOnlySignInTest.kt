@@ -57,21 +57,21 @@ class GoogleOnlySignInTest {
     @Config(sdk = [34], qualifiers = "en")
     fun theEnglishWordingNamesGoogleForAndroidAndAppleForIphone() {
         assertEquals(
-            "Sign in with Google. Your recipes follow you to a new phone, Android or iPhone, wherever you sign in with Google. We keep your account ID and email address.",
+            "Sign in with Google. Your sparks follow you to a new phone, Android or iPhone, wherever you sign in with Google. We keep your account ID and email address.",
             context.getString(R.string.recipe_choice_account_body)
         )
         assertEquals(
-            "Signed in with Apple on an iPhone? Add Google sign-in there, in Recipe settings, to use your recipes on this device.",
+            "Signed in with Apple on an iPhone? Add Google sign-in there, in Recipe settings, to use your sparks on this device.",
             context.getString(R.string.recipe_apple_on_iphone_hint)
         )
-        assertEquals("Already have recipes in an account? Sign in to use them here.", context.getString(R.string.recipe_have_account_hint))
+        assertEquals("Already have sparks in an account? Sign in to use them here.", context.getString(R.string.recipe_have_account_hint))
         assertEquals(
             "Sign in with Google on another phone, Android or iPhone, or with Apple on an iPhone, to use them there.",
             context.getString(R.string.recipe_signed_in_google_and_apple)
         )
         assertEquals("Signed in with Google, Apple", context.getString(R.string.recipe_signed_in_with, signInProvidersText(both)))
         val note = context.getString(R.string.recipe_apple_link_left_body)
-        assertTrue(note, note.startsWith("Your account and its recipes are deleted, but your Apple Account is still linked to this app."))
+        assertTrue(note, note.startsWith("Your account and its sparks are deleted, but your Apple Account is still linked to this app."))
         assertTrue(note, "Sign in with Apple" in note && "Apple Account settings" in note)
     }
 

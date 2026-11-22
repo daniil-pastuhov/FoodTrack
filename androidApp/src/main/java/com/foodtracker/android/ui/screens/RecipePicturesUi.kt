@@ -92,7 +92,7 @@ internal fun pictureLevelLabel(resources: Resources, level: PictureLevel): Strin
     }
 )
 
-/** "The dish · 2 recipes"; no cost for no pictures, which the button's pill says anyway. */
+/** "The dish · 2 sparks"; no cost for no pictures, which the button's pill says anyway. */
 internal fun pictureRowValue(resources: Resources, level: PictureLevel, costs: RecipeCosts): String {
     val label = pictureLevelLabel(resources, level)
     val cost = costs.picture(level)

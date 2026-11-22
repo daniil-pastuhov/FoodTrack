@@ -57,7 +57,7 @@ struct TasteProfileRow: View {
 // MARK: Promo sheet
 
 /// What a taste profile does, for someone with no recipes in a pack and no saved profile. Static:
-/// shown without any call, no price, no count of questions. "See recipe packs" opens the Buy sheet.
+/// shown without any call, no price, no count of questions. "See spark packs" opens the Buy sheet.
 struct TastePromoSheet: View {
     @ObservedObject var model: RecipeViewModel
 

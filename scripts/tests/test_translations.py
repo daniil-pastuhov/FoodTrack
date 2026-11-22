@@ -7,7 +7,7 @@ against en.lproj.
 For every app language: the same keys as English (Android strings marked translatable="false"
 excepted), the same format placeholders, no apostrophe aapt2 would refuse, on iOS only the
 {markers} English has for that key (where English has {device}, either it or {the_device}, as
-L10n.withDevice replaces both), and the paid unit never called a credit or token (CLAUDE.md,
+L10n.withDevice replaces both), and the paid unit (a "spark" in English) never called a credit or token (CLAUDE.md,
 "Recipe") where English doesn't use the word itself (the App Check debug token). Standard library only.
 """
 import pathlib

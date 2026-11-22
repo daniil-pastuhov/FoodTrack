@@ -770,13 +770,13 @@
     <string name="recipe_time_guide_hint">Den længste tid er en grænse; den korteste er kun vejledende.</string>
     <string name="recipe_prompt_min_minutes">Helst omkring %1$d minutter eller mere</string>
     <string name="recipe_prompt_meals">Passer til et af disse måltider: %1$s</string>
-    <string name="recipe_not_enough_items">Der er ikke nok at lave mad med, når din kost og dine allergener er trukket fra. Sæt kryds ved nogle flere varer. Der er ikke trukket nogen opskrift.</string>
+    <string name="recipe_not_enough_items">Der er ikke nok at lave mad med, når din kost og dine allergener er trukket fra. Sæt kryds ved nogle flere varer. Der er ikke trukket nogen gnister.</string>
     <plurals name="recipe_not_enough_items_menu">
-        <item quantity="one">Der er ikke nok til én dag. Sæt kryds ved nogle flere varer, eller bed om en enkelt opskrift. Der er ikke trukket nogen opskrifter.</item>
-        <item quantity="other">Der er ikke nok til %1$d dage. Sæt kryds ved nogle flere varer, eller bed om en enkelt opskrift. Der er ikke trukket nogen opskrifter.</item>
+        <item quantity="one">Der er ikke nok til én dag. Sæt kryds ved nogle flere varer, eller bed om en enkelt opskrift. Der er ikke trukket nogen gnister.</item>
+        <item quantity="other">Der er ikke nok til %1$d dage. Sæt kryds ved nogle flere varer, eller bed om en enkelt opskrift. Der er ikke trukket nogen gnister.</item>
     </plurals>
-    <string name="recipe_diets_need_update">Opskrifter fra pakker kan endnu ikke kombinere glutenfri med en anden kost. Behold én af dem i opskriftsindstillingerne, eller brug enhedens egen model eller den delte prompt. Der er ikke trukket nogen opskrifter.</string>
-    <string name="recipe_language_needs_update">Opskrifter fra pakker kan endnu ikke skrives på dansk. Vælg et andet opskriftssprog i opskriftsindstillingerne, eller brug enhedens egen model eller den delte prompt. Der er ikke trukket nogen opskrifter.</string>
+    <string name="recipe_diets_need_update">Opskrifter fra pakker kan endnu ikke kombinere glutenfri med en anden kost. Behold én af dem i opskriftsindstillingerne, eller brug enhedens egen model eller den delte prompt. Der er ikke trukket nogen gnister.</string>
+    <string name="recipe_language_needs_update">Opskrifter fra pakker kan endnu ikke skrives på dansk. Vælg et andet opskriftssprog i opskriftsindstillingerne, eller brug enhedens egen model eller den delte prompt. Der er ikke trukket nogen gnister.</string>
     <string name="recipe_not_from_pantry_hint">Ingredienser uden mærket »I dit forråd« kommer ikke fra dit forråd: basisvarer eller nogle få ting, du måske skal købe.</string>
     <!-- Add to shopping list -->
     <string name="recipe_shopping_add">Føj til indkøbslisten</string>
@@ -892,8 +892,8 @@
     </plurals>
 
     <!-- Recipe tab, paid route: packs, the server, the account. The unit is a "recipe", never a credit. -->
-    <string name="recipe_balance_description">Opskrifter tilbage: %1$d. Køb flere</string>
-    <string name="recipe_balance_only_description">Opskrifter tilbage: %1$d</string>
+    <string name="recipe_balance_description">Gnister tilbage: %1$d. Køb flere</string>
+    <string name="recipe_balance_only_description">Gnister tilbage: %1$d</string>
     <string name="recipe_mode_label">Hvad skal laves</string>
     <string name="recipe_mode_recipe">Opskrift</string>
     <string name="recipe_mode_menu">Menusæt</string>
@@ -903,10 +903,10 @@
         <item quantity="other">%1$d dage</item>
     </plurals>
     <plurals name="recipe_packs_body_sets">
-        <item quantity="one">Én opskrift er én ret skrevet af vores server. Et menusæt bruger %1$d til %2$d opskrift, afhængigt af dage og retter om dagen. De udløber ikke.</item>
-        <item quantity="other">Én opskrift er én ret skrevet af vores server. Et menusæt bruger %1$d til %2$d opskrifter, afhængigt af dage og retter om dagen. De udløber ikke.</item>
+        <item quantity="one">Én gnist er én opskrift skrevet af vores server. Et menusæt bruger %1$d til %2$d gnist, afhængigt af dage og retter om dagen. De udløber ikke.</item>
+        <item quantity="other">Én gnist er én opskrift skrevet af vores server. Et menusæt bruger %1$d til %2$d gnister, afhængigt af dage og retter om dagen. De udløber ikke.</item>
     </plurals>
-    <string name="recipe_intro_packs_body_sets">Vores server skriver opskriften og kan også planlægge et menusæt. En opskrift bruger %1$s fra en pakke; et menusæt bruger %2$d til %3$d, afhængigt af dage og retter om dagen.</string>
+    <string name="recipe_intro_packs_body_sets">Vores server skriver opskriften og kan også planlægge et menusæt. Pakkerne indeholder gnister: en opskrift bruger %1$s; et menusæt bruger %2$d til %3$d, afhængigt af dage og retter om dagen.</string>
     <plurals name="recipe_saved_unread_action">
         <item quantity="one">Gemte opskrifter, %1$d ny</item>
         <item quantity="other">Gemte opskrifter, %1$d nye</item>
@@ -928,10 +928,10 @@
     <string name="recipe_generate">Lav opskrift</string>
     <string name="recipe_generate_menu">Lav menu</string>
     <plurals name="recipe_cost_recipes">
-        <item quantity="one">%1$d opskrift</item>
-        <item quantity="other">%1$d opskrifter</item>
+        <item quantity="one">%1$d gnist</item>
+        <item quantity="other">%1$d gnister</item>
     </plurals>
-    <string name="recipe_buy">Køb opskrifter</string>
+    <string name="recipe_buy">Køb gnister</string>
     <string name="recipe_on_device_weak">Modellen på denne enhed er stadig svag til madlavning, så tjek, at opskriften giver mening.</string>
     <plurals name="recipe_menu_few_items">
         <item quantity="one">Kun %1$d vare til %2$d retter. Det meste til denne menu skal købes ind.</item>
@@ -943,10 +943,10 @@
         <item quantity="other">Du har %1$d tilbage. En enkelt opskrift kan stadig laves.</item>
     </plurals>
     <plurals name="recipe_balance_left">
-        <item quantity="one">%1$d opskrift tilbage</item>
-        <item quantity="other">%1$d opskrifter tilbage</item>
+        <item quantity="one">%1$d gnist tilbage</item>
+        <item quantity="other">%1$d gnister tilbage</item>
     </plurals>
-    <string name="recipe_menu_short_none">Du har ingen opskrifter tilbage.</string>
+    <string name="recipe_menu_short_none">Du har ingen gnister tilbage.</string>
     <string name="recipe_writing_server_title">Skriver din opskrift</string>
     <string name="recipe_writing_server_body">Et par sekunder. Du kan godt forlade skærmen; opskriften kommer i Gemte opskrifter.</string>
     <plurals name="recipe_writing_menu_title">
@@ -956,83 +956,83 @@
     <string name="recipe_writing_menu_body">Det kan tage op til to minutter. Du kan godt forlade skærmen; menuen kommer i Gemte opskrifter.</string>
     <string name="recipe_offline_title">Ingen forbindelse</string>
     <string name="recipe_offline_body">Opskrifter fra din pakke kræver internet. De gratis muligheder nedenfor virker stadig.</string>
-    <string name="recipe_failed_server">Opskriften kunne ikke skrives. Der er ikke trukket nogen opskrift.</string>
-    <string name="recipe_failed_server_menu">Menuen kunne ikke skrives. Der er ikke trukket nogen opskrifter.</string>
-    <string name="recipe_failed_limit_today">Det er grænsen for i dag. Prøv igen i morgen. Der er ikke trukket nogen opskrifter.</string>
-    <string name="recipe_failed_trouble_today">Vi har problemer med at skrive opskrifter lige nu. Prøv igen i morgen. Der er ikke trukket nogen opskrifter.</string>
-    <string name="recipe_failed_server_later">Det kunne ikke skrives lige nu. Prøv igen senere. Der er ikke trukket nogen opskrifter.</string>
-    <string name="recipe_failed_server_busy">En anden opskrift er stadig ved at blive skrevet. Prøv igen om et minut. Der er ikke trukket nogen opskrifter.</string>
-    <string name="recipe_failed_rate_limited">For mange opskrifter på kort tid. Prøv igen om et minut. Der er ikke trukket nogen opskrifter.</string>
+    <string name="recipe_failed_server">Opskriften kunne ikke skrives. Der er ikke trukket nogen gnister.</string>
+    <string name="recipe_failed_server_menu">Menuen kunne ikke skrives. Der er ikke trukket nogen gnister.</string>
+    <string name="recipe_failed_limit_today">Det er grænsen for i dag. Prøv igen i morgen. Der er ikke trukket nogen gnister.</string>
+    <string name="recipe_failed_trouble_today">Vi har problemer med at skrive opskrifter lige nu. Prøv igen i morgen. Der er ikke trukket nogen gnister.</string>
+    <string name="recipe_failed_server_later">Det kunne ikke skrives lige nu. Prøv igen senere. Der er ikke trukket nogen gnister.</string>
+    <string name="recipe_failed_server_busy">En anden opskrift er stadig ved at blive skrevet. Prøv igen om et minut. Der er ikke trukket nogen gnister.</string>
+    <string name="recipe_failed_rate_limited">For mange opskrifter på kort tid. Prøv igen om et minut. Der er ikke trukket nogen gnister.</string>
     <string name="recipe_left_out">»%1$s« blev udeladt: navnet kunne ikke sendes.</string>
-    <string name="recipe_ingredient_not_sent">»%1$s« kunne ikke sendes. Fjern krydset, eller giv den et nyt navn, og prøv så igen. Der er ikke trukket nogen opskrifter.</string>
-    <string name="recipe_allergen_not_sent">Dit allergen »%1$s« kunne ikke sendes, så der blev ikke skrevet noget: en opskrift uden det er måske ikke sikker. Giv det et nyt navn under Allergenadvarsler i Indstillinger, og prøv så igen. Der er ikke trukket nogen opskrifter.</string>
+    <string name="recipe_ingredient_not_sent">»%1$s« kunne ikke sendes. Fjern krydset, eller giv den et nyt navn, og prøv så igen. Der er ikke trukket nogen gnister.</string>
+    <string name="recipe_allergen_not_sent">Dit allergen »%1$s« kunne ikke sendes, så der blev ikke skrevet noget: en opskrift uden det er måske ikke sikker. Giv det et nyt navn under Allergenadvarsler i Indstillinger, og prøv så igen. Der er ikke trukket nogen gnister.</string>
     <plurals name="recipe_allergens_too_many">
-        <item quantity="one">Der blev ikke skrevet noget: en opskrift kan højst tage hensyn til %1$d allergen, og der er angivet flere. Fjern nogle under Allergenadvarsler i Indstillinger, og prøv så igen. Der er ikke trukket nogen opskrifter.</item>
-        <item quantity="other">Der blev ikke skrevet noget: en opskrift kan højst tage hensyn til %1$d allergener, og der er angivet flere. Fjern nogle under Allergenadvarsler i Indstillinger, og prøv så igen. Der er ikke trukket nogen opskrifter.</item>
+        <item quantity="one">Der blev ikke skrevet noget: en opskrift kan højst tage hensyn til %1$d allergen, og der er angivet flere. Fjern nogle under Allergenadvarsler i Indstillinger, og prøv så igen. Der er ikke trukket nogen gnister.</item>
+        <item quantity="other">Der blev ikke skrevet noget: en opskrift kan højst tage hensyn til %1$d allergener, og der er angivet flere. Fjern nogle under Allergenadvarsler i Indstillinger, og prøv så igen. Der er ikke trukket nogen gnister.</item>
     </plurals>
     <plurals name="recipe_refused">
-        <item quantity="one">Der kunne ikke laves en opskrift af disse varer. Det brugte %1$d opskrift, da forsøget alligevel kostede os penge at køre. Prøv med færre eller andre varer.</item>
-        <item quantity="other">Der kunne ikke laves en opskrift af disse varer. Det brugte %1$d opskrifter, da forsøget alligevel kostede os penge at køre. Prøv med færre eller andre varer.</item>
+        <item quantity="one">Der kunne ikke laves en opskrift af disse varer. Det brugte %1$d gnist, da forsøget alligevel kostede os penge at køre. Prøv med færre eller andre varer.</item>
+        <item quantity="other">Der kunne ikke laves en opskrift af disse varer. Det brugte %1$d gnister, da forsøget alligevel kostede os penge at køre. Prøv med færre eller andre varer.</item>
     </plurals>
     <plurals name="recipe_refused_menu">
-        <item quantity="one">Der kunne ikke laves en menu af disse varer. Det brugte %1$d opskrift, da forsøget alligevel kostede os penge at køre. Prøv med færre eller andre varer.</item>
-        <item quantity="other">Der kunne ikke laves en menu af disse varer. Det brugte %1$d opskrifter, da forsøget alligevel kostede os penge at køre. Prøv med færre eller andre varer.</item>
+        <item quantity="one">Der kunne ikke laves en menu af disse varer. Det brugte %1$d gnist, da forsøget alligevel kostede os penge at køre. Prøv med færre eller andre varer.</item>
+        <item quantity="other">Der kunne ikke laves en menu af disse varer. Det brugte %1$d gnister, da forsøget alligevel kostede os penge at køre. Prøv med færre eller andre varer.</item>
     </plurals>
     <string name="recipe_paused_title">Opskrifter fra pakker er sat på pause</string>
     <plurals name="recipe_paused_body">
-        <item quantity="one">Din %1$d opskrift er i sikkerhed. De gratis muligheder nedenfor virker stadig.</item>
-        <item quantity="other">Dine %1$d opskrifter er i sikkerhed. De gratis muligheder nedenfor virker stadig.</item>
+        <item quantity="one">Din %1$d gnist er i sikkerhed. De gratis muligheder nedenfor virker stadig.</item>
+        <item quantity="other">Dine %1$d gnister er i sikkerhed. De gratis muligheder nedenfor virker stadig.</item>
     </plurals>
     <string name="recipe_paused_body_none">De gratis muligheder nedenfor virker stadig.</string>
     <plurals name="recipe_added">
-        <item quantity="one">%1$d opskrift tilføjet</item>
-        <item quantity="other">%1$d opskrifter tilføjet</item>
+        <item quantity="one">%1$d gnist tilføjet</item>
+        <item quantity="other">%1$d gnister tilføjet</item>
     </plurals>
     <plurals name="recipe_saved_left">
-        <item quantity="one">Gemt. %1$d opskrift tilbage</item>
-        <item quantity="other">Gemt. %1$d opskrifter tilbage</item>
+        <item quantity="one">Gemt. %1$d gnist tilbage</item>
+        <item quantity="other">Gemt. %1$d gnister tilbage</item>
     </plurals>
     <string name="recipe_unconfirmed_title">Dit køb bliver bekræftet</string>
     <plurals name="recipe_unconfirmed_body">
-        <item quantity="one">Du har betalt for %1$d opskrift, og den er ikke tilføjet endnu. Vi bliver ved med at prøve; du behøver ikke at købe igen.</item>
-        <item quantity="other">Du har betalt for %1$d opskrifter, og de er ikke tilføjet endnu. Vi bliver ved med at prøve; du behøver ikke at købe igen.</item>
+        <item quantity="one">Du har betalt for %1$d gnist, og den er ikke tilføjet endnu. Vi bliver ved med at prøve; du behøver ikke at købe igen.</item>
+        <item quantity="other">Du har betalt for %1$d gnister, og de er ikke tilføjet endnu. Vi bliver ved med at prøve; du behøver ikke at købe igen.</item>
     </plurals>
     <string name="recipe_try_now">Prøv nu</string>
     <string name="recipe_pending_title">Venter på betaling</string>
-    <string name="recipe_pending_body">Dine opskrifter bliver tilføjet, når butikken bekræfter betalingen. Det kan tage et stykke tid.</string>
-    <string name="recipe_packs_body">Én opskrift er én ret skrevet af vores server. En menu for 3 dage bruger %1$s med to retter om dagen og %2$s med tre. De udløber ikke.</string>
+    <string name="recipe_pending_body">Dine gnister bliver tilføjet, når butikken bekræfter betalingen. Det kan tage et stykke tid.</string>
+    <string name="recipe_packs_body">Én gnist er én opskrift skrevet af vores server. En menu for 3 dage bruger %1$s med to retter om dagen og %2$s med tre. De udløber ikke.</string>
     <plurals name="recipe_pack_name">
-        <item quantity="one">%1$d opskrift</item>
-        <item quantity="other">%1$d opskrifter</item>
+        <item quantity="one">%1$d gnist</item>
+        <item quantity="other">%1$d gnister</item>
     </plurals>
     <string name="recipe_pack_each">%1$s pr. stk.</string>
-    <string name="recipe_pack_saving_a11y">%1$d %% billigere pr. opskrift</string>
+    <string name="recipe_pack_saving_a11y">%1$d %% billigere pr. gnist</string>
     <string name="recipe_cancel">Annullér</string>
     <string name="recipe_back">Tilbage</string>
     <string name="recipe_close">Luk</string>
     <string name="recipe_ok">OK</string>
-    <string name="recipe_choice_title">Hvor skal dine opskrifter ligge?</string>
+    <string name="recipe_choice_title">Hvor skal dine gnister ligge?</string>
     <string name="recipe_choice_body">Du vælger én gang. Du kan logge ind senere under Opskriftsindstillinger.</string>
     <string name="recipe_choice_phone_title">På denne enhed, uden konto</string>
-    <string name="recipe_choice_phone_body">Intet at logge ind på. Opskrifterne hører til denne installation af appen: hvis du sletter appen eller skifter enhed, mister du dem, du ikke har brugt.</string>
+    <string name="recipe_choice_phone_body">Intet at logge ind på. Gnisterne hører til denne installation af appen: hvis du sletter appen eller skifter enhed, mister du dem, du ikke har brugt.</string>
     <string name="recipe_choice_account_title">På en konto</string>
-    <string name="recipe_choice_account_body">Log ind med Google. Dine opskrifter følger med til en ny telefon, Android eller iPhone, hvor du end logger ind med Google. Vi gemmer dit konto-id og din e-mailadresse.</string>
+    <string name="recipe_choice_account_body">Log ind med Google. Dine gnister følger med til en ny telefon, Android eller iPhone, hvor du end logger ind med Google. Vi gemmer dit konto-id og din e-mailadresse.</string>
     <string name="recipe_sign_in_google">Log ind med Google</string>
-    <string name="recipe_apple_on_iphone_hint">Logget ind med Apple på en iPhone? Tilføj login med Google dér, under Opskriftsindstillinger, for at bruge dine opskrifter på denne enhed.</string>
-    <string name="recipe_have_account_hint">Har du allerede opskrifter på en konto? Log ind for at bruge dem her.</string>
+    <string name="recipe_apple_on_iphone_hint">Logget ind med Apple på en iPhone? Tilføj login med Google dér, under Opskriftsindstillinger, for at bruge dine gnister på denne enhed.</string>
+    <string name="recipe_have_account_hint">Har du allerede gnister på en konto? Log ind for at bruge dem her.</string>
     <string name="recipe_store_error_title">Kan ikke få forbindelse til butikken</string>
     <string name="recipe_store_error_body">Tjek din forbindelse, og prøv igen. Der er ikke trukket nogen penge.</string>
     <string name="recipe_rejected_title">Købet kunne ikke tilføjes</string>
-    <string name="recipe_rejected_body">Butikken melder, at det er refunderet eller allerede brugt. Hvis du har betalt og ikke har fået nogen opskrifter, så kontakt butikken for at få pengene tilbage.</string>
-    <string name="recipe_your_recipes">Dine opskrifter</string>
+    <string name="recipe_rejected_body">Butikken melder, at det er refunderet eller allerede brugt. Hvis du har betalt og ikke har fået nogen gnister, så kontakt butikken for at få pengene tilbage.</string>
+    <string name="recipe_your_recipes">Dine gnister</string>
     <plurals name="recipe_on_phone_label">
-        <item quantity="one">opskrift på denne enhed</item>
-        <item quantity="other">opskrifter på denne enhed</item>
+        <item quantity="one">gnist på denne enhed</item>
+        <item quantity="other">gnister på denne enhed</item>
     </plurals>
     <string name="recipe_on_phone_body">De hører til denne installation af appen. Hvis du sletter appen eller skifter enhed, mister du dem, du ikke har brugt. Log ind for i stedet at gemme dem på en konto; de flyttes med det samme.</string>
     <plurals name="recipe_in_account_label">
-        <item quantity="one">opskrift på din konto</item>
-        <item quantity="other">opskrifter på din konto</item>
+        <item quantity="one">gnist på din konto</item>
+        <item quantity="other">gnister på din konto</item>
     </plurals>
     <string name="recipe_signed_in_with">Logget ind med %1$s</string>
     <string name="recipe_signed_in_add_google">Login med Apple virker kun i iPhone-appen. Tilføj login med Google her for at blive ved med at bruge dem på Android.</string>
@@ -1043,12 +1043,12 @@
     <string name="recipe_delete_account">Slet konto</string>
     <string name="recipe_sign_out_title">Log ud?</string>
     <plurals name="recipe_sign_out_body">
-        <item quantity="one">Din %1$d opskrift bliver på din konto. Log ind igen for at bruge den. Gemte opskrifter bliver på denne enhed.</item>
-        <item quantity="other">Dine %1$d opskrifter bliver på din konto. Log ind igen for at bruge dem. Gemte opskrifter bliver på denne enhed.</item>
+        <item quantity="one">Din %1$d gnist bliver på din konto. Log ind igen for at bruge den. Gemte opskrifter bliver på denne enhed.</item>
+        <item quantity="other">Dine %1$d gnister bliver på din konto. Log ind igen for at bruge dem. Gemte opskrifter bliver på denne enhed.</item>
     </plurals>
     <string name="recipe_delete_title">Slet din konto?</string>
     <string name="recipe_apple_link_left_title">Forbindelsen til Apple er ikke fjernet</string>
-    <string name="recipe_apple_link_left_body">Din konto og dens opskrifter er slettet, men din Apple-konto er stadig forbundet med appen. For også at fjerne forbindelsen skal du slå Log ind med Apple fra for appen i indstillingerne for din Apple-konto.</string>
+    <string name="recipe_apple_link_left_body">Din konto og dens gnister er slettet, men din Apple-konto er stadig forbundet med appen. For også at fjerne forbindelsen skal du slå Log ind med Apple fra for appen i indstillingerne for din Apple-konto.</string>
     <!-- The allergen consent step (ALLERGEN_CONSENT_VERSION in shared AllergenConsent.kt: raise it when this wording changes; iOS has the same text). -->
     <string name="recipe_allergen_consent_title">Send dine allergener til vores server?</string>
     <string name="recipe_allergen_consent_body">For at skrive dette sendes din allergenliste (%1$s) sammen med de afkrydsede varer og dine præferencer til vores server og til Googles AI-model, så opskriften undgår de fødevarer. Google kan behandle den uden for EU. Vi bruger den kun til denne forespørgsel og gemmer den ikke bagefter. Google behandler den for at skrive opskriften og kan logge forespørgsler for at opdage misbrug. Du kan trække samtykket tilbage under Opskriftsindstillinger.\n\nDe gratis muligheder, enhedens egen model og den delte prompt, sender den ikke til os.</string>
@@ -1059,28 +1059,28 @@
     <string name="recipe_allergen_consent_setting_on">Du gav samtykke den %1$s. Slå fra for at trække det tilbage: så skriver vores server ikke opskrifter, mens der er angivet allergener.</string>
     <string name="recipe_allergen_consent_setting_off">Kræves for opskrifter fra vores server, mens der er angivet allergener. Vi bruger det kun til forespørgslen og gemmer det ikke.</string>
     <plurals name="recipe_delete_body">
-        <item quantity="one">Din %1$d ubrugte opskrift går tabt og kan hverken refunderes eller gendannes. Dit login og din e-mailadresse slettes fra vores server; en registrering af købene bliver gemt, men er ikke længere knyttet til dig. Eventuelle rapporter, du har sendt, bliver gemt i en begrænset periode og er heller ikke længere knyttet til dig. Gemte opskrifter og dit forråd bliver på denne enhed.</item>
-        <item quantity="other">Dine %1$d ubrugte opskrifter går tabt og kan hverken refunderes eller gendannes. Dit login og din e-mailadresse slettes fra vores server; en registrering af købene bliver gemt, men er ikke længere knyttet til dig. Eventuelle rapporter, du har sendt, bliver gemt i en begrænset periode og er heller ikke længere knyttet til dig. Gemte opskrifter og dit forråd bliver på denne enhed.</item>
+        <item quantity="one">Din %1$d ubrugte gnist går tabt og kan hverken refunderes eller gendannes. Dit login og din e-mailadresse slettes fra vores server; en registrering af købene bliver gemt, men er ikke længere knyttet til dig. Eventuelle rapporter, du har sendt, bliver gemt i en begrænset periode og er heller ikke længere knyttet til dig. Gemte opskrifter og dit forråd bliver på denne enhed.</item>
+        <item quantity="other">Dine %1$d ubrugte gnister går tabt og kan hverken refunderes eller gendannes. Dit login og din e-mailadresse slettes fra vores server; en registrering af købene bliver gemt, men er ikke længere knyttet til dig. Eventuelle rapporter, du har sendt, bliver gemt i en begrænset periode og er heller ikke længere knyttet til dig. Gemte opskrifter og dit forråd bliver på denne enhed.</item>
     </plurals>
     <!-- Deleting what our server holds for recipes kept on this device (an anonymous account). -->
     <string name="recipe_delete_device_data">Slet mine data fra vores server</string>
     <string name="recipe_delete_device_title">Slet dine data fra vores server?</string>
     <plurals name="recipe_delete_device_body">
-        <item quantity="one">Din %1$d ubrugte opskrift går tabt og kan hverken refunderes eller gendannes. Det anonyme login, som denne enhed bruger, slettes fra vores server; en registrering af købene bliver gemt, men er ikke længere knyttet til dig. Eventuelle rapporter, du har sendt, bliver gemt i en begrænset periode og er heller ikke længere knyttet til dig. Gemte opskrifter og dit forråd bliver på denne enhed.</item>
-        <item quantity="other">Dine %1$d ubrugte opskrifter går tabt og kan hverken refunderes eller gendannes. Det anonyme login, som denne enhed bruger, slettes fra vores server; en registrering af købene bliver gemt, men er ikke længere knyttet til dig. Eventuelle rapporter, du har sendt, bliver gemt i en begrænset periode og er heller ikke længere knyttet til dig. Gemte opskrifter og dit forråd bliver på denne enhed.</item>
+        <item quantity="one">Din %1$d ubrugte gnist går tabt og kan hverken refunderes eller gendannes. Det anonyme login, som denne enhed bruger, slettes fra vores server; en registrering af købene bliver gemt, men er ikke længere knyttet til dig. Eventuelle rapporter, du har sendt, bliver gemt i en begrænset periode og er heller ikke længere knyttet til dig. Gemte opskrifter og dit forråd bliver på denne enhed.</item>
+        <item quantity="other">Dine %1$d ubrugte gnister går tabt og kan hverken refunderes eller gendannes. Det anonyme login, som denne enhed bruger, slettes fra vores server; en registrering af købene bliver gemt, men er ikke længere knyttet til dig. Eventuelle rapporter, du har sendt, bliver gemt i en begrænset periode og er heller ikke længere knyttet til dig. Gemte opskrifter og dit forråd bliver på denne enhed.</item>
     </plurals>
     <string name="recipe_delete_device_body_none">Det anonyme login, som denne enhed bruger, slettes fra vores server; en registrering af eventuelle køb bliver gemt, men er ikke længere knyttet til dig. Eventuelle rapporter, du har sendt, bliver gemt i en begrænset periode og er heller ikke længere knyttet til dig. Gemte opskrifter og dit forråd bliver på denne enhed.</string>
     <string name="recipe_delete_device_confirm">Slet data</string>
     <string name="recipe_device_data_deleted">Dine data er slettet fra vores server</string>
     <string name="recipe_delete_waits_for_purchase">Et køb er stadig ved at blive gennemført. Du kan slette, når det er færdigt.</string>
-    <string name="recipe_merge_title">Føje enhedens opskrifter til din konto?</string>
-    <string name="recipe_merge_body">Din konto har allerede %1$d opskrifter. De %2$d på denne enhed bliver føjet til den, så det bliver %3$d i alt. Det kan ikke fortrydes.</string>
-    <string name="recipe_merge_body_unknown">De %1$d opskrifter på denne enhed bliver føjet til din konto. Det kan ikke fortrydes.</string>
+    <string name="recipe_merge_title">Føje enhedens gnister til din konto?</string>
+    <string name="recipe_merge_body">Din konto har allerede %1$d gnister. De %2$d på denne enhed bliver føjet til den, så det bliver %3$d i alt. Det kan ikke fortrydes.</string>
+    <string name="recipe_merge_body_unknown">De %1$d gnister på denne enhed bliver føjet til din konto. Det kan ikke fortrydes.</string>
     <string name="recipe_merge_confirm">Tilføj og log ind</string>
-    <string name="recipe_sign_in_failed">Du kunne ikke logges ind. Dine opskrifter er uændrede.</string>
-    <string name="recipe_sign_in_in_use">Det login hører allerede til en anden konto. Dine opskrifter er uændrede.</string>
+    <string name="recipe_sign_in_failed">Du kunne ikke logges ind. Dine gnister er uændrede.</string>
+    <string name="recipe_sign_in_in_use">Det login hører allerede til en anden konto. Dine gnister er uændrede.</string>
     <string name="recipe_account_deleted">Kontoen er slettet</string>
-    <string name="recipe_purchases_blocked">Du kan ikke købe opskrifter med denne konto, fordi tidligere køb blev refunderet, efter at opskrifterne var brugt.</string>
+    <string name="recipe_purchases_blocked">Du kan ikke købe gnister med denne konto, fordi tidligere køb blev refunderet, efter at gnisterne var brugt.</string>
     <string name="recipe_account_busy">En opskrift er stadig ved at blive skrevet. Prøv igen om et øjeblik.</string>
     <string name="recipe_account_action_failed">Kunne ikke få forbindelse til vores server. Intet blev ændret.</string>
     <string name="recipe_writing_busy_title">Vores server har travlt</string>
@@ -1089,23 +1089,23 @@
     <string name="recipe_busy_body">Din forespørgsel er gemt og kan stadig blive skrevet. Prøv igen om et minut for at hente den. De gratis muligheder nedenfor virker stadig.</string>
     <string name="recipe_elsewhere_title">Et køb hører til en anden konto</string>
     <plurals name="recipe_elsewhere_body">
-        <item quantity="one">%1$d opskrift på denne enhed blev købt med en anden konto. Log ind på den konto, du købte den med, for at tilføje den.</item>
-        <item quantity="other">%1$d opskrifter på denne enhed blev købt med en anden konto. Log ind på den konto, du købte dem med, for at tilføje dem.</item>
+        <item quantity="one">%1$d gnist på denne enhed blev købt med en anden konto. Log ind på den konto, du købte den med, for at tilføje den.</item>
+        <item quantity="other">%1$d gnister på denne enhed blev købt med en anden konto. Log ind på den konto, du købte dem med, for at tilføje dem.</item>
     </plurals>
-    <string name="recipe_rejected_build_body">Denne kopi af appen er sat op til en anden butik, så den kan ikke tilføje køb fra Google Play. Købet blev ikke føjet til dine opskrifter. Google Play refunderer normalt et køb, der ikke er tilføjet inden for tre dage. Installér appen fra Google Play for at købe opskrifter.</string>
+    <string name="recipe_rejected_build_body">Denne kopi af appen er sat op til en anden butik, så den kan ikke tilføje køb fra Google Play. Købet blev ikke føjet til dine gnister. Google Play refunderer normalt et køb, der ikke er tilføjet inden for tre dage. Installér appen fra Google Play for at købe gnister.</string>
     <plurals name="recipe_merged_moved">
-        <item quantity="one">%1$d opskrift er flyttet fra denne enhed til din konto</item>
-        <item quantity="other">%1$d opskrifter er flyttet fra denne enhed til din konto</item>
+        <item quantity="one">%1$d gnist er flyttet fra denne enhed til din konto</item>
+        <item quantity="other">%1$d gnister er flyttet fra denne enhed til din konto</item>
     </plurals>
     <plurals name="recipe_merged_debt">
-        <item quantity="one">Denne enhed skyldte %1$d opskrift efter en refundering fra butikken. Den er trukket fra din konto.</item>
-        <item quantity="other">Denne enhed skyldte %1$d opskrifter efter en refundering fra butikken. De er trukket fra din konto.</item>
+        <item quantity="one">Denne enhed skyldte %1$d gnist efter en refundering fra butikken. Den er trukket fra din konto.</item>
+        <item quantity="other">Denne enhed skyldte %1$d gnister efter en refundering fra butikken. De er trukket fra din konto.</item>
     </plurals>
     <string name="recipe_earlier_recipe_saved">En opskrift, du bad om tidligere, er klar. Den ligger i Gemte opskrifter.</string>
     <string name="recipe_earlier_menu_saved">En menu, du bad om tidligere, er klar. Den ligger i Gemte opskrifter.</string>
     <plurals name="recipe_earlier_refused">
-        <item quantity="one">En opskrift, du bad om tidligere, kunne ikke laves. Den brugte %1$d opskrift, da forsøget alligevel kostede os penge at køre.</item>
-        <item quantity="other">En opskrift, du bad om tidligere, kunne ikke laves. Den brugte %1$d opskrifter, da forsøget alligevel kostede os penge at køre.</item>
+        <item quantity="one">En opskrift, du bad om tidligere, kunne ikke laves. Den brugte %1$d gnist, da forsøget alligevel kostede os penge at køre.</item>
+        <item quantity="other">En opskrift, du bad om tidligere, kunne ikke laves. Den brugte %1$d gnister, da forsøget alligevel kostede os penge at køre.</item>
     </plurals>
     <string name="recipe_menu_bar_title">Menu</string>
     <plurals name="recipe_menu_title">
@@ -1140,13 +1140,13 @@
     <string name="recipe_intro_prompt_body">Del eller kopiér en færdig prompt til den AI-app, du allerede bruger.</string>
     <string name="recipe_intro_device_title">Gratis, på denne enhed</string>
     <string name="recipe_intro_device_body">Enheden skriver selv opskriften, og intet bliver sendt nogen steder hen.</string>
-    <string name="recipe_intro_packs_title">Fra en opskriftspakke</string>
-    <string name="recipe_intro_packs_body">Vores server skriver opskriften og kan også planlægge en menu for 3 dage. En opskrift bruger %1$s fra en pakke; en menu bruger %2$s med 2 retter om dagen eller %3$s med 3.</string>
+    <string name="recipe_intro_packs_title">Fra en gnistpakke</string>
+    <string name="recipe_intro_packs_body">Vores server skriver opskriften og kan også planlægge en menu for 3 dage. Pakkerne indeholder gnister: en opskrift bruger %1$s; en menu bruger %2$s med 2 retter om dagen eller %3$s med 3.</string>
     <string name="recipe_intro_packs_price">Pakker fra %1$s.</string>
     <string name="recipe_intro_free_stays">De gratis muligheder er der stadig, når du har en pakke.</string>
     <string name="recipe_intro_again">Du kan åbne dette igen under Opskriftsindstillinger.</string>
     <string name="recipe_intro_start">Forstået</string>
-    <string name="recipe_intro_packs_action">Se opskriftspakker</string>
+    <string name="recipe_intro_packs_action">Se gnistpakker</string>
     <string name="recipe_intro_settings_supporting">Måderne at få en opskrift på</string>
     <string name="recipe_not_available_title">Opskrifter fra pakker er ikke tilgængelige i denne installation</string>
     <string name="recipe_not_available_body">Der er ikke trukket nogen penge. De gratis muligheder virker stadig: del prompten med en AI-app, eller skriv opskriften på denne enhed, hvor det er muligt.</string>
@@ -1229,21 +1229,21 @@
     <string name="welcome_intro_account_one">Denne konto kan få en gratis opskrift til at prøve det.</string>
     <string name="welcome_buy_sign_in_one">Eller log ind og få en gratis opskrift</string>
     <string name="welcome_buy_get_one">Eller få en gratis opskrift</string>
-    <string name="welcome_sheet_lede_one">Log ind, så lægger vores server en gratis opskrift på din konto, så du kan prøve, hvad en pakke giver.</string>
+    <string name="welcome_sheet_lede_one">Log ind, så lægger vores server en gratis gnist på din konto, nok til én opskrift, så du kan prøve, hvad en pakke giver.</string>
     <string name="welcome_sheet_server_title">Skrevet af vores server</string>
-    <string name="welcome_sheet_server_body">De fungerer som opskrifter fra en pakke: en enkelt opskrift eller en menu, hvis der er nok.</string>
+    <string name="welcome_sheet_server_body">De fungerer som gnister fra en pakke: en enkelt opskrift eller en menu, hvis der er nok.</string>
     <string name="welcome_sheet_account_title">Gemt på din konto</string>
-    <string name="welcome_sheet_account_body">De og alle opskrifter, du køber senere, følger med til en ny telefon, hvor du end logger ind med Google.</string>
+    <string name="welcome_sheet_account_body">De og alle gnister, du køber senere, følger med til en ny telefon, hvor du end logger ind med Google.</string>
     <string name="welcome_sheet_privacy_title">En konto på vores server</string>
     <string name="welcome_sheet_privacy_body">Vi gemmer dit konto-id og din e-mailadresse. Når du logger ind, sendes intet fra dit forråd, og du kan slette kontoen under Opskriftsindstillinger.</string>
     <string name="welcome_once">Gratis opskrifter gives én gang pr. Google-konto.</string>
     <string name="welcome_not_now">Ikke nu</string>
-    <string name="welcome_adding">Tilføjer dine gratis opskrifter…</string>
+    <string name="welcome_adding">Tilføjer dine gratis gnister…</string>
     <string name="welcome_already_title">Denne konto har allerede fået sine gratis opskrifter</string>
-    <string name="welcome_already_body">Gratis opskrifter gives én gang pr. Apple- eller Google-konto. Du er logget ind, og opskrifter, du køber, gemmes på denne konto.</string>
+    <string name="welcome_already_body">Gratis opskrifter gives én gang pr. Apple- eller Google-konto. Du er logget ind, og gnister, du køber, gemmes på denne konto.</string>
     <string name="welcome_off_signed_in_now">Gratis opskrifter er ikke tilgængelige lige nu. Du er logget ind; intet andet er ændret.</string>
     <string name="welcome_off">Gratis opskrifter er ikke tilgængelige lige nu. Intet er ændret.</string>
-    <string name="welcome_claim_failed">Logget ind, men dine gratis opskrifter kunne ikke tilføjes endnu.</string>
+    <string name="welcome_claim_failed">Logget ind, men dine gratis gnister kunne ikke tilføjes endnu.</string>
     <string name="welcome_settings_sign_in_one">Log ind og få en gratis opskrift fra vores server, én gang pr. Google-konto.</string>
     <string name="welcome_settings_account_one">Denne konto kan få en gratis opskrift fra vores server.</string>
     <string name="welcome_settings_on_phone_one">Når du logger ind, får du også en gratis opskrift.</string>
@@ -1276,12 +1276,12 @@
         <item quantity="other">Eller få %1$d gratis opskrifter</item>
     </plurals>
     <plurals name="welcome_sheet_lede">
-        <item quantity="one">Log ind, så lægger vores server %1$d gratis opskrift på din konto, så du kan prøve, hvad en pakke giver.</item>
-        <item quantity="other">Log ind, så lægger vores server %1$d gratis opskrifter på din konto, så du kan prøve, hvad en pakke giver.</item>
+        <item quantity="one">Log ind, så lægger vores server %1$d gratis gnist på din konto, nok til én opskrift, så du kan prøve, hvad en pakke giver.</item>
+        <item quantity="other">Log ind, så lægger vores server %1$d gratis gnister på din konto, én til hver opskrift, så du kan prøve, hvad en pakke giver.</item>
     </plurals>
     <plurals name="welcome_granted">
-        <item quantity="one">%1$d gratis opskrift tilføjet</item>
-        <item quantity="other">%1$d gratis opskrifter tilføjet</item>
+        <item quantity="one">%1$d gratis gnist tilføjet</item>
+        <item quantity="other">%1$d gratis gnister tilføjet</item>
     </plurals>
     <plurals name="welcome_settings_sign_in">
         <item quantity="one">Log ind og få %1$d gratis opskrift fra vores server, én gang pr. Google-konto.</item>
@@ -1375,6 +1375,6 @@
     <string name="recipe_report_done">Du har rapporteret det</string>
     <string name="recipe_report_limit">Det er grænsen for rapporter i dag. Prøv igen i morgen.</string>
     <string name="recipe_report_unknown">Denne opskrift kan ikke længere rapporteres.</string>
-    <string name="recipe_image_unavailable">Billeder kan ikke laves lige nu. Der er ikke trukket nogen opskrift.</string>
+    <string name="recipe_image_unavailable">Billeder kan ikke laves lige nu. Der er ikke trukket nogen gnister.</string>
     <!-- /Recipe: pictures and reports -->
 </resources>

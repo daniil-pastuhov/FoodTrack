@@ -573,9 +573,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d recipe</string>
+            <string>%d spark</string>
             <key>other</key>
-            <string>%d recipes</string>
+            <string>%d sparks</string>
         </dict>
     </dict>
     <key>recipe_courses_count</key>
@@ -621,9 +621,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d recipe left</string>
+            <string>%d spark left</string>
             <key>other</key>
-            <string>%d recipes left</string>
+            <string>%d sparks left</string>
         </dict>
     </dict>
     <key>recipe_earlier_refused</key>
@@ -637,9 +637,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>A recipe you asked for earlier couldn't be made. It used %d recipe, because the attempt still cost us to run.</string>
+            <string>A recipe you asked for earlier couldn't be made. It used %d spark, because the attempt still cost us to run.</string>
             <key>other</key>
-            <string>A recipe you asked for earlier couldn't be made. It used %d recipes, because the attempt still cost us to run.</string>
+            <string>A recipe you asked for earlier couldn't be made. It used %d sparks, because the attempt still cost us to run.</string>
         </dict>
     </dict>
     <key>recipe_other_account_message</key>
@@ -653,9 +653,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d recipe on this {device} was bought with another account. Sign in to the account you bought it with to add it.</string>
+            <string>%d spark on this {device} was bought with another account. Sign in to the account you bought it with to add it.</string>
             <key>other</key>
-            <string>%d recipes on this {device} were bought with another account. Sign in to the account you bought them with to add them.</string>
+            <string>%d sparks on this {device} were bought with another account. Sign in to the account you bought them with to add them.</string>
         </dict>
     </dict>
     <key>recipe_menu_short_message</key>
@@ -685,9 +685,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Saved. %d recipe left</string>
+            <string>Saved. %d spark left</string>
             <key>other</key>
-            <string>Saved. %d recipes left</string>
+            <string>Saved. %d sparks left</string>
         </dict>
     </dict>
     <key>recipe_added</key>
@@ -701,9 +701,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d recipe added</string>
+            <string>%d spark added</string>
             <key>other</key>
-            <string>%d recipes added</string>
+            <string>%d sparks added</string>
         </dict>
     </dict>
     <key>recipe_paused_message</key>
@@ -717,9 +717,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Your %d recipe is safe. The free routes below still work.</string>
+            <string>Your %d spark is safe. The free routes below still work.</string>
             <key>other</key>
-            <string>Your %d recipes are safe. The free routes below still work.</string>
+            <string>Your %d sparks are safe. The free routes below still work.</string>
         </dict>
     </dict>
     <key>recipe_unconfirmed_message</key>
@@ -733,9 +733,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>You paid for %d recipe and it is not added yet. We keep trying; you don't need to buy again.</string>
+            <string>You paid for %d spark and it is not added yet. We keep trying; you don't need to buy again.</string>
             <key>other</key>
-            <string>You paid for %d recipes and they are not added yet. We keep trying; you don't need to buy again.</string>
+            <string>You paid for %d sparks and they are not added yet. We keep trying; you don't need to buy again.</string>
         </dict>
     </dict>
     <key>recipe_on_phone_label</key>
@@ -749,9 +749,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>recipe on this {device}</string>
+            <string>spark on this {device}</string>
             <key>other</key>
-            <string>recipes on this {device}</string>
+            <string>sparks on this {device}</string>
         </dict>
     </dict>
     <key>recipe_in_account_label</key>
@@ -765,9 +765,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>recipe in your account</string>
+            <string>spark in your account</string>
             <key>other</key>
-            <string>recipes in your account</string>
+            <string>sparks in your account</string>
         </dict>
     </dict>
     <key>recipe_sign_out_message</key>
@@ -781,9 +781,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Your %d recipe stays in your account. Sign in again to use it. Saved recipes stay on this {device}.</string>
+            <string>Your %d spark stays in your account. Sign in again to use it. Saved recipes stay on this {device}.</string>
             <key>other</key>
-            <string>Your %d recipes stay in your account. Sign in again to use them. Saved recipes stay on this {device}.</string>
+            <string>Your %d sparks stay in your account. Sign in again to use them. Saved recipes stay on this {device}.</string>
         </dict>
     </dict>
     <key>recipe_delete_message</key>
@@ -797,9 +797,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Your %d unused recipe will be lost and can't be refunded or restored. Your sign-in and email address are deleted from our server; a record of the purchases stays, no longer linked to you. Any reports you sent are kept for a limited time, also no longer linked to you. Saved recipes and your pantry stay on this {device}.</string>
+            <string>Your %d unused spark will be lost and can't be refunded or restored. Your sign-in and email address are deleted from our server; a record of the purchases stays, no longer linked to you. Any reports you sent are kept for a limited time, also no longer linked to you. Saved recipes and your pantry stay on this {device}.</string>
             <key>other</key>
-            <string>Your %d unused recipes will be lost and can't be refunded or restored. Your sign-in and email address are deleted from our server; a record of the purchases stays, no longer linked to you. Any reports you sent are kept for a limited time, also no longer linked to you. Saved recipes and your pantry stay on this {device}.</string>
+            <string>Your %d unused sparks will be lost and can't be refunded or restored. Your sign-in and email address are deleted from our server; a record of the purchases stays, no longer linked to you. Any reports you sent are kept for a limited time, also no longer linked to you. Saved recipes and your pantry stay on this {device}.</string>
         </dict>
     </dict>
     <key>recipe_delete_device_message</key>
@@ -813,9 +813,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Your %d unused recipe will be lost and can't be refunded or restored. The anonymous sign-in this {device} uses is deleted from our server; a record of the purchases stays, no longer linked to you. Any reports you sent are kept for a limited time, also no longer linked to you. Saved recipes and your pantry stay on this {device}.</string>
+            <string>Your %d unused spark will be lost and can't be refunded or restored. The anonymous sign-in this {device} uses is deleted from our server; a record of the purchases stays, no longer linked to you. Any reports you sent are kept for a limited time, also no longer linked to you. Saved recipes and your pantry stay on this {device}.</string>
             <key>other</key>
-            <string>Your %d unused recipes will be lost and can't be refunded or restored. The anonymous sign-in this {device} uses is deleted from our server; a record of the purchases stays, no longer linked to you. Any reports you sent are kept for a limited time, also no longer linked to you. Saved recipes and your pantry stay on this {device}.</string>
+            <string>Your %d unused sparks will be lost and can't be refunded or restored. The anonymous sign-in this {device} uses is deleted from our server; a record of the purchases stays, no longer linked to you. Any reports you sent are kept for a limited time, also no longer linked to you. Saved recipes and your pantry stay on this {device}.</string>
         </dict>
     </dict>
     <key>recipe_server_refused</key>
@@ -829,9 +829,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Couldn't make a recipe from these items. It used %d recipe, because the attempt still cost us to run. Try fewer or different items.</string>
+            <string>Couldn't make a recipe from these items. It used %d spark, because the attempt still cost us to run. Try fewer or different items.</string>
             <key>other</key>
-            <string>Couldn't make a recipe from these items. It used %d recipes, because the attempt still cost us to run. Try fewer or different items.</string>
+            <string>Couldn't make a recipe from these items. It used %d sparks, because the attempt still cost us to run. Try fewer or different items.</string>
         </dict>
     </dict>
     <key>recipe_server_refused_menu</key>
@@ -845,9 +845,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Couldn't make a menu from these items. It used %d recipe, because the attempt still cost us to run. Try fewer or different items.</string>
+            <string>Couldn't make a menu from these items. It used %d spark, because the attempt still cost us to run. Try fewer or different items.</string>
             <key>other</key>
-            <string>Couldn't make a menu from these items. It used %d recipes, because the attempt still cost us to run. Try fewer or different items.</string>
+            <string>Couldn't make a menu from these items. It used %d sparks, because the attempt still cost us to run. Try fewer or different items.</string>
         </dict>
     </dict>
     <key>recipe_server_unknown_taken</key>
@@ -861,9 +861,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Couldn't write the recipe right now. Try again later. %d recipe was taken.</string>
+            <string>Couldn't write the recipe right now. Try again later. %d spark was taken.</string>
             <key>other</key>
-            <string>Couldn't write the recipe right now. Try again later. %d recipes were taken.</string>
+            <string>Couldn't write the recipe right now. Try again later. %d sparks were taken.</string>
         </dict>
     </dict>
     <key>recipe_server_unknown_taken_menu</key>
@@ -877,9 +877,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Couldn't write the menu right now. Try again later. %d recipe was taken.</string>
+            <string>Couldn't write the menu right now. Try again later. %d spark was taken.</string>
             <key>other</key>
-            <string>Couldn't write the menu right now. Try again later. %d recipes were taken.</string>
+            <string>Couldn't write the menu right now. Try again later. %d sparks were taken.</string>
         </dict>
     </dict>
     <key>recipe_allergens_too_many</key>
@@ -893,9 +893,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Nothing was written: a recipe can take at most %d allergen, and more are set. Remove some under Allergen warnings in Settings, then try again. No recipes were taken.</string>
+            <string>Nothing was written: a recipe can take at most %d allergen, and more are set. Remove some under Allergen warnings in Settings, then try again. No sparks were taken.</string>
             <key>other</key>
-            <string>Nothing was written: a recipe can take at most %d allergens, and more are set. Remove some under Allergen warnings in Settings, then try again. No recipes were taken.</string>
+            <string>Nothing was written: a recipe can take at most %d allergens, and more are set. Remove some under Allergen warnings in Settings, then try again. No sparks were taken.</string>
         </dict>
     </dict>
     <key>recipe_merged_moved</key>
@@ -909,9 +909,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d recipe moved from this {device} to your account</string>
+            <string>%d spark moved from this {device} to your account</string>
             <key>other</key>
-            <string>%d recipes moved from this {device} to your account</string>
+            <string>%d sparks moved from this {device} to your account</string>
         </dict>
     </dict>
     <key>recipe_merged_debt</key>
@@ -925,9 +925,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>This {device} owed %d recipe after a store refund. It was taken from your account.</string>
+            <string>This {device} owed %d spark after a store refund. It was taken from your account.</string>
             <key>other</key>
-            <string>This {device} owed %d recipes after a store refund. They were taken from your account.</string>
+            <string>This {device} owed %d sparks after a store refund. They were taken from your account.</string>
         </dict>
     </dict>
     <key>recipe_menu_few_items</key>
@@ -1117,9 +1117,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Not enough for %d day. Tick a few more items, or ask for a single recipe. No recipes were taken.</string>
+            <string>Not enough for %d day. Tick a few more items, or ask for a single recipe. No sparks were taken.</string>
             <key>other</key>
-            <string>Not enough for %d days. Tick a few more items, or ask for a single recipe. No recipes were taken.</string>
+            <string>Not enough for %d days. Tick a few more items, or ask for a single recipe. No sparks were taken.</string>
         </dict>
     </dict>
     <key>recipe_menu_summary</key>
@@ -1165,9 +1165,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>One recipe is one dish written by our server. A menu set takes {min} to %d recipe, depending on its days and courses a day. They don't expire.</string>
+            <string>One spark is one recipe written by our server. A menu set takes {min} to %d spark, depending on its days and courses a day. They don't expire.</string>
             <key>other</key>
-            <string>One recipe is one dish written by our server. A menu set takes {min} to %d recipes, depending on its days and courses a day. They don't expire.</string>
+            <string>One spark is one recipe written by our server. A menu set takes {min} to %d sparks, depending on its days and courses a day. They don't expire.</string>
         </dict>
     </dict>
     <!-- Taste profile: copied from Android's strings.xml -->
@@ -1312,9 +1312,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Sign in, and our server adds %d free recipe to your account, so you can try what a pack gives.</string>
+            <string>Sign in, and our server adds %d free spark to your account, enough for one recipe, so you can try what a pack gives.</string>
             <key>other</key>
-            <string>Sign in, and our server adds %d free recipes to your account, so you can try what a pack gives.</string>
+            <string>Sign in, and our server adds %d free sparks to your account, one for each recipe, so you can try what a pack gives.</string>
         </dict>
     </dict>
     <key>welcome_granted</key>
@@ -1328,9 +1328,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d free recipe added</string>
+            <string>%d free spark added</string>
             <key>other</key>
-            <string>%d free recipes added</string>
+            <string>%d free sparks added</string>
         </dict>
     </dict>
     <key>welcome_settings_sign_in</key>

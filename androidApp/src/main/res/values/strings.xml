@@ -769,13 +769,13 @@
     <string name="recipe_time_guide_hint">The longest time is a limit; the shortest is only a guide.</string>
     <string name="recipe_prompt_min_minutes">Ideally about %1$d minutes or more</string>
     <string name="recipe_prompt_meals">Suitable for any of these meals: %1$s</string>
-    <string name="recipe_not_enough_items">Not enough to cook with once your diet and allergens are left out. Tick a few more items. No recipe was taken.</string>
+    <string name="recipe_not_enough_items">Not enough to cook with once your diet and allergens are left out. Tick a few more items. No sparks were taken.</string>
     <plurals name="recipe_not_enough_items_menu">
-        <item quantity="one">Not enough for one day. Tick a few more items, or ask for a single recipe. No recipes were taken.</item>
-        <item quantity="other">Not enough for %1$d days. Tick a few more items, or ask for a single recipe. No recipes were taken.</item>
+        <item quantity="one">Not enough for one day. Tick a few more items, or ask for a single recipe. No sparks were taken.</item>
+        <item quantity="other">Not enough for %1$d days. Tick a few more items, or ask for a single recipe. No sparks were taken.</item>
     </plurals>
-    <string name="recipe_diets_need_update">Recipes from packs can\'t combine gluten-free with another diet yet. Keep one of them in Recipe settings, or use this device\'s model or the shared prompt. No recipes were taken.</string>
-    <string name="recipe_language_needs_update">Recipes from packs can\'t be written in Danish yet. Choose another recipe language in Recipe settings, or use this device\'s model or the shared prompt. No recipes were taken.</string>
+    <string name="recipe_diets_need_update">Recipes from packs can\'t combine gluten-free with another diet yet. Keep one of them in Recipe settings, or use this device\'s model or the shared prompt. No sparks were taken.</string>
+    <string name="recipe_language_needs_update">Recipes from packs can\'t be written in Danish yet. Choose another recipe language in Recipe settings, or use this device\'s model or the shared prompt. No sparks were taken.</string>
     <string name="recipe_not_from_pantry_hint">Ingredients without the “In your pantry” mark aren\'t from your pantry: staples, or a few things you may need to buy.</string>
     <!-- Add to shopping list -->
     <string name="recipe_shopping_add">Add to shopping list</string>
@@ -890,9 +890,9 @@
         <item quantity="other">%1$d servings</item>
     </plurals>
 
-    <!-- Recipe tab, paid route: packs, the server, the account. The unit is a "recipe", never a credit. -->
-    <string name="recipe_balance_description">Recipes left: %1$d. Buy more</string>
-    <string name="recipe_balance_only_description">Recipes left: %1$d</string>
+    <!-- Recipe tab, paid route: packs, the server, the account. The unit is a "spark" (one spark is one recipe from our server), never a credit or token; "recipe" is only the dish written. -->
+    <string name="recipe_balance_description">Sparks left: %1$d. Buy more</string>
+    <string name="recipe_balance_only_description">Sparks left: %1$d</string>
     <string name="recipe_mode_label">What to make</string>
     <string name="recipe_mode_recipe">Recipe</string>
     <string name="recipe_mode_menu">Menu set</string>
@@ -902,10 +902,10 @@
         <item quantity="other">%1$d days</item>
     </plurals>
     <plurals name="recipe_packs_body_sets">
-        <item quantity="one">One recipe is one dish written by our server. A menu set takes %1$d to %2$d recipe, depending on its days and courses a day. They don\'t expire.</item>
-        <item quantity="other">One recipe is one dish written by our server. A menu set takes %1$d to %2$d recipes, depending on its days and courses a day. They don\'t expire.</item>
+        <item quantity="one">One spark is one recipe written by our server. A menu set takes %1$d to %2$d spark, depending on its days and courses a day. They don\'t expire.</item>
+        <item quantity="other">One spark is one recipe written by our server. A menu set takes %1$d to %2$d sparks, depending on its days and courses a day. They don\'t expire.</item>
     </plurals>
-    <string name="recipe_intro_packs_body_sets">Our server writes the recipe, and can also plan a menu set. A recipe takes %1$s from a pack; a menu set takes %2$d to %3$d, depending on its days and courses a day.</string>
+    <string name="recipe_intro_packs_body_sets">Our server writes the recipe, and can also plan a menu set. Packs hold sparks: a recipe takes %1$s, a menu set %2$d to %3$d, depending on its days and courses a day.</string>
     <plurals name="recipe_saved_unread_action">
         <item quantity="one">Saved recipes, %1$d new</item>
         <item quantity="other">Saved recipes, %1$d new</item>
@@ -927,10 +927,10 @@
     <string name="recipe_generate">Generate recipe</string>
     <string name="recipe_generate_menu">Generate menu</string>
     <plurals name="recipe_cost_recipes">
-        <item quantity="one">%1$d recipe</item>
-        <item quantity="other">%1$d recipes</item>
+        <item quantity="one">%1$d spark</item>
+        <item quantity="other">%1$d sparks</item>
     </plurals>
-    <string name="recipe_buy">Buy recipes</string>
+    <string name="recipe_buy">Buy sparks</string>
     <string name="recipe_on_device_weak">The model on this device is still weak at cooking, so check the recipe makes sense.</string>
     <plurals name="recipe_menu_few_items">
         <item quantity="one">Only %1$d item for %2$d dishes. Most of this menu will need shopping.</item>
@@ -942,10 +942,10 @@
         <item quantity="other">You have %1$d left. A single recipe still works.</item>
     </plurals>
     <plurals name="recipe_balance_left">
-        <item quantity="one">%1$d recipe left</item>
-        <item quantity="other">%1$d recipes left</item>
+        <item quantity="one">%1$d spark left</item>
+        <item quantity="other">%1$d sparks left</item>
     </plurals>
-    <string name="recipe_menu_short_none">You have no recipes left.</string>
+    <string name="recipe_menu_short_none">You have no sparks left.</string>
     <string name="recipe_writing_server_title">Writing your recipe</string>
     <string name="recipe_writing_server_body">A few seconds. You can leave this screen; the recipe will be in Saved recipes.</string>
     <plurals name="recipe_writing_menu_title">
@@ -955,83 +955,83 @@
     <string name="recipe_writing_menu_body">This can take up to two minutes. You can leave this screen; the menu will be in Saved recipes.</string>
     <string name="recipe_offline_title">No connection</string>
     <string name="recipe_offline_body">Recipes from your pack need the internet. The free routes below still work.</string>
-    <string name="recipe_failed_server">Couldn\'t write the recipe. No recipe was taken.</string>
-    <string name="recipe_failed_server_menu">Couldn\'t write the menu. No recipes were taken.</string>
-    <string name="recipe_failed_limit_today">That\'s the limit for today. Try again tomorrow. No recipes were taken.</string>
-    <string name="recipe_failed_trouble_today">We\'re having trouble writing recipes right now. Try again tomorrow. No recipes were taken.</string>
-    <string name="recipe_failed_server_later">Couldn\'t write it right now. Try again later. No recipes were taken.</string>
-    <string name="recipe_failed_server_busy">Another recipe is still being written. Try again in a minute. No recipes were taken.</string>
-    <string name="recipe_failed_rate_limited">Too many recipes in a short time. Try again in a minute. No recipes were taken.</string>
+    <string name="recipe_failed_server">Couldn\'t write the recipe. No sparks were taken.</string>
+    <string name="recipe_failed_server_menu">Couldn\'t write the menu. No sparks were taken.</string>
+    <string name="recipe_failed_limit_today">That\'s the limit for today. Try again tomorrow. No sparks were taken.</string>
+    <string name="recipe_failed_trouble_today">We\'re having trouble writing recipes right now. Try again tomorrow. No sparks were taken.</string>
+    <string name="recipe_failed_server_later">Couldn\'t write it right now. Try again later. No sparks were taken.</string>
+    <string name="recipe_failed_server_busy">Another recipe is still being written. Try again in a minute. No sparks were taken.</string>
+    <string name="recipe_failed_rate_limited">Too many recipes in a short time. Try again in a minute. No sparks were taken.</string>
     <string name="recipe_left_out">“%1$s” was left out: that name couldn\'t be sent.</string>
-    <string name="recipe_ingredient_not_sent">“%1$s” couldn\'t be sent. Untick it or rename it, then try again. No recipes were taken.</string>
-    <string name="recipe_allergen_not_sent">Your allergen “%1$s” couldn\'t be sent, so nothing was written: a recipe without it might not be safe. Rename it under Allergen warnings in Settings, then try again. No recipes were taken.</string>
+    <string name="recipe_ingredient_not_sent">“%1$s” couldn\'t be sent. Untick it or rename it, then try again. No sparks were taken.</string>
+    <string name="recipe_allergen_not_sent">Your allergen “%1$s” couldn\'t be sent, so nothing was written: a recipe without it might not be safe. Rename it under Allergen warnings in Settings, then try again. No sparks were taken.</string>
     <plurals name="recipe_allergens_too_many">
-        <item quantity="one">Nothing was written: a recipe can take at most %1$d allergen, and more are set. Remove some under Allergen warnings in Settings, then try again. No recipes were taken.</item>
-        <item quantity="other">Nothing was written: a recipe can take at most %1$d allergens, and more are set. Remove some under Allergen warnings in Settings, then try again. No recipes were taken.</item>
+        <item quantity="one">Nothing was written: a recipe can take at most %1$d allergen, and more are set. Remove some under Allergen warnings in Settings, then try again. No sparks were taken.</item>
+        <item quantity="other">Nothing was written: a recipe can take at most %1$d allergens, and more are set. Remove some under Allergen warnings in Settings, then try again. No sparks were taken.</item>
     </plurals>
     <plurals name="recipe_refused">
-        <item quantity="one">Couldn\'t make a recipe from these items. It used %1$d recipe, because the attempt still cost us to run. Try fewer or different items.</item>
-        <item quantity="other">Couldn\'t make a recipe from these items. It used %1$d recipes, because the attempt still cost us to run. Try fewer or different items.</item>
+        <item quantity="one">Couldn\'t make a recipe from these items. It used %1$d spark, because the attempt still cost us to run. Try fewer or different items.</item>
+        <item quantity="other">Couldn\'t make a recipe from these items. It used %1$d sparks, because the attempt still cost us to run. Try fewer or different items.</item>
     </plurals>
     <plurals name="recipe_refused_menu">
-        <item quantity="one">Couldn\'t make a menu from these items. It used %1$d recipe, because the attempt still cost us to run. Try fewer or different items.</item>
-        <item quantity="other">Couldn\'t make a menu from these items. It used %1$d recipes, because the attempt still cost us to run. Try fewer or different items.</item>
+        <item quantity="one">Couldn\'t make a menu from these items. It used %1$d spark, because the attempt still cost us to run. Try fewer or different items.</item>
+        <item quantity="other">Couldn\'t make a menu from these items. It used %1$d sparks, because the attempt still cost us to run. Try fewer or different items.</item>
     </plurals>
     <string name="recipe_paused_title">Recipes from packs are paused</string>
     <plurals name="recipe_paused_body">
-        <item quantity="one">Your %1$d recipe is safe. The free routes below still work.</item>
-        <item quantity="other">Your %1$d recipes are safe. The free routes below still work.</item>
+        <item quantity="one">Your %1$d spark is safe. The free routes below still work.</item>
+        <item quantity="other">Your %1$d sparks are safe. The free routes below still work.</item>
     </plurals>
     <string name="recipe_paused_body_none">The free routes below still work.</string>
     <plurals name="recipe_added">
-        <item quantity="one">%1$d recipe added</item>
-        <item quantity="other">%1$d recipes added</item>
+        <item quantity="one">%1$d spark added</item>
+        <item quantity="other">%1$d sparks added</item>
     </plurals>
     <plurals name="recipe_saved_left">
-        <item quantity="one">Saved. %1$d recipe left</item>
-        <item quantity="other">Saved. %1$d recipes left</item>
+        <item quantity="one">Saved. %1$d spark left</item>
+        <item quantity="other">Saved. %1$d sparks left</item>
     </plurals>
     <string name="recipe_unconfirmed_title">Your purchase is being confirmed</string>
     <plurals name="recipe_unconfirmed_body">
-        <item quantity="one">You paid for %1$d recipe and it is not added yet. We keep trying; you don\'t need to buy again.</item>
-        <item quantity="other">You paid for %1$d recipes and they are not added yet. We keep trying; you don\'t need to buy again.</item>
+        <item quantity="one">You paid for %1$d spark and it is not added yet. We keep trying; you don\'t need to buy again.</item>
+        <item quantity="other">You paid for %1$d sparks and they are not added yet. We keep trying; you don\'t need to buy again.</item>
     </plurals>
     <string name="recipe_try_now">Try now</string>
     <string name="recipe_pending_title">Waiting for payment</string>
-    <string name="recipe_pending_body">Your recipes will be added when the store confirms the payment. That can take a while.</string>
-    <string name="recipe_packs_body">One recipe is one dish written by our server. A menu for 3 days takes %1$s with two courses a day, %2$s with three. They don\'t expire.</string>
+    <string name="recipe_pending_body">Your sparks will be added when the store confirms the payment. That can take a while.</string>
+    <string name="recipe_packs_body">One spark is one recipe written by our server. A menu for 3 days takes %1$s with two courses a day, %2$s with three. They don\'t expire.</string>
     <plurals name="recipe_pack_name">
-        <item quantity="one">%1$d recipe</item>
-        <item quantity="other">%1$d recipes</item>
+        <item quantity="one">%1$d spark</item>
+        <item quantity="other">%1$d sparks</item>
     </plurals>
     <string name="recipe_pack_each">%1$s each</string>
-    <string name="recipe_pack_saving_a11y">%1$d%% less per recipe</string>
+    <string name="recipe_pack_saving_a11y">%1$d%% less per spark</string>
     <string name="recipe_cancel">Cancel</string>
     <string name="recipe_back">Back</string>
     <string name="recipe_close">Close</string>
     <string name="recipe_ok">OK</string>
-    <string name="recipe_choice_title">Where should your recipes live?</string>
+    <string name="recipe_choice_title">Where should your sparks live?</string>
     <string name="recipe_choice_body">Choose once. You can sign in later from Recipe settings.</string>
     <string name="recipe_choice_phone_title">On this device, no account</string>
-    <string name="recipe_choice_phone_body">Nothing to sign in to. The recipes stay with this install of the app: if you delete the app or change device, the ones you haven\'t used are lost.</string>
+    <string name="recipe_choice_phone_body">Nothing to sign in to. The sparks stay with this install of the app: if you delete the app or change device, the ones you haven\'t used are lost.</string>
     <string name="recipe_choice_account_title">In an account</string>
-    <string name="recipe_choice_account_body">Sign in with Google. Your recipes follow you to a new phone, Android or iPhone, wherever you sign in with Google. We keep your account ID and email address.</string>
+    <string name="recipe_choice_account_body">Sign in with Google. Your sparks follow you to a new phone, Android or iPhone, wherever you sign in with Google. We keep your account ID and email address.</string>
     <string name="recipe_sign_in_google">Sign in with Google</string>
-    <string name="recipe_apple_on_iphone_hint">Signed in with Apple on an iPhone? Add Google sign-in there, in Recipe settings, to use your recipes on this device.</string>
-    <string name="recipe_have_account_hint">Already have recipes in an account? Sign in to use them here.</string>
+    <string name="recipe_apple_on_iphone_hint">Signed in with Apple on an iPhone? Add Google sign-in there, in Recipe settings, to use your sparks on this device.</string>
+    <string name="recipe_have_account_hint">Already have sparks in an account? Sign in to use them here.</string>
     <string name="recipe_store_error_title">Can\'t reach the store</string>
     <string name="recipe_store_error_body">Check your connection and try again. Nothing was charged.</string>
     <string name="recipe_rejected_title">This purchase couldn\'t be added</string>
-    <string name="recipe_rejected_body">The store reports it as refunded or already used. If you were charged and have no recipes, contact the store for a refund.</string>
-    <string name="recipe_your_recipes">Your recipes</string>
+    <string name="recipe_rejected_body">The store reports it as refunded or already used. If you were charged and have no sparks, contact the store for a refund.</string>
+    <string name="recipe_your_recipes">Your sparks</string>
     <plurals name="recipe_on_phone_label">
-        <item quantity="one">recipe on this device</item>
-        <item quantity="other">recipes on this device</item>
+        <item quantity="one">spark on this device</item>
+        <item quantity="other">sparks on this device</item>
     </plurals>
     <string name="recipe_on_phone_body">They stay with this install of the app. If you delete the app or change device, the ones you haven\'t used are lost. Sign in to keep them in an account instead; they move over at once.</string>
     <plurals name="recipe_in_account_label">
-        <item quantity="one">recipe in your account</item>
-        <item quantity="other">recipes in your account</item>
+        <item quantity="one">spark in your account</item>
+        <item quantity="other">sparks in your account</item>
     </plurals>
     <string name="recipe_signed_in_with">Signed in with %1$s</string>
     <string name="recipe_signed_in_add_google">Apple sign-in works only in the iPhone app. Add Google sign-in here to keep using them on Android.</string>
@@ -1042,12 +1042,12 @@
     <string name="recipe_delete_account">Delete account</string>
     <string name="recipe_sign_out_title">Sign out?</string>
     <plurals name="recipe_sign_out_body">
-        <item quantity="one">Your %1$d recipe stays in your account. Sign in again to use it. Saved recipes stay on this device.</item>
-        <item quantity="other">Your %1$d recipes stay in your account. Sign in again to use them. Saved recipes stay on this device.</item>
+        <item quantity="one">Your %1$d spark stays in your account. Sign in again to use it. Saved recipes stay on this device.</item>
+        <item quantity="other">Your %1$d sparks stay in your account. Sign in again to use them. Saved recipes stay on this device.</item>
     </plurals>
     <string name="recipe_delete_title">Delete your account?</string>
     <string name="recipe_apple_link_left_title">Apple link not removed</string>
-    <string name="recipe_apple_link_left_body">Your account and its recipes are deleted, but your Apple Account is still linked to this app. To remove the link too, turn off Sign in with Apple for this app in your Apple Account settings.</string>
+    <string name="recipe_apple_link_left_body">Your account and its sparks are deleted, but your Apple Account is still linked to this app. To remove the link too, turn off Sign in with Apple for this app in your Apple Account settings.</string>
     <!-- The allergen consent step (ALLERGEN_CONSENT_VERSION in shared AllergenConsent.kt: raise it when this wording changes; iOS has the same text). -->
     <string name="recipe_allergen_consent_title">Send your allergens to our server?</string>
     <string name="recipe_allergen_consent_body">To write this, your allergen list (%1$s) goes with the ticked items and your preferences to our server and to Google\'s AI model, so the recipe avoids those foods. Google may process it outside the EU. We use it only for this request and don\'t keep it afterwards. Google processes it to write the recipe and may log requests to detect abuse. You can withdraw this in Recipe settings.\n\nThe free ways, this device\'s own model and the shared prompt, don\'t send it to us.</string>
@@ -1058,28 +1058,28 @@
     <string name="recipe_allergen_consent_setting_on">You agreed on %1$s. Turn off to withdraw: our server then won\'t write recipes while allergens are set.</string>
     <string name="recipe_allergen_consent_setting_off">Needed for recipes from our server while allergens are set. We use it only for the request and don\'t keep it.</string>
     <plurals name="recipe_delete_body">
-        <item quantity="one">Your %1$d unused recipe will be lost and can\'t be refunded or restored. Your sign-in and email address are deleted from our server; a record of the purchases stays, no longer linked to you. Any reports you sent are kept for a limited time, also no longer linked to you. Saved recipes and your pantry stay on this device.</item>
-        <item quantity="other">Your %1$d unused recipes will be lost and can\'t be refunded or restored. Your sign-in and email address are deleted from our server; a record of the purchases stays, no longer linked to you. Any reports you sent are kept for a limited time, also no longer linked to you. Saved recipes and your pantry stay on this device.</item>
+        <item quantity="one">Your %1$d unused spark will be lost and can\'t be refunded or restored. Your sign-in and email address are deleted from our server; a record of the purchases stays, no longer linked to you. Any reports you sent are kept for a limited time, also no longer linked to you. Saved recipes and your pantry stay on this device.</item>
+        <item quantity="other">Your %1$d unused sparks will be lost and can\'t be refunded or restored. Your sign-in and email address are deleted from our server; a record of the purchases stays, no longer linked to you. Any reports you sent are kept for a limited time, also no longer linked to you. Saved recipes and your pantry stay on this device.</item>
     </plurals>
     <!-- Deleting what our server holds for recipes kept on this device (an anonymous account). -->
     <string name="recipe_delete_device_data">Delete my data from our server</string>
     <string name="recipe_delete_device_title">Delete your data from our server?</string>
     <plurals name="recipe_delete_device_body">
-        <item quantity="one">Your %1$d unused recipe will be lost and can\'t be refunded or restored. The anonymous sign-in this device uses is deleted from our server; a record of the purchases stays, no longer linked to you. Any reports you sent are kept for a limited time, also no longer linked to you. Saved recipes and your pantry stay on this device.</item>
-        <item quantity="other">Your %1$d unused recipes will be lost and can\'t be refunded or restored. The anonymous sign-in this device uses is deleted from our server; a record of the purchases stays, no longer linked to you. Any reports you sent are kept for a limited time, also no longer linked to you. Saved recipes and your pantry stay on this device.</item>
+        <item quantity="one">Your %1$d unused spark will be lost and can\'t be refunded or restored. The anonymous sign-in this device uses is deleted from our server; a record of the purchases stays, no longer linked to you. Any reports you sent are kept for a limited time, also no longer linked to you. Saved recipes and your pantry stay on this device.</item>
+        <item quantity="other">Your %1$d unused sparks will be lost and can\'t be refunded or restored. The anonymous sign-in this device uses is deleted from our server; a record of the purchases stays, no longer linked to you. Any reports you sent are kept for a limited time, also no longer linked to you. Saved recipes and your pantry stay on this device.</item>
     </plurals>
     <string name="recipe_delete_device_body_none">The anonymous sign-in this device uses is deleted from our server; a record of any purchases stays, no longer linked to you. Any reports you sent are kept for a limited time, also no longer linked to you. Saved recipes and your pantry stay on this device.</string>
     <string name="recipe_delete_device_confirm">Delete data</string>
     <string name="recipe_device_data_deleted">Your data is deleted from our server</string>
     <string name="recipe_delete_waits_for_purchase">A purchase is still being completed. You can delete once it has finished.</string>
-    <string name="recipe_merge_title">Add this device\'s recipes to your account?</string>
-    <string name="recipe_merge_body">Your account already has %1$d recipes. The %2$d on this device will be added to it, making %3$d. This can\'t be undone.</string>
-    <string name="recipe_merge_body_unknown">The %1$d recipes on this device will be added to your account. This can\'t be undone.</string>
+    <string name="recipe_merge_title">Add this device\'s sparks to your account?</string>
+    <string name="recipe_merge_body">Your account already has %1$d sparks. The %2$d on this device will be added to it, making %3$d. This can\'t be undone.</string>
+    <string name="recipe_merge_body_unknown">The %1$d sparks on this device will be added to your account. This can\'t be undone.</string>
     <string name="recipe_merge_confirm">Add and sign in</string>
-    <string name="recipe_sign_in_failed">Couldn\'t sign in. Your recipes are unchanged.</string>
-    <string name="recipe_sign_in_in_use">That sign-in already belongs to another account. Your recipes are unchanged.</string>
+    <string name="recipe_sign_in_failed">Couldn\'t sign in. Your sparks are unchanged.</string>
+    <string name="recipe_sign_in_in_use">That sign-in already belongs to another account. Your sparks are unchanged.</string>
     <string name="recipe_account_deleted">Account deleted</string>
-    <string name="recipe_purchases_blocked">Buying recipes isn\'t available for this account because earlier purchases were refunded after the recipes were used.</string>
+    <string name="recipe_purchases_blocked">Buying sparks isn\'t available for this account because earlier purchases were refunded after the sparks were used.</string>
     <string name="recipe_account_busy">A recipe is still being written. Try again in a moment.</string>
     <string name="recipe_account_action_failed">Couldn\'t reach our server. Nothing was changed.</string>
     <string name="recipe_writing_busy_title">Our server is busy</string>
@@ -1088,23 +1088,23 @@
     <string name="recipe_busy_body">Your request is kept and may still be written. Try again in a minute to fetch it. The free routes below still work.</string>
     <string name="recipe_elsewhere_title">A purchase belongs to another account</string>
     <plurals name="recipe_elsewhere_body">
-        <item quantity="one">%1$d recipe on this device was bought with another account. Sign in to the account you bought it with to add it.</item>
-        <item quantity="other">%1$d recipes on this device were bought with another account. Sign in to the account you bought them with to add them.</item>
+        <item quantity="one">%1$d spark on this device was bought with another account. Sign in to the account you bought it with to add it.</item>
+        <item quantity="other">%1$d sparks on this device were bought with another account. Sign in to the account you bought them with to add them.</item>
     </plurals>
-    <string name="recipe_rejected_build_body">This copy of the app is set up for a different store, so it can\'t add Google Play purchases. The purchase was not added to your recipes. Google Play normally refunds a purchase that isn\'t added within three days. To buy recipes, install the app from Google Play.</string>
+    <string name="recipe_rejected_build_body">This copy of the app is set up for a different store, so it can\'t add Google Play purchases. The purchase was not added to your sparks. Google Play normally refunds a purchase that isn\'t added within three days. To buy sparks, install the app from Google Play.</string>
     <plurals name="recipe_merged_moved">
-        <item quantity="one">%1$d recipe moved from this device to your account</item>
-        <item quantity="other">%1$d recipes moved from this device to your account</item>
+        <item quantity="one">%1$d spark moved from this device to your account</item>
+        <item quantity="other">%1$d sparks moved from this device to your account</item>
     </plurals>
     <plurals name="recipe_merged_debt">
-        <item quantity="one">This device owed %1$d recipe after a store refund. It was taken from your account.</item>
-        <item quantity="other">This device owed %1$d recipes after a store refund. They were taken from your account.</item>
+        <item quantity="one">This device owed %1$d spark after a store refund. It was taken from your account.</item>
+        <item quantity="other">This device owed %1$d sparks after a store refund. They were taken from your account.</item>
     </plurals>
     <string name="recipe_earlier_recipe_saved">A recipe you asked for earlier is ready. It\'s in Saved recipes.</string>
     <string name="recipe_earlier_menu_saved">A menu you asked for earlier is ready. It\'s in Saved recipes.</string>
     <plurals name="recipe_earlier_refused">
-        <item quantity="one">A recipe you asked for earlier couldn\'t be made. It used %1$d recipe, because the attempt still cost us to run.</item>
-        <item quantity="other">A recipe you asked for earlier couldn\'t be made. It used %1$d recipes, because the attempt still cost us to run.</item>
+        <item quantity="one">A recipe you asked for earlier couldn\'t be made. It used %1$d spark, because the attempt still cost us to run.</item>
+        <item quantity="other">A recipe you asked for earlier couldn\'t be made. It used %1$d sparks, because the attempt still cost us to run.</item>
     </plurals>
     <string name="recipe_menu_bar_title">Menu</string>
     <plurals name="recipe_menu_title">
@@ -1139,13 +1139,13 @@
     <string name="recipe_intro_prompt_body">Share or copy a ready-made prompt to the AI app you already use.</string>
     <string name="recipe_intro_device_title">Free, on this device</string>
     <string name="recipe_intro_device_body">This device writes the recipe itself, and nothing is sent anywhere.</string>
-    <string name="recipe_intro_packs_title">From a recipe pack</string>
-    <string name="recipe_intro_packs_body">Our server writes the recipe, and can also plan a menu for 3 days. A recipe takes %1$s from a pack; a menu takes %2$s with 2 courses a day or %3$s with 3.</string>
+    <string name="recipe_intro_packs_title">From a spark pack</string>
+    <string name="recipe_intro_packs_body">Our server writes the recipe, and can also plan a menu for 3 days. Packs hold sparks: a recipe takes %1$s; a menu takes %2$s with 2 courses a day or %3$s with 3.</string>
     <string name="recipe_intro_packs_price">Packs from %1$s.</string>
     <string name="recipe_intro_free_stays">The free ways stay there when you have a pack.</string>
     <string name="recipe_intro_again">You can open this again in Recipe settings.</string>
     <string name="recipe_intro_start">Got it</string>
-    <string name="recipe_intro_packs_action">See recipe packs</string>
+    <string name="recipe_intro_packs_action">See spark packs</string>
     <string name="recipe_intro_settings_supporting">The ways to get a recipe</string>
     <string name="recipe_not_available_title">Recipes from packs aren\'t available on this install</string>
     <string name="recipe_not_available_body">Nothing was charged. The free ways still work: share the prompt with an AI app, or write the recipe on this device where it can.</string>
@@ -1228,21 +1228,21 @@
     <string name="welcome_intro_account_one">This account can get a free recipe to try it.</string>
     <string name="welcome_buy_sign_in_one">Or sign in and get a free recipe</string>
     <string name="welcome_buy_get_one">Or get a free recipe</string>
-    <string name="welcome_sheet_lede_one">Sign in, and our server adds a free recipe to your account, so you can try what a pack gives.</string>
+    <string name="welcome_sheet_lede_one">Sign in, and our server adds a free spark to your account, enough for one recipe, so you can try what a pack gives.</string>
     <string name="welcome_sheet_server_title">Written by our server</string>
-    <string name="welcome_sheet_server_body">They work like recipes from a pack: a single recipe, or a menu if there are enough.</string>
+    <string name="welcome_sheet_server_body">They work like sparks from a pack: a single recipe, or a menu if there are enough.</string>
     <string name="welcome_sheet_account_title">Kept in your account</string>
-    <string name="welcome_sheet_account_body">They, and any recipes you buy later, follow you to a new phone wherever you sign in with Google.</string>
+    <string name="welcome_sheet_account_body">They, and any sparks you buy later, follow you to a new phone wherever you sign in with Google.</string>
     <string name="welcome_sheet_privacy_title">An account on our server</string>
     <string name="welcome_sheet_privacy_body">We keep your account ID and email address. Signing in sends nothing from your pantry, and you can delete the account in Recipe settings.</string>
     <string name="welcome_once">Free recipes are given once per Google account.</string>
     <string name="welcome_not_now">Not now</string>
-    <string name="welcome_adding">Adding your free recipes…</string>
+    <string name="welcome_adding">Adding your free sparks…</string>
     <string name="welcome_already_title">This account has already had its free recipes</string>
-    <string name="welcome_already_body">Free recipes are given once per Apple or Google account. You\'re signed in, and any recipes you buy are kept in this account.</string>
+    <string name="welcome_already_body">Free recipes are given once per Apple or Google account. You\'re signed in, and any sparks you buy are kept in this account.</string>
     <string name="welcome_off_signed_in_now">Free recipes aren\'t available right now. You\'re signed in; nothing else has changed.</string>
     <string name="welcome_off">Free recipes aren\'t available right now. Nothing has changed.</string>
-    <string name="welcome_claim_failed">Signed in, but your free recipes couldn\'t be added yet.</string>
+    <string name="welcome_claim_failed">Signed in, but your free sparks couldn\'t be added yet.</string>
     <string name="welcome_settings_sign_in_one">Sign in and get a free recipe from our server, once per Google account.</string>
     <string name="welcome_settings_account_one">This account can get a free recipe from our server.</string>
     <string name="welcome_settings_on_phone_one">Signing in also gets you a free recipe.</string>
@@ -1275,12 +1275,12 @@
         <item quantity="other">Or get %1$d free recipes</item>
     </plurals>
     <plurals name="welcome_sheet_lede">
-        <item quantity="one">Sign in, and our server adds %1$d free recipe to your account, so you can try what a pack gives.</item>
-        <item quantity="other">Sign in, and our server adds %1$d free recipes to your account, so you can try what a pack gives.</item>
+        <item quantity="one">Sign in, and our server adds %1$d free spark to your account, enough for one recipe, so you can try what a pack gives.</item>
+        <item quantity="other">Sign in, and our server adds %1$d free sparks to your account, one for each recipe, so you can try what a pack gives.</item>
     </plurals>
     <plurals name="welcome_granted">
-        <item quantity="one">%1$d free recipe added</item>
-        <item quantity="other">%1$d free recipes added</item>
+        <item quantity="one">%1$d free spark added</item>
+        <item quantity="other">%1$d free sparks added</item>
     </plurals>
     <plurals name="welcome_settings_sign_in">
         <item quantity="one">Sign in and get %1$d free recipe from our server, once per Google account.</item>
@@ -1330,7 +1330,7 @@
         <item quantity="one">Your staple may be used too</item>
         <item quantity="other">Your %1$d staples may be used too</item>
     </plurals>
-    <!-- Recipe: pictures (recipes from packs only, single recipes; each level only when our server says acceptsRecipeImage and prices it: recipeImage, recipeImageSteps). The unit is a "recipe", never a credit. -->
+    <!-- Recipe: pictures (recipes from packs only, single recipes; each level only when our server says acceptsRecipeImage and prices it: recipeImage, recipeImageSteps). The unit is a "spark" (one spark is one recipe from our server), never a credit or token; "recipe" is only the dish written. -->
     <string name="recipe_image_row">Pictures</string>
     <string name="recipe_image_title">Pictures, made by AI</string>
     <string name="recipe_image_none">No pictures</string>
@@ -1381,6 +1381,6 @@
     <string name="recipe_report_done">You\'ve reported this</string>
     <string name="recipe_report_limit">That\'s the limit for reports today. Try again tomorrow.</string>
     <string name="recipe_report_unknown">This recipe can\'t be reported any more.</string>
-    <string name="recipe_image_unavailable">Pictures can\'t be made right now. No recipe was taken.</string>
+    <string name="recipe_image_unavailable">Pictures can\'t be made right now. No sparks were taken.</string>
     <!-- /Recipe: pictures and reports -->
 </resources>

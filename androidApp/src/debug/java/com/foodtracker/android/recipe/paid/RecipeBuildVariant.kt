@@ -66,7 +66,7 @@ private class EmulatorRecipeStore : RecipeStore {
     override val updates: Flow<StoreUpdate> = _updates.asSharedFlow()
     override val isSupported: Boolean = true
 
-    // The store's sample prices for 10 / 50 / 100 recipes.
+    // The store's sample prices for 10 / 50 / 100 sparks.
     override suspend fun packs(): List<StorePack> = RECIPE_PACKS.map { (id, recipes) ->
         val micros = when (recipes) {
             10 -> 2_990_000L

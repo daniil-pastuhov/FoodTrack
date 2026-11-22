@@ -291,7 +291,7 @@ extension L10n {
     static func recipeDays(_ count: Int) -> String { plural("recipe_days_count", count) }
     static var recipeGenerateRecipe: String { paid("recipe_generate_recipe") }
     static var recipeGenerateMenu: String { paid("recipe_generate_menu") }
-    /// "1 recipe", "5 recipes": what an action takes, and a pack's size.
+    /// "1 spark", "5 sparks": what an action takes, and a pack's size.
     static func recipeCost(_ count: Int) -> String { plural("recipe_cost_count", count) }
     static func recipeBalanceLeft(_ count: Int) -> String { plural("recipe_balance_left", count) }
     static var recipeBuy: String { paid("recipe_buy") }
@@ -548,7 +548,7 @@ extension L10n {
     static func welcomeOffer(_ hint: WelcomeHint) -> String {
         hint.needsSignIn ? welcomeOfferSignIn(hint.recipes) : welcomeOfferGet(hint.recipes)
     }
-    /// The confirmation, with the numeral even for one ("1 free recipe added").
+    /// The confirmation, with the numeral even for one ("1 free spark added").
     static func welcomeAdded(_ count: Int) -> String { plural("welcome_granted", count) }
     /// The offer row's line in menu mode, without the number (the row's title says it).
     static func welcomeMenuCover(_ line: WelcomeMenuCover) -> String {
@@ -762,7 +762,7 @@ extension L10n {
         case .steps: return picture("recipe_image_steps_desc")
         }
     }
-    /// The row's value: "No pictures", or the level really sent and its cost ("The dish · 2 recipes").
+    /// The row's value: "No pictures", or the level really sent and its cost ("The dish · 2 sparks").
     static func recipeImageValue(_ level: RecipePictureLevel, cost: Int?) -> String {
         guard level != .none, let cost else { return recipeImageLevel(.none) }
         return "\(recipeImageLevel(level)) · \(recipeCost(cost))"

@@ -22,14 +22,14 @@ BestBefore lleva el control de las fechas de caducidad o vencimiento y del inven
 • La pestaña Receta elige los productos con la fecha más cercana; cambia la selección, las porciones, el tiempo, la dieta y más
 • Gratis: copia o comparte un prompt ya listo con la app de IA que ya usas
 • Gratis en teléfonos Android compatibles: la receta se escribe en el mismo teléfono, con su propio modelo (por ahora, solo en inglés)
-• Paquetes de recetas (compra dentro de la app): recetas escritas por nuestro servidor y guardadas en la app, y sets de menús de 1 a 4 días, con hasta tres platos al día, que usan primero lo que vence antes
+• Paquetes de chispas (compra dentro de la app): una chispa es una receta escrita por nuestro servidor y guardada en la app. Los sets de menús planifican de 1 a 4 días, con hasta tres platos al día, en torno a lo que vence antes, y cuestan unas pocas chispas
 • Añade con un toque a la lista de compras lo que le falta a una receta
 
 <b>Tus datos</b>
 • Sin anuncios ni rastreo
-• Sin suscripción: la app es gratis y los paquetes de recetas son compras únicas opcionales
+• Sin suscripción: la app es gratis y los paquetes de chispas son compras únicas opcionales
 • Tu despensa se guarda en tu teléfono; exporta un respaldo cuando quieras
-• No necesitas cuenta, ni siquiera para comprar un paquete. Inicia sesión con Google solo si quieres tus recetas en otros teléfonos
+• No necesitas cuenta, ni siquiera para comprar un paquete. Inicia sesión con Google solo si quieres tus chispas en otros teléfonos
 • Una receta de un paquete envía a nuestro servidor los productos que marques, tus ajustes de recetas y tus alérgenos. Las opciones gratuitas no nos envían nada
 • Disponible en español, inglés, ruso, noruego, alemán, francés, sueco y danés
 

@@ -61,31 +61,36 @@ PRODUCTS = {
 
 # Play language code -> (language of the count above, title with {n}, description with {count}).
 LISTINGS = {
-    "en-GB": ("en", "{n} recipes",
-              "{count} dishes written for you from what is about to expire. Unused recipes don't expire."),
-    "ru-RU": ("ru", "{n} рецептов",
-              "{count} блюд, составленных для вас из продуктов, у которых скоро выходит срок. "
-              "Неиспользованные рецепты не сгорают."),
-    "no-NO": ("nb", "{n} oppskrifter",
-              "{count} retter laget for deg av det som snart går ut på dato. Ubrukte oppskrifter utløper ikke."),
-    "es-ES": ("es", "{n} recetas",
-              "{count} platos pensados para ti con lo que está a punto de caducar. Las recetas sin usar no caducan."),
-    "es-419": ("es", "{n} recetas",
-               "{count} platillos pensados para ti con lo que está por caducar. Las recetas sin usar no vencen."),
-    "de-DE": ("de", "{n} Rezepte",
-              "{count} Gerichte, für dich zusammengestellt aus dem, was bald abläuft. "
-              "Unbenutzte Rezepte verfallen nicht."),
-    "fr-FR": ("fr", "{n} recettes",
-              "{count} plats imaginés pour vous avec ce qui arrive bientôt à date. "
-              "Les recettes non utilisées n'expirent pas."),
-    "fr-CA": ("fr", "{n} recettes",
-              "{count} plats pensés pour vous avec ce qui arrive bientôt à échéance. "
-              "Les recettes inutilisées n'expirent pas."),
-    "sv-SE": ("sv", "{n} recept",
-              "{count} rätter skapade åt dig av det som snart passerar bäst före-datum. "
-              "Oanvända recept går inte ut."),
-    "da-DK": ("da", "{n} opskrifter",
-              "{count} retter lavet til dig af det, der snart når sin dato. Ubrugte opskrifter udløber ikke."),
+    "en-GB": ("en", "{n} sparks",
+              "{count} recipes written for you from what is about to expire, one spark each. "
+              "Unused sparks don't expire."),
+    "ru-RU": ("ru", "{n} искр",
+              "{count} рецептов из продуктов, у которых скоро выходит срок, по искре за рецепт. "
+              "Неиспользованные искры не сгорают."),
+    "no-NO": ("nb", "{n} gnister",
+              "{count} oppskrifter skrevet for deg av det som snart går ut på dato, én gnist hver. "
+              "Ubrukte gnister utløper ikke."),
+    "es-ES": ("es", "{n} chispas",
+              "{count} recetas pensadas para ti con lo que está a punto de caducar, una chispa cada una. "
+              "Las chispas sin usar no caducan."),
+    "es-419": ("es", "{n} chispas",
+               "{count} recetas pensadas para ti con lo que está por caducar, una chispa cada una. "
+               "Las chispas sin usar no vencen."),
+    "de-DE": ("de", "{n} Funken",
+              "{count} Rezepte, für dich erstellt aus dem, was bald abläuft, ein Funke pro Rezept. "
+              "Unbenutzte Funken verfallen nicht."),
+    "fr-FR": ("fr", "{n} étincelles",
+              "{count} recettes imaginées pour vous avec ce qui arrive bientôt à date, une étincelle chacune. "
+              "Les étincelles non utilisées n'expirent pas."),
+    "fr-CA": ("fr", "{n} étincelles",
+              "{count} recettes pensées pour vous avec ce qui arrive bientôt à échéance, une étincelle chacune. "
+              "Les étincelles inutilisées n'expirent pas."),
+    "sv-SE": ("sv", "{n} gnistor",
+              "{count} recept skrivna åt dig av det som snart passerar bäst före-datum, en gnista per recept. "
+              "Oanvända gnistor går inte ut."),
+    "da-DK": ("da", "{n} gnister",
+              "{count} opskrifter skrevet til dig af det, der snart når sin dato, én gnist hver. "
+              "Ubrugte gnister udløber ikke."),
 }
 
 

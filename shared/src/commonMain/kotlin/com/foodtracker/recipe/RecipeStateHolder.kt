@@ -746,7 +746,7 @@ class RecipeStateHolder(
         updateOptions { it.copy(introSeen = true) }
     }
 
-    /** The introduction's "See recipe packs": closed, then the pack sheet. */
+    /** The introduction's "See spark packs": closed, then the pack sheet. */
     fun introToPacks() {
         dismissIntro()
         paid.openPacks()

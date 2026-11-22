@@ -125,7 +125,7 @@ name, Matvakt.
 >
 > I den nye versjonen kommer en Oppskrift-fane som tar det som snart går ut og lager en oppskrift
 > av det. To måter er gratis: del en ferdig ledetekst med KI-appen du allerede bruker, eller la
-> telefonen skrive oppskriften selv der den støtter det. Det finnes også valgfrie oppskriftspakker
+> telefonen skrive oppskriften selv der den støtter det. Det finnes også valgfrie gnistpakker
 > som engangskjøp, uten abonnement, fra USD 2,99 for ti oppskrifter (omregnet til kroner av
 > butikkene). Med en pakke kan appen også sette opp et menysett for én til fire dager, med opptil
 > tre retter om dagen.

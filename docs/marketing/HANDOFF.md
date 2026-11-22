@@ -101,12 +101,12 @@ been posted, submitted or sent.
 
 ## Decisions already taken
 
-- The paid unit is called a "recipe" everywhere; never credit or token.
+- The paid unit is called a "spark" everywhere (owner's decision 2026-11-22, before that "recipe"): one spark is one recipe written by the server; never credit or token. Packs are "packs of sparks" / "spark packs".
 - The paid menu is a **menu set**: 1 to 4 days, 1 to 3 courses a day (one course is the main),
-  priced in recipes by the server (default days + courses - 1, so 1 to 6). Never "3-day menu".
-- **Pack prices** (2026-11-15, both stores): 10 recipes USD 2.99 (lowered from 3.99), 50 for
+  priced in sparks by the server (default days + courses - 1, so 1 to 6). Never "3-day menu".
+- **Pack prices** (2026-11-15, both stores): 10 sparks USD 2.99 (lowered from 3.99), 50 for
   10.99, 100 for 18.99; other currencies follow each store's conversion. The Buy sheet shows what
-  a larger pack saves per recipe. Listing texts state no price (store rules); posts and pitches
+  a larger pack saves per spark. Listing texts state no price (store rules); posts and pitches
   may say "from USD 2.99 for 10 recipes, converted by the stores".
 - One Russian keyword that is also another app's name was dropped; two-letter Norwegian
   keywords were dropped (Apple wants keywords longer than two characters).

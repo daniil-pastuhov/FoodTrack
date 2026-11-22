@@ -215,7 +215,7 @@ private fun LarderButtonImpl(
  * A form's primary action, the first and only filled button of its group (the Recipe tab's
  * Generate or Share): full width as the caller sizes it, at least 56dp high, a rounded rectangle
  * whose 28dp corners make it a pill at that height (never an oval when it grows), with [cost] as a
- * small outlined pill at the end ("Free", "5 recipes") that never wraps or shrinks. [subtitle] is a
+ * small outlined pill at the end ("Free", "5 sparks") that never wraps or shrinks. [subtitle] is a
  * quieter line under the label. Label and subtitle take up to two lines each beside the icon and the
  * pill; when they need more, or with font scale 1.5 and over, the icon goes and label, subtitle and
  * pill stack, centred. Drawn in the flow of the form, not floating. One element to a screen reader:
@@ -438,10 +438,10 @@ internal fun LarderButtonStylesPreview() = LarderPreview {
 @Composable
 internal fun LarderPrimaryActionPreview() = LarderPreview {
     Column(verticalArrangement = Arrangement.spacedBy(LarderSpace.s3)) {
-        LarderPrimaryAction("Generate recipe", LarderIcons.Sparkles, {}, Modifier.fillMaxWidth(), cost = "1 recipe")
+        LarderPrimaryAction("Generate recipe", LarderIcons.Sparkles, {}, Modifier.fillMaxWidth(), cost = "1 spark")
         LarderPrimaryAction("Generate on this device", LarderIcons.Smartphone, {}, Modifier.fillMaxWidth(), cost = "Free")
         LarderPrimaryAction("Share prompt", LarderIcons.Share2, {}, Modifier.fillMaxWidth())
-        LarderPrimaryAction("Generate recipe", LarderIcons.Sparkles, {}, Modifier.fillMaxWidth(), cost = "1 recipe", subtitle = "Uses your taste profile")
+        LarderPrimaryAction("Generate recipe", LarderIcons.Sparkles, {}, Modifier.fillMaxWidth(), cost = "1 spark", subtitle = "Uses your taste profile")
         LarderPrimaryAction("Составить на этом устройстве с длинной подписью", LarderIcons.Smartphone, {}, Modifier.widthIn(max = 280.dp), cost = "Бесплатно", subtitle = "С учётом вашего вкусового профиля")
         LarderPrimaryAction("Generate on this device", LarderIcons.Smartphone, {}, Modifier.fillMaxWidth(), cost = "Free", enabled = false)
     }

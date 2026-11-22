@@ -45,7 +45,7 @@ enum RecipeCreditsNotice: Equatable {
     /// A join of this install into an account moved recipes (`moved` > 0) or, after a store
     /// refund, a debt (`moved` < 0). As Android's `PaidEvent.Merged`.
     case merged(moved: Int)
-    /// Free recipes for signing in (`claimWelcome`): GRANTED, "3 free recipes added".
+    /// Free recipes for signing in (`claimWelcome`): GRANTED, "3 free sparks added".
     case welcomeGranted(Int)
     /// OFF: not available right now. `justSignedIn`: the person signed in for them, which the
     /// message says too; nothing else changed.
@@ -350,7 +350,7 @@ final class RecipeCredits: ObservableObject {
     /// The same dialog for a purchase this build can't add (`STORE_MISMATCH`): it says why, and
     /// that the purchase was not added. Once per purchase per launch.
     @Published var rejectedByBuild = false { didSet { if rejectedByBuild { Self.noteReviewProblem() } } }
-    /// "Add this phone's recipes to your account?"
+    /// "Add this phone's sparks to your account?"
     @Published var pendingMerge: RecipePendingMerge?
     /// The last `getWelcomeOffer` answer, shown at once while under a day old.
     @Published private(set) var welcomeOffer: WelcomeOfferAnswer?
@@ -361,7 +361,7 @@ final class RecipeCredits: ObservableObject {
     @Published private(set) var welcomeClaimed: Set<String>
     /// `claimWelcome` is on its way: "Getting your free recipes…" / "Adding your free recipes…".
     @Published private(set) var isClaimingWelcome = false
-    /// ALREADY: "This account has already had its free recipes", a dialog with See recipe packs.
+    /// ALREADY: "This account has already had its free recipes", a dialog with See spark packs.
     @Published var welcomeAlready = false
     /// A sign-in made while the offer showed, waiting on the merge question: claims once it ends.
     private var mergeClaimsWelcome = false
