@@ -1,0 +1,2 @@
+• Los paquetes de recetas ahora se cuentan en chispas: una chispa es una receta escrita por nuestro servidor, y una receta con imágenes o un menú cuesta algunas más.
+• Textos más claros donde ves tu saldo, un costo o un paquete. Tu saldo y los precios siguen igual.

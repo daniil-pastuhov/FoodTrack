@@ -1,0 +1,2 @@
+• Recipe packs are now counted in sparks: one spark is one recipe written by our server, and a recipe with pictures or a menu set takes a few more.
+• Clearer wording wherever you see your balance, a cost or a pack. Your balance and the prices stay the same.
