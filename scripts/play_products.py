@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Creates the recipe-pack one-time products on Google Play (recipes_10, recipes_50, recipes_100)
-and, with --reprice, brings their prices in line with scripts/pack_prices.py.
+and, with --reprice, brings their prices in line with scripts/pack_prices.py, and with --relist
+their names and descriptions in line with LISTINGS below.
 
 Dry run by default: it reads what Play already has, asks Play to convert each base price into
 every region's price, and prints what it would create or change. Nothing is written without
@@ -12,13 +13,15 @@ every region's price, and prints what it would create or change. Nothing is writ
     PLAY_SERVICE_ACCOUNT_JSON="$(cat key.json)" python3 scripts/play_products.py --apply recipes_10
     PLAY_SERVICE_ACCOUNT_JSON="$(cat key.json)" python3 scripts/play_products.py --reprice  # dry run
     PLAY_SERVICE_ACCOUNT_JSON="$(cat key.json)" python3 scripts/play_products.py --reprice --apply
+    PLAY_SERVICE_ACCOUNT_JSON="$(cat key.json)" python3 scripts/play_products.py --relist   # dry run
+    PLAY_SERVICE_ACCOUNT_JSON="$(cat key.json)" python3 scripts/play_products.py --relist --apply
 
 Authenticates exactly like scripts/play_upload.py (its `publisher()`); the key never lives in the
 repository. The service account needs Play Console permission to manage the app's in-app
 products, and Play only creates in-app products once it has seen a build with Play Billing on a
 testing track (docs/recipe-setup.md, step 4).
 
-Without --reprice it is idempotent: a product that already exists is not changed; if its purchase
+Without --reprice or --relist it is idempotent: a product that already exists is not changed; if its purchase
 option `buy` is not active, --apply only activates it. Each new product is a consumable with one
 purchase option `buy` (legacy-compatible, so Play Billing's ProductDetails sees it; multi-quantity
 off), available in every region at Play's conversion of the USD base price (`convertRegionPrices`),
@@ -31,6 +34,14 @@ every region, as creation does, and patches the purchase options (`updateMask=pu
 the regions version of that conversion) with the `buy` option's regional prices and new-regions
 prices replaced. Listings, the option's state and availability, and every other field are sent
 back as Play has them. The dry run prints the US price, a few regions and how many change.
+
+--relist changes only listings: for each existing product whose listings differ from LISTINGS
+(title and description per language), it patches the listings (`updateMask=listings`, under the
+product's own regions version, as no price changes). Purchase options, prices, their state and
+every other field are left as Play has them. A language Play has that LISTINGS doesn't is sent
+back unchanged (the list is replaced whole, so leaving it out would delete it) and reported. The
+dry run prints old -> new title and description per product and language; equal listings mean
+nothing to do.
 
 The prices are scripts/pack_prices.py's (shared with scripts/testflight.py `iap-prices`, the App
 Store's base prices); the pack sizes must match PRODUCT_CREDITS in functions/src/constants.ts.
@@ -255,6 +266,100 @@ def describe_reprice(product_id, current, target, changes, unconverted, option):
     return lines
 
 
+# --- --relist: bring existing products' listings in line with LISTINGS ---------------------------
+#
+# Same patch as --reprice, with `updateMask=listings`: the listings list is replaced whole and
+# nothing else changes. `regionsVersion.version` is still required; the product's own version is
+# sent, since no price is converted.
+
+def relist_body(product, wanted):
+    """The patch body that gives a product the wanted listings, and what changes.
+
+    `wanted` is listings(product_id). Returns (body, changes, kept): changes is
+    [(languageCode, old listing or None, new listing)] for every language whose title or
+    description differs or which Play doesn't have yet; kept lists the languages Play has that
+    `wanted` doesn't, sent back as Play has them. body is None when nothing changes."""
+    current = {l.get("languageCode"): l for l in product.get("listings") or []}
+    changes = []
+    for listing in wanted:
+        old = current.get(listing["languageCode"])
+        if old is None or old.get("title") != listing["title"] or \
+                old.get("description") != listing["description"]:
+            changes.append((listing["languageCode"], old, listing))
+    codes = {l["languageCode"] for l in wanted}
+    kept = [code for code in current if code not in codes]
+    if not changes:
+        return None, [], kept
+    body = {"packageName": product.get("packageName", PACKAGE_NAME), "productId": product["productId"],
+            "listings": [dict(l) for l in wanted] + [copy.deepcopy(current[c]) for c in kept]}
+    return body, changes, kept
+
+
+def describe_relist(product_id, changes, kept):
+    lines = [f"{product_id}: {len(changes)} listing(s) change"]
+    for code, old, new in changes:
+        if old is None:
+            lines.append(f"  {code}: new")
+            lines.append(f"    title:       {new['title']!r}")
+            lines.append(f"    description: {new['description']!r}")
+            continue
+        lines.append(f"  {code}:")
+        for field in ("title", "description"):
+            if old.get(field) == new[field]:
+                lines.append(f"    {field}: {new[field]!r} (unchanged)")
+            else:
+                lines.append(f"    {field}: {old.get(field)!r}")
+                lines.append(f"      -> {new[field]!r}")
+    if kept:
+        lines.append(f"  not in LISTINGS, sent back unchanged: {', '.join(kept)}")
+    return lines
+
+
+def relist(args):
+    from googleapiclient.errors import HttpError
+    api = publisher(timeout=60, static_discovery=False)
+    if api is None:
+        print("PLAY_SERVICE_ACCOUNT_JSON is not set", file=sys.stderr)
+        return 2
+    mode = "APPLY" if args.apply else "DRY RUN (pass --apply to write)"
+    print(f"{mode}: listings of {PACKAGE_NAME} against LISTINGS in scripts/play_products.py")
+    failed = False
+    for product_id in args.products or list(PRODUCTS):
+        try:
+            product = existing(api, product_id)
+            if product is None:
+                print(f"{product_id}: does not exist; run without --relist to create it")
+                continue
+            wanted = listings(product_id)
+            body, changes, kept = relist_body(product, wanted)
+            if body is None:
+                print(f"{product_id}: {len(wanted)} listings, as LISTINGS; nothing to do"
+                      + (f" (also on Play, not in LISTINGS: {', '.join(kept)})" if kept else ""))
+                continue
+            for line in describe_relist(product_id, changes, kept):
+                print(line)
+            version = (product.get("regionsVersion") or {}).get("version")
+            print(f"  option '{PURCHASE_OPTION}' {option_state(product)}; regions version {version}")
+            if not args.apply:
+                continue
+            if not version:
+                print(f"{product_id}: Play gave no regions version; not changed", file=sys.stderr)
+                failed = True
+                continue
+            api.monetization().onetimeproducts().patch(
+                packageName=PACKAGE_NAME, productId=product_id, updateMask="listings",
+                regionsVersion_version=version, body=body,
+            ).execute()
+            _, left, _ = relist_body(existing(api, product_id), wanted)
+            print("  changed; Play now has the listings of LISTINGS" if not left
+                  else f"  changed, but Play still differs in: {', '.join(c for c, _, _ in left)}")
+            failed |= bool(left)
+        except HttpError as e:
+            failed = True
+            print(f"{product_id}: HTTP {e.resp.status} {e.content.decode(errors='replace')[:2000]}", file=sys.stderr)
+    return 1 if failed else 0
+
+
 def reprice(args):
     from googleapiclient.errors import HttpError
     api = publisher(timeout=60, static_discovery=False)
@@ -309,15 +414,23 @@ def main() -> int:
     parser.add_argument("products", nargs="*", metavar="PRODUCT_ID",
                         help=f"only these ({', '.join(PRODUCTS)}); default all")
     parser.add_argument("--apply", action="store_true",
-                        help="create and activate (with --reprice: change the prices); without it nothing is written")
+                        help="create and activate (with --reprice: change the prices; with --relist: the "
+                             "listings); without it nothing is written")
     parser.add_argument("--reprice", action="store_true",
                         help="bring existing products' prices in line with scripts/pack_prices.py instead of creating")
+    parser.add_argument("--relist", action="store_true",
+                        help="bring existing products' listings (title, description) in line with LISTINGS "
+                             "instead of creating")
     args = parser.parse_args()
+    if args.reprice and args.relist:
+        parser.error("--reprice and --relist are separate runs")
     unknown = [p for p in args.products if p not in PRODUCTS]
     if unknown:
         parser.error(f"unknown product id: {', '.join(unknown)}")
     if args.reprice:
         return reprice(args)
+    if args.relist:
+        return relist(args)
     from googleapiclient.errors import HttpError
     api = publisher(timeout=60, static_discovery=False)
     if api is None:

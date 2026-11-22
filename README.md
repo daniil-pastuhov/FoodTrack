@@ -176,6 +176,29 @@ PLAY_SERVICE_ACCOUNT_JSON="$(cat key.json)" python3 scripts/play_products.py --r
 ASC_KEY_ID=… ASC_ISSUER_ID=… ASC_KEY_PATH=… python3 scripts/testflight.py iap-prices --apply
 ```
 
+**Changing a pack's name**: the names and descriptions the stores' purchase dialogs show are
+`LISTINGS` in `scripts/play_products.py` (Play, per Play language; its titles are the app's
+`recipe_pack_name`) and `IAP_LISTINGS` in `scripts/testflight.py` (App Store, per locale: the
+name taken from Play's title, a description of at most 45 characters, the name at most 30);
+`scripts/tests/test_pack_names.py` checks both against the app's strings and the limits. Edit
+them, then compare; the dry runs print what the stores have and old -> new per product and
+language, and write nothing:
+
+```sh
+PLAY_SERVICE_ACCOUNT_JSON="$(cat key.json)" python3 scripts/play_products.py --relist
+ASC_KEY_ID=… ASC_ISSUER_ID=… ASC_KEY_PATH=… python3 scripts/testflight.py iap-names
+```
+
+With `--apply`, Play's patches only the listings (prices, purchase option and its state stay) and
+takes effect without review. On the App Store a display name lives on an In-App Purchase
+version, which can't be edited once submitted: `iap-names --apply` edits the draft version if
+there is one, else makes a new one from the approved version and edits that. The draft then has
+to pass App Review: the next release's `testflight.py appstore` adds it to the app version's
+review submission (`testflight.py iaps` shows it as "added"); until it is approved, the store
+keeps the approved version's texts. It refuses while a version of the purchase is in review or
+in a submission. A locale a purchase has no localization for is only reported; `--add-missing`
+adds it. Neither runs in CI.
+
 **Screenshot check**: `scripts/screenshot_check.py` takes every screenshot the store capture
 scripts take (`scripts/android_screenshots.sh`, `scripts/ios_screenshots.sh`) on each of their
 devices in turn, booting one, shooting every language, shutting it down before the next, and

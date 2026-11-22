@@ -33,6 +33,12 @@ Used by .github/workflows/ci.yml as part of the release flow (see "Releasing" in
     # for each one whose USA price differs.
     python3 scripts/testflight.py iap-prices [--apply] [PRODUCT_ID ...]
 
+    # The in-app purchases' display names and descriptions against IAP_LISTINGS below (the pack
+    # names from scripts/play_products.py's LISTINGS): dry run by default, prints what App Store
+    # Connect has and old -> new per locale; --apply edits the draft In-App Purchase version or
+    # makes a new one, which goes to App Review with the next `appstore` submission.
+    python3 scripts/testflight.py iap-names [--apply] [--add-missing] [PRODUCT_ID ...]
+
     # Read-only overview of the app's builds and groups.
     python3 scripts/testflight.py status
 
@@ -834,6 +840,251 @@ def cmd_iap_prices(args):
         now = price_in_force([p for p in after if p["territory"] == PRICE_BASE_TERRITORY], today)
         print(f"    set; App Store Connect now has USD {now['price'] if now else '?'}")
         failed |= not now or now["point"] != point["id"]
+    return 1 if failed else 0
+
+
+# --- In-app purchase names: the table below onto each purchase's localizations ------------------
+#
+# developer.apple.com/documentation/appstoreconnectapi/working-with-in-app-purchase-versions (API
+# 4.4.1): an in-app purchase's display name and description per locale (InAppPurchaseLocalization,
+# attributes name, description, locale) live on an In-App Purchase version. A version is open for
+# editing only while PREPARE_FOR_SUBMISSION; "to change a version's contents, create a new
+# version" (POST /v1/inAppPurchaseVersions, relationship inAppPurchase only, which "captures its
+# current localized metadata and review images" and starts PREPARE_FOR_SUBMISSION), then change
+# its localizations (PATCH /v2/inAppPurchaseLocalizations/{id}, attributes name and description;
+# POST /v2/inAppPurchaseLocalizations relates a new one to the version). The new version goes to
+# App Review like a first one: `appstore` adds a PREPARE_FOR_SUBMISSION version to the app
+# version's review submission (plan_iaps, IAP_RESUBMIT_VERSION_STATES). The review screenshot
+# stays on the parent purchase.
+#
+# Limits: App Store Connect allows a display name of 30 characters and a description of 45
+# (App Store Connect Help, "In-app purchase information"; the API reference gives none).
+
+IAP_NAME_LIMIT = 30
+IAP_DESCRIPTION_LIMIT = 45
+# Version states in which the localizations are edited in place.
+IAP_EDITABLE_VERSION_STATES = {"PREPARE_FOR_SUBMISSION"}
+# Version states with a review under way or a submission holding it: no new version is made.
+IAP_BUSY_VERSION_STATES = {"READY_FOR_REVIEW", "WAITING_FOR_REVIEW", "IN_REVIEW", "DEVELOPER_REJECTED"}
+IAP_LIVE_VERSION_STATES = {"APPROVED", "ACCEPTED"}
+
+# App Store Connect locale -> (scripts/play_products.py LISTINGS code whose title is the name, so
+# the pack names are the app's own words; the description, one per locale for all three packs).
+IAP_LISTINGS = {
+    "en-GB": ("en-GB", "One spark per recipe. Sparks don't expire."),
+    "en-US": ("en-GB", "One spark per recipe. Sparks don't expire."),
+    "en-AU": ("en-GB", "One spark per recipe. Sparks don't expire."),
+    "en-CA": ("en-GB", "One spark per recipe. Sparks don't expire."),
+    "ru": ("ru-RU", "Одна искра на рецепт. Искры не сгорают."),
+    "no": ("no-NO", "Én gnist per oppskrift. Gnister utløper ikke."),
+    "es-ES": ("es-ES", "Una chispa por receta. Nunca caducan."),
+    "es-MX": ("es-419", "Una chispa por receta. Nunca vencen."),
+    "de-DE": ("de-DE", "Ein Funke pro Rezept. Funken verfallen nicht."),
+    "fr-FR": ("fr-FR", "Une étincelle par recette. Sans expiration."),
+    "fr-CA": ("fr-CA", "Une étincelle par recette. Sans expiration."),
+    "sv": ("sv-SE", "En gnista per recept. Gnistor går inte ut."),
+    "da": ("da-DK", "Én gnist pr. opskrift. Gnister udløber ikke."),
+}
+
+
+def iap_name_table():
+    """{productId: {locale: {"name", "description"}}} for the three packs."""
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+    from play_products import LISTINGS, PRODUCTS
+    return {product: {locale: {"name": LISTINGS[code][1].format(n=n), "description": description}
+                      for locale, (code, description) in IAP_LISTINGS.items()}
+            for product, (n, _, _) in PRODUCTS.items()}
+
+
+def check_iap_names(table):
+    """The table's problems (over a limit, empty), as strings; none when it can be sent."""
+    problems = []
+    for product, locales in table.items():
+        for locale, texts in locales.items():
+            for field, limit in (("name", IAP_NAME_LIMIT), ("description", IAP_DESCRIPTION_LIMIT)):
+                text = texts.get(field) or ""
+                if not text.strip():
+                    problems.append(f"{product} {locale}: empty {field}")
+                elif len(text) > limit:
+                    problems.append(f"{product} {locale}: {field} is {len(text)} characters, "
+                                    f"over {limit}: {text!r}")
+    return problems
+
+
+def iap_name_target(versions):
+    """Where `iap-names` writes for one purchase, from its versions ([{"id", "attributes":
+    {"version", "state"}}]). Returns (action, version, detail): "edit" (the newest draft, open
+    for editing), "new" (no draft: a new version is made from `version`, the newest live one,
+    or None) or "blocked" (a version is in review or in a review submission)."""
+    def state(v):
+        return (v.get("attributes") or {}).get("state")
+    ordered = sorted(versions, key=version_number, reverse=True)
+    live = next((v for v in ordered if state(v) in IAP_LIVE_VERSION_STATES), None)
+    # Only versions after the live one count: an older one withdrawn or rejected is history.
+    newer = ordered[:ordered.index(live)] if live else ordered
+    busy = [v for v in newer if state(v) in IAP_BUSY_VERSION_STATES]
+    if busy:
+        return "blocked", busy[0], (f"version {(busy[0].get('attributes') or {}).get('version')} is "
+                                    f"{state(busy[0])}; nothing is changed while it is in review or "
+                                    "in a review submission")
+    draft = next((v for v in newer if state(v) in IAP_EDITABLE_VERSION_STATES), None)
+    if draft:
+        return "edit", draft, f"draft version {(draft.get('attributes') or {}).get('version')} edited in place"
+    base = live or (ordered[0] if ordered else None)
+    return "new", base, ("a new version (a draft for App Review) made from version "
+                         f"{(base.get('attributes') or {}).get('version')} {state(base)}" if base
+                         else "a new version (the purchase has none yet)")
+
+
+def plan_iap_names(current, wanted, add_missing=False):
+    """What changes in one version's localizations. `current` is {locale: {"id", "name",
+    "description"}}, `wanted` {locale: {"name", "description"}}. Returns [(locale, action, old,
+    new)] in locale order, action "same", "update", "create" (a table locale the version lacks,
+    only with add_missing), "missing" (the same without it: reported, not created) or "extra" (on
+    App Store Connect, not in the table: left as it is)."""
+    plan = []
+    for locale in sorted(set(current) | set(wanted)):
+        old, new = current.get(locale), wanted.get(locale)
+        if new is None:
+            plan.append((locale, "extra", old, None))
+        elif old is None:
+            plan.append((locale, "create" if add_missing else "missing", None, new))
+        elif (old.get("name") or "") == new["name"] and (old.get("description") or "") == new["description"]:
+            plan.append((locale, "same", old, new))
+        else:
+            plan.append((locale, "update", old, new))
+    return plan
+
+
+def describe_iap_names(plan):
+    lines = []
+    for locale, action, old, new in plan:
+        if action == "same":
+            lines.append(f"    {locale}: {new['name']!r} / {new['description']!r} (as the table)")
+        elif action == "extra":
+            lines.append(f"    {locale}: {old.get('name')!r} / {old.get('description')!r} "
+                         "(not in the table; left as it is)")
+        elif action in ("create", "missing"):
+            lines.append(f"    {locale}: not on App Store Connect; "
+                         + ("would be added" if action == "create" else "NOT added (--add-missing adds it)")
+                         + f": {new['name']!r} / {new['description']!r}")
+        else:
+            lines.append(f"    {locale}:")
+            for field in ("name", "description"):
+                if (old.get(field) or "") == new[field]:
+                    lines.append(f"      {field}: {new[field]!r} (unchanged)")
+                else:
+                    lines.append(f"      {field}: {old.get(field)!r}")
+                    lines.append(f"        -> {new[field]!r}")
+    return lines
+
+
+def version_localizations(asc, version_id):
+    """A version's localizations as {locale: {"id", "name", "description", "state"}}."""
+    items, _ = get_all(asc, f"/inAppPurchaseVersions/{version_id}/localizations", {"limit": 50})
+    return {(i.get("attributes") or {}).get("locale"): {"id": i["id"], **(i.get("attributes") or {})}
+            for i in items}
+
+
+def legacy_localizations(asc, iap_id):
+    """The deprecated read of a purchase's localizations (each with its own state), or None when
+    App Store Connect no longer answers it."""
+    try:
+        items, _ = get_all(asc, f"/v2/inAppPurchases/{iap_id}/inAppPurchaseLocalizations", {"limit": 50})
+    except AscError as error:
+        print(f"    (deprecated /inAppPurchaseLocalizations read: HTTP {error.status})")
+        return None
+    return {(i.get("attributes") or {}).get("locale"): i.get("attributes") or {} for i in items}
+
+
+def apply_iap_names(asc, version_id, plan):
+    for locale, action, old, new in plan:
+        if action == "update":
+            asc.call("PATCH", f"/v2/inAppPurchaseLocalizations/{old['id']}", body={"data": {
+                "type": "inAppPurchaseLocalizations", "id": old["id"],
+                "attributes": {"name": new["name"], "description": new["description"]}}})
+            print(f"    {locale}: changed")
+        elif action == "create":
+            asc.call("POST", "/v2/inAppPurchaseLocalizations", body={"data": {
+                "type": "inAppPurchaseLocalizations",
+                "attributes": {"locale": locale, "name": new["name"], "description": new["description"]},
+                "relationships": {"version": {"data": {"type": "inAppPurchaseVersions", "id": version_id}}}}})
+            print(f"    {locale}: added")
+
+
+def cmd_iap_names(args):
+    """Brings each in-app purchase's display names and descriptions in line with IAP_LISTINGS
+    (dry run unless --apply)."""
+    table = iap_name_table()
+    problems = check_iap_names(table)
+    if problems:
+        raise ListingError("in-app purchase names over a limit:\n" + "\n".join(problems))
+    live = Asc()
+    asc = live if args.apply else ReadOnlyAsc(live)
+    print("APPLY" if args.apply else "DRY RUN (pass --apply to write)")
+    app_id = asc.app_id()
+    iaps, _ = get_all(asc, f"/apps/{app_id}/inAppPurchasesV2", {"limit": 200})
+    by_product = {(i.get("attributes") or {}).get("productId"): i for i in iaps}
+    failed = False
+    for product, wanted in table.items():
+        if args.products and product not in args.products:
+            continue
+        iap = by_product.get(product)
+        if not iap:
+            print(f"{product}: no such in-app purchase in App Store Connect")
+            failed = True
+            continue
+        attrs = iap.get("attributes") or {}
+        versions, _ = get_all(asc, f"/v2/inAppPurchases/{iap['id']}/versions", {"limit": 200})
+        print(f"{product} (id {iap['id']}, {attrs.get('inAppPurchaseType')}): state {attrs.get('state')}; "
+              "versions " + (", ".join(f"{(v.get('attributes') or {}).get('version')} "
+                                       f"{(v.get('attributes') or {}).get('state')} (id {v['id']})"
+                                       for v in sorted(versions, key=version_number)) or "none"))
+        legacy = legacy_localizations(asc, iap["id"])
+        if legacy is not None:
+            print("    localizations' own states (deprecated read): " + (", ".join(
+                f"{locale} {(a.get('state') or '?')}" for locale, a in sorted(legacy.items())) or "none"))
+        action, version, detail = iap_name_target(versions)
+        print(f"  -> {detail}")
+        current = version_localizations(asc, version["id"]) if version else {}
+        plan = plan_iap_names(current, wanted, args.add_missing)
+        for line in describe_iap_names(plan):
+            print(line)
+        changes = [p for p in plan if p[1] in ("update", "create")]
+        if action == "blocked":
+            failed |= bool(changes)
+            continue
+        if not changes:
+            print("  nothing to change")
+            continue
+        if not args.apply:
+            print(f"  would {'edit the draft' if action == 'edit' else 'create a new version and edit it'}: "
+                  f"{len(changes)} localization(s); it then goes to App Review with the next "
+                  "`appstore` submission")
+            continue
+        target = version
+        if action == "new":
+            target = live.call("POST", "/inAppPurchaseVersions", body={"data": {
+                "type": "inAppPurchaseVersions", "relationships": {
+                    "inAppPurchase": {"data": {"type": "inAppPurchases", "id": iap["id"]}}}}})["data"]
+            print(f"  created version {(target.get('attributes') or {}).get('version')} "
+                  f"{(target.get('attributes') or {}).get('state')} (id {target['id']})")
+            # The new version starts from the purchase's current localizations: plan against those.
+            copied = version_localizations(asc, target["id"])
+            if set(copied) != set(current):
+                print(f"::error::{product}: the new version {target['id']} has the localizations "
+                      f"{', '.join(sorted(copied)) or 'none'}, not those of the version it was made from "
+                      f"({', '.join(sorted(current)) or 'none'}); nothing edited. Check the draft in App "
+                      "Store Connect before the next `appstore` run, which would send it for review.")
+                failed = True
+                continue
+            plan = plan_iap_names(copied, wanted, args.add_missing)
+        apply_iap_names(asc, target["id"], plan)
+        left = [p[0] for p in plan_iap_names(version_localizations(asc, target["id"]), wanted,
+                                             args.add_missing) if p[1] in ("update", "create")]
+        print("  App Store Connect now has the table's texts" if not left
+              else f"  still different: {', '.join(left)}")
+        failed |= bool(left)
     return 1 if failed else 0
 
 
@@ -2925,6 +3176,13 @@ def main() -> int:
     prices.add_argument("products", nargs="*", metavar="PRODUCT_ID", help="only these; default all")
     prices.add_argument("--apply", action="store_true", help="set the new price schedules")
     prices.set_defaults(func=cmd_iap_prices)
+    names = commands.add_parser("iap-names", help="set the in-app purchases' display names and "
+                                                  "descriptions to IAP_LISTINGS (dry run unless --apply)")
+    names.add_argument("products", nargs="*", metavar="PRODUCT_ID", help="only these; default all")
+    names.add_argument("--apply", action="store_true", help="write the differences")
+    names.add_argument("--add-missing", action="store_true",
+                       help="also add the table's locales a purchase has no localization for")
+    names.set_defaults(func=cmd_iap_names)
     commands.add_parser("status", help="list groups and recent builds").set_defaults(func=cmd_status)
     revoke = commands.add_parser("revoke-ci-certs", help="revoke development certificates left by CI runs")
     revoke.set_defaults(func=cmd_revoke_ci_certs)
