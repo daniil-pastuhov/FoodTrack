@@ -1,0 +1,2 @@
+• Oppskriftspakker telles nå i gnister: én gnist er én oppskrift skrevet av serveren vår, og en oppskrift med bilder eller en meny koster noen flere.
+• Tydeligere tekst overalt der du ser saldoen, en kostnad eller en pakke. Saldoen din og prisene er de samme.

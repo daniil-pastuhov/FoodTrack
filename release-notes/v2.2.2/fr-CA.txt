@@ -1,0 +1,2 @@
+• Les forfaits de recettes se comptent maintenant en étincelles : une étincelle correspond à une recette écrite par notre serveur, et une recette avec images ou un menu en demande quelques-unes de plus.
+• Des textes plus clairs partout où s'affichent votre solde, un coût ou un forfait. Votre solde et les prix ne changent pas.

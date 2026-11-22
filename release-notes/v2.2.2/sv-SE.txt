@@ -1,0 +1,2 @@
+• Receptpaket räknas nu i gnistor: en gnista är ett recept skrivet av vår server, och ett recept med bilder eller en meny kostar några fler.
+• Tydligare text överallt där du ser ditt saldo, en kostnad eller ett paket. Ditt saldo och priserna är desamma.

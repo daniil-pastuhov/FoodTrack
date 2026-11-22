@@ -1,0 +1,2 @@
+• Rezeptpakete werden jetzt in Funken gezählt: Ein Funke ist ein Rezept, das unser Server schreibt, und ein Rezept mit Bildern oder ein Menü kostet ein paar mehr.
+• Klarere Texte überall, wo du dein Guthaben, Kosten oder ein Paket siehst. Dein Guthaben und die Preise bleiben gleich.
