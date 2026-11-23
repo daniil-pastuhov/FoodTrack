@@ -549,3 +549,53 @@ export const REVENUE_WINDOW_DAYS = 7;
 
 /** How far back the daily Voided Purchases poll looks (the API allows up to 30 days). */
 export const VOIDED_POLL_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
+
+/**
+ * The home worker (README "Home worker"): recipe text for the owner's own test accounts only,
+ * written by a small HTTP server on the owner's computer (home-worker/server.mjs), reached through
+ * a tunnel at the https address `config/runtime.homeWorker.url`. Only a request from a listed
+ * account (a uid in `testers`, or a verified email in `emails`), while `enabled` and with a
+ * `url`, is sent there (POST <url>`path`); the call waits at most `waitMs` (config, within
+ * `maxWaitMs`), and on any failure the normal text provider writes the recipe as if the server did
+ * not exist. A recipe with pictures gets its text there too; its pictures come from the picture
+ * router as for everyone. Each wait comes on top of TIMINGS (the text's abort and the
+ * reservation's deadline are lengthened by it).
+ *
+ * The bounds (functionTimeoutSeconds 300 is generateRecipe's timeout; the apps wait for the
+ * callable and then poll getGeneration until 150 s for a recipe and 270 s for a menu or a recipe
+ * with pictures from the first send; a generation still IN_PROGRESS after that is never charged
+ * twice: Android recovers it later, iOS's "Try again" sends the same request id). The worst case is
+ * the server's whole wait and then the normal provider's whole time:
+ * - recipe: wait + text 40 + judge 10 = at most 170 s with the 120 s maximum (inside 300 s, past the
+ *   apps' 150 s); the default 90 s ends by 140 s.
+ * - menu: wait + text 120 + judge 20 + 10 s = 300 s with the 150 s maximum; up to 120 s it ends by
+ *   260 s, inside the apps' 270 s.
+ * - recipeImage (dish or steps): wait + text 40 + judge 10 + the pictures' budget (dish 50 s, steps
+ *   100 s; a provider's own timing may lengthen it, imageTimingOf) + 10 s: with the 110 s maximum
+ *   at most 270 s with step pictures, inside the apps' 270 s and the 300 s.
+ * test/homeWorker.test.ts checks this arithmetic for every picture provider.
+ * - `serverMarginMs`: the server is told to give up this much before the call stops waiting.
+ * - `maxResultChars`: the longest answer text accepted (a 4 x 3 menu is about 60 000 characters of
+ *   JSON); `maxResponseBytes`: the most of a response body read at all. `maxTesters` / `maxEmails`:
+ *   the most uids / emails in the lists; `maxUrlChars`: the longest url.
+ * - `secretName`: the Secret Manager secret holding the bearer secret sent to the server, read at
+ *   run time (adapters/secretManager.ts SecretReader, like a provider's key: never bound with
+ *   defineSecret, so a deploy never needs it); under `minSecretChars` characters it is never sent.
+ */
+export const HOME_WORKER = {
+  path: "/v1/text",
+  secretName: "HOME_WORKER_SECRET",
+  minSecretChars: 32,
+  functionTimeoutSeconds: 300,
+  // Measured through the CLI (Sonnet, 2026-11-23): a plain recipe 7 to 55 s; a 3-day 2-course
+  // menu 22 s (17 s at effort low), both passing the output checks (README "Home worker").
+  waitMs: { recipe: 90_000, menu: 90_000, recipeImage: 90_000 } as Readonly<Record<"recipe" | "menu" | "recipeImage", number>>,
+  minWaitMs: 1_000,
+  maxWaitMs: { recipe: 120_000, menu: 150_000, recipeImage: 110_000 } as Readonly<Record<"recipe" | "menu" | "recipeImage", number>>,
+  serverMarginMs: 2_000,
+  maxResultChars: 200_000,
+  maxResponseBytes: 1024 * 1024,
+  maxTesters: 20,
+  maxEmails: 20,
+  maxUrlChars: 300,
+} as const;

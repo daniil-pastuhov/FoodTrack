@@ -20,6 +20,7 @@ import { onSchedule } from "firebase-functions/v2/scheduler";
 import * as logger from "firebase-functions/logger";
 import { defineInt, defineSecret, defineString } from "firebase-functions/params";
 import {
+  HOME_WORKER,
   CONSUME_APP_CHECK_TOKENS,
   DEFAULT_IMAGE_SELECTION,
   GENERATE_TIMEOUT_SECONDS,
@@ -95,6 +96,8 @@ import {
   type OwnerEnv,
 } from "./core/providerSwitch";
 import { OwnerCallGate } from "./core/ownerCall";
+import { HttpHomeWorker } from "./core/homeWorker";
+import { GoogleAuth } from "google-auth-library";
 import { getOwnerSettings as ownerSettingsCore, setOwnerSettings as setOwnerSettingsCore } from "./core/ownerSettings";
 
 // --- Params and secrets (see README "Parameters") ---------------------------------------------
@@ -286,6 +289,33 @@ function welcomeCounter(): (day: string) => Promise<number> {
   return (day) => counter.grants(day);
 }
 
+/**
+ * The home server on the owner's computer (README "Home worker"): called only for a listed
+ * tester's request, with an ID token of the runtime service account and the shared secret. The secret HOME_WORKER_SECRET is read at run time, on the first such
+ * request (never bound with defineSecret, so a deploy never needs it); the emulator reads it from
+ * the environment (functions/.env.local, never committed).
+ */
+function homeWorker(): HttpHomeWorker {
+  const emulator = process.env.FUNCTIONS_EMULATOR === "true";
+  let reader: SecretReader | undefined;
+  let auth: GoogleAuth | undefined;
+  return new HttpHomeWorker({
+    logger,
+    // The runtime service account's ID token for the server's url (the metadata server; none in
+    // the emulator, so there the server is never answered and the normal provider writes the text).
+    idToken: async (audience) => {
+      auth ??= new GoogleAuth();
+      const client = await auth.getIdTokenClient(audience);
+      return client.idTokenProvider.fetchIdToken(audience);
+    },
+    secret: () => {
+      if (emulator) return process.env.HOME_WORKER_SECRET ? Promise.resolve(process.env.HOME_WORKER_SECRET) : Promise.reject(new Error("unset"));
+      reader ??= new SecretReader({ project: projectId(), secret: HOME_WORKER.secretName });
+      return reader.get();
+    },
+  });
+}
+
 function getDeps(): Deps {
   if (!deps && emulatorFakesEnabled()) {
     logger.warn("EMULATOR_FAKES: fake stores and LLM in use (emulator only)");
@@ -304,6 +334,7 @@ function getDeps(): Deps {
       logger,
       config: configSource(),
       welcomeDayGrants: welcomeCounter(),
+      homeWorker: homeWorker(),
     };
   }
   deps ??= {
@@ -346,6 +377,8 @@ function getDeps(): Deps {
     logger,
     config: configSource(),
     welcomeDayGrants: welcomeCounter(),
+    // Asked only for a listed tester's request (core/homeWorker.ts); nobody else ever reaches it.
+    homeWorker: homeWorker(),
   };
   return deps;
 }
@@ -368,6 +401,7 @@ function callerOf(request: CallableRequest, throttle: CallThrottle, consume: boo
     profileClaims: Boolean(request.auth.token.name || request.auth.token.picture),
     providers: identities && typeof identities === "object" ? Object.keys(identities) : [],
     issuedAt: request.auth.token.iat ?? 0,
+    verifiedEmail: request.auth.token.email_verified === true && typeof request.auth.token.email === "string" ? request.auth.token.email.toLowerCase() : null,
   };
 }
 
@@ -465,7 +499,10 @@ export const generateRecipe = onCall(
   {
     ...callable,
     consumeAppCheckToken: CONSUME_APP_CHECK_TOKENS,
-    timeoutSeconds: GENERATE_TIMEOUT_SECONDS,
+    // Longer than GENERATE_TIMEOUT_SECONDS only for the owner's test accounts' home server
+    // (constants.ts HOME_WORKER: its wait, then the normal provider); everyone else's call ends
+    // within the same 180 s as before, by the text's and pictures' own timers.
+    timeoutSeconds: Math.max(GENERATE_TIMEOUT_SECONDS, HOME_WORKER.functionTimeoutSeconds),
     maxInstances: LIMITS.generateRecipe.maxInstances,
     concurrency: 1,
   },

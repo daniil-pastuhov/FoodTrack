@@ -12,6 +12,7 @@
  *   npm run admin -- report weekly [--week YYYY-Www] [--run [--apply]]  (README "Weekly app report": the stored report; --run is a dry run unless --apply)
  *   npm run admin -- report weekly | judge review --send [--to-self <file.html>] [--apply [--force]]  (README "Report emails": the email; a dry run unless --apply)
  *   npm run admin -- report email-test [--to-self <file.html>] [--apply]  (README "Report emails": made-up figures, no report read or written)
+ *   npm run admin -- home-worker list | add <uid> | remove <uid> | add-email <email> | remove-email <email> | on | off | wait <recipe|menu|recipeImage> <ms> | url <https-url|none> [--apply]  (README "Home worker")
  *
  * Against the emulators (project demo-foodtracker, 127.0.0.1:8080 / :9099) unless `--project` names
  * a live project; then with the operator's Application Default Credentials. `delete` is a dry run
@@ -60,6 +61,7 @@ import { GeminiPromptReviewer } from "../adapters/gemini";
 import { RestStreamingModels } from "./vertexRest";
 import { EmulatorPromptReviewer } from "../emulatorFakes";
 import { PROMPT_REVIEW } from "../constants";
+import { parseHomeWorkerArgs, runHomeWorkerCommand } from "./homeWorkerCli";
 import { SETTING_CHANGES, applySettings, listSettings, settingById, type Control, type SettingDef } from "../core/ownerSettings";
 
 export const EMULATOR_PROJECT = "demo-foodtracker";
@@ -88,7 +90,8 @@ const USAGE = `usage:
   npm run admin -- report weekly [--week YYYY-Www] [--run [--apply]] [--project <id>]   (no model call; storing sends no email)
   npm run admin -- report weekly | judge review --send [--week YYYY-Www] [--to-self <file.html> | --apply [--force]] [--project <id>]   (the email, once; live: REPORT_EMAIL, REPORT_SMTP_PASSWORD)
   npm run admin -- report email-test [--to-self <file.html> | --apply] [--project <id>]   (made-up figures, "[test]" subject; no report read or written)
-Without --project: the local emulators (${EMULATOR_PROJECT}). delete, providers set, config set / reset, judge review --run / --send, report weekly --run / --send and report email-test are dry runs without --apply.`;
+  npm run admin -- home-worker list | add <uid> | remove <uid> | add-email <email> | remove-email <email> | on | off | wait <recipe|menu|recipeImage> <ms> | url <https-url|none> [--apply] [--project <id>]   (README "Home worker")
+Without --project: the local emulators (${EMULATOR_PROJECT}). delete, providers set, config set / reset, judge review --run / --send, report weekly --run / --send report email-test and the home-worker changes are dry runs without --apply.`;
 
 const OPTIONS = {
   email: { type: "string" },
@@ -536,6 +539,7 @@ export function cliValue(def: SettingDef, raw: string): unknown {
     case "select":
       return raw;
     case "multi":
+    case "list":
       return raw === "" ? [] : raw.split(",").map((s) => s.trim());
     case "table":
       try {
@@ -556,6 +560,7 @@ export function showSetting(control: Control, v: unknown): string {
       if (control.unit === "usd") return `USD ${((v as number) / 1_000_000).toFixed(control.step < 10_000 ? 3 : 2)} (${v})`;
       return v === 0 && control.offAtZero ? `0 (${control.offAtZero})` : String(v);
     case "multi":
+    case "list":
       return (v as string[]).length ? (v as string[]).join(",") : "none";
     default:
       return typeof v === "string" ? v : JSON.stringify(v);
@@ -839,6 +844,13 @@ async function main(): Promise<void> {
       const judgeEnv = buildBoardEnv(args.project);
       console.log(args.project.startsWith("demo-") ? `[emulators, ${args.project}]` : `[LIVE project ${args.project}, read-only]`);
       await runJudgeAnswers(args, judgeEnv);
+      return;
+    }
+    if (argv[0] === "home-worker") {
+      const args = parseHomeWorkerArgs(argv, EMULATOR_PROJECT);
+      const { app } = adminApp(args.project);
+      console.log(args.project.startsWith("demo-") ? `[emulators, ${args.project}]` : `[LIVE project ${args.project}${args.command === "list" ? ", read-only" : ""}]`);
+      await runHomeWorkerCommand(args, { db: getFirestore(app), auth: getAuth(app), print: (l) => console.log(l) });
       return;
     }
     if (argv[0] === "board") {

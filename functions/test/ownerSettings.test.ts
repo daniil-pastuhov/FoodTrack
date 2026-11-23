@@ -145,7 +145,7 @@ describe("the registry", () => {
     for (const k of Object.keys(DEFAULT_RUNTIME_CONFIG)) top.add(k);
     const nested: Record<string, string> = {
       costs: "validCosts", prices: "validPrices", image: "validImageSelection", text: "validTextSelection",
-      welcome: "validWelcome", reports: "validReports", tasteQuiz: "validTasteQuiz",
+      welcome: "validWelcome", reports: "validReports", tasteQuiz: "validTasteQuiz", homeWorker: "validHomeWorker",
     };
     const out: string[] = [];
     for (const k of top) {
@@ -186,7 +186,7 @@ describe("the registry", () => {
    * off its default), recursively, is covered. A new field reaches one of the two (the type needs a
    * default, or the fixture an entry), so it can't slip past both this and the source test.
    */
-  const TERMINAL = new Set(["costs.menuSets", "prices.imageUsdPerImage", "prices.textUsdPerMTok", "providerBalanceAlerts", "tasteQuiz.hidden", "providerDefaults"]);
+  const TERMINAL = new Set(["costs.menuSets", "prices.imageUsdPerImage", "prices.textUsdPerMTok", "providerBalanceAlerts", "tasteQuiz.hidden", "providerDefaults", "homeWorker.waitMs"]);
   const isPlain = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
   const leaves = (v: unknown, at = ""): string[] =>
     !isPlain(v) || TERMINAL.has(at) ? [at] : Object.keys(v).flatMap((k) => leaves(v[k], at ? `${at}.${k}` : k));
@@ -202,6 +202,7 @@ describe("the registry", () => {
     reports: { perUserPerDay: 1, perDay: 2, keepDays: 3 },
     tasteQuiz: { hidden: ["units"] },
     welcome: { recipes: 1, perDay: 2 },
+    homeWorker: { enabled: true, testers: ["owner-uid"], emails: ["owner@example.com"], url: "https://home.example.com", waitMs: { recipe: 60_000, menu: 60_000, recipeImage: 60_000 } },
   };
 
   test("every leaf of the defaults and of a parsed maximal document is editable, read-only or excluded", () => {
@@ -223,7 +224,7 @@ describe("the registry", () => {
 
   test("every setting has a web rule or says why it needs none", () => {
     for (const s of SETTINGS) expect(Boolean(s.web) !== (s.id in WEB_UNRESTRICTED), s.id).toBe(true);
-    expect(Object.keys(WEB_UNRESTRICTED).sort()).toEqual(["image.maxStepImages", "promptReviewEnabled", "tasteQuiz.hidden", "weeklyReportEnabled"]);
+    expect(Object.keys(WEB_UNRESTRICTED).sort()).toEqual(["homeWorker.emails", "homeWorker.enabled", "image.maxStepImages", "promptReviewEnabled", "tasteQuiz.hidden", "weeklyReportEnabled"]);
     const bad: SettingDef[] = [{ ...def("dailyCap"), web: { kind: "offOnly" } }, { ...def("costs.recipe"), web: undefined }];
     expect(settingsRegistryProblems(bad).join("\n")).toMatch(/does not fit its control[\s\S]*no web rule/);
   });
@@ -355,11 +356,16 @@ describe("every setting's validation and bounds", () => {
       const zero = structuredClone(DEFAULT_MENU_SETS) as Record<string, Record<string, number>>;
       zero["1"]["1"] = 0;
       for (const bad of [missing, zero, { ...DEFAULT_MENU_SETS, "5": DEFAULT_MENU_SETS["4"] }, [], "x"]) await expect(refused(id, bad)).resolves.toBe("INVALID_VALUE");
+    } else if (c.kind === "list") {
+      expect(checkValue(s, [" Me@Example.com ", "you@example.org"])).toEqual(["me@example.com", "you@example.org"]);
+      expect(checkValue(s, [])).toEqual([]);
+      const many = Array.from({ length: c.max + 1 }, (_, i) => `a${i}@example.com`);
+      for (const bad of [["me@example.com", "ME@example.com"], ["not an email"], ["me@localhost"], "me@example.com", [1], many]) await expect(refused(id, bad)).resolves.toBe("INVALID_VALUE");
     }
     // At its bounds over an empty document the setting reads back as set, with no warning (a
     // price the rest of the default table can't take excepted: the parser's own rule, tested below).
     const values = c.kind === "number" ? [c.min, c.max] : c.kind === "toggle" ? [!s.read(parseRuntimeConfig({}), {})] : c.kind === "select" ? [c.options[c.options.length - 1].value]
-      : c.kind === "multi" ? [[c.options[0].value]] : [{ ...DEFAULT_MENU_SETS, "4": { "1": 4, "2": 5, "3": 7 } }];
+      : c.kind === "multi" ? [[c.options[0].value]] : c.kind === "list" ? [["me@example.com"]] : [{ ...DEFAULT_MENU_SETS, "4": { "1": 4, "2": 5, "3": 7 } }];
     // The prices only hold together with each other: read back at their extremes, all at once, below.
     if (id.startsWith("costs.")) return;
     for (const value of values) {
@@ -1044,6 +1050,32 @@ describe("the owner callables", () => {
     expect(logged).not.toContain(owner.uid);
     expect(logged).not.toContain(owner.email);
     expect(env.logs.find((l) => l.message === "owner_settings_changed")?.data).toMatchObject({ via: "web", uidHash: uidHash(owner.uid) });
+  });
+
+  test("the test server card: the switch and the emails, saved only by the owner; the address never in full", async () => {
+    const env = makeEnv();
+    const owner = await googleUser();
+    await db.doc(RUNTIME_DOC).set({ homeWorker: { testers: ["owner-uid-1"], url: "https://secret-laptop.tail9876.ts.net" } });
+    const other = await googleUser();
+    await db.doc(OWNER_DOC).set({ uids: [owner.uid] });
+    const changes = [{ id: "homeWorker.enabled", value: true, expect: null }, { id: "homeWorker.emails", value: [" Me@Example.com", "me2@example.com"], expect: null }];
+    expect(await reason(setOwnerSettings(env, bearer(other.idToken), { changes, dryRun: true }))).toBe("NOT_OWNER");
+    const view = await getOwnerSettings(env, bearer(owner.idToken));
+    const card = view.sections.find((s) => s.id === "homeWorker")!;
+    expect(card.settings.map((s) => s.id)).toEqual(["homeWorker.enabled", "homeWorker.emails"]);
+    expect(card.settings.every((s) => s.sensitive)).toBe(true);
+    expect(view.readOnly.find((r) => r.id === "homeWorker.url")?.value).toBe("https://sec…ts.net");
+    expect(JSON.stringify(view)).not.toContain("tail9876");
+    expect(await reason(setOwnerSettings(env, bearer(owner.idToken), { changes: [{ id: "homeWorker.emails", value: ["not an email"], expect: null }], dryRun: true }))).toBe("INVALID_VALUE");
+    const dry = await setOwnerSettings(env, bearer(owner.idToken), { changes, dryRun: true });
+    expect(dry.plan.sensitive).toEqual(["homeWorker.enabled", "homeWorker.emails"]);
+    const done = await setOwnerSettings(env, bearer(owner.idToken), { changes, confirm: true, token: dry.plan.token, sensitive: ["homeWorker.enabled", "homeWorker.emails"], typed: SENSITIVE_CONFIRM_WORD });
+    expect(done.changed).toBe(true);
+    // Field paths only: the uid list and the address are left as they were.
+    expect(await runtime()).toEqual({ homeWorker: { testers: ["owner-uid-1"], url: "https://secret-laptop.tail9876.ts.net", enabled: true, emails: ["me@example.com", "me2@example.com"] } });
+    expect(parseRuntimeConfig((await runtime())!).homeWorker).toMatchObject({ enabled: true, emails: ["me@example.com", "me2@example.com"] });
+    expect(JSON.stringify(env.logs)).not.toContain("me@example.com");
+    expect(JSON.stringify(env.logs)).not.toContain("tail9876");
   });
 
   test("a change needs a recent sign-in; reading does not", async () => {

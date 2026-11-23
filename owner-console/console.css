@@ -97,6 +97,12 @@ select{-webkit-appearance:none;appearance:none;padding-right:32px;max-width:100%
   background:var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 6.25 8 9.75l3.5-3.5' fill='none' stroke='%23858480' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") right 8px center/16px no-repeat}
 select:disabled,input:disabled{opacity:.55;cursor:not-allowed}
 input[type="number"]{width:7.5rem;text-align:right;font-variant-numeric:tabular-nums;-moz-appearance:textfield}
+/* A list setting (one entry per line). */
+textarea{font:inherit;color:inherit;width:100%;min-height:calc(var(--ctl) * 2);border-radius:var(--r);border:0;background:var(--surface);
+  box-shadow:inset 0 0 0 1px var(--field-line);padding:8px 10px;font-size:14px;resize:vertical;transition:box-shadow .12s}
+textarea:hover{box-shadow:inset 0 0 0 1px var(--ink-3)}
+textarea:focus-visible{outline:none;box-shadow:inset 0 0 0 1px var(--accent),var(--ring)}
+textarea:disabled{opacity:.55;cursor:not-allowed}
 input[type="number"]::-webkit-inner-spin-button,input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 input[type="text"]{width:100%}
 /* A number with its unit inside the same frame. */

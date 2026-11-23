@@ -242,6 +242,27 @@ export interface RecipeGenerator {
   generate(request: GenerateRequest, prompt: Prompt, signal: AbortSignal, limits: GenerationLimits, target?: TextTarget): Promise<GenerationResult>;
 }
 
+/** The home worker's answer: the parsed JSON, and the model it named (logs only). */
+export interface HomeAnswer {
+  output: unknown;
+  model: string;
+}
+
+/** Where and how long to ask the home worker (config/runtime.homeWorker). */
+export interface HomeWorkerTarget {
+  /** Its https base address (owner-set; never logged). */
+  url: string;
+  waitMs: number;
+  /** How the caller was found on the list (logged): by uid or by verified email. */
+  match?: "uid" | "email";
+}
+
+/** The home server on the owner's computer (core/homeWorker.ts HttpHomeWorker). */
+export interface HomeWorkerQueue {
+  /** Its answer within `target.waitMs`, or null on any failure (unreachable, busy, an error status, not JSON): never throws. */
+  ask(uid: string, req: GenerateRequest, prompt: Prompt, limits: GenerationLimits, signal: AbortSignal, target: HomeWorkerTarget): Promise<HomeAnswer | null>;
+}
+
 /** What the judge classifies: a validated answer, and the picture's brief when one was asked. */
 export interface JudgedOutput {
   /** The recipe language asked for (config.language), a code from a fixed list. */
@@ -515,6 +536,11 @@ export interface Deps {
   /** `config/runtime`, parsed fail-closed (cached for CONFIG_CACHE_MS in production). */
   config(): Promise<RuntimeConfig>;
   /**
+   * The home server (core/homeWorker.ts): asked first for the text of a listed tester's request;
+   * absent: never asked (the admin command, the red-team runner).
+   */
+  homeWorker?: HomeWorkerQueue;
+  /**
    * Today's welcome grants (`stats/{day}.welcomeGrants`) for the `welcomeRecipes` field, cached
    * per instance in production (core/welcome.ts WelcomeDayCounter); absent: read afresh.
    */
@@ -538,4 +564,10 @@ export interface Caller {
   providers: string[];
   /** Seconds since epoch when the ID token was issued (`iat`). */
   issuedAt: number;
+  /**
+   * The ID token's `email`, lower-cased, only when its `email_verified` claim is true; else null
+   * or absent. Read from the verified token, never looked up; used only to match the home
+   * worker's test accounts (core/homeWorker.ts), never stored or logged.
+   */
+  verifiedEmail?: string | null;
 }
