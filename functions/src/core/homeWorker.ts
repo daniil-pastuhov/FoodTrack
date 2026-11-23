@@ -3,9 +3,10 @@
  * by a small HTTP server on the owner's computer (home-worker/server.mjs: the Claude Code CLI under
  * the owner's own subscription) instead of a provider. For the owner's accounts only: the server
  * is no provider of the registry, so no switch can ever select it, and only a uid in
- * `config/runtime.homeWorker.testers` reaches it (homeWorkerWaitMs). Everything else about such a
- * request is unchanged: reservation, output checks, quality gate, judge, settle and refunds.
- * Pictures never go there.
+ * `config/runtime.homeWorker.testers` or a verified email in `emails` reaches it (homeWorkerMatch).
+ * Everything else about such a request is unchanged: reservation, output checks, quality gate,
+ * judge, settle and refunds. For a recipe with pictures it writes the text with the picture brief
+ * and step marks (the same schema a text provider gets); the pictures come from the picture router.
  *
  * The call: POST <config/runtime.homeWorker.url>/v1/text (https only, redirects refused) with two
  * proofs, both checked by the server: `Authorization: Bearer <a Google-signed ID token>` of the
@@ -27,14 +28,60 @@ import type { GenerationLimits, HomeAnswer, HomeWorkerQueue, HomeWorkerTarget, L
 /** The provider id the logs name when the home worker wrote the text (never a registry id). */
 export const HOME_PROVIDER = "home";
 
+/** Who is asking: the uid, and the email the ID token says is verified (Caller.verifiedEmail). */
+export interface HomeWho {
+  uid: string;
+  verifiedEmail?: string | null;
+}
+
 /**
- * How long a request from `uid` waits for the home server: 0 (never asked) unless the feature is
- * enabled with a url, `uid` is a listed tester and the request asks no picture.
+ * The owner's home address, shortened wherever it is shown (the admin command, the owner
+ * console): the scheme and the host's first three and last six characters, never in full.
  */
-export function homeWorkerWaitMs(config: Pick<RuntimeConfig, "homeWorker">, uid: string, req: Pick<GenerateRequest, "kind" | "image">): number {
+export function maskedUrl(url: string): string {
+  if (!url) return "none";
+  const u = new URL(url);
+  const host = u.hostname;
+  return `https://${host.length > 8 ? `${host.slice(0, 3)}…${host.slice(-6)}` : "…"}${u.pathname === "/" ? "" : "/…"}`;
+}
+
+/** How a caller was found on the list (logged; never the email itself). */
+export type HomeMatch = "uid" | "email";
+
+/**
+ * Whether the caller is one of the owner's test accounts: the feature enabled with a url, and the
+ * uid in `testers` or the verified email in `emails` (exact, lower-cased; an unverified email is
+ * never matched: Caller.verifiedEmail is null then). null otherwise.
+ */
+export function homeWorkerMatch(config: Pick<RuntimeConfig, "homeWorker">, who: HomeWho): HomeMatch | null {
   const h = config.homeWorker;
-  if (!h.enabled || !h.url || req.image || !h.testers.includes(uid)) return 0;
-  return h.waitMs[req.kind];
+  if (!h.enabled || !h.url) return null;
+  if (h.testers.includes(who.uid)) return "uid";
+  const email = typeof who.verifiedEmail === "string" ? who.verifiedEmail.trim().toLowerCase() : "";
+  return email && h.emails.includes(email) ? "email" : null;
+}
+
+/** Where, how long and why a request is sent to the home server. */
+export interface HomePlan extends HomeWorkerTarget {
+  match: HomeMatch;
+}
+
+/**
+ * The home server for this request, or null: a listed caller (homeWorkerMatch), waiting
+ * `waitMs.recipeImage` for a recipe with pictures (whose text, picture brief and step marks the
+ * server writes; the pictures still come from the picture router) and `waitMs.recipe` /
+ * `waitMs.menu` otherwise.
+ */
+export function homePlanOf(config: Pick<RuntimeConfig, "homeWorker">, who: HomeWho, req: Pick<GenerateRequest, "kind" | "image">): HomePlan | null {
+  const match = homeWorkerMatch(config, who);
+  if (!match) return null;
+  const h = config.homeWorker;
+  return { url: h.url, waitMs: req.image ? h.waitMs.recipeImage : h.waitMs[req.kind], match };
+}
+
+/** How long a request waits for the home server: 0 when it is never asked. */
+export function homeWorkerWaitMs(config: Pick<RuntimeConfig, "homeWorker">, who: HomeWho | string, req: Pick<GenerateRequest, "kind" | "image">): number {
+  return homePlanOf(config, typeof who === "string" ? { uid: who } : who, req)?.waitMs ?? 0;
 }
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
@@ -119,6 +166,8 @@ export class HttpHomeWorker implements HomeWorkerQueue {
       // answered: the server's text goes on to the checks; anything else: the normal provider writes it.
       outcome,
       status,
+      // How the caller was found on the list; never the email.
+      match: target.match ?? null,
       durationMs: Date.now() - started,
       waitMs: target.waitMs,
     });

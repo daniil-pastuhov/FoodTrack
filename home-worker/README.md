@@ -72,12 +72,15 @@ after each job.
    | `model` | `HOME_WORKER_MODEL` | `sonnet` (default), `opus`, `haiku` or a full model id |
    | `effort` | `HOME_WORKER_EFFORT` | optional: `low` … `max`; lower is faster |
    | `claude` | `CLAUDE_BIN` | the CLI: `claude` on the PATH, or a full path to `claude.exe` |
-   | `maxJobMs` | `HOME_WORKER_MAX_JOB_MS` | the most one job may take (default 130000); the function's own wait cuts it shorter |
+   | `maxJobMs` | `HOME_WORKER_MAX_JOB_MS` | the most one job may take (default 148000: the function's longest wait, a menu's 150 s, less its 2 s margin); the function's own wait cuts it shorter |
    | `logPrompts` | `HOME_WORKER_LOG_PROMPTS=1` | print each prompt (debugging only: allergens) |
 
-7. **Run it**: `node D:\FoodTrackerServer\server.mjs`. A plain recipe with Sonnet took 7 to 55 s
-   end to end in testing; the function waits 90 s by default (`npm run admin -- home-worker wait
-   recipe <ms>`, at most 120 s; menus at most 30 s, so most menus go to the normal provider).
+7. **Run it**: `node D:\FoodTrackerServer\server.mjs`. Measured with Sonnet (2026-11-23): a plain
+   recipe 7 to 55 s, a recipe with step pictures 8 s, a 3-day 2-course menu 22 s (17 s with
+   `effort: low`). The function waits 90 s for each by default (`npm run admin -- home-worker wait
+   recipe|menu|recipeImage <ms>`: at most 120 / 150 / 110 s; functions/README.md "Home worker" has
+   the arithmetic). For a recipe with pictures this server writes the text and the picture
+   descriptions; the pictures themselves are still made by the picture model on Google's side.
 
 ### Start it with Windows (Task Scheduler)
 
@@ -171,10 +174,17 @@ From the functions folder, with your gcloud login (`gcloud auth application-defa
 
 ```bash
 npm run admin -- home-worker url https://your-laptop.your-tailnet.ts.net --apply --project bestbefore-f9ee1
-npm run admin -- home-worker add <uid> --apply --project bestbefore-f9ee1   # your own account's uid (Firebase console › Authentication)
+npm run admin -- home-worker add-email you@example.com --apply --project bestbefore-f9ee1   # your own account's email
+npm run admin -- home-worker add <uid> --apply --project bestbefore-f9ee1   # or its uid (Firebase console › Authentication)
 npm run admin -- home-worker on --apply --project bestbefore-f9ee1
-npm run admin -- home-worker list --project bestbefore-f9ee1                # on/off, the address (shortened), waits, the uids
+npm run admin -- home-worker list --project bestbefore-f9ee1                # on/off, the address (shortened), waits, uids, emails
 ```
+
+The switch and the email list are also in the owner console, card "Test server (your own
+accounts)" (the address, waits and uids are shown there read-only, the address shortened).
+An email matches only while the account's sign-in says it is verified; with Sign in with Apple's
+"Hide my email" the account's email is the relay address (`…@privaterelay.appleid.com`), so list
+that or use the uid; an anonymous account has no email, so use its uid.
 
 Without `--apply` each change is a dry run. Changes reach every instance within 30 s.
 

@@ -70,7 +70,7 @@ import {
 import { blockFlag } from "./buyers";
 import { LogSampler } from "./guard";
 import { welcomeFlag } from "./welcome";
-import { HOME_PROVIDER, homeWorkerWaitMs } from "./homeWorker";
+import { HOME_PROVIDER, homePlanOf, type HomePlan } from "./homeWorker";
 import {
   GenerationError,
   type Caller,
@@ -113,16 +113,14 @@ function fromDoc(doc: GenerationDoc, balance: number, costs: Costs): GenerateRes
   }
 }
 
-/** How long this request waits for the home worker (0: not asked; never without one in deps). */
-function homeWaitOf(deps: Pick<Deps, "homeWorker">, config: RuntimeConfig, uid: string, req: GenerateRequest): number {
-  return deps.homeWorker ? homeWorkerWaitMs(config, uid, req) : 0;
-}
 
 /** What one request costs in credits, may spend in tokens, and reserves in estimated money. */
 export interface Plan {
   costKey: CostKey;
   /** With a picture: the table's `recipeImage`. */
   cost: number;
+  /** A listed tester's wait for the home server (core/homeWorker.ts), added to the reservation; absent: 0. */
+  homeWaitMs?: number;
   limits: GenerationLimits;
   /** With a picture: the picture's price included. */
   reservedMicroUsd: number;
@@ -403,7 +401,7 @@ async function reserveTx(
       statsDay: day,
       createdAt: Timestamp.fromMillis(now),
       // A tester's request waits for the home worker first: its reservation is that much longer.
-      deadlineAt: Timestamp.fromMillis(now + TIMINGS[req.kind].reservationMs + homeWaitOf(deps, config, uid, req) + (req.image ? imageTimingOf(config.image.provider).reservationExtraMs[req.image] : 0)),
+      deadlineAt: Timestamp.fromMillis(now + TIMINGS[req.kind].reservationMs + (plan.homeWaitMs ?? 0) + (req.image ? imageTimingOf(config.image.provider).reservationExtraMs[req.image] : 0)),
       ...(plan.image && "share" in plan.image
         ? {
             imageLevel: req.image!,
@@ -815,12 +813,12 @@ async function generateText(
   limits: GenerationLimits,
   config: RuntimeConfig,
   ledger: CallLedger,
+  home: HomePlan | null,
 ): Promise<GenerationResult> {
-  // The owner's own test accounts only (core/homeWorker.ts): the home worker first, within its
+  // The owner's own test accounts only (core/homeWorker.ts): the home server first, within its
   // wait; without an answer, the text is written below as for everyone. It costs nothing booked.
-  const homeWaitMs = homeWaitOf(deps, config, uid, req);
-  if (homeWaitMs > 0 && deps.homeWorker) {
-    const answer = await deps.homeWorker.ask(uid, req, prompt, limits, signal, { url: config.homeWorker.url, waitMs: homeWaitMs });
+  if (home && deps.homeWorker) {
+    const answer = await deps.homeWorker.ask(uid, req, prompt, limits, signal, home);
     if (answer) {
       const usage: LlmUsage = { inputTokens: 0, outputTokens: 0, thinkingTokens: 0, model: answer.model, finishReason: null };
       ledger.answered = { provider: HOME_PROVIDER, model: answer.model };
@@ -907,9 +905,11 @@ export async function runGenerator(
   req: GenerateRequest,
   limits: GenerationLimits,
   config: RuntimeConfig,
+  /** A listed tester's request: the home server to ask first (homePlanOf); absent: never asked. */
+  home: HomePlan | null = null,
 ): Promise<Outcome> {
   const ledger: CallLedger = { parts: [], fallback: false };
-  return withCosts(await runChecked(deps, uid, req, limits, config, ledger), ledger, config);
+  return withCosts(await runChecked(deps, uid, req, limits, config, ledger, home), ledger, config);
 }
 
 async function runChecked(
@@ -919,16 +919,17 @@ async function runChecked(
   limits: GenerationLimits,
   config: RuntimeConfig,
   ledger: CallLedger,
+  home: HomePlan | null,
 ): Promise<Outcome> {
   const controller = new AbortController();
-  // A tester's wait for the home worker comes on top of the text's own time (HOME_WORKER).
-  const timer = setTimeout(() => controller.abort(), TIMINGS[req.kind].llmAbortMs + homeWaitOf(deps, config, uid, req));
+  // A tester's wait for the home server comes on top of the text's own time (HOME_WORKER).
+  const timer = setTimeout(() => controller.abort(), TIMINGS[req.kind].llmAbortMs + (home && deps.homeWorker ? home.waitMs : 0));
   const canary = newCanary();
   const prompt = buildPrompt(req, canary);
   let checked: CheckedAnswer;
   let usage: LlmUsage | undefined;
   try {
-    const result = await generateText(deps, uid, req, prompt, controller.signal, limits, config, ledger);
+    const result = await generateText(deps, uid, req, prompt, controller.signal, limits, config, ledger, home);
     usage = result.usage;
     // The answer arrived too late to use, but its usage is known and is what gets booked.
     if (controller.signal.aborted) return { ok: false, failureClass: "infra", reason: "timeout", usage };
@@ -1201,14 +1202,17 @@ export async function generateRecipe(deps: Deps, caller: Caller, data: unknown):
     deps.logger.info("generation_not_enough_items", { uidHash: uidHash(caller.uid), kind: req.kind, courses: req.courses ?? null, days: req.kind === "menu" ? menuDaysOf(req) : null, items: req.ingredients.length });
     fail("failed-precondition", "NOT_ENOUGH_ITEMS", "The ticked items cannot make this request");
   }
-  const plan = planFor(req, config, deps.judge.model);
+  // The owner's own test accounts (by uid, or by the ID token's verified email): the home server
+  // writes the text first (core/homeWorker.ts). Nobody else ever reaches it.
+  const home = deps.homeWorker ? homePlanOf(config, caller, req) : null;
+  const plan: Plan = { ...planFor(req, config, deps.judge.model), ...(home ? { homeWaitMs: home.waitMs } : {}) };
   const reservation = await reserve(deps, caller.uid, req, config, plan);
   if (!reservation.reserved) {
     const response = await withImage(deps, caller.uid, req.requestId, reservation.generation, reservation.response);
     return { ...response, ...capabilitiesOf(config), ...(await blockFlag(deps.db, reservation.user, config)), ...(await welcomeFlag(deps, config)) };
   }
   const started = deps.now();
-  let outcome = await runGenerator(deps, caller.uid, req, plan.limits, config);
+  let outcome = await runGenerator(deps, caller.uid, req, plan.limits, config, home);
   const durationMs = deps.now() - started;
   if (outcome.ok && req.image) {
     // The text passed every check: now its picture, from the checked brief only.

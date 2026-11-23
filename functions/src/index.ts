@@ -401,6 +401,7 @@ function callerOf(request: CallableRequest, throttle: CallThrottle, consume: boo
     profileClaims: Boolean(request.auth.token.name || request.auth.token.picture),
     providers: identities && typeof identities === "object" ? Object.keys(identities) : [],
     issuedAt: request.auth.token.iat ?? 0,
+    verifiedEmail: request.auth.token.email_verified === true && typeof request.auth.token.email === "string" ? request.auth.token.email.toLowerCase() : null,
   };
 }
 
@@ -498,7 +499,10 @@ export const generateRecipe = onCall(
   {
     ...callable,
     consumeAppCheckToken: CONSUME_APP_CHECK_TOKENS,
-    timeoutSeconds: GENERATE_TIMEOUT_SECONDS,
+    // Longer than GENERATE_TIMEOUT_SECONDS only for the owner's test accounts' home server
+    // (constants.ts HOME_WORKER: its wait, then the normal provider); everyone else's call ends
+    // within the same 180 s as before, by the text's and pictures' own timers.
+    timeoutSeconds: Math.max(GENERATE_TIMEOUT_SECONDS, HOME_WORKER.functionTimeoutSeconds),
     maxInstances: LIMITS.generateRecipe.maxInstances,
     concurrency: 1,
   },

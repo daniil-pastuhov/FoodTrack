@@ -594,7 +594,7 @@ concurrency 1 below 1 vCPU), 1 instance:
 
 | function | instances | per-instance throttle (calls/min let through to Firestore) | timeout |
 |---|---|---|---|
-| `generateRecipe` | 5 (so at most 5 generations in flight service-wide) | 24 (and 12 per uid) | 180 s |
+| `generateRecipe` | 5 (so at most 5 generations in flight service-wide) | 24 (and 12 per uid) | 300 s (everyone's call ends within 180 s by its own timers; the longer limit is only for the owner's test accounts' home server, "Home worker") |
 | `getGeneration` | 1 | 120 | 10 s |
 | `getBalance` | 1 | 120 | 30 s (it may revoke a stored Apple token) |
 | `getTasteQuiz` | 1 | 120 | 10 s |
@@ -2329,28 +2329,72 @@ by the Claude Code CLI under the owner's own Claude subscription, through a smal
 there (`../home-worker/server.mjs`; its README has the install and the tunnel). It works from
 anywhere: the phone calls `generateRecipe` as always, and the function calls the computer at its
 public https address. Nothing changes for anyone else, and nothing on the wire changes for the
-apps. Anthropic's terms do not allow serving other people through a subscription: never put
-anyone else's uid on the list.
+apps. Anthropic's terms do not allow serving other people through a subscription: never list
+anyone else's account.
 
-**Who**: `config/runtime.homeWorker` (`enabled`, `testers`: uids, `url`: the tunnel's https
-address, `waitMs`), read with the rest of `config/runtime` (30 s cache; invalid is off). A request
-goes to the server only when `enabled`, a `url` is set, the caller's uid is listed, and it asks no
-picture (`homeWorkerWaitMs`, core/homeWorker.ts). The server is not a provider of the registry, so
-no provider switch lists it or can select it, and the owner console doesn't show the setting.
+**Who**: `config/runtime.homeWorker` (`enabled`, `testers`: uids, `emails`: verified emails, `url`:
+the tunnel's https address, `waitMs`), read with the rest of `config/runtime` (30 s cache; invalid
+is off). A request goes to the server only when `enabled`, a `url` is set, and the caller is
+listed (`homeWorkerMatch`, core/homeWorker.ts): its uid is in `testers`, or the callable's verified
+ID token has `email_verified: true` and an `email` that is in `emails` exactly, case aside (the
+token's claims, `Caller.verifiedEmail`; no lookup per request). Edge cases:
+- An unverified email never matches (the token's `email_verified` false: `verifiedEmail` is null).
+- Sign in with Apple's "Hide my email": the token's email is the relay address
+  (`…@privaterelay.appleid.com`); list that, or the uid.
+- An anonymous account has no email: list its uid (the command's `add`).
+- The server's profile cleanup ("Profile data") clears only the name and photo; the email and
+  `email_verified` stay on the Auth user and in its ID tokens.
+- An account linked to several providers has one top-level email (the one Firebase kept); that is
+  the one matched.
+- A token is up to an hour old: an email removed from the list stops matching at once (the list is
+  read per request); a newly verified address matches from the next token.
+The emails live only in Firestore; nothing logs one (`home_worker` says `match: "uid" | "email"`).
+The server is not a provider of the registry, so no provider switch lists it or can select it.
+
+**Switch and list in the owner console**: the card "Test server (your own accounts)" has
+"Forward test accounts to the test server" (`homeWorker.enabled`) and "Test accounts by email"
+(`homeWorker.emails`, one per line, at most 20, trimmed and lower-cased, plausible addresses
+only), both sensitive (the typed word), saved through `setOwnerSettings` like every setting
+(`config/owner` allowlist, field paths only, audited). The address (shortened, never in full),
+the waits and the uids are shown read-only: they are changed with the command.
 
 **What happens**: after the usual reservation, `generateRecipe` sends `POST <url>/v1/text` with the
 prompt exactly as a text provider gets it (`kind`, `systemInstruction`, `userText`, `schema`,
-`maxOutputTokens`, and `timeoutMs`, the wait less 2 s) and nothing else (no uid, no account data),
-and waits up to `waitMs` (default 90 s for a recipe, 30 s for a menu; the reservation deadline and
-the text's abort are lengthened by the wait, and the longest waits, 120 s / 30 s, keep wait + text +
-judge inside the function's 180 s). A `200 {text, model}` whose text parses as a JSON object goes
-through every output check, the quality gate, the judge and settle exactly like a provider's (an
-answer the checks refuse is the usual content failure, not a second call). Anything else (no
+`maxOutputTokens`, and `timeoutMs`, the wait less 2 s) and nothing else (no uid, no email, no
+account data), and waits up to its wait. A `200 {text, model}` whose text parses as a JSON object
+goes through every output check, the quality gate, the judge and settle exactly like a provider's
+(an answer the checks refuse is the usual content failure, not a second call). Anything else (no
 secret or ID token to send, unreachable, a timeout, any other status such as `429` busy, a
 redirect, a body over 1 MiB or a text over 200,000 characters, text that is not JSON): the normal
-text router writes the recipe, as for everyone. The app waits 70 s for a plain recipe and then
-recovers a slower one with `getGeneration`, as for any slow call. The server's text is booked at 0
-tokens (it costs no API money); the judge's call is booked as usual.
+text router writes the recipe, as for everyone. The server's text is booked at 0 tokens; the
+judge's call is booked as usual.
+
+**A recipe with pictures**: the server writes the text, the picture brief and the step marks (the
+schema it gets is the one a text provider gets for that level, with `imageBrief` and
+`stepBriefs`); the pictures come from the picture router as for everyone, from the checked brief
+(`checkImageBrief`, `checkStepBriefs`), with the same refunds of picture shares.
+
+**The waits and the time limits** (constants.ts `HOME_WORKER`; test/homeWorker.test.ts checks the
+arithmetic): the worst case is the server's whole wait and then the normal provider's whole time.
+generateRecipe's timeout is 300 s (everyone else's call still ends within 180 s by its own timers);
+the apps wait for the callable (70-75 s recipe, 130 s dish, 190 s steps, 190-200 s menu) and then
+poll `getGeneration` until 150 s (recipe) or 270 s (menu, pictures) from the first send. A
+generation still writing after that is never charged twice (the server holds one generation per
+request id): Android keeps it and recovers it later (it lands in Saved recipes as unread); iOS
+says it couldn't finish, and "Try again" sends the same request id, which returns the finished
+result. With the default waits every case ends inside the apps' own waits; only the maximums can
+run past them.
+
+| | default | max | worst case at the default | at the max |
+|---|---|---|---|---|
+| `waitMs.recipe` | 90 s | 120 s | 90 + 40 + 10 = 140 s (inside the apps' 150 s) | 170 s (past the apps' 150 s: see above) |
+| `waitMs.menu` | 90 s | 150 s | 90 + 120 + 20 = 230 s (inside 270 s) | 290 s (inside 300 s; past the apps' 270 s) |
+| `waitMs.recipeImage` | 90 s | 110 s | steps: 90 + 40 + 10 + 100 = 240 s | 260 s (inside 270 s and 300 s) |
+
+The reservation deadline and the text's abort are lengthened by the wait, so the sweeper never
+settles a call that is still waiting. Measured on the owner's Mac through server.mjs (Sonnet,
+2026-11-23): a plain recipe 7 to 55 s, a recipe with step pictures 8 s, a 3-day 2-course menu 22 s
+(17 s at `effort: low`), each passing the output checks; the defaults leave ample room.
 
 **Who may call the server**: every request carries two proofs, and the server checks both before
 reading the body (same `401` for any failure):
@@ -2374,8 +2418,9 @@ asked there and the normal provider writes the text.
 `generateRecipe` makes one outbound call.
 
 Logs: `home_worker` (`outcome` answered | timeout | unreachable | status | unusable | oversized |
-no_secret | no_identity | bad_url, `status`, `durationMs`, `waitMs`, `uidHash`; never the address,
-a prompt or an answer); `llm_call` has `provider: "home"` when the server wrote the text.
+no_secret | no_identity | bad_url, `status`, `match` uid | email, `durationMs`, `waitMs`,
+`uidHash`; never the address, an email, a prompt or an answer); `llm_call` has `provider: "home"`
+when the server wrote the text.
 
 ```bash
 # 1. The shared secret (once; rotate by adding a version), readable by the functions' account only.
@@ -2383,20 +2428,21 @@ openssl rand -base64 48 | tr -d '\n' | gcloud secrets create HOME_WORKER_SECRET 
 gcloud secrets add-iam-policy-binding HOME_WORKER_SECRET --project=bestbefore-f9ee1 \
   --member=serviceAccount:recipe-functions@bestbefore-f9ee1.iam.gserviceaccount.com --role=roles/secretmanager.secretAccessor
 gcloud secrets versions access latest --secret=HOME_WORKER_SECRET --project=bestbefore-f9ee1   # into the server's config.json
-# 2. Deploy generateRecipe (the only function that changed).
-npx firebase deploy --only functions:generateRecipe --project bestbefore-f9ee1
-# 3. The address and the owner's own accounts (the uid is in the Firebase console, Authentication), then on.
+# 2. Deploy generateRecipe (and, for the console's card, the owner callables and Hosting).
+npx firebase deploy --only functions:generateRecipe,functions:getOwnerSettings,functions:setOwnerSettings,hosting --project bestbefore-f9ee1
+# 3. The address and the owner's own accounts, then on (or the switch and the email list in the console).
 npm run admin -- home-worker url https://<the tunnel's address> --apply --project bestbefore-f9ee1
-npm run admin -- home-worker add <uid> --apply --project bestbefore-f9ee1
+npm run admin -- home-worker add-email <your account's email> --apply --project bestbefore-f9ee1   # or add <uid>
 npm run admin -- home-worker on --apply --project bestbefore-f9ee1
 npm run admin -- home-worker list --project bestbefore-f9ee1
-# Off again (nobody's text goes there; the list and address stay):
+# Off again (nobody's text goes there; the lists and address stay):
 npm run admin -- home-worker off --apply --project bestbefore-f9ee1
 ```
 
-`wait recipe|menu <ms>` changes a wait, `url none` clears the address. Tests:
-`test/homeWorker.test.ts` (the function's side, against a local stand-in server) and
-`../home-worker/test/` (the server's checks, `node --test`).
+`wait recipe|menu|recipeImage <ms>` changes a wait, `url none` clears the address,
+`remove <uid>` / `remove-email <email>` take an account off. Tests: `test/homeWorker.test.ts` (the
+function's side, against a local stand-in server), `test/ownerSettings.test.ts` (the console card)
+and `../home-worker/test/` (the server's checks, `node --test`).
 
 ## Firestore
 
@@ -2541,7 +2587,7 @@ its default, and a warning "config/runtime has invalid fields" names them. Insta
 | `providerBalanceAlerts` | map | `{}` | `{"<provider>": threshold}` (0 to 1e9, the provider's own unit, at most 20): the hourly `checkProviderBalances` logs `provider_balance_low` under it, for providers with a balance probe ("Provider balances"); one for an unknown provider or one without a probe logs `provider_balance_unprobed` instead. Anything invalid: none (warning `providerBalanceAlerts`). |
 | `budgetKillFraction` | number in (0, 2] | `1` | The budget alert flips the kill switch at cost ≥ budget × this. |
 | `welcome` | map | `{recipes: 3, perDay: 200}` | The welcome grant ("Welcome grant"): `recipes` (integer 0–20) free recipes once per Google or Apple sign-in, 0 turns it off; `perDay` (integer 0–10,000) grants at most per UTC day across all accounts, then the offer reads 0 and claims answer `OFF`. Either may be left out (its default). Anything invalid: the grant is **off** (warning `welcome`). |
-| `homeWorker` | map | `{enabled: false, testers: [], waitMs: {recipe: 90000, menu: 30000}, url: ""}` | The home worker ("Home worker"), set with `npm run admin -- home-worker`, not in the console: `enabled`, `testers` (at most 20 distinct uids: the owner's own accounts only), `url` (the owner's tunnel address: https, no user, query or fragment, at most 300 characters; `""` none, which keeps it off), `waitMs` (`recipe` 1,000–120,000, `menu` 1,000–30,000). Anything invalid: **off** (warning `homeWorker`). |
+| `homeWorker` | map | `{enabled: false, testers: [], emails: [], waitMs: {recipe: 90000, menu: 90000, recipeImage: 90000}, url: ""}` | The home worker ("Home worker"): `enabled` and `emails` from the owner console's card or the command, the rest with `npm run admin -- home-worker`. `testers` (at most 20 distinct uids) and `emails` (at most 20 plausible addresses, read trimmed and lower-cased): the owner's own accounts only; `url` (the owner's tunnel address: https, no user, query or fragment, at most 300 characters; `""` none, which keeps it off), `waitMs` (`recipe` 1,000–120,000, `menu` 1,000–150,000, `recipeImage` 1,000–110,000). Anything invalid: **off** (warning `homeWorker`). |
 | `tasteQuiz` | map | `{hidden: []}` | `hidden`: at most 200 `"<step>"` or `"<step>:<option>"` ids left out of `getTasteQuiz` and dropped from requests' `taste` (see "Taste profile quiz"). Nothing else of the quiz is configurable here. Anything invalid: nothing hidden (warning `tasteQuiz`). |
 
 `dailySpendCapMicroUsd` from earlier drafts is no longer read; use the four `dailySpend*` /

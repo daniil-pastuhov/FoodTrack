@@ -253,6 +253,8 @@ export interface HomeWorkerTarget {
   /** Its https base address (owner-set; never logged). */
   url: string;
   waitMs: number;
+  /** How the caller was found on the list (logged): by uid or by verified email. */
+  match?: "uid" | "email";
 }
 
 /** The home server on the owner's computer (core/homeWorker.ts HttpHomeWorker). */
@@ -562,4 +564,10 @@ export interface Caller {
   providers: string[];
   /** Seconds since epoch when the ID token was issued (`iat`). */
   issuedAt: number;
+  /**
+   * The ID token's `email`, lower-cased, only when its `email_verified` claim is true; else null
+   * or absent. Read from the verified token, never looked up; used only to match the home
+   * worker's test accounts (core/homeWorker.ts), never stored or logged.
+   */
+  verifiedEmail?: string | null;
 }

@@ -380,6 +380,8 @@ function fmt(c, v) {
       return c.options.find((o) => o.value === v)?.label ?? String(v);
     case "multi":
       return v.length === 0 ? "none" : v.map((x) => c.options.find((o) => o.value === x)?.label ?? x).join("; ");
+    case "list":
+      return v.length === 0 ? "none" : v.join(", ");
     case "table":
       return c.rows.map((r) => `${r.label}: ${c.cols.map((k) => v[r.value]?.[k.value]).join(" / ")}`).join("; ");
     default:
@@ -459,6 +461,22 @@ function controlFor(s, fid) {
       restore: (v) => boxes.forEach((b, i) => { b.box.checked = v[i]; }),
     };
   }
+  if (c.kind === "list") {
+    // One entry per line; the server trims, lower-cases and checks each (and refuses a bad one).
+    const box = el("textarea", { id: fid, rows: String(Math.min(Math.max((s.value ?? []).length + 1, 3), 10)), spellcheck: false, autocomplete: "off", disabled: Boolean(s.blocked) });
+    box.value = (s.value ?? []).join("\n");
+    box.placeholder = c.item === "email" ? "one email per line" : "one per line";
+    box.setAttribute("aria-describedby", `${fid}-name`);
+    return {
+      node: box,
+      get: () => {
+        const list = box.value.split(/[\n,]/).map((x) => x.trim().toLowerCase()).filter(Boolean);
+        return list.length > c.max ? undefined : list;
+      },
+      state: () => box.value,
+      restore: (v) => { box.value = v; },
+    };
+  }
   if (c.kind === "table") {
     const cells = [];
     const head = el("tr", {}, el("th", { text: "" }), ...c.cols.map((k) => el("th", { scope: "col", text: k.label })));
@@ -511,7 +529,7 @@ function pendingOf(s) {
 function settingNode(s, sec) {
   const fid = `setting-${++fieldSeq}`;
   const ctl = controlFor(s, fid);
-  const block = s.control.kind === "multi" || s.control.kind === "table";
+  const block = s.control.kind === "multi" || s.control.kind === "table" || s.control.kind === "list";
   const meta = el("p", { class: "s-meta" });
   const node = el("div", { class: "setting" + (block ? " block" : "") + (s.changed ? " changed" : "") });
   const entry = { get: ctl.get, state: ctl.state, restore: ctl.restore, reset: false, sec: sec.id, node, meta, setting: s };

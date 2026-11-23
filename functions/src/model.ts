@@ -434,18 +434,26 @@ export interface RuntimeConfig {
    */
   welcome: WelcomeConfig;
   /**
-   * The home worker (README "Home worker"; constants.ts HOME_WORKER): `testers` are the owner's
-   * own uids whose recipe text is asked of the server on the owner's computer at `url` first,
+   * The home worker (README "Home worker"; constants.ts HOME_WORKER): `testers` (uids) and
+   * `emails` (verified emails) are the owner's own accounts whose recipe text is asked of the
+   * server on the owner's computer at `url` first,
    * while `enabled`; `waitMs` how long a call waits for it before the normal provider writes the
    * text. Missing or invalid, or no `url`: off (no uid is ever routed there).
    */
   homeWorker: HomeWorkerConfig;
 }
 
+export type HomeWaitKind = "recipe" | "menu" | "recipeImage";
+export const HOME_WAIT_KINDS: readonly HomeWaitKind[] = ["recipe", "menu", "recipeImage"];
+
 export interface HomeWorkerConfig {
   enabled: boolean;
+  /** The owner's own accounts by uid (an anonymous account has no email). */
   testers: string[];
-  waitMs: Readonly<Record<"recipe" | "menu", number>>;
+  /** The owner's own accounts by verified email: lower-cased, trimmed. Never logged. */
+  emails: string[];
+  /** How long a request waits for the server: a recipe, a menu, a recipe with pictures. */
+  waitMs: Readonly<Record<HomeWaitKind, number>>;
   /** The server's https base address (the owner's tunnel), "" for none. Never logged. */
   url: string;
 }
@@ -469,14 +477,28 @@ export function homeWorkerUrlOf(v: unknown): string | null {
 /** A Firebase Auth uid as the tester list may hold it. */
 export const TESTER_UID = /^[A-Za-z0-9_-]{1,128}$/;
 
+/**
+ * A plausible email address as the tester list holds it: trimmed and lower-cased, at most 254
+ * characters, one @ with up to 64 characters before it and a dotted domain after it, no spaces.
+ * null otherwise. (Plausible only: a match also needs the ID token to say the address is verified.)
+ */
+export function testerEmailOf(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  const e = v.trim().toLowerCase();
+  if (e.length > 254 || !/^[^\s@]{1,64}@[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+$/.test(e)) return null;
+  return e;
+}
+
 /** What a missing or invalid `homeWorker` reads as: off, nobody listed. */
-export const HOME_WORKER_OFF: Readonly<HomeWorkerConfig> = { enabled: false, testers: [], waitMs: HOME_WORKER.waitMs, url: "" };
+export const HOME_WORKER_OFF: Readonly<HomeWorkerConfig> = { enabled: false, testers: [], emails: [], waitMs: HOME_WORKER.waitMs, url: "" };
 
 /**
  * `homeWorker`: `enabled` a boolean (default false), `testers` at most HOME_WORKER.maxTesters
- * distinct uids, `waitMs` an optional map whose `recipe` / `menu` (each optional) are integers in
- * HOME_WORKER.minWaitMs to maxWaitMs, `url` absent, "" or an https address (homeWorkerUrlOf).
- * Anything else is refused as a whole (the caller turns it off).
+ * distinct uids, `emails` at most HOME_WORKER.maxEmails distinct plausible addresses
+ * (testerEmailOf; read trimmed and lower-cased), `waitMs` an optional map whose `recipe` / `menu`
+ * / `recipeImage` (each optional) are integers in HOME_WORKER.minWaitMs to maxWaitMs, `url`
+ * absent, "" or an https address (homeWorkerUrlOf). Anything else is refused as a whole (the
+ * caller turns it off).
  */
 export function validHomeWorker(v: unknown): HomeWorkerConfig | null {
   if (!isObj(v)) return null;
@@ -485,10 +507,14 @@ export function validHomeWorker(v: unknown): HomeWorkerConfig | null {
   const testers = v.testers === undefined ? [] : v.testers;
   if (!Array.isArray(testers) || testers.length > HOME_WORKER.maxTesters) return null;
   if (!testers.every((t) => typeof t === "string" && TESTER_UID.test(t)) || new Set(testers).size !== testers.length) return null;
+  const rawEmails = v.emails === undefined ? [] : v.emails;
+  if (!Array.isArray(rawEmails) || rawEmails.length > HOME_WORKER.maxEmails) return null;
+  const emails = rawEmails.map(testerEmailOf);
+  if (emails.some((e) => e === null) || new Set(emails).size !== emails.length) return null;
   const waits = v.waitMs === undefined ? {} : v.waitMs;
   if (!isObj(waits)) return null;
-  const waitMs: Record<"recipe" | "menu", number> = { ...HOME_WORKER.waitMs };
-  for (const kind of ["recipe", "menu"] as const) {
+  const waitMs: Record<HomeWaitKind, number> = { ...HOME_WORKER.waitMs };
+  for (const kind of HOME_WAIT_KINDS) {
     const n = waits[kind];
     if (n === undefined) continue;
     if (!isCount(n) || n < HOME_WORKER.minWaitMs || n > HOME_WORKER.maxWaitMs[kind]) return null;
@@ -500,7 +526,7 @@ export function validHomeWorker(v: unknown): HomeWorkerConfig | null {
     if (u === null) return null;
     url = u;
   }
-  return { enabled, testers: [...(testers as string[])], waitMs, url };
+  return { enabled, testers: [...(testers as string[])], emails: emails as string[], waitMs, url };
 }
 
 export interface ReportsConfig {

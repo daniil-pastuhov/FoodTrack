@@ -22,7 +22,8 @@
 import { createHash } from "node:crypto";
 import { FieldPath, FieldValue, Timestamp, type Firestore } from "firebase-admin/firestore";
 import { HttpsError } from "firebase-functions/v2/https";
-import { COST_MAX, DEFAULT_COSTS, DEFAULT_PRICES, JUDGE_LOG, PROMPT_REVIEW, REVENUE_WINDOW_DAYS, DEFAULT_IMAGE_SELECTION, DEFAULT_MENU_DAYS, DEFAULT_MENU_SETS, DEFAULT_TEXT_SELECTION, MAX_STEP_IMAGES_LIMIT, MENU_COURSES, MENU_DAYS, type Costs } from "../constants";
+import { maskedUrl } from "./homeWorker";
+import { COST_MAX, DEFAULT_COSTS, DEFAULT_PRICES, HOME_WORKER, JUDGE_LOG, PROMPT_REVIEW, REVENUE_WINDOW_DAYS, DEFAULT_IMAGE_SELECTION, DEFAULT_MENU_DAYS, DEFAULT_MENU_SETS, DEFAULT_TEXT_SELECTION, MAX_STEP_IMAGES_LIMIT, MENU_COURSES, MENU_DAYS, type Costs } from "../constants";
 import {
   DEFAULT_RUNTIME_CONFIG,
   OUTPUT_JUDGE_MODES,
@@ -31,6 +32,7 @@ import {
   dailySpendCeiling,
   parseRuntimeConfig,
   statsRef,
+  testerEmailOf,
   uidHash,
   utcDay,
   validCosts,
@@ -75,7 +77,7 @@ export const WEB_PRICE_STEP = 1;
 
 // --- The registry ---------------------------------------------------------------------------
 
-export type SectionId = "onoff" | "spending" | "perAccount" | "sandbox" | "costs" | "welcome" | "pictures" | "taste" | "reports" | "balances" | "promptReview" | "weeklyReport";
+export type SectionId = "onoff" | "spending" | "perAccount" | "sandbox" | "costs" | "welcome" | "pictures" | "taste" | "reports" | "balances" | "promptReview" | "weeklyReport" | "homeWorker";
 
 /**
  * The console's groups, in this order: each is a card on the page (title, one line of help, its
@@ -97,6 +99,7 @@ export const SECTIONS: readonly { id: SectionId; title: string; help: string; wi
   { id: "balances", title: "Provider balances", help: "The hourly balance check logs provider_balance_low (alerted on) under these thresholds. Empty: not checked." },
   { id: "promptReview", title: "Weekly prompt review", help: "Every Monday a model reads last week's second-check answers and advises on the prompts. Advice only: it never changes a prompt.", wide: true, reviews: true },
   { id: "weeklyReport", title: "Weekly report", help: "Every Monday, last week's money and use in figures: no model, only what the server already counts. Emailed to the alert channel and kept here.", wide: true, weekly: true },
+  { id: "homeWorker", title: "Test server (your own accounts)", help: "The recipe text of your own test accounts from the server on your computer (README \"Home worker\"). Any failure, or no answer in time, and the usual provider writes it. Only your own accounts: Anthropic's terms do not allow serving others through a subscription." },
 ];
 
 export interface Option {
@@ -110,6 +113,8 @@ export type Control =
   | { kind: "number"; min: number; max: number; step: number; integer: boolean; unit: "count" | "usd" | "fraction" | "recipes" | "days" | "credits"; offAtZero?: string; emptyMeans?: string }
   | { kind: "select"; options: Option[] }
   | { kind: "multi"; options: Option[]; max: number }
+  /** A list of free entries of one kind (`item`), at most `max`, checked and normalised by the server. */
+  | { kind: "list"; item: "email"; max: number }
   /** A days x courses table; its fixed cells are other settings' values, shown and not edited here. */
   | { kind: "table"; rows: Option[]; cols: Option[]; min: number; max: number; fixed: { row: string; col: string; from: string }[] };
 
@@ -178,6 +183,7 @@ const SPEND = "it changes how much model spend a day can reach, or when recipes 
 const REPORTS = "it changes how many recipes users can report, or how long reports are kept";
 const BRAKE = "it loosens or tightens a brake against abuse or runaway spend";
 const PRICE = "it changes what users are charged";
+const HOME_SENDS = "it sends the listed accounts' recipe prompts (their pantry and allergens) to your own computer";
 
 const DAY_ROWS: Option[] = MENU_DAYS.map((d) => ({ value: `${d}`, label: d === 1 ? "1 day" : `${d} days` }));
 const COURSE_COLS: Option[] = MENU_COURSES.map((c) => ({ value: `${c}`, label: c === 1 ? "1 course" : `${c} courses` }));
@@ -375,6 +381,17 @@ export const SETTINGS: readonly SettingDef[] = [
     help: "Mondays at 03:41 UTC with the prompt review, on the week before: purchases, estimated revenue and margin, model spend, recipes, free recipes, refunds and problems, with the changes against the week before. Arithmetic over stored figures, a few hundred Firestore reads, no model call. It is emailed to the owner once, from the owner's own Gmail. Off: nothing is read, stored or emailed.",
     control: { kind: "toggle" }, path: ["weeklyReportEnabled"], read: top("weeklyReportEnabled"),
   },
+  // The test server (core/homeWorker.ts)
+  {
+    id: "homeWorker.enabled", section: "homeWorker", label: "Forward test accounts to the test server",
+    help: "On: a recipe or menu asked by an account listed below (or by a uid set with the command) is written by the server on your computer first; pictures still come from the picture model. Nothing is sent while no server address is set (the command's home-worker url).",
+    control: { kind: "toggle" }, sensitive: HOME_SENDS, path: ["homeWorker", "enabled"], read: (c) => c.homeWorker.enabled,
+  },
+  {
+    id: "homeWorker.emails", section: "homeWorker", label: "Test accounts by email",
+    help: `Your own accounts only, one email per line (at most ${HOME_WORKER.maxEmails}). An account matches only while its sign-in says the email is verified, exactly (case aside). Sign in with Apple's "Hide my email" shows a relay address (…@privaterelay.appleid.com): list that one, or use the account's uid with the command. An anonymous account has no email: use its uid.`,
+    control: { kind: "list", item: "email", max: HOME_WORKER.maxEmails }, sensitive: HOME_SENDS, path: ["homeWorker", "emails"], read: (c) => c.homeWorker.emails,
+  },
 ];
 
 /** Fields shown but not editable here, with why. */
@@ -388,6 +405,7 @@ export interface ReadOnlyDef {
 }
 
 const RAW_PRICES = "Raw model prices: every reservation, the spend ceilings and the per-account brake are worked out from them, and a price below the provider's real one lets real spend pass every ceiling unnoticed. Change them in Firestore by hand after checking the provider's price page (README \"Price table\"); a provider switch raises a picture price it needs itself.";
+const HOME_BY_COMMAND = "Changed with npm run admin -- home-worker (url, wait, add / remove a uid): the address is your home's in effect and never shown in full here, and the waits are bounded by the apps' own waits and the function's timeout (README \"Home worker\").";
 const BY_SWITCH = "Set by the provider switches above, each of which checks the provider's key, its privacy approval and its price first; a model typed here could be unpriced (pictures off, or the text falling back) or a provider not yet approved.";
 
 export const READ_ONLY: readonly ReadOnlyDef[] = [
@@ -403,6 +421,9 @@ export const READ_ONLY: readonly ReadOnlyDef[] = [
   { id: "text.model", section: "providers", label: "Recipe text model", reason: BY_SWITCH, read: (c) => c.text.model },
   { id: "text.fallbackProvider", section: "providers", label: "Recipe text fallback provider", reason: BY_SWITCH, read: (c) => c.text.fallbackProvider },
   { id: "text.fallbackModel", section: "providers", label: "Recipe text fallback model", reason: BY_SWITCH, read: (c) => c.text.fallbackModel },
+  { id: "homeWorker.url", section: "homeWorker", label: "Test server address (shortened)", reason: HOME_BY_COMMAND, read: (c) => maskedUrl(c.homeWorker.url) },
+  { id: "homeWorker.waitMs", section: "homeWorker", label: "Waits for the test server (ms)", reason: HOME_BY_COMMAND, read: (c) => c.homeWorker.waitMs },
+  { id: "homeWorker.testers", section: "homeWorker", label: "Test accounts by uid", reason: HOME_BY_COMMAND, read: (c) => c.homeWorker.testers },
   {
     id: "consumptionSampleContentProvided", section: "other", label: "Told to Apple: sample content provided",
     reason: "A statement to Apple in every refund consumption answer (the pack sheet explains what a recipe buys before purchase). It changes only if the app's pack sheet changes, with a code review, not as a setting.",
@@ -413,7 +434,6 @@ export const READ_ONLY: readonly ReadOnlyDef[] = [
 /** Fields parseRuntimeConfig knows that are neither: why they are left out. */
 export const EXCLUDED: Readonly<Record<string, string>> = {
   providerDefaults: "Not stored in config/runtime: the deploy parameters' text and picture defaults (TEXT_PROVIDER, GEMINI_MODEL, IMAGE_*), changed only by a deploy.",
-  homeWorker: "The owner's own test accounts and the home worker on the owner's computer (README \"Home worker\"): changed only with npm run admin -- home-worker, never from the console.",
 };
 
 /** Settings the console may change within their whole range, and why that is safe. */
@@ -422,6 +442,8 @@ export const WEB_UNRESTRICTED: Readonly<Record<string, string>> = {
   "tasteQuiz.hidden": "Hiding quiz steps or options only leaves soft preferences out of the quiz and the prompt; it charges, gives or spends nothing.",
   promptReviewEnabled: "The weekly review spends at most its small worst case once a week, booked against the day's spend ceiling, and changes no prompt: on or off is harmless either way.",
   weeklyReportEnabled: "The weekly report only reads figures the server already keeps, a few hundred reads a week, and changes nothing: on or off is harmless either way.",
+  "homeWorker.enabled": "It only decides whether your own listed accounts' recipe text is asked of your computer first; any failure falls back to the usual provider, and it charges, gives or spends nothing.",
+  "homeWorker.emails": "Only verified emails ever match (exactly, case aside), and a match only sends that account's own prompt to your computer, with the usual provider as the fallback; it charges, gives or spends nothing.",
 };
 
 /** Maps keyed by an id, edited as one setting per known key ("<field>.<key>"); other keys are kept as stored. */
@@ -533,6 +555,13 @@ export function checkValue(def: SettingDef, value: unknown): unknown {
       // Kept in the choices' order, so the same set is always stored the same way.
       const order = new Map(c.options.map((o, i) => [o.value, i]));
       return [...(list as string[])].sort((a, b) => order.get(a)! - order.get(b)!);
+    }
+    case "list": {
+      if (!Array.isArray(value) || value.length > c.max) refuseValue(def, `must be a list of at most ${c.max}`);
+      const out = (value as unknown[]).map((v) => testerEmailOf(v));
+      if (out.some((e) => e === null)) refuseValue(def, "has an entry that is not an email address");
+      if (new Set(out).size !== out.length) refuseValue(def, "has an entry twice");
+      return out;
     }
     case "table": {
       if (!isObj(value)) refuseValue(def, "must be a table");
@@ -773,6 +802,22 @@ export function sectionFacts(id: SectionId, cfg: RuntimeConfig, today: TodayFigu
       label: "Today",
       value: plural(today.welcomeGrants, "grant", "grants"),
       note: `${plural(today.welcomeCredits, "free recipe", "free recipes")} granted, of at most ${intText(cfg.welcome.perDay)} grants a day; ${plural(today.welcomeUsedCredits, "free recipe", "free recipes")} used today, estimated model cost ${usdText(today.welcomeUsedMicroUsd, 3)}. Not sales: they never raise the spend ceiling.`,
+    }];
+  }
+  if (id === "homeWorker") {
+    const h = cfg.homeWorker;
+    const accounts = h.testers.length + h.emails.length;
+    const forwarding = h.enabled && h.url && accounts > 0;
+    return [{
+      label: "Forwarding",
+      value: forwarding ? "On" : h.enabled ? "On, but nothing is forwarded" : "Off",
+      note: !h.enabled
+        ? "Every account's recipe text comes from the usual provider."
+        : !h.url
+          ? "No server address is set: npm run admin -- home-worker url <https address>."
+          : accounts === 0
+            ? "No account is listed."
+            : `${plural(h.emails.length, "email", "emails")} and ${plural(h.testers.length, "uid", "uids")} listed; waits ${Math.round(h.waitMs.recipe / 1000)} s for a recipe, ${Math.round(h.waitMs.menu / 1000)} s for a menu, ${Math.round(h.waitMs.recipeImage / 1000)} s for a recipe with pictures, then the usual provider.`,
     }];
   }
   return [];

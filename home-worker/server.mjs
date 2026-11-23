@@ -62,7 +62,8 @@ export async function loadConfig(dir = HERE, env = process.env) {
     model: String(pick("HOME_WORKER_MODEL", "model", "sonnet")),
     effort: String(pick("HOME_WORKER_EFFORT", "effort", "")),
     claude: String(pick("CLAUDE_BIN", "claude", "claude")),
-    maxJobMs: Number(pick("HOME_WORKER_MAX_JOB_MS", "maxJobMs", 130_000)),
+    // The function's longest wait (functions/src/constants.ts HOME_WORKER.maxWaitMs.menu, 150 s) less its 2 s margin.
+    maxJobMs: Number(pick("HOME_WORKER_MAX_JOB_MS", "maxJobMs", 148_000)),
     logPrompts: String(pick("HOME_WORKER_LOG_PROMPTS", "logPrompts", "")) === "1" || file.logPrompts === true,
   };
   if (!c.publicUrl) throw new Error("Set publicUrl (or HOME_WORKER_PUBLIC_URL): this server's public https address, exactly as in config/runtime.homeWorker.url");

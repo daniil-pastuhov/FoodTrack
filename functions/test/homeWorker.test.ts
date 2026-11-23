@@ -8,12 +8,14 @@ import { randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { generateRecipe } from "../src/core/generation";
-import { HttpHomeWorker, homeWorkerWaitMs, parseHomeAnswer } from "../src/core/homeWorker";
-import { HOME_WORKER } from "../src/constants";
-import { emptyUser, homeWorkerUrlOf, parseRuntimeConfig } from "../src/model";
+import { HttpHomeWorker, homePlanOf, homeWorkerMatch, homeWorkerWaitMs, maskedUrl, parseHomeAnswer } from "../src/core/homeWorker";
+import { GENERATE_TIMEOUT_SECONDS, HOME_WORKER, JUDGE, TIMINGS } from "../src/constants";
+import { emptyUser, homeWorkerUrlOf, parseRuntimeConfig, testerEmailOf } from "../src/model";
+import { imageProviders, imageTimingOf } from "../src/providers/registry";
 import { parseHomeWorkerArgs, runHomeWorkerCommand } from "../src/admin/homeWorkerCli";
 import { AdminRefusal } from "../src/admin/accountRequests";
-import { auth, callerFor, db, makeDeps, passwordUser, resetEmulators, sampleRecipe, setConfig, type TestDeps } from "./helpers";
+import { SAMPLE_BRIEF, SAMPLE_STEP_BRIEFS, auth, callerFor, db, makeDeps, passwordUser, resetEmulators, sampleMenu, sampleRecipe, setConfig, type TestDeps } from "./helpers";
+import { validateGenerateRequest, type GenerateRequest } from "../src/contract";
 
 const OWNER = "owner-tester-uid";
 const OTHER = "someone-else-uid";
@@ -128,11 +130,12 @@ describe("routing", () => {
     expect(gen.deadlineAt.toMillis() - gen.createdAt.toMillis()).toBe(60_000);
   });
 
-  test("off, without a url, for another uid or with pictures: never asked", async () => {
+  test("off, without a url or for another uid: never asked", async () => {
     const live = parseRuntimeConfig({ homeWorker: { enabled: true, testers: [OWNER], url: URL_OK } });
     expect(homeWorkerWaitMs(live, OWNER, { kind: "recipe" })).toBe(HOME_WORKER.waitMs.recipe);
     expect(homeWorkerWaitMs(live, OWNER, { kind: "menu" })).toBe(HOME_WORKER.waitMs.menu);
-    expect(homeWorkerWaitMs(live, OWNER, { kind: "recipe", image: "dish" })).toBe(0);
+    expect(homeWorkerWaitMs(live, OWNER, { kind: "recipe", image: "dish" })).toBe(HOME_WORKER.waitMs.recipeImage);
+    expect(homeWorkerWaitMs(live, OWNER, { kind: "recipe", image: "steps" })).toBe(HOME_WORKER.waitMs.recipeImage);
     expect(homeWorkerWaitMs(live, OTHER, { kind: "recipe" })).toBe(0);
     expect(homeWorkerWaitMs(parseRuntimeConfig({ homeWorker: { enabled: false, testers: [OWNER], url: URL_OK } }), OWNER, { kind: "recipe" })).toBe(0);
     expect(homeWorkerWaitMs(parseRuntimeConfig({ homeWorker: { enabled: true, testers: [OWNER] } }), OWNER, { kind: "recipe" })).toBe(0);
@@ -214,9 +217,132 @@ describe("routing", () => {
   });
 });
 
+describe("testers by email", () => {
+  const live = parseRuntimeConfig({ homeWorker: { enabled: true, testers: [OWNER], emails: ["owner@example.com"], url: URL_OK } });
+
+  test("a verified email on the list matches, case aside; unverified, another address or none never does", () => {
+    expect(homeWorkerMatch(live, { uid: "x", verifiedEmail: "owner@example.com" })).toBe("email");
+    expect(homeWorkerMatch(live, { uid: "x", verifiedEmail: "Owner@Example.COM" })).toBe("email");
+    expect(homeWorkerMatch(live, { uid: "x", verifiedEmail: null })).toBeNull();
+    expect(homeWorkerMatch(live, { uid: "x" })).toBeNull();
+    expect(homeWorkerMatch(live, { uid: "x", verifiedEmail: "someone@example.com" })).toBeNull();
+    expect(homeWorkerMatch(live, { uid: "x", verifiedEmail: "owner@example.com.evil.test" })).toBeNull();
+    expect(homeWorkerMatch(live, { uid: "x", verifiedEmail: "xowner@example.com" })).toBeNull();
+    // The uid list still works (an anonymous account has no email), and comes first.
+    expect(homeWorkerMatch(live, { uid: OWNER, verifiedEmail: null })).toBe("uid");
+    // Off, or no url: nobody.
+    expect(homeWorkerMatch(parseRuntimeConfig({ homeWorker: { enabled: false, emails: ["owner@example.com"], url: URL_OK } }), { uid: "x", verifiedEmail: "owner@example.com" })).toBeNull();
+    expect(homeWorkerMatch(parseRuntimeConfig({ homeWorker: { enabled: true, emails: ["owner@example.com"] } }), { uid: "x", verifiedEmail: "owner@example.com" })).toBeNull();
+  });
+
+  test("a caller found by verified email gets the server's text; the log says how, never the address", async () => {
+    await setConfig({ homeWorker: { enabled: true, emails: ["owner@example.com"], url: URL_OK, waitMs: { recipe: 5_000 } } });
+    await seed(OTHER, 3);
+    const res = await generateRecipe(deps, { ...callerFor(OTHER, "google.com"), verifiedEmail: "owner@example.com" }, request());
+    expect(res.recipe?.title).toBe("Home pasta");
+    expect(seen).toHaveLength(1);
+    expect(logged("home_worker")[0].data).toMatchObject({ outcome: "answered", match: "email" });
+    expect(JSON.stringify(deps.logs)).not.toContain("owner@example.com");
+    expect(JSON.stringify(seen[0].body)).not.toContain("owner@example.com");
+  });
+
+  test("the same email unverified, or another account's, sends nothing", async () => {
+    await setConfig({ homeWorker: { enabled: true, emails: ["owner@example.com"], url: URL_OK } });
+    await seed(OTHER, 3);
+    await generateRecipe(deps, { ...callerFor(OTHER, "password"), verifiedEmail: null }, request());
+    await generateRecipe(deps, { ...callerFor(OTHER, "google.com"), verifiedEmail: "other@example.com" }, request());
+    expect(seen).toHaveLength(0);
+    expect(deps.generator.calls).toBe(2);
+    expect(logged("home_worker")).toHaveLength(0);
+  });
+
+  test("by uid the log says uid", async () => {
+    await on();
+    await seed(OWNER, 3);
+    await generateRecipe(deps, callerFor(OWNER), request());
+    expect(logged("home_worker")[0].data).toMatchObject({ outcome: "answered", match: "uid" });
+  });
+});
+
+describe("menus and recipes with pictures", () => {
+  test("a menu from the server: its own wait, the reservation lengthened by it, the usual checks", async () => {
+    await on({ waitMs: { menu: 7_000 } });
+    await seed(OWNER, 10);
+    const raw = request({ kind: "menu", courses: 2 });
+    handler = (_s, res) => {
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify({ text: JSON.stringify(sampleMenu(validateGenerateRequest(raw, Date.now()) as GenerateRequest)), model: "claude-test" }));
+    };
+    const res = await generateRecipe(deps, callerFor(OWNER), raw);
+    expect(res).toMatchObject({ status: "DONE", charged: true });
+    expect(res.menu?.days).toHaveLength(3);
+    expect(deps.generator.calls).toBe(0);
+    expect(seen[0].body).toMatchObject({ kind: "menu", timeoutMs: 7_000 - HOME_WORKER.serverMarginMs });
+    const gen = (await db.collection("users").doc(OWNER).collection("generations").get()).docs[0].data();
+    expect(gen.deadlineAt.toMillis() - gen.createdAt.toMillis()).toBe(TIMINGS.menu.reservationMs + 7_000);
+  });
+
+  test("a menu the server can't write in time: the usual provider writes it", async () => {
+    await on({ waitMs: { menu: 1_000 } });
+    await seed(OWNER, 10);
+    handler = () => undefined;
+    const res = await generateRecipe(deps, callerFor(OWNER), request({ kind: "menu", courses: 2 }));
+    expect(res).toMatchObject({ status: "DONE" });
+    expect(deps.generator.calls).toBe(1);
+    expect(logged("home_worker")[0].data).toMatchObject({ outcome: "timeout", waitMs: 1_000 });
+  });
+
+  test.each(["dish", "steps"] as const)("a recipe with pictures (%s): the text, brief and step marks from the server, the pictures from the picture router", async (level) => {
+    await on({ waitMs: { recipeImage: 6_000 } });
+    await seed(OWNER, 10);
+    const answer = { ...sampleRecipe("Home pasta"), imageBrief: SAMPLE_BRIEF, ...(level === "steps" ? { stepBriefs: SAMPLE_STEP_BRIEFS } : {}) };
+    handler = (_s, res) => {
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify({ text: JSON.stringify(answer), model: "claude-test" }));
+    };
+    const res = await generateRecipe(deps, callerFor(OWNER), request({ image: level }));
+    expect(res).toMatchObject({ status: "DONE", charged: true });
+    expect(res.recipe?.title).toBe("Home pasta");
+    expect(res.image).toMatchObject({ mimeType: "image/jpeg" });
+    expect(deps.generator.calls).toBe(0);
+    // The schema the server got asks for the brief (and the step marks) exactly as a provider's does.
+    const schema = seen[0].body.schema as { properties: Record<string, unknown>; required: string[] };
+    expect(schema.required).toContain("imageBrief");
+    if (level === "steps") expect(schema.required).toContain("stepBriefs");
+    expect(seen[0].body).toMatchObject({ timeoutMs: 6_000 - HOME_WORKER.serverMarginMs });
+    // The pictures: the usual router, from the checked brief.
+    expect(deps.imageGenerator.calls).toBe(level === "steps" ? 1 + SAMPLE_STEP_BRIEFS.length : 1);
+    expect(deps.imageGenerator.prompts[0].text).toContain("glossy tomato sauce");
+    const gen = (await db.collection("users").doc(OWNER).collection("generations").get()).docs[0].data();
+    expect(gen.deadlineAt.toMillis() - gen.createdAt.toMillis()).toBe(TIMINGS.recipe.reservationMs + 6_000 + imageTimingOf("vertex").reservationExtraMs[level]);
+  });
+
+  test("a recipe with pictures whose server answer fails: the usual provider writes the text, the pictures still come", async () => {
+    await on({ waitMs: { recipeImage: 1_000 } });
+    await seed(OWNER, 10);
+    handler = (_s, res) => {
+      res.writeHead(503, { "content-type": "application/json" });
+      res.end("{}");
+    };
+    const res = await generateRecipe(deps, callerFor(OWNER), request({ image: "dish" }));
+    expect(res).toMatchObject({ status: "DONE" });
+    expect(res.image).toBeDefined();
+    expect(deps.generator.calls).toBe(1);
+    expect(deps.imageGenerator.calls).toBe(1);
+  });
+
+  test("homePlanOf picks the wait by what is asked", () => {
+    const c = parseRuntimeConfig({ homeWorker: { enabled: true, testers: [OWNER], url: URL_OK, waitMs: { recipe: 10_000, menu: 20_000, recipeImage: 30_000 } } });
+    expect(homePlanOf(c, { uid: OWNER }, { kind: "recipe" })).toEqual({ url: URL_OK, waitMs: 10_000, match: "uid" });
+    expect(homePlanOf(c, { uid: OWNER }, { kind: "menu" })?.waitMs).toBe(20_000);
+    expect(homePlanOf(c, { uid: OWNER }, { kind: "recipe", image: "dish" })?.waitMs).toBe(30_000);
+    expect(maskedUrl("https://my-laptop.tail1234.ts.net")).toBe("https://my-…ts.net");
+  });
+});
+
 describe("config/runtime.homeWorker", () => {
   test("missing is off; invalid turns it off and is logged", () => {
-    expect(parseRuntimeConfig({}).homeWorker).toEqual({ enabled: false, testers: [], waitMs: HOME_WORKER.waitMs, url: "" });
+    expect(parseRuntimeConfig({}).homeWorker).toEqual({ enabled: false, testers: [], emails: [], waitMs: HOME_WORKER.waitMs, url: "" });
     const warn: unknown[] = [];
     const logger = { info: () => undefined, warn: (_m: string, d?: unknown) => warn.push(d), error: () => undefined };
     const bad = [
@@ -231,19 +357,44 @@ describe("config/runtime.homeWorker", () => {
       { enabled: true, testers: [OWNER], url: "https://user:pw@home.test" },
       { enabled: true, testers: [OWNER], url: "https://home.test/?x=1" },
       { enabled: true, testers: [OWNER], url: 42 },
+      { enabled: true, emails: "owner@example.com" },
+      { enabled: true, emails: ["not an email"] },
+      { enabled: true, emails: ["owner@example.com", " Owner@Example.com "] },
+      { enabled: true, emails: Array.from({ length: HOME_WORKER.maxEmails + 1 }, (_, i) => `o${i}@example.com`) },
+      { enabled: true, testers: [OWNER], waitMs: { recipeImage: HOME_WORKER.maxWaitMs.recipeImage + 1 } },
       [OWNER],
     ];
     for (const b of bad) expect(parseRuntimeConfig({ homeWorker: b }, logger).homeWorker.enabled).toBe(false);
     expect(warn.length).toBe(bad.length);
     expect(parseRuntimeConfig({ homeWorker: { enabled: true, testers: [OWNER], waitMs: { menu: 20_000 }, url: "https://home.test/api/" } }).homeWorker)
-      .toEqual({ enabled: true, testers: [OWNER], waitMs: { recipe: HOME_WORKER.waitMs.recipe, menu: 20_000 }, url: "https://home.test/api" });
+      .toEqual({ enabled: true, testers: [OWNER], emails: [], waitMs: { ...HOME_WORKER.waitMs, menu: 20_000 }, url: "https://home.test/api" });
+    // Emails are read trimmed and lower-cased.
+    expect(parseRuntimeConfig({ homeWorker: { emails: [" Owner@Example.COM "] } }).homeWorker.emails).toEqual(["owner@example.com"]);
+    expect(testerEmailOf("a b@example.com")).toBeNull();
+    expect(testerEmailOf("owner@localhost")).toBeNull();
     expect(homeWorkerUrlOf("https://Home.Test:8443/")).toBe("https://home.test:8443");
   });
 
-  test("the longest waits keep the whole call inside the function's timeout", () => {
-    expect(HOME_WORKER.maxWaitMs).toEqual({ recipe: 120_000, menu: 30_000 });
-    expect(HOME_WORKER.waitMs.recipe).toBeLessThanOrEqual(HOME_WORKER.maxWaitMs.recipe);
-    expect(HOME_WORKER.waitMs.menu).toBeLessThanOrEqual(HOME_WORKER.maxWaitMs.menu);
+  test("the longest waits, then the normal provider, fit the function's timeout; the defaults the apps' own waits", () => {
+    const T = HOME_WORKER.functionTimeoutSeconds * 1000;
+    const margin = 10_000;
+    // The apps: the callable, then getGeneration until 150 s (recipe) / 270 s (menu, pictures) from the first send.
+    const APP = { recipe: 150_000, long: 270_000 };
+    expect(T).toBeGreaterThanOrEqual(GENERATE_TIMEOUT_SECONDS * 1000);
+    const recipe = (w: number) => w + TIMINGS.recipe.llmAbortMs + JUDGE.abortMs.recipe;
+    const menu = (w: number) => w + TIMINGS.menu.llmAbortMs + JUDGE.abortMs.menu;
+    expect(recipe(HOME_WORKER.maxWaitMs.recipe) + margin).toBeLessThanOrEqual(T);
+    expect(menu(HOME_WORKER.maxWaitMs.menu) + margin).toBeLessThanOrEqual(T);
+    expect(recipe(HOME_WORKER.waitMs.recipe) + margin).toBeLessThanOrEqual(APP.recipe);
+    expect(menu(HOME_WORKER.waitMs.menu) + margin).toBeLessThanOrEqual(APP.long);
+    // A recipe with pictures: text, judge, then the pictures' budget, for every picture provider and level.
+    for (const d of imageProviders()) {
+      const t = imageTimingOf(d.id);
+      for (const level of ["dish", "steps"] as const) {
+        expect(recipe(HOME_WORKER.maxWaitMs.recipeImage) + t.budgetMs[level] + margin, `${d.id} ${level}`).toBeLessThanOrEqual(Math.min(T, APP.long));
+      }
+    }
+    for (const k of ["recipe", "menu", "recipeImage"] as const) expect(HOME_WORKER.waitMs[k]).toBeLessThanOrEqual(HOME_WORKER.maxWaitMs[k]);
   });
 
   test("the server's text is read as a JSON object, fenced or not", () => {
@@ -270,7 +421,8 @@ describe("npm run admin -- home-worker", () => {
     await cmd("on", "--apply");
     await cmd("wait", "menu", "20000", "--apply");
     await cmd("url", "https://my-laptop.tail1234.ts.net/", "--apply");
-    expect(await runtime()).toEqual({ enabled: true, testers: [uid], waitMs: { recipe: HOME_WORKER.waitMs.recipe, menu: 20_000 }, url: "https://my-laptop.tail1234.ts.net" });
+    await cmd("add-email", " Owner@Example.com ", "--apply");
+    expect(await runtime()).toEqual({ enabled: true, testers: [uid], emails: ["owner@example.com"], waitMs: { ...HOME_WORKER.waitMs, menu: 20_000 }, url: "https://my-laptop.tail1234.ts.net" });
     // The rest of config/runtime is left alone, and the functions read it as written.
     expect((await db.doc("config/runtime").get()).data()?.dailyCap).toBe(900);
     expect(homeWorkerWaitMs(parseRuntimeConfig((await db.doc("config/runtime").get()).data()!), uid, { kind: "menu" })).toBe(20_000);
@@ -281,10 +433,12 @@ describe("npm run admin -- home-worker", () => {
     // The address is the owner's home: shortened on screen.
     expect(lines.join("\n")).not.toContain("tail1234");
     expect(lines.join("\n")).toContain("https://my-…ts.net");
+    expect(lines.join("\n")).toContain("email owner@example.com");
     await cmd("off", "--apply");
     await cmd("remove", uid, "--apply");
+    await cmd("remove-email", "owner@example.com", "--apply");
     await cmd("url", "none", "--apply");
-    expect(await runtime()).toEqual({ enabled: false, testers: [], waitMs: { recipe: HOME_WORKER.waitMs.recipe, menu: 20_000 }, url: "" });
+    expect(await runtime()).toEqual({ enabled: false, testers: [], emails: [], waitMs: { ...HOME_WORKER.waitMs, menu: 20_000 }, url: "" });
   });
 
   test("refuses a uid with no Auth user, a wait out of range and a stored setting it can't read", async () => {
@@ -292,6 +446,9 @@ describe("npm run admin -- home-worker", () => {
     await expect(cmd("add", "no-such-user-uid", "--apply")).rejects.toBeInstanceOf(AdminRefusal);
     expect(() => parseHomeWorkerArgs(["home-worker", "wait", "menu", String(HOME_WORKER.maxWaitMs.menu + 1)], "demo-foodtracker")).toThrow(AdminRefusal);
     expect(() => parseHomeWorkerArgs(["home-worker", "add", "bad uid"], "demo-foodtracker")).toThrow(AdminRefusal);
+    expect(() => parseHomeWorkerArgs(["home-worker", "add-email", "not-an-email"], "demo-foodtracker")).toThrow(AdminRefusal);
+    expect(() => parseHomeWorkerArgs(["home-worker", "wait", "recipeImage", String(HOME_WORKER.maxWaitMs.recipeImage + 1)], "demo-foodtracker")).toThrow(AdminRefusal);
+    await expect(cmd("remove-email", "nobody@example.com", "--apply")).rejects.toBeInstanceOf(AdminRefusal);
     for (const url of ["http://my-laptop.example", "https://user:pw@my-laptop.example", "https://my-laptop.example/?a=1", "ftp://x"]) {
       expect(() => parseHomeWorkerArgs(["home-worker", "url", url], "demo-foodtracker")).toThrow(AdminRefusal);
     }
