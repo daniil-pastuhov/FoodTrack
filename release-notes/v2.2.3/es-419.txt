@@ -1,0 +1,1 @@
+• Escáner: si la cámara no puede mostrar imagen, la app ahora te avisa en lugar de dejar la pantalla en negro, y vuelve a iniciar la cámara por sí sola cuando es posible.

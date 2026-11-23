@@ -1,0 +1,1 @@
+• Skanner: Om kameran inte kan visa någon bild säger appen nu till i stället för att visa en svart skärm, och startar kameran igen av sig själv när det går.

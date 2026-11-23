@@ -1,0 +1,1 @@
+• Scanner: Wenn die Kamera kein Bild zeigen kann, sagt die App das jetzt, statt einen schwarzen Bildschirm zu zeigen, und startet die Kamera von selbst neu, sobald es geht.
