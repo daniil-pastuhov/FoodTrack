@@ -421,6 +421,9 @@ public enum L10n {
     public static var cameraOffBody: String { NSLocalizedString("camera_off_body", comment: "") }
     public static var cameraOffOpenSettings: String { NSLocalizedString("camera_off_open_settings", comment: "") }
     public static var cameraOffAddByHand: String { NSLocalizedString("camera_off_add_by_hand", comment: "") }
+    public static var cameraPausedTitle: String { NSLocalizedString("camera_paused_title", comment: "") }
+    public static var cameraPausedMultitasking: String { NSLocalizedString("camera_paused_multitasking", comment: "") }
+    public static var cameraPausedBusy: String { NSLocalizedString("camera_paused_busy", comment: "") }
     public static var scannerModePickerLabel: String { NSLocalizedString("scanner_mode_picker_label", comment: "") }
     public static var scanModeBarcode: String { NSLocalizedString("scan_mode_barcode", comment: "") }
     public static var scanModeDateOcr: String { NSLocalizedString("scan_mode_date_ocr", comment: "") }

@@ -49,17 +49,21 @@ public struct CameraScannerView: UIViewControllerRepresentable {
     public var onBarcodeFound: (String) -> Void
     public var onDateFound: (Date) -> Void
     public var onControllerReady: ((CameraScannerViewController) -> Void)?
+    /// Why the camera shows no picture, or nil once it does (`CameraProblem`).
+    public var onProblemChange: ((CameraProblem?) -> Void)?
 
     public init(
         mode: IOSCameraMode,
         onBarcodeFound: @escaping (String) -> Void,
         onDateFound: @escaping (Date) -> Void,
-        onControllerReady: ((CameraScannerViewController) -> Void)? = nil
+        onControllerReady: ((CameraScannerViewController) -> Void)? = nil,
+        onProblemChange: ((CameraProblem?) -> Void)? = nil
     ) {
         self.mode = mode
         self.onBarcodeFound = onBarcodeFound
         self.onDateFound = onDateFound
         self.onControllerReady = onControllerReady
+        self.onProblemChange = onProblemChange
     }
 
     public func makeUIViewController(context: Context) -> CameraScannerViewController {
@@ -67,6 +71,7 @@ public struct CameraScannerView: UIViewControllerRepresentable {
         vc.mode = mode
         vc.onBarcodeFound = onBarcodeFound
         vc.onDateFound = onDateFound
+        vc.onProblemChange = onProblemChange
         DispatchQueue.main.async {
             onControllerReady?(vc)
         }
@@ -75,7 +80,18 @@ public struct CameraScannerView: UIViewControllerRepresentable {
 
     public func updateUIViewController(_ uiViewController: CameraScannerViewController, context: Context) {
         uiViewController.mode = mode
+        uiViewController.onProblemChange = onProblemChange
     }
+}
+
+/// Why the camera shows no picture while the scanner is on screen, so the sheet can say so
+/// instead of leaving the picture black.
+public enum CameraProblem: Equatable {
+    /// iPadOS cuts the camera off while other apps share the screen (Split View, Slide Over,
+    /// Stage Manager, windowed apps) on iPads without multitasking camera access.
+    case multitasking
+    /// No camera, another app holding it, system pressure, or a session that wouldn't start.
+    case unavailable
 }
 
 public class CameraScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsDelegate, AVCaptureVideoDataOutputSampleBufferDelegate {
@@ -98,6 +114,25 @@ public class CameraScannerViewController: UIViewController, AVCaptureMetadataOut
     private let metadataOutput = AVCaptureMetadataOutput()
     private let photoOutput = AVCapturePhotoOutput()
     private var videoDevice: AVCaptureDevice?
+
+    public var onProblemChange: ((CameraProblem?) -> Void)?
+    private var problem: CameraProblem? {
+        didSet {
+            guard problem != oldValue else { return }
+            // Never during the SwiftUI update that may have set it (viewDidLoad runs in one).
+            let problem = problem
+            DispatchQueue.main.async { [weak self] in self?.onProblemChange?(problem) }
+        }
+    }
+    /// Starts and stops of every scanner's session, in the order they were asked for: the
+    /// sheet swaps its layout on iPad (Split View, a resized window) by building a new scanner,
+    /// and the old one's stop must not land after the new one's start.
+    private static let sessionQueue = DispatchQueue(label: "CameraScannerViewController.session")
+    private var isSessionConfigured = false
+    /// Between viewWillAppear and viewWillDisappear; main thread only.
+    private var isOnScreen = false
+    /// A runtime error other than a media-services reset is retried once per appearance.
+    private var retriedAfterRuntimeError = false
 
     /// Keeps the preview, the frames handed to Vision and captured photos upright however the
     /// device is held. Without it they come out 90° off whenever the device isn't in the
@@ -169,6 +204,17 @@ public class CameraScannerViewController: UIViewController, AVCaptureMetadataOut
         super.viewDidLoad()
         view.backgroundColor = .black
         setupCamera()
+        // Also from viewWillAppear, for a scanner shown again after it disappeared; starting
+        // here too keeps the camera from depending on SwiftUI forwarding the first appearance.
+        isOnScreen = true
+        startSession()
+    }
+
+    public override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        isOnScreen = true
+        retriedAfterRuntimeError = false
+        startSession()
     }
 
     public override func viewDidLayoutSubviews() {
@@ -180,9 +226,12 @@ public class CameraScannerViewController: UIViewController, AVCaptureMetadataOut
         captureSession.beginConfiguration()
         captureSession.sessionPreset = .high
 
-        guard let videoDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
+        // Any camera rather than none where there is no back one (an iPad app on a Mac).
+        guard let videoDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back)
+                ?? AVCaptureDevice.default(for: .video),
               let videoInput = try? AVCaptureDeviceInput(device: videoDevice) else {
             captureSession.commitConfiguration()
+            problem = .unavailable
             return
         }
 
@@ -240,8 +289,83 @@ public class CameraScannerViewController: UIViewController, AVCaptureMetadataOut
             },
         ]
 
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            self?.captureSession.startRunning()
+        let center = NotificationCenter.default
+        center.addObserver(self, selector: #selector(sessionWasInterrupted(_:)),
+                           name: AVCaptureSession.wasInterruptedNotification, object: captureSession)
+        center.addObserver(self, selector: #selector(sessionInterruptionEnded(_:)),
+                           name: AVCaptureSession.interruptionEndedNotification, object: captureSession)
+        center.addObserver(self, selector: #selector(sessionDidStartRunning(_:)),
+                           name: AVCaptureSession.didStartRunningNotification, object: captureSession)
+        center.addObserver(self, selector: #selector(sessionRuntimeError(_:)),
+                           name: AVCaptureSession.runtimeErrorNotification, object: captureSession)
+
+        isSessionConfigured = true
+    }
+
+    /// Starts the session off the main thread. A session that is interrupted (another app on
+    /// screen, the camera in use) reports itself through `sessionWasInterrupted` and resumes by
+    /// itself when that ends; one that simply didn't start is reported here.
+    private func startSession() {
+        guard isSessionConfigured else { return }
+        Self.sessionQueue.async { [weak self] in
+            guard let self else { return }
+            let session = self.captureSession
+            if !session.isRunning { session.startRunning() }
+            let running = session.isRunning
+            let interrupted = session.isInterrupted
+            DispatchQueue.main.async { [weak self] in
+                guard let self, self.isOnScreen, !running, !interrupted, self.problem == nil else { return }
+                self.problem = .unavailable
+            }
+        }
+    }
+
+    private func stopSession() {
+        guard isSessionConfigured else { return }
+        Self.sessionQueue.async { [weak self] in
+            guard let session = self?.captureSession, session.isRunning else { return }
+            session.stopRunning()
+        }
+    }
+
+    // MARK: - Session notifications (posted on any thread)
+
+    @objc nonisolated private func sessionWasInterrupted(_ notification: Notification) {
+        let raw = (notification.userInfo?[AVCaptureSessionInterruptionReasonKey] as? NSNumber)?.intValue
+        let reason = raw.flatMap(AVCaptureSession.InterruptionReason.init(rawValue:))
+        DispatchQueue.main.async { [weak self] in
+            switch reason {
+            case .videoDeviceNotAvailableInBackground:
+                // Nothing on screen to explain; it resumes when the app comes back.
+                break
+            case .videoDeviceNotAvailableWithMultipleForegroundApps:
+                self?.problem = .multitasking
+            default:
+                self?.problem = .unavailable
+            }
+        }
+    }
+
+    @objc nonisolated private func sessionInterruptionEnded(_ notification: Notification) {
+        DispatchQueue.main.async { [weak self] in self?.problem = nil }
+    }
+
+    @objc nonisolated private func sessionDidStartRunning(_ notification: Notification) {
+        DispatchQueue.main.async { [weak self] in self?.problem = nil }
+    }
+
+    /// A session stopped by an error stays stopped (and the preview black) until started again.
+    @objc nonisolated private func sessionRuntimeError(_ notification: Notification) {
+        let code = (notification.userInfo?[AVCaptureSessionErrorKey] as? NSError)?.code
+        let mediaServicesReset = code == AVError.Code.mediaServicesWereReset.rawValue
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.isOnScreen else { return }
+            if mediaServicesReset || !self.retriedAfterRuntimeError {
+                if !mediaServicesReset { self.retriedAfterRuntimeError = true }
+                self.startSession()
+            } else {
+                self.problem = .unavailable
+            }
         }
     }
 
@@ -452,9 +576,8 @@ public class CameraScannerViewController: UIViewController, AVCaptureMetadataOut
 
     public override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
-        if captureSession.isRunning {
-            captureSession.stopRunning()
-        }
+        isOnScreen = false
+        stopSession()
     }
 }
 

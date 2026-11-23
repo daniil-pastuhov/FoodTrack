@@ -62,6 +62,9 @@ public struct ScannerSheetView: View {
     @State private var cameraAccess = AVCaptureDevice.authorizationStatus(for: .video)
     @State private var mode: IOSCameraMode
     @State private var cameraController: CameraScannerViewController?
+    /// Why the camera shows no picture right now (another app sharing the iPad's screen, the
+    /// camera busy), said over the picture rather than left black.
+    @State private var cameraProblem: CameraProblem?
     @State private var isCapturingPhoto: Bool = false
     @State private var capturedPhotoURL: URL?
     // A captured photo lives in Application Support and only becomes a saved item's imageUrl if
@@ -487,8 +490,13 @@ public struct ScannerSheetView: View {
                 controls
                     .zIndex(1)
                     .environment(\.colorScheme, .dark)
-                aimArea(expanded: expanded)
-                    .environment(\.colorScheme, .dark)
+                // The frame and its hint would sit across the note saying why there's no picture.
+                if cameraProblem != nil, capturedPhotoURL == nil {
+                    Spacer(minLength: 0)
+                } else {
+                    aimArea(expanded: expanded)
+                        .environment(\.colorScheme, .dark)
+                }
                 // The frame dims everything around it, so all that sits on top is raised above it.
                 shutter
                     .zIndex(1)
@@ -516,6 +524,9 @@ public struct ScannerSheetView: View {
             #else
             camera
             #endif
+            if let cameraProblem, capturedPhotoURL == nil {
+                CameraProblemNote(problem: cameraProblem)
+            }
             if let url = capturedPhotoURL, let image = UIImage(contentsOfFile: url.path) {
                 GeometryReader { proxy in
                     Image(uiImage: image)
@@ -539,7 +550,8 @@ public struct ScannerSheetView: View {
                 controller.readsBatchDatesUntil = viewModel.batchDateWindow?.closesAt
                 controller.pausesAutomaticDates = pausesAutomaticDates
                 cameraController = controller
-            }
+            },
+            onProblemChange: { cameraProblem = $0 }
         )
     }
 
@@ -1441,6 +1453,24 @@ private struct CheckDateMark: View {
     }
 }
 
+/// Over the camera's picture while it can't show one although it is allowed, so it isn't just
+/// black. The controls stay usable, Type it in included.
+private struct CameraProblemNote: View {
+    let problem: CameraProblem
+
+    var body: some View {
+        ScreenError(
+            .cameraOff,
+            title: L10n.cameraPausedTitle,
+            message: problem == .multitasking ? L10n.cameraPausedMultitasking : L10n.cameraPausedBusy
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(LarderColor.scrim)
+        .environment(\.colorScheme, .dark)
+        .accessibilityElement(children: .combine)
+    }
+}
+
 /// T5: stands in for the whole scanner when the camera is refused. Every mode needs the camera,
 /// so the modes and the torch go, and Close stays.
 private struct CameraOffView: View {
@@ -1469,6 +1499,10 @@ private struct CameraOffView: View {
         }
         .environment(\.colorScheme, .dark)
     }
+}
+
+#Preview("Camera paused") {
+    CameraProblemNote(problem: .multitasking)
 }
 
 #Preview("Camera off") {

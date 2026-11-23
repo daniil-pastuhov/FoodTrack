@@ -109,6 +109,9 @@
 "camera_off_body" = "BestBefore skal bruge kameraet for at scanne. Du kan stadig tilføje mad i hånden.";
 "camera_off_open_settings" = "Åbn indstillinger";
 "camera_off_add_by_hand" = "Skriv det selv";
+"camera_paused_title" = "Kameraet er sat på pause";
+"camera_paused_multitasking" = "Det kan ikke bruges, mens andre apps deler skærmen. Vis denne app i fuld skærm for at scanne.";
+"camera_paused_busy" = "En anden app bruger det måske. Du kan stadig tilføje mad i hånden.";
 "scanner_mode_picker_label" = "Scannertilstand";
 "scan_mode_barcode" = "Stregkode";
 "scan_mode_date_ocr" = "Dato";
