@@ -1,0 +1,1 @@
+• Scanner: if the camera can't show a picture, the app now says so instead of leaving a black screen, and starts the camera again by itself when it can.

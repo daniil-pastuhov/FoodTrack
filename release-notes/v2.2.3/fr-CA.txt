@@ -1,0 +1,1 @@
+• Lecteur : si l'appareil photo ne peut pas afficher d'image, l'appli vous le dit maintenant au lieu de laisser un écran noir, et relance l'appareil photo d'elle-même dès que possible.
