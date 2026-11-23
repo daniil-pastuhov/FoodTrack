@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Starts a release: bumps the version, writes localized release notes, opens a release PR.
 
-    scripts/release            # interactive
-    scripts/release --dry-run  # everything up to the commit, then show what would change
+    scripts/release                     # interactive, both apps
+    scripts/release --platform ios      # only the iOS app (or android)
+    scripts/release --dry-run           # everything up to the commit, then show what would change
 
 What it does (see "Releasing" in README.md for the whole flow):
 1. Takes origin/main and the commits since the last vX.Y.Z tag.
@@ -14,6 +15,11 @@ What it does (see "Releasing" in README.md for the whole flow):
 
 CI publishes every push to a release/v* branch to internal testing, and promotes the build to
 closed testing (and tags vX.Y.Z) when the PR is merged.
+
+With --platform android or ios, the release is for that app only: the branch also gets
+release-notes/vX.Y.Z/platform holding the platform, which CI reads on every push and on the merge
+to publish only that app. The version is still the one of both apps, so the other app skips it;
+the notes cover the commits since the last release that shipped that platform.
 
 Needs: git, gh (logged in) and claude on PATH. Standard library only.
 """
@@ -46,6 +52,11 @@ VERSION_FILES = [
 # ------------------------------------------------------------------------------------------
 
 NOTES_LIMIT = 500  # Google Play's limit per language
+# release-notes/vX.Y.Z/platform: "android" or "ios" for a release of one app only, absent for both
+# (scripts/check_release_version.sh reads it in CI). Not a .txt, which would read as a locale.
+PLATFORM_FILE = "platform"
+PLATFORMS = {"android": "Android", "ios": "iOS"}
+TAG_PATTERN = re.compile(r"v(\d+)\.(\d+)\.(\d+)")
 ROOT = Path(__file__).resolve().parent.parent
 REMOTE = "origin"
 BASE = f"{REMOTE}/main"
@@ -99,6 +110,48 @@ def current_version():
     return match.group(2)
 
 
+def platforms_of(platform):
+    """The platforms a release ships: platform is "android", "ios" or None (both)."""
+    return (platform,) if platform else tuple(PLATFORMS)
+
+
+def read_platform(text):
+    """A release's platform file's text (None: no file) -> "android", "ios" or None (both)."""
+    if text is None:
+        return None
+    if text.strip() not in PLATFORMS:
+        sys.exit(f"Unexpected release platform {text.strip()!r}; expected one of {', '.join(PLATFORMS)}")
+    return text.strip()
+
+
+def notes_base(released, platform, fallback):
+    """The tag to count the release notes' commits from: the oldest of, per platform this release
+    ships, the newest earlier release that shipped it, so an app that skipped a platform-only
+    release still hears what changed then. released is [(tag, platform or None)], newest first."""
+    bases = []
+    for name in platforms_of(platform):
+        bases.append(next((tag for tag, shipped in released if name in platforms_of(shipped)),
+                          fallback))
+    return min(bases, key=lambda tag: parse_version(tag[1:]))
+
+
+def released_tags():
+    """[(tag, platform or None)] of the vX.Y.Z tags on origin/main, newest version first."""
+    tags = [tag for tag in git("tag", "--merged", BASE, "--list", "v*").split()
+            if TAG_PATTERN.fullmatch(tag)]
+    tags.sort(key=lambda tag: parse_version(tag[1:]), reverse=True)
+    return [(tag, read_platform(
+                git("show", f"{tag}:release-notes/{tag}/{PLATFORM_FILE}", check=False) or None))
+            for tag in tags]
+
+
+def app_description(platform):
+    if not platform:
+        return APP_DESCRIPTION
+    return (f"the {PLATFORMS[platform]} app of {APP_DESCRIPTION} (this release is for "
+            f"{PLATFORMS[platform]} only: leave out changes that only affect the other app)")
+
+
 def ask(prompt, choices):
     while True:
         answer = input(prompt).strip()
@@ -109,9 +162,9 @@ def ask(prompt, choices):
 
 # --- Release notes ------------------------------------------------------------------------
 
-def draft_notes(version, commits, feedback=None):
+def draft_notes(version, commits, platform, feedback=None):
     languages = "\n".join(f'- "{code}": {name}' for code, name in LOCALES.items())
-    prompt = f"""You write the "What's new" release notes for {APP_DESCRIPTION}, version {version}.
+    prompt = f"""You write the "What's new" release notes for {app_description(platform)}, version {version}.
 
 Below are the git commits since the previous release. Write notes for people who use the app:
 - Only changes a user can notice: features, improvements, fixes. Leave out CI, build, tests,
@@ -184,8 +237,8 @@ def edit_notes(notes, version):
         {code: notes.get(code, "") for code in LOCALES if code not in edited}
 
 
-def review_notes(version, commits):
-    notes = draft_notes(version, commits)
+def review_notes(version, commits, platform):
+    notes = draft_notes(version, commits, platform)
     while True:
         show_notes(notes)
         problems = notes_problems(notes)
@@ -202,18 +255,24 @@ def review_notes(version, commits):
             notes = edit_notes(notes, version)
         elif action == "regenerate":
             feedback = input("What should change? (Enter to just try again) ").strip()
-            notes = draft_notes(version, commits, feedback or None)
+            notes = draft_notes(version, commits, platform, feedback or None)
         else:
             sys.exit("Stopped; nothing was changed.")
 
 
 # --- Main ---------------------------------------------------------------------------------
 
-def main():
+def parse_args(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--dry-run", action="store_true",
                         help="stop before creating the branch and show what would be committed")
-    args = parser.parse_args()
+    parser.add_argument("--platform", choices=tuple(PLATFORMS),
+                        help="release only this app (default: both)")
+    return parser.parse_args(argv)
+
+
+def main():
+    args = parse_args()
 
     for tool in ("git", "claude") + (() if args.dry_run else ("gh",)):
         if not shutil.which(tool):
@@ -228,13 +287,17 @@ def main():
     if not previous_tag:
         sys.exit(f"No vX.Y.Z tag on {BASE}. Tag the last released commit first, e.g.\n"
                  "  git tag v1.0.0 <commit> && git push origin v1.0.0")
-    commits = git("log", f"{previous_tag}..{BASE}", "--no-merges", "--format=* %s%n%w(0,2,2)%b")
+    # The notes count from the last release of each platform this one ships (the same tag unless a
+    # platform-only release came in between); the version always goes on from the last tag.
+    since = notes_base(released_tags(), args.platform, previous_tag)
+    commits = git("log", f"{since}..{BASE}", "--no-merges", "--format=* %s%n%w(0,2,2)%b")
     if not commits:
-        sys.exit(f"No commits on {BASE} since {previous_tag}; nothing to release.")
-    count = git("rev-list", "--count", "--no-merges", f"{previous_tag}..{BASE}")
-    print(f"\n{count} commits since {previous_tag}:")
-    for line in git("log", f"{previous_tag}..{BASE}", "--no-merges", "--format=%h %s").splitlines():
+        sys.exit(f"No commits on {BASE} since {since}; nothing to release.")
+    count = git("rev-list", "--count", "--no-merges", f"{since}..{BASE}")
+    print(f"\n{count} commits since {since}:")
+    for line in git("log", f"{since}..{BASE}", "--no-merges", "--format=%h %s").splitlines():
         print(f"  {line}")
+    print(f"\nPlatform: {PLATFORMS[args.platform] + ' only' if args.platform else 'Android and iOS'}")
 
     version = current_version()
     choices = {"p": "patch", "": "patch", "m": "minor", "M": "major"}
@@ -255,9 +318,10 @@ def main():
             git("rev-parse", "--verify", "--quiet", f"refs/heads/{branch}", check=False):
         sys.exit(f"Branch {branch} already exists (locally or on {REMOTE})")
 
-    notes = review_notes(new_version, commits)
+    notes = review_notes(new_version, commits, args.platform)
     notes_dir = f"release-notes/{tag}"
     changes = bumped_files(new_version)
+    only = f" ({PLATFORMS[args.platform]} only)" if args.platform else ""
 
     if args.dry_run:
         print(f"Dry run: would create {branch} from {BASE} ({git('rev-parse', '--short', BASE)}) with:")
@@ -266,6 +330,8 @@ def main():
                 old.splitlines(True), new.splitlines(True), f"a/{path}", f"b/{path}", n=0))
         for code in LOCALES:
             print(f"+ {notes_dir}/{code}.txt")
+        if args.platform:
+            print(f"+ {notes_dir}/{PLATFORM_FILE}: {args.platform}")
         return 0
 
     git("switch", "-c", branch, BASE, "--no-track")
@@ -274,20 +340,27 @@ def main():
     (ROOT / notes_dir).mkdir(parents=True, exist_ok=True)
     for code in LOCALES:
         (ROOT / notes_dir / f"{code}.txt").write_text(notes[code] + "\n", encoding="utf-8")
+    if args.platform:
+        (ROOT / notes_dir / PLATFORM_FILE).write_text(args.platform + "\n", encoding="utf-8")
     git("add", notes_dir, *changes)
     first_locale = next(iter(LOCALES))
-    git("commit", "-m", f"Release {new_version}\n\n{notes[first_locale]}")
+    git("commit", "-m", f"Release {new_version}{only}\n\n{notes[first_locale]}")
     print(f"Pushing {branch}…")
     git("push", "-u", REMOTE, branch, capture=False)
 
-    commit_list = git("log", f"{previous_tag}..{BASE}", "--no-merges", "--format=- %h %s")
+    commit_list = git("log", f"{since}..{BASE}", "--no-merges", "--format=- %h %s")
+    scope = (f"This release is for **{PLATFORMS[args.platform]} only** "
+             f"(`{notes_dir}/{PLATFORM_FILE}`): CI publishes nothing of the other app.\n\n"
+             if args.platform else "")
     body = (f"Release notes ({first_locale}; every language is in `{notes_dir}/`):\n\n"
-            f"{notes[first_locale]}\n\n"
+            f"{notes[first_locale]}\n\n{scope}"
             f"Every push to this branch is published to **internal testing**. Merging this PR "
-            f"promotes the tested build to **closed testing** with these notes and tags `{tag}`.\n\n"
-            f"Changes since {previous_tag}:\n{commit_list}\n")
+            + ("submits the newest TestFlight build for **App Review**" if args.platform == "ios"
+               else "promotes the tested build to **closed testing**")
+            + f" with these notes and tags `{tag}`.\n\n"
+            f"Changes since {since}:\n{commit_list}\n")
     url = run("gh", "pr", "create", "--base", "main", "--head", branch,
-              "--title", f"Release {new_version}", "--body", body)
+              "--title", f"Release {new_version}{only}", "--body", body)
     print(f"\nRelease PR: {url}\nCI is now publishing {new_version} to internal testing.")
     return 0
 
