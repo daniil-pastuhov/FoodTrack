@@ -129,6 +129,18 @@ Merging to `main` publishes nothing; CI only tests and builds it (a merged pull 
    `APP_STORE_RELEASE_TYPE` to `MANUAL` to release it from App Store Connect yourself). Then it
    tags `vX.Y.Z` and creates a GitHub release.
 
+**One app only**: `scripts/release --platform android` (or `ios`) releases just that app. The
+branch also gets `release-notes/vX.Y.Z/platform` holding the platform, which CI's `release-plan`
+job reads on every push and on the merge (no file: both apps; anything but `android` or `ios`
+fails the run), and every job of the other app is skipped: Android only uploads nothing to
+TestFlight and does nothing on the App Store; iOS only uploads nothing to Play, neither promotes
+nor applies the Play listing, and fails unless `IOS_PUBLISH` is `true`. The version stays the
+one of both apps and every release takes a new one, so the other app skips that number (an
+Android release after an iOS-only 2.3.0 is 2.3.1 or later; both stores only need a higher
+version). The notes are the same ten files, written for that app from the commits since its own
+last release. The tag is still `vX.Y.Z` (the GitHub release titled "X.Y.Z (iOS only)"); for iOS
+only it is made once the App Store job has run, whatever came of it.
+
 **Google Play production**: the Android app has no production release yet. A new personal
 developer account needs a closed test with at least 12 testers opted in for 14 days in a row
 before it can apply for production access; the steps, dates and declarations are in

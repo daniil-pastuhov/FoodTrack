@@ -21,6 +21,9 @@ name: CI
 #   the Play store listing from store-listing/google-play/, sets the App Store listing and
 #   screenshots from store-listing/app-store/ on the version and submits the newest TestFlight
 #   build of it for App Store review, and tags vX.Y.Z.
+# - A release of one app only (scripts/release --platform) has release-notes/vX.Y.Z/platform; the
+#   release-plan job reads it, on the push and on the merge alike, and every job above that
+#   publishes the other app is skipped.
 # Main itself publishes nothing. The release jobs live in this workflow, not a separate one,
 # because the Play version code is derived from this workflow's run number.
 on:
@@ -100,15 +103,23 @@ jobs:
               - 'iosApp/FoodTracker/*.lproj/**'
               - 'iosApp/FoodTracker.xcodeproj/project.pbxproj'
               - '.github/workflows/ci.yml'
+      # Only decides whether the simulator build is needed; release-plan checks the file strictly.
+      - name: Read the release's platform
+        id: release
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/v')
+        run: |
+          FILE="release-notes/v${GITHUB_REF_NAME#release/v}/platform"
+          echo "platform=$(cat "$FILE" 2>/dev/null || echo both)" >> "$GITHUB_OUTPUT"
       - name: Decide
         id: decide
         env:
           ANDROID: ${{ env.BUILD_ALL == 'true' || steps.filter.outputs.android == 'true' }}
-          # publish-testflight's archive compiles everything the simulator build does.
+          # publish-testflight's archive compiles everything the simulator build does, when the
+          # release ships iOS.
           IOS: >-
             ${{ (env.BUILD_ALL == 'true' || steps.filter.outputs.ios == 'true') &&
             !(github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/v') &&
-              vars.IOS_PUBLISH == 'true') }}
+              vars.IOS_PUBLISH == 'true' && steps.release.outputs.platform != 'android') }}
           FUNCTIONS: ${{ env.BUILD_ALL == 'true' || steps.filter.outputs.functions == 'true' }}
           SCRIPTS: ${{ env.BUILD_ALL == 'true' || steps.filter.outputs.scripts == 'true' }}
         run: |
@@ -423,10 +434,56 @@ jobs:
             -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages" \
             ARCHS=arm64 CODE_SIGNING_ALLOWED=NO build
 
+  # Which apps a release ships, for the push of a release branch and for its PR's merge (which
+  # checks out the merge commit, so it reads the same file): "both" unless
+  # release-notes/vX.Y.Z/platform says "android" or "ios" (scripts/check_release_version.sh
+  # refuses anything else). The outputs gate every publishing job: android, and ios, which also
+  # needs IOS_PUBLISH; a release for iOS only without IOS_PUBLISH would publish nothing, so it fails.
+  release-plan:
+    name: Find which apps the release ships
+    if: >-
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/v')) ||
+      (github.event_name == 'pull_request' && github.event.action == 'closed' &&
+      github.event.pull_request.merged && startsWith(github.head_ref, 'release/v') &&
+      github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      platform: ${{ steps.check.outputs.platform }}
+      android: ${{ steps.decide.outputs.android }}
+      ios: ${{ steps.decide.outputs.ios }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
+      - name: Check the release version
+        id: check
+        run: |
+          BRANCH=${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}
+          scripts/check_release_version.sh "${BRANCH#release/v}"
+      - name: Decide
+        id: decide
+        env:
+          PLATFORM: ${{ steps.check.outputs.platform }}
+          IOS_PUBLISH: ${{ vars.IOS_PUBLISH }}
+        run: |
+          ANDROID=false; IOS=false
+          [ "$PLATFORM" != ios ] && ANDROID=true
+          if [ "$PLATFORM" != android ] && [ "$IOS_PUBLISH" = true ]; then IOS=true; fi
+          if [ "$PLATFORM" = ios ] && [ "$IOS" != true ]; then
+            echo "::error::This release is for iOS only, and the IOS_PUBLISH repository variable is not \"true\""
+            exit 1
+          fi
+          echo "android=$ANDROID" >> "$GITHUB_OUTPUT"
+          echo "ios=$IOS" >> "$GITHUB_OUTPUT"
+          echo "Release for $PLATFORM: Android $ANDROID, iOS $IOS"
+
   publish-play:
     name: Publish to Google Play (internal)
-    needs: android
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/v')
+    needs: [android, release-plan]
+    if: >-
+      github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/v') &&
+      needs.release-plan.outputs.android == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     concurrency:
@@ -439,7 +496,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Check the release version
-        run: scripts/check_release_version.sh "${GITHUB_REF_NAME#release/v}"
+        run: scripts/check_release_version.sh "${GITHUB_REF_NAME#release/v}" android
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
@@ -498,9 +555,12 @@ jobs:
   publish-testflight:
     name: Publish to TestFlight (internal)
     # No "needs: ios": the archive compiles everything that build would, so it is skipped here.
-    # Needs the repository variable IOS_PUBLISH set to "true" and the ASC_* secrets (see
-    # store-listing/app-store/README.md).
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/v') && vars.IOS_PUBLISH == 'true'
+    # Needs the repository variable IOS_PUBLISH set to "true" (release-plan's ios output) and the
+    # ASC_* secrets (see store-listing/app-store/README.md).
+    needs: release-plan
+    if: >-
+      github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/v') &&
+      needs.release-plan.outputs.ios == 'true'
     # Same Xcode as the iOS build job, for iPhone Duo (see there).
     runs-on: xcode-27
     env:
@@ -514,7 +574,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Check the release version
-        run: scripts/check_release_version.sh "${GITHUB_REF_NAME#release/v}"
+        run: scripts/check_release_version.sh "${GITHUB_REF_NAME#release/v}" ios
       - name: Restore the App Store Connect API key
         env:
           ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
@@ -577,10 +637,12 @@ jobs:
 
   promote-play:
     name: Promote to Google Play closed testing
+    needs: release-plan
     if: >-
       github.event_name == 'pull_request' && github.event.action == 'closed' &&
       github.event.pull_request.merged && startsWith(github.head_ref, 'release/v') &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      needs.release-plan.outputs.android == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     concurrency:
@@ -593,7 +655,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.merge_commit_sha }}
       - name: Check the release version
-        run: scripts/check_release_version.sh "${GITHUB_HEAD_REF#release/v}"
+        run: scripts/check_release_version.sh "${GITHUB_HEAD_REF#release/v}" android
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
@@ -642,11 +704,12 @@ jobs:
   # group that the run it waits for still needs.
   wait-for-testflight:
     name: Wait for the release branch's TestFlight upload
+    needs: release-plan
     if: >-
       github.event_name == 'pull_request' && github.event.action == 'closed' &&
       github.event.pull_request.merged && startsWith(github.head_ref, 'release/v') &&
       github.event.pull_request.head.repo.full_name == github.repository &&
-      vars.IOS_PUBLISH == 'true'
+      needs.release-plan.outputs.ios == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 75
     permissions:
@@ -668,8 +731,8 @@ jobs:
       github.event_name == 'pull_request' && github.event.action == 'closed' &&
       github.event.pull_request.merged && startsWith(github.head_ref, 'release/v') &&
       github.event.pull_request.head.repo.full_name == github.repository &&
-      vars.IOS_PUBLISH == 'true'
-    needs: wait-for-testflight
+      needs.release-plan.outputs.ios == 'true'
+    needs: [release-plan, wait-for-testflight]
     runs-on: ubuntu-latest
     # Uploading and processing the screenshot sets takes most of it.
     timeout-minutes: 45
@@ -685,7 +748,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.merge_commit_sha }}
       - name: Check the release version
-        run: scripts/check_release_version.sh "${GITHUB_HEAD_REF#release/v}"
+        run: scripts/check_release_version.sh "${GITHUB_HEAD_REF#release/v}" ios
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
@@ -706,10 +769,15 @@ jobs:
 
   tag-release:
     name: Tag the release
-    needs: [promote-play, release-app-store]
-    # Tagged once Play has the release; an App Store failure is reported by its own job and can be
-    # re-run without moving the tag that scripts/release counts the next release's commits from.
-    if: ${{ !cancelled() && needs.promote-play.result == 'success' }}
+    needs: [release-plan, promote-play, release-app-store]
+    # Tagged once Play has the release (an iOS-only one: once the merge's App Store job has run,
+    # whatever came of it); an App Store failure is reported by its own job and can be re-run
+    # without moving the tag that scripts/release counts the next release's commits from.
+    if: >-
+      ${{ !cancelled() && github.event_name == 'pull_request' &&
+      needs.release-plan.result == 'success' &&
+      (needs.promote-play.result == 'success' ||
+       (needs.release-plan.outputs.android != 'true' && needs.release-plan.outputs.ios == 'true')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -722,7 +790,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+          ONLY: ${{ needs.release-plan.outputs.platform == 'ios' && ' (iOS only)' || needs.release-plan.outputs.platform == 'android' && ' (Android only)' || '' }}
         run: |
           VERSION=${GITHUB_HEAD_REF#release/v}
-          gh release create "v$VERSION" --target "$MERGE_SHA" --title "$VERSION" \
+          gh release create "v$VERSION" --target "$MERGE_SHA" --title "$VERSION$ONLY" \
             --notes-file "release-notes/v$VERSION/en-GB.txt"
