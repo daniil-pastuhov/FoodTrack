@@ -109,6 +109,9 @@
 "camera_off_body" = "BestBefore necesita la cámara para escanear. Puedes seguir añadiendo comida a mano.";
 "camera_off_open_settings" = "Abrir Ajustes";
 "camera_off_add_by_hand" = "Escribirlo";
+"camera_paused_title" = "La cámara está en pausa";
+"camera_paused_multitasking" = "No se puede usar mientras otras apps comparten la pantalla. Pon esta app a pantalla completa para escanear.";
+"camera_paused_busy" = "Puede que otra app la esté usando. Puedes seguir añadiendo comida a mano.";
 "scanner_mode_picker_label" = "Modo de escaneo";
 "scan_mode_barcode" = "Código";
 "scan_mode_date_ocr" = "Fecha";

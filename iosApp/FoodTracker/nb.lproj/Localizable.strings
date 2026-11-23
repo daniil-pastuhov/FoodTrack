@@ -109,6 +109,9 @@
 "camera_off_body" = "Matvakt trenger kameraet for å skanne. Du kan fortsatt legge til mat for hånd.";
 "camera_off_open_settings" = "Åpne innstillinger";
 "camera_off_add_by_hand" = "Skriv det inn";
+"camera_paused_title" = "Kameraet er satt på pause";
+"camera_paused_multitasking" = "Det kan ikke brukes mens andre apper deler skjermen. Vis denne appen i fullskjerm for å skanne.";
+"camera_paused_busy" = "En annen app bruker det kanskje. Du kan fortsatt legge til mat for hånd.";
 "scanner_mode_picker_label" = "Skannemodus";
 "scan_mode_barcode" = "Strekkode";
 "scan_mode_date_ocr" = "Datoskanning";

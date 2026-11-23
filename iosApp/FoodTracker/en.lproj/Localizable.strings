@@ -109,6 +109,9 @@
 "camera_off_body" = "BestBefore needs the camera to scan. You can still add food by hand.";
 "camera_off_open_settings" = "Open settings";
 "camera_off_add_by_hand" = "Type it in";
+"camera_paused_title" = "The camera is paused";
+"camera_paused_multitasking" = "It can't be used while other apps share the screen. Make this app full screen to scan.";
+"camera_paused_busy" = "Another app may be using it. You can still add food by hand.";
 "scanner_mode_picker_label" = "Scanner Mode";
 "scan_mode_barcode" = "Barcode";
 "scan_mode_date_ocr" = "Date";

@@ -109,6 +109,9 @@
 "camera_off_body" = "BestBefore behöver kameran för att skanna. Du kan fortfarande lägga till mat för hand.";
 "camera_off_open_settings" = "Öppna inställningar";
 "camera_off_add_by_hand" = "Skriv in";
+"camera_paused_title" = "Kameran är pausad";
+"camera_paused_multitasking" = "Den kan inte användas medan andra appar delar skärmen. Visa den här appen i helskärm för att skanna.";
+"camera_paused_busy" = "En annan app kanske använder den. Du kan fortfarande lägga till mat för hand.";
 "scanner_mode_picker_label" = "Skannerläge";
 "scan_mode_barcode" = "Streckkod";
 "scan_mode_date_ocr" = "Datum";
