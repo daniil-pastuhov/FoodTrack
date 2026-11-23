@@ -186,7 +186,7 @@ describe("the registry", () => {
    * off its default), recursively, is covered. A new field reaches one of the two (the type needs a
    * default, or the fixture an entry), so it can't slip past both this and the source test.
    */
-  const TERMINAL = new Set(["costs.menuSets", "prices.imageUsdPerImage", "prices.textUsdPerMTok", "providerBalanceAlerts", "tasteQuiz.hidden", "providerDefaults"]);
+  const TERMINAL = new Set(["costs.menuSets", "prices.imageUsdPerImage", "prices.textUsdPerMTok", "providerBalanceAlerts", "tasteQuiz.hidden", "providerDefaults", "homeWorker"]);
   const isPlain = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
   const leaves = (v: unknown, at = ""): string[] =>
     !isPlain(v) || TERMINAL.has(at) ? [at] : Object.keys(v).flatMap((k) => leaves(v[k], at ? `${at}.${k}` : k));

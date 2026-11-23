@@ -1,0 +1,12 @@
+{
+  "publicUrl": "https://your-laptop.your-tailnet.ts.net",
+  "allowedServiceAccount": "recipe-functions@bestbefore-f9ee1.iam.gserviceaccount.com",
+  "secret": "paste HOME_WORKER_SECRET here (at least 32 characters)",
+  "host": "127.0.0.1",
+  "port": 8787,
+  "model": "sonnet",
+  "effort": "",
+  "claude": "claude",
+  "maxJobMs": 130000,
+  "logPrompts": false
+}

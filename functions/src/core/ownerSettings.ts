@@ -413,6 +413,7 @@ export const READ_ONLY: readonly ReadOnlyDef[] = [
 /** Fields parseRuntimeConfig knows that are neither: why they are left out. */
 export const EXCLUDED: Readonly<Record<string, string>> = {
   providerDefaults: "Not stored in config/runtime: the deploy parameters' text and picture defaults (TEXT_PROVIDER, GEMINI_MODEL, IMAGE_*), changed only by a deploy.",
+  homeWorker: "The owner's own test accounts and the home worker on the owner's computer (README \"Home worker\"): changed only with npm run admin -- home-worker, never from the console.",
 };
 
 /** Settings the console may change within their whole range, and why that is safe. */

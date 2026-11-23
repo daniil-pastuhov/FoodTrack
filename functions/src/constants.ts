@@ -549,3 +549,39 @@ export const REVENUE_WINDOW_DAYS = 7;
 
 /** How far back the daily Voided Purchases poll looks (the API allows up to 30 days). */
 export const VOIDED_POLL_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
+
+/**
+ * The home worker (README "Home worker"): recipe text for the owner's own test accounts only,
+ * written by a small HTTP server on the owner's computer (home-worker/server.mjs), reached through
+ * a tunnel at the https address `config/runtime.homeWorker.url`. Only a request from a uid in
+ * `config/runtime.homeWorker.testers`, while `enabled`, with a `url`, and without pictures, is sent
+ * there (POST <url>`path`); the call waits at most `waitMs` (config, within `maxWaitMs`), and on
+ * any failure the normal text provider writes the recipe as if the server did not exist. Each wait
+ * comes on top of TIMINGS (the text's abort and the reservation's deadline are lengthened by it),
+ * and `maxWaitMs` keeps wait + llmAbortMs + the judge's abort + 10 s inside GENERATE_TIMEOUT_SECONDS.
+ * - `serverMarginMs`: the server is told to give up this much before the call stops waiting.
+ * - `maxResultChars`: the longest answer text accepted (a 4 x 3 menu is about 60 000 characters of
+ *   JSON); `maxResponseBytes`: the most of a response body read at all. `maxTesters`: the most
+ *   uids in the list; `maxUrlChars`: the longest url.
+ * - `secretName`: the Secret Manager secret holding the bearer secret sent to the server, read at
+ *   run time (adapters/secretManager.ts SecretReader, like a provider's key: never bound with
+ *   defineSecret, so a deploy never needs it); under `minSecretChars` characters it is never sent.
+ */
+export const HOME_WORKER = {
+  path: "/v1/text",
+  secretName: "HOME_WORKER_SECRET",
+  minSecretChars: 32,
+  // A plain recipe from Sonnet through the CLI took 7 to 55 s end to end (2026-11-23): the default
+  // leaves room; the app waits 70 s, then recovers the answer with getGeneration as for any slow call.
+  waitMs: { recipe: 90_000, menu: 30_000 } as Readonly<Record<GenerationKind, number>>,
+  minWaitMs: 1_000,
+  maxWaitMs: {
+    recipe: GENERATE_TIMEOUT_SECONDS * 1000 - TIMINGS.recipe.llmAbortMs - JUDGE.abortMs.recipe - 10_000,
+    menu: GENERATE_TIMEOUT_SECONDS * 1000 - TIMINGS.menu.llmAbortMs - JUDGE.abortMs.menu - 10_000,
+  } as Readonly<Record<GenerationKind, number>>,
+  serverMarginMs: 2_000,
+  maxResultChars: 200_000,
+  maxResponseBytes: 1024 * 1024,
+  maxTesters: 20,
+  maxUrlChars: 300,
+} as const;

@@ -1,0 +1,2 @@
+# The server's own settings hold the shared secret: never commit them.
+config.json

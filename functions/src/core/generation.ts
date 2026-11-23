@@ -70,6 +70,7 @@ import {
 import { blockFlag } from "./buyers";
 import { LogSampler } from "./guard";
 import { welcomeFlag } from "./welcome";
+import { HOME_PROVIDER, homeWorkerWaitMs } from "./homeWorker";
 import {
   GenerationError,
   type Caller,
@@ -110,6 +111,11 @@ function fromDoc(doc: GenerationDoc, balance: number, costs: Costs): GenerateRes
     case "failed":
       return { status: "FAILED", balance, charged: doc.charged === true, costs };
   }
+}
+
+/** How long this request waits for the home worker (0: not asked; never without one in deps). */
+function homeWaitOf(deps: Pick<Deps, "homeWorker">, config: RuntimeConfig, uid: string, req: GenerateRequest): number {
+  return deps.homeWorker ? homeWorkerWaitMs(config, uid, req) : 0;
 }
 
 /** What one request costs in credits, may spend in tokens, and reserves in estimated money. */
@@ -396,7 +402,8 @@ async function reserveTx(
       reservedMicroUsd,
       statsDay: day,
       createdAt: Timestamp.fromMillis(now),
-      deadlineAt: Timestamp.fromMillis(now + TIMINGS[req.kind].reservationMs + (req.image ? imageTimingOf(config.image.provider).reservationExtraMs[req.image] : 0)),
+      // A tester's request waits for the home worker first: its reservation is that much longer.
+      deadlineAt: Timestamp.fromMillis(now + TIMINGS[req.kind].reservationMs + homeWaitOf(deps, config, uid, req) + (req.image ? imageTimingOf(config.image.provider).reservationExtraMs[req.image] : 0)),
       ...(plan.image && "share" in plan.image
         ? {
             imageLevel: req.image!,
@@ -800,7 +807,7 @@ export interface CallLedger {
  * is refunded); the reservation already covers the dearer provider (planFor).
  */
 async function generateText(
-  deps: Pick<Deps, "generator" | "logger">,
+  deps: Pick<Deps, "generator" | "logger" | "homeWorker">,
   uid: string,
   req: GenerateRequest,
   prompt: Prompt,
@@ -809,6 +816,18 @@ async function generateText(
   config: RuntimeConfig,
   ledger: CallLedger,
 ): Promise<GenerationResult> {
+  // The owner's own test accounts only (core/homeWorker.ts): the home worker first, within its
+  // wait; without an answer, the text is written below as for everyone. It costs nothing booked.
+  const homeWaitMs = homeWaitOf(deps, config, uid, req);
+  if (homeWaitMs > 0 && deps.homeWorker) {
+    const answer = await deps.homeWorker.ask(uid, req, prompt, limits, signal, { url: config.homeWorker.url, waitMs: homeWaitMs });
+    if (answer) {
+      const usage: LlmUsage = { inputTokens: 0, outputTokens: 0, thinkingTokens: 0, model: answer.model, finishReason: null };
+      ledger.answered = { provider: HOME_PROVIDER, model: answer.model };
+      ledger.parts.push({ prices: { inputUsdPerMTok: config.prices.inputUsdPerMTok, outputUsdPerMTok: config.prices.outputUsdPerMTok }, usage });
+      return { output: answer.output, usage };
+    }
+  }
   const sel = textSelectionOf(config);
   const primary: TextTarget = { provider: sel.provider, model: sel.model };
   const priced = (t: TextTarget) => textPricesOf(config, t) ?? textReservePricesOf(config);
@@ -883,7 +902,7 @@ export function withCosts(outcome: Outcome, ledger: CallLedger, config: RuntimeC
  * the red-team runner (admin/redteam), which runs exactly this against the live model.
  */
 export async function runGenerator(
-  deps: Pick<Deps, "generator" | "judge" | "judgeLog" | "logger">,
+  deps: Pick<Deps, "generator" | "judge" | "judgeLog" | "logger" | "homeWorker">,
   uid: string,
   req: GenerateRequest,
   limits: GenerationLimits,
@@ -894,7 +913,7 @@ export async function runGenerator(
 }
 
 async function runChecked(
-  deps: Pick<Deps, "generator" | "judge" | "judgeLog" | "logger">,
+  deps: Pick<Deps, "generator" | "judge" | "judgeLog" | "logger" | "homeWorker">,
   uid: string,
   req: GenerateRequest,
   limits: GenerationLimits,
@@ -902,7 +921,8 @@ async function runChecked(
   ledger: CallLedger,
 ): Promise<Outcome> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMINGS[req.kind].llmAbortMs);
+  // A tester's wait for the home worker comes on top of the text's own time (HOME_WORKER).
+  const timer = setTimeout(() => controller.abort(), TIMINGS[req.kind].llmAbortMs + homeWaitOf(deps, config, uid, req));
   const canary = newCanary();
   const prompt = buildPrompt(req, canary);
   let checked: CheckedAnswer;

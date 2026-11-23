@@ -2322,6 +2322,82 @@ on Recipe settings for new questions) without fetching it. An answer to somethin
 when it is shown again (the apps keep stored answers as saved). Nothing else of the quiz is
 configurable there.
 
+## Home worker
+
+Recipe text for **the owner's own test accounts only**, written on the owner's always-on computer
+by the Claude Code CLI under the owner's own Claude subscription, through a small HTTP server
+there (`../home-worker/server.mjs`; its README has the install and the tunnel). It works from
+anywhere: the phone calls `generateRecipe` as always, and the function calls the computer at its
+public https address. Nothing changes for anyone else, and nothing on the wire changes for the
+apps. Anthropic's terms do not allow serving other people through a subscription: never put
+anyone else's uid on the list.
+
+**Who**: `config/runtime.homeWorker` (`enabled`, `testers`: uids, `url`: the tunnel's https
+address, `waitMs`), read with the rest of `config/runtime` (30 s cache; invalid is off). A request
+goes to the server only when `enabled`, a `url` is set, the caller's uid is listed, and it asks no
+picture (`homeWorkerWaitMs`, core/homeWorker.ts). The server is not a provider of the registry, so
+no provider switch lists it or can select it, and the owner console doesn't show the setting.
+
+**What happens**: after the usual reservation, `generateRecipe` sends `POST <url>/v1/text` with the
+prompt exactly as a text provider gets it (`kind`, `systemInstruction`, `userText`, `schema`,
+`maxOutputTokens`, and `timeoutMs`, the wait less 2 s) and nothing else (no uid, no account data),
+and waits up to `waitMs` (default 90 s for a recipe, 30 s for a menu; the reservation deadline and
+the text's abort are lengthened by the wait, and the longest waits, 120 s / 30 s, keep wait + text +
+judge inside the function's 180 s). A `200 {text, model}` whose text parses as a JSON object goes
+through every output check, the quality gate, the judge and settle exactly like a provider's (an
+answer the checks refuse is the usual content failure, not a second call). Anything else (no
+secret or ID token to send, unreachable, a timeout, any other status such as `429` busy, a
+redirect, a body over 1 MiB or a text over 200,000 characters, text that is not JSON): the normal
+text router writes the recipe, as for everyone. The app waits 70 s for a plain recipe and then
+recovers a slower one with `getGeneration`, as for any slow call. The server's text is booked at 0
+tokens (it costs no API money); the judge's call is booked as usual.
+
+**Who may call the server**: every request carries two proofs, and the server checks both before
+reading the body (same `401` for any failure):
+- `Authorization: Bearer <ID token>`: a Google-signed ID token of the functions' runtime service
+  account (`recipe-functions@bestbefore-f9ee1.iam.gserviceaccount.com`, `FUNCTIONS_SERVICE_ACCOUNT`)
+  with the audience set to `url` exactly, from the metadata server's identity endpoint through
+  google-auth-library (`getIdTokenClient`). The server verifies it with Google's public keys:
+  RS256, issuer, audience, expiry, `email_verified`, and the email equal to that account.
+- `X-Worker-Secret: <HOME_WORKER_SECRET>`: Secret Manager, read at run time like a provider key
+  (never bound with `defineSecret`, so a deploy never needs it), at least 32 characters.
+
+So only code running as that service account in this project, holding the secret, gets an answer.
+The address itself is public (the tunnel): anyone can reach it and gets `401` or `404`. Limiting
+it to Google's addresses would need a fixed outbound IP for the functions (a VPC with Cloud NAT and
+a reserved static IP, https://docs.cloud.google.com/run/docs/configuring/static-outbound-ip), all
+billed: not done. Requests use `redirect: "error"` and never send anything but the prompt and the
+two proofs. In the emulator there is no metadata server, so no ID token: the server is never
+asked there and the normal provider writes the text.
+
+**Cost**: nothing while idle. No function, schedule or poll runs for this; only a listed tester's
+`generateRecipe` makes one outbound call.
+
+Logs: `home_worker` (`outcome` answered | timeout | unreachable | status | unusable | oversized |
+no_secret | no_identity | bad_url, `status`, `durationMs`, `waitMs`, `uidHash`; never the address,
+a prompt or an answer); `llm_call` has `provider: "home"` when the server wrote the text.
+
+```bash
+# 1. The shared secret (once; rotate by adding a version), readable by the functions' account only.
+openssl rand -base64 48 | tr -d '\n' | gcloud secrets create HOME_WORKER_SECRET --data-file=- --project=bestbefore-f9ee1
+gcloud secrets add-iam-policy-binding HOME_WORKER_SECRET --project=bestbefore-f9ee1 \
+  --member=serviceAccount:recipe-functions@bestbefore-f9ee1.iam.gserviceaccount.com --role=roles/secretmanager.secretAccessor
+gcloud secrets versions access latest --secret=HOME_WORKER_SECRET --project=bestbefore-f9ee1   # into the server's config.json
+# 2. Deploy generateRecipe (the only function that changed).
+npx firebase deploy --only functions:generateRecipe --project bestbefore-f9ee1
+# 3. The address and the owner's own accounts (the uid is in the Firebase console, Authentication), then on.
+npm run admin -- home-worker url https://<the tunnel's address> --apply --project bestbefore-f9ee1
+npm run admin -- home-worker add <uid> --apply --project bestbefore-f9ee1
+npm run admin -- home-worker on --apply --project bestbefore-f9ee1
+npm run admin -- home-worker list --project bestbefore-f9ee1
+# Off again (nobody's text goes there; the list and address stay):
+npm run admin -- home-worker off --apply --project bestbefore-f9ee1
+```
+
+`wait recipe|menu <ms>` changes a wait, `url none` clears the address. Tests:
+`test/homeWorker.test.ts` (the function's side, against a local stand-in server) and
+`../home-worker/test/` (the server's checks, `node --test`).
+
 ## Firestore
 
 Server-only. Documents:
@@ -2465,6 +2541,7 @@ its default, and a warning "config/runtime has invalid fields" names them. Insta
 | `providerBalanceAlerts` | map | `{}` | `{"<provider>": threshold}` (0 to 1e9, the provider's own unit, at most 20): the hourly `checkProviderBalances` logs `provider_balance_low` under it, for providers with a balance probe ("Provider balances"); one for an unknown provider or one without a probe logs `provider_balance_unprobed` instead. Anything invalid: none (warning `providerBalanceAlerts`). |
 | `budgetKillFraction` | number in (0, 2] | `1` | The budget alert flips the kill switch at cost ≥ budget × this. |
 | `welcome` | map | `{recipes: 3, perDay: 200}` | The welcome grant ("Welcome grant"): `recipes` (integer 0–20) free recipes once per Google or Apple sign-in, 0 turns it off; `perDay` (integer 0–10,000) grants at most per UTC day across all accounts, then the offer reads 0 and claims answer `OFF`. Either may be left out (its default). Anything invalid: the grant is **off** (warning `welcome`). |
+| `homeWorker` | map | `{enabled: false, testers: [], waitMs: {recipe: 90000, menu: 30000}, url: ""}` | The home worker ("Home worker"), set with `npm run admin -- home-worker`, not in the console: `enabled`, `testers` (at most 20 distinct uids: the owner's own accounts only), `url` (the owner's tunnel address: https, no user, query or fragment, at most 300 characters; `""` none, which keeps it off), `waitMs` (`recipe` 1,000–120,000, `menu` 1,000–30,000). Anything invalid: **off** (warning `homeWorker`). |
 | `tasteQuiz` | map | `{hidden: []}` | `hidden`: at most 200 `"<step>"` or `"<step>:<option>"` ids left out of `getTasteQuiz` and dropped from requests' `taste` (see "Taste profile quiz"). Nothing else of the quiz is configurable here. Anything invalid: nothing hidden (warning `tasteQuiz`). |
 
 `dailySpendCapMicroUsd` from earlier drafts is no longer read; use the four `dailySpend*` /
@@ -3262,6 +3339,10 @@ npx firebase functions:secrets:set OPENAI_API_KEY
 # The weekly report emails ("Report emails"; docs/recipe-setup.md "Report emails"): the Gmail app
 # password and the owner's address, both bound to weeklyPromptReview.
 #   REPORT_SMTP_PASSWORD, REPORT_EMAIL
+# The home worker's shared secret ("Home worker"): not bound to any function, read at run time by
+# generateRecipe for a listed tester only; until it exists the home server is never called. Grant
+# the service account Secret Accessor on it alone.
+#   HOME_WORKER_SECRET
 # Any other provider's key works the same way ("Adding a provider", "Secrets"); MISTRAL_API_KEY and
 # BFL_API_KEY already exist; BFL_API_KEY's grant is made (2026-11-18), MISTRAL_API_KEY's still
 # needed (docs/recipe-setup.md step 13a).

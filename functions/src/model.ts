@@ -12,6 +12,7 @@ import {
   DEFAULT_MENU_SETS,
   DEFAULT_PRICES,
   DEFAULT_TEXT_SELECTION,
+  HOME_WORKER,
   JUDGE_PRICES,
   MENU_COURSES,
   MENU_DAYS,
@@ -432,6 +433,74 @@ export interface RuntimeConfig {
    * accounts (the brake on farming).
    */
   welcome: WelcomeConfig;
+  /**
+   * The home worker (README "Home worker"; constants.ts HOME_WORKER): `testers` are the owner's
+   * own uids whose recipe text is asked of the server on the owner's computer at `url` first,
+   * while `enabled`; `waitMs` how long a call waits for it before the normal provider writes the
+   * text. Missing or invalid, or no `url`: off (no uid is ever routed there).
+   */
+  homeWorker: HomeWorkerConfig;
+}
+
+export interface HomeWorkerConfig {
+  enabled: boolean;
+  testers: string[];
+  waitMs: Readonly<Record<"recipe" | "menu", number>>;
+  /** The server's https base address (the owner's tunnel), "" for none. Never logged. */
+  url: string;
+}
+
+/**
+ * An https base address the home worker may be called at: no credentials, query or fragment, at
+ * most HOME_WORKER.maxUrlChars; normalised without a trailing slash. null otherwise.
+ */
+export function homeWorkerUrlOf(v: unknown): string | null {
+  if (typeof v !== "string" || v.length === 0 || v.length > HOME_WORKER.maxUrlChars) return null;
+  let u: URL;
+  try {
+    u = new URL(v);
+  } catch {
+    return null;
+  }
+  if (u.protocol !== "https:" || u.username || u.password || u.search || u.hash || !u.hostname) return null;
+  return `${u.origin}${u.pathname.replace(/\/+$/, "")}`;
+}
+
+/** A Firebase Auth uid as the tester list may hold it. */
+export const TESTER_UID = /^[A-Za-z0-9_-]{1,128}$/;
+
+/** What a missing or invalid `homeWorker` reads as: off, nobody listed. */
+export const HOME_WORKER_OFF: Readonly<HomeWorkerConfig> = { enabled: false, testers: [], waitMs: HOME_WORKER.waitMs, url: "" };
+
+/**
+ * `homeWorker`: `enabled` a boolean (default false), `testers` at most HOME_WORKER.maxTesters
+ * distinct uids, `waitMs` an optional map whose `recipe` / `menu` (each optional) are integers in
+ * HOME_WORKER.minWaitMs to maxWaitMs, `url` absent, "" or an https address (homeWorkerUrlOf).
+ * Anything else is refused as a whole (the caller turns it off).
+ */
+export function validHomeWorker(v: unknown): HomeWorkerConfig | null {
+  if (!isObj(v)) return null;
+  const enabled = v.enabled === undefined ? false : v.enabled;
+  if (typeof enabled !== "boolean") return null;
+  const testers = v.testers === undefined ? [] : v.testers;
+  if (!Array.isArray(testers) || testers.length > HOME_WORKER.maxTesters) return null;
+  if (!testers.every((t) => typeof t === "string" && TESTER_UID.test(t)) || new Set(testers).size !== testers.length) return null;
+  const waits = v.waitMs === undefined ? {} : v.waitMs;
+  if (!isObj(waits)) return null;
+  const waitMs: Record<"recipe" | "menu", number> = { ...HOME_WORKER.waitMs };
+  for (const kind of ["recipe", "menu"] as const) {
+    const n = waits[kind];
+    if (n === undefined) continue;
+    if (!isCount(n) || n < HOME_WORKER.minWaitMs || n > HOME_WORKER.maxWaitMs[kind]) return null;
+    waitMs[kind] = n;
+  }
+  let url = "";
+  if (v.url !== undefined && v.url !== "") {
+    const u = homeWorkerUrlOf(v.url);
+    if (u === null) return null;
+    url = u;
+  }
+  return { enabled, testers: [...(testers as string[])], waitMs, url };
 }
 
 export interface ReportsConfig {
@@ -506,6 +575,7 @@ export const DEFAULT_RUNTIME_CONFIG: Readonly<RuntimeConfig> = {
   reports: { perUserPerDay: 10, perDay: 500, keepDays: 90 },
   tasteQuiz: { hidden: [] },
   welcome: { recipes: 3, perDay: 200 },
+  homeWorker: HOME_WORKER_OFF,
 };
 
 const COUNT_FIELDS = [
@@ -938,6 +1008,15 @@ export function parseRuntimeConfig(
       // Never fail open: an invalid welcome setting turns the grant off.
       out.welcome = { ...WELCOME_OFF };
       bad.push("welcome");
+    }
+  }
+  if (data.homeWorker !== undefined) {
+    const h = validHomeWorker(data.homeWorker);
+    if (h) out.homeWorker = h;
+    else {
+      // Never fail open: an invalid home worker setting routes nobody there.
+      out.homeWorker = { ...HOME_WORKER_OFF };
+      bad.push("homeWorker");
     }
   }
   if (data.reports !== undefined) {
